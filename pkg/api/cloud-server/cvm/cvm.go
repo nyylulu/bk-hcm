@@ -326,8 +326,8 @@ func (req *BatchCvmHostItem) Validate() error {
 // BatchResetCvmReq batch reset cvm req.
 type BatchResetCvmReq struct {
 	Hosts      []BatchCvmHostItem `json:"hosts" validate:"required,min=1,max=500"`
-	Pwd        string             `json:"pwd" validate:"required,min=12,max=30"`
-	PwdConfirm string             `json:"pwd_confirm" validate:"required,min=12,max=30"`
+	Pwd        string             `json:"pwd" validate:"required,min=12,max=20"`
+	PwdConfirm string             `json:"pwd_confirm" validate:"required,min=12,max=20"`
 	SessionID  string             `json:"session_id" validate:"required"`
 }
 

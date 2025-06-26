@@ -10,12 +10,12 @@ POST /api/v1/cloud/cvms/batch/reset_async
 
 ### 输入参数
 
-| 参数名称        | 参数类型         | 必选 | 描述                     |
-|-------------|--------------|----|------------------------|
+| 参数名称        | 参数类型         | 必选 | 描述                      |
+|-------------|--------------|----|---------------------------------|
 | hosts       | object array | 是  | 虚拟机的Host列表, 最多支持500台主机 |
-| pwd         | string       | 是  | 重装密码                   |
-| pwd_confirm | string       | 是  | 重装确认密码                 |
-| session_id  | string       | 是  | moa验证的会话ID             |
+| pwd         | string       | 是  | 重装密码, 密码长度必须12-20位      |
+| pwd_confirm | string       | 是  | 重装确认密码, 密码长度必须12-20位   |
+| session_id  | string       | 是  | moa验证的会话ID                   |
 
 
 #### hosts[n]
