@@ -39,14 +39,14 @@ const { formModel } = useFormModel<IFormModel>({ hosts: [], pwd: '', pwd_confirm
 const rules = {
   pwd: [
     {
-      validator: (value: string) => value.length >= 8 && value.length <= 20,
-      message: '密码长度需要在8-20个字符之间',
+      validator: (value: string) => value.length >= 12 && value.length <= 20,
+      message: '密码长度需要在12-20个字符之间',
       trigger: 'blur',
     },
     {
       validator: (value: string) => {
         // eslint-disable-next-line no-useless-escape
-        const pattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@#+_\-\[\]{}])[A-Za-z\d@#+_\-\[\]{}]{8,20}$/;
+        const pattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@#+_\-\[\]{}])[A-Za-z\d@#+_\-\[\]{}]{12,20}$/;
         return pattern.test(value);
       },
       message: '密码不符合复杂度要求',
@@ -65,14 +65,14 @@ const rules = {
   ],
   pwd_confirm: [
     {
-      validator: (value: string) => value.length >= 8 && value.length <= 20,
-      message: '密码长度需要在8-20个字符之间',
+      validator: (value: string) => value.length >= 12 && value.length <= 20,
+      message: '密码长度需要在12-20个字符之间',
       trigger: 'blur',
     },
     {
       validator: (value: string) => {
         // eslint-disable-next-line no-useless-escape
-        const pattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@#+_\-\[\]{}])[A-Za-z\d@#+_\-\[\]{}]{8,20}$/;
+        const pattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@#+_\-\[\]{}])[A-Za-z\d@#+_\-\[\]{}]{12,20}$/;
         return pattern.test(value);
       },
       message: '密码不符合复杂度要求',
