@@ -20,7 +20,9 @@
 package sops
 
 import (
+	"context"
 	"sync"
+	"time"
 
 	"golang.org/x/time/rate"
 )
@@ -35,7 +37,7 @@ type sopsLimit float64
 const (
 	// writeLimit 标准运维写接口限制10/s
 	writeLimit sopsLimit = 10
-	// readLimit  标准运维写接口限制20/s
+	// readLimit  标准运维读接口限制20/s
 	readLimit sopsLimit = 20
 )
 
@@ -61,4 +63,28 @@ func getSopsLimiter(api sopsApi, limit sopsLimit) *rate.Limiter {
 	}
 
 	return sopsApiLimiters[api]
+}
+
+// WaitSopsCreateTaskLimiter 标准运维-创建任务限频
+func WaitSopsCreateTaskLimiter(ctx context.Context, timeout time.Duration) error {
+	timedCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	limiter := getSopsLimiter(createTask, writeLimit)
+	return limiter.Wait(timedCtx)
+}
+
+// WaitSopsStartTaskLimiter 标准运维-启动任务限频
+func WaitSopsStartTaskLimiter(ctx context.Context, timeout time.Duration) error {
+	timedCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	limiter := getSopsLimiter(startTask, writeLimit)
+	return limiter.Wait(timedCtx)
+}
+
+// WaitSopsGetTaskStatusLimiter 标准运维-查询任务限频
+func WaitSopsGetTaskStatusLimiter(ctx context.Context, timeout time.Duration) error {
+	timedCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	limiter := getSopsLimiter(getTaskStatus, readLimit)
+	return limiter.Wait(timedCtx)
 }

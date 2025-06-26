@@ -26,6 +26,9 @@ import (
 	cvt "hcm/pkg/tools/converter"
 )
 
+// PrecheckMaxBatchSize 检查CC模块和负责人最大批次大小
+const PrecheckMaxBatchSize = 500
+
 type stepBatch struct {
 	kt    *kit.Kit
 	steps []*StepMeta
@@ -42,7 +45,7 @@ type PreCheckWorkGroup struct {
 
 // MaxBatchSize ...
 func (p *PreCheckWorkGroup) MaxBatchSize() int {
-	return 500
+	return PrecheckMaxBatchSize
 }
 
 // NewPreCheckWorkGroup ...
@@ -56,8 +59,8 @@ func NewPreCheckWorkGroup(cc cmdb.Client, resultHandler StepResultHandler, worke
 }
 
 // HandleResult ...
-func (p *PreCheckWorkGroup) HandleResult(kt *kit.Kit, steps []*StepMeta, detectErr error, log string) {
-	p.resultHandler(kt, steps, detectErr, log)
+func (p *PreCheckWorkGroup) HandleResult(kt *kit.Kit, steps []*StepMeta, detectErr error, log string, needRetry bool) {
+	p.resultHandler.HandleResult(kt, steps, detectErr, log, needRetry)
 }
 
 // Start 启动worker
@@ -111,9 +114,9 @@ func (p *PreCheckWorkGroup) Run(kt *kit.Kit, steps []*StepMeta) {
 	}
 
 	worker := preCheckWorker{
-		hostMap:      hostMap,
-		cc:           p.cc,
-		handleResult: p.HandleResult,
+		hostMap:       hostMap,
+		cc:            p.cc,
+		resultHandler: p,
 	}
 	worker.checkAll(kt, hostIDs)
 }
@@ -125,9 +128,9 @@ func (p *PreCheckWorkGroup) Submit(kt *kit.Kit, steps []*StepMeta) {
 
 // preCheckWorker worker
 type preCheckWorker struct {
-	cc           CmdbOperator
-	hostMap      map[int64]*HostExecInfo
-	handleResult StepResultHandler
+	cc            CmdbOperator
+	hostMap       map[int64]*HostExecInfo
+	resultHandler StepResultHandler
 }
 
 func (w *preCheckWorker) checkAll(kt *kit.Kit, hostIDs []int64) {
@@ -152,13 +155,7 @@ func (w *preCheckWorker) checkOperator(kt *kit.Kit, hostIDs []int64) (succeed []
 	if err != nil {
 		logs.Errorf("get host base info by id failed, err: %s, rid: %s", err, kt.Rid)
 		// fail all
-		hostInfos := make([]*HostExecInfo, 0, len(w.hostMap))
-		for i := range w.hostMap {
-			w.hostMap[i].Error = err
-			w.hostMap[i].ExecLog = err.Error()
-			hostInfos = append(hostInfos, w.hostMap[i])
-		}
-		w.markHostResult(kt, hostInfos)
+		w.handleHostBatchError(kt, hostIDs, err)
 		return nil
 	}
 
@@ -180,7 +177,7 @@ func (w *preCheckWorker) checkOperator(kt *kit.Kit, hostIDs []int64) (succeed []
 			hostExecInfo.Error = fmt.Errorf("%s is not operator or bak operator of host %s",
 				hostExecInfo.Step.User, hostExecInfo.Step.IP)
 
-			w.markHostResult(kt, []*HostExecInfo{hostExecInfo})
+			w.handleResult(kt, []*HostExecInfo{hostExecInfo}, false)
 			continue
 		}
 		// 检查成功
@@ -189,8 +186,8 @@ func (w *preCheckWorker) checkOperator(kt *kit.Kit, hostIDs []int64) (succeed []
 
 	for hostID := range leftHostIDSet {
 		host := w.hostMap[hostID]
-		host.Error = fmt.Errorf("host %s(%d) not found on cmdb", host.Step.IP, host.Step.HostID)
-		w.markHostResult(kt, []*HostExecInfo{host})
+		e := fmt.Errorf("host %s(%d) not found on cmdb", host.Step.IP, host.Step.HostID)
+		w.handleHostError(kt, host, e)
 	}
 	return succeed
 }
@@ -211,13 +208,8 @@ func (w *preCheckWorker) checkHostModule(kt *kit.Kit, hostIDs []int64) {
 	if err != nil {
 		logs.Errorf("get host topo info failed, err: %s, rid: %s", err, kt.Rid)
 		// fail all
-		var failedHosts = make([]*HostExecInfo, 0, len(hostIDs))
-		for _, hostID := range hostIDs {
-			host := w.hostMap[hostID]
-			host.Error = fmt.Errorf("fail to get host topo info err: %v", err)
-			failedHosts = append(failedHosts, host)
-		}
-		w.markHostResult(kt, failedHosts)
+		e := fmt.Errorf("fail to get host topo info err: %v", err)
+		w.handleHostBatchError(kt, hostIDs, e)
 		return
 	}
 
@@ -242,7 +234,7 @@ func (w *preCheckWorker) checkHostModule(kt *kit.Kit, hostIDs []int64) {
 		if err != nil {
 			logs.Errorf("failed to get module info, err: %v, module: %v, rid: %s", err, moduleIDs, kt.Rid)
 			e := fmt.Errorf("fail to get module info err: %v", err)
-			w.markAllHostError(kt, bizHostIDs, e)
+			w.handleHostBatchError(kt, bizHostIDs, e)
 			continue
 		}
 
@@ -256,8 +248,8 @@ func (w *preCheckWorker) checkHostModule(kt *kit.Kit, hostIDs []int64) {
 
 	for hostID := range leftHostIDSet {
 		host := w.hostMap[hostID]
-		host.Error = fmt.Errorf("host %s(%d) topo relation not found on cmdb", host.Step.IP, host.Step.HostID)
-		w.markHostResult(kt, []*HostExecInfo{host})
+		e := fmt.Errorf("host %s(%d) topo relation not found on cmdb", host.Step.IP, host.Step.HostID)
+		w.handleHostError(kt, host, e)
 	}
 	return
 }
@@ -266,14 +258,13 @@ func (w *preCheckWorker) checkRecycleModule(kt *kit.Kit, moduleMap map[int64]*cm
 	host *HostExecInfo, relList []cmdb.HostTopoRelation) {
 
 	for _, rel := range relList {
-
 		module, ok := moduleMap[rel.BkModuleID]
 		if !ok {
 			// 找不到模块
-			host.Error = fmt.Errorf("module: %d of host: %s not found", rel.BkModuleID, host.Step.IP)
+			e := fmt.Errorf("module: %d of host: %s not found", rel.BkModuleID, host.Step.IP)
 			logs.Errorf("failed to get module info, biz: %d, module: %d, rid: %s",
 				bizId, rel.BkModuleID, kt.Rid)
-			w.markHostResult(kt, []*HostExecInfo{host})
+			w.handleHostError(kt, host, e)
 			return
 		}
 		host.ExecLog += fmt.Sprintf("\nmodule: %d, name: %s, dft: %d",
@@ -284,15 +275,16 @@ func (w *preCheckWorker) checkRecycleModule(kt *kit.Kit, moduleMap map[int64]*cm
 				host.Step.IP, module.BkModuleName, rel.BkModuleID, module.Default)
 			logs.Errorf("module: %d of host: %s is not 待回收, biz: %d, rid: %s",
 				rel.BkModuleID, host.Step.IP, bizId, kt.Rid)
-			w.markHostResult(kt, []*HostExecInfo{host})
+			w.handleResult(kt, []*HostExecInfo{host}, false)
 			return
 		}
 	}
 	// 成功
-	w.markHostResult(kt, []*HostExecInfo{host})
+	w.handleResult(kt, []*HostExecInfo{host}, false)
 }
 
-func (w *preCheckWorker) markAllHostError(kt *kit.Kit, hostIDs []int64, err error) {
+// handleHostBatchError 批量失败，需要重试
+func (w *preCheckWorker) handleHostBatchError(kt *kit.Kit, hostIDs []int64, err error) {
 	if len(hostIDs) == 0 {
 		return
 	}
@@ -302,11 +294,19 @@ func (w *preCheckWorker) markAllHostError(kt *kit.Kit, hostIDs []int64, err erro
 		host.Error = err
 		hostList = append(hostList, host)
 	}
-	w.markHostResult(kt, hostList)
+	w.handleResult(kt, hostList, true)
 }
 
-func (w *preCheckWorker) markHostResult(kt *kit.Kit, resultHosts []*HostExecInfo) {
+// handleHostError 单个主机失败，需要重试
+func (w *preCheckWorker) handleHostError(kt *kit.Kit, host *HostExecInfo, err error) {
+	if err != nil {
+		host.Error = err
+	}
+	w.handleResult(kt, []*HostExecInfo{host}, true)
+}
+
+func (w *preCheckWorker) handleResult(kt *kit.Kit, resultHosts []*HostExecInfo, needRetry bool) {
 	for _, host := range resultHosts {
-		w.handleResult(kt, []*StepMeta{host.StepMeta}, host.Error, host.ExecLog)
+		w.resultHandler.HandleResult(kt, []*StepMeta{host.StepMeta}, host.Error, host.ExecLog, needRetry)
 	}
 }

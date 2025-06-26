@@ -35,7 +35,10 @@ import (
 )
 
 // StepResultHandler 预检步骤执行结果处理回调
-type StepResultHandler func(kt *kit.Kit, steps []*StepMeta, detectErr error, log string)
+type StepResultHandler interface {
+	// HandleResult 处理结果接口，在错误非空的时候，needRetry表示是否需要重试
+	HandleResult(kt *kit.Kit, steps []*StepMeta, detectErr error, log string, needRetry bool)
+}
 
 func (d *Detector) initStepExecutor(backendKit *kit.Kit) error {
 	d.StepExecutors = map[table.DetectStepName]StepExecutor{}
@@ -52,7 +55,9 @@ func (d *Detector) initStepExecutor(backendKit *kit.Kit) error {
 		var workgroup DetectStepWorkGroup
 		switch stepCfg.Name {
 		case table.StepPreCheck:
-			workgroup = NewPreCheckWorkGroup(d.cc, executor.HandleResult, stepCfg.Worker)
+			workgroup = NewPreCheckWorkGroup(d.cc, executor, stepCfg.Worker)
+		case table.StepCheckProcess:
+			workgroup = NewCheckProcessWorkGroup(d.sops, d.cc, executor, stepCfg.Worker)
 		// 	TODO 其他步骤执行器
 		default:
 			return errors.New(string("detect step not supported: " + stepCfg.Name))
@@ -80,8 +85,8 @@ func (d *Detector) Detect(kt *kit.Kit, order *table.RecycleOrder) error {
 		return err
 	}
 
-	// 获取需要处理的预检任务（主机）
-	taskMap, err := d.getDetectTaskMap(kt, order.SuborderID, len(stepConfigs))
+	// 初始化并获取需要处理的预检任务（主机）
+	taskMap, err := d.initAndGetDetectTaskMap(kt, order.SuborderID, len(stepConfigs))
 	if err != nil {
 		logs.Errorf("fail to get detect task map, order: %s, err: %v, rid: %s",
 			order.SuborderID, err, kt.Rid)
@@ -139,7 +144,8 @@ func (d *Detector) Cancel(kt *kit.Kit, suborderID string) error {
 func (d *Detector) handleDetectResult(kt *kit.Kit, suborderID string, getResult func() (result *Result, ok bool),
 	taskMap map[int64]*table.DetectTask) error {
 
-	detectErrs := make([]error, 0)
+	defer logs.Infof("suborder all detect step done, order: %s, rid: %s", suborderID, kt.Rid)
+
 	// 等待单内所有主机的所有预检步骤结果
 	for {
 		result, ok := getResult()
@@ -164,7 +170,6 @@ func (d *Detector) handleDetectResult(kt *kit.Kit, suborderID string, getResult 
 			task.FailedNum++
 			task.Status = table.DetectStatusFailed
 			task.Message += result.Error.Error() + "\n"
-			detectErrs = append(detectErrs, result.Error)
 		} else {
 			task.SuccessNum++
 			if task.Status != table.DetectStatusFailed {
@@ -172,20 +177,28 @@ func (d *Detector) handleDetectResult(kt *kit.Kit, suborderID string, getResult 
 			}
 		}
 		task.PendingNum--
-		// 更新task 状态
-		err := d.updateTaskProgressV2(kt, task)
+		// 更新recycle task, recycle host 的状态
+		err := d.updateRecycleTaskAndHostStatus(kt, task)
 		if err != nil {
 			logs.Errorf("skip update task %s failed, order: %s, err: %v, rid: %s",
 				task.TaskID, suborderID, err, kt.Rid)
 			// 忽略单次失败，防止阻塞Channel
 		}
+
 	}
 
-	return errors.Join(detectErrs...)
+	return nil
 }
 
-func (d *Detector) getDetectTaskMap(kt *kit.Kit, suborderID string, stepCount int) (
+func (d *Detector) initAndGetDetectTaskMap(kt *kit.Kit, suborderID string, stepCount int) (
 	map[int64]*table.DetectTask, error) {
+
+	// (重新)初始化task状态为running
+	err := d.batchUpdateTaskStatus(kt, suborderID, table.DetectStatusRunning, stepCount)
+	if err != nil {
+		logs.Errorf("failed to update task status to running, order: %s, err: %v, rid: %s", suborderID, err, kt.Rid)
+		return nil, err
+	}
 
 	taskInfos, err := d.getDetectTasks(kt, suborderID)
 	if err != nil {
@@ -201,7 +214,6 @@ func (d *Detector) getDetectTaskMap(kt *kit.Kit, suborderID string, stepCount in
 	}
 
 	for _, task := range taskInfos {
-		// (重新)初始化task状态为running
 		task.Status = table.DetectStatusRunning
 		task.FailedNum = 0
 		task.SuccessNum = 0
@@ -233,6 +245,8 @@ type stepRunner struct {
 
 // Run 执行预检步骤，并汇总其结果
 func (sr *stepRunner) Run(kt *kit.Kit, executor StepExecutor, execSteps, skipSteps []*table.DetectStep) {
+	defer sr.Done()
+
 	// 将跳过的直接投到结果队列
 	for _, step := range skipSteps {
 		result := &Result{
@@ -242,7 +256,10 @@ func (sr *stepRunner) Run(kt *kit.Kit, executor StepExecutor, execSteps, skipSte
 		}
 		sr.SendResult(result)
 	}
-
+	if len(execSteps) <= 0 {
+		// 全部跳过
+		return
+	}
 	// 初始化预检步骤
 	resultCh, submitErr := executor.SubmitSteps(kt, sr.suborderID, execSteps)
 	if submitErr != nil {
@@ -255,6 +272,10 @@ func (sr *stepRunner) Run(kt *kit.Kit, executor StepExecutor, execSteps, skipSte
 		sr.SendResult(result)
 	}
 
+}
+
+// Done 当前步骤执行结束
+func (sr *stepRunner) Done() {
 	if sr.remainingSteps.Add(-1) == 0 {
 		// 全部流程结束，关闭总结果channel
 		close(sr.allResult)
@@ -428,7 +449,34 @@ func (d *Detector) listDetectTaskStepByID(kt *kit.Kit, suborder string, ids []st
 
 	return steps, nil
 }
-func (d *Detector) updateTaskProgressV2(kt *kit.Kit, task *table.DetectTask) error {
+
+func (d *Detector) batchUpdateTaskStatus(kt *kit.Kit, suborderID string, status table.DetectStatus,
+	totalSteps int) error {
+
+	filter := &mapstr.MapStr{
+		"suborder_id": suborderID,
+	}
+
+	doc := mapstr.MapStr{
+		"total_num":   totalSteps,
+		"success_num": 0,
+		"failed_num":  0,
+		"pending_num": totalSteps,
+		"message":     "",
+		"update_at":   time.Now(),
+		"status":      status,
+	}
+
+	if err := dao.Set().DetectTask().UpdateDetectTask(kt.Ctx, filter, &doc); err != nil {
+		logs.Errorf("failed to update recycle task status, suborder: %s, status: %s, steps count: %d, err: %v, rid: %s",
+			suborderID, status, totalSteps, err, kt.Rid)
+		return err
+	}
+	return nil
+}
+
+// 更新recycle task, recycle host 的状态
+func (d *Detector) updateRecycleTaskAndHostStatus(kt *kit.Kit, task *table.DetectTask) error {
 	filter := &mapstr.MapStr{
 		"task_id": task.TaskID,
 	}
@@ -442,16 +490,49 @@ func (d *Detector) updateTaskProgressV2(kt *kit.Kit, task *table.DetectTask) err
 		"update_at":   time.Now(),
 	}
 	if task.PendingNum == 0 {
+		var targetStatus = table.DetectStatusFailed
 		if task.FailedNum == 0 {
-			doc["status"] = table.DetectStatusSuccess
-		} else {
-			doc["status"] = table.DetectStatusFailed
+			targetStatus = table.DetectStatusSuccess
 		}
+		doc["status"] = targetStatus
 	}
 
 	if err := dao.Set().DetectTask().UpdateDetectTask(kt.Ctx, filter, &doc); err != nil {
 		logs.Errorf("failed to update recycle task, task id: %s, update: %+v, err: %v, rid: %s",
 			task.TaskID, doc, err, kt.Rid)
+		return err
+	}
+
+	// 如果结束，更新recycle host 的状态
+	if task.PendingNum == 0 && task.FailedNum != 0 {
+		if err := d.updateRecycleHostStatus(kt, task.SuborderID, task.AssetID, task.IP,
+			table.RecycleStatusDetectFailed); err != nil {
+			logs.Errorf("failed to update recycle host, task id: %s, host: %s, assetID: %s, err: %v, rid: %s",
+				task.TaskID, task.IP, task.AssetID, err, kt.Rid)
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (d *Detector) updateRecycleHostStatus(kt *kit.Kit, suborder string, assetID string, ip string,
+	status table.RecycleStatus) error {
+
+	filter := &mapstr.MapStr{
+		"suborder_id": suborder,
+		"asset_id":    assetID,
+		"ip":          ip,
+	}
+
+	doc := mapstr.MapStr{
+		"status":    status,
+		"update_at": time.Now(),
+	}
+
+	if err := dao.Set().RecycleHost().UpdateRecycleHost(kt.Ctx, filter, &doc); err != nil {
+		logs.Errorf("failed to update recycle host, suborder: %s, ip: %s, asset_id: %s, status: %s, err: %v, rid: %s",
+			suborder, ip, assetID, status, err, kt.Rid)
 		return err
 	}
 	return nil
