@@ -790,6 +790,8 @@ type ResourceSpec struct {
 	ChargeMonths uint `json:"charge_months" bson:"charge_months"`
 	// 被继承云主机实例ID
 	InheritInstanceId string `json:"inherit_instance_id" bson:"inherit_instance_id"`
+	// 分区生产时报错的可用区ID列表
+	FailedZoneIDs []string `json:"failed_zone_ids" bson:"failed_zone_ids"`
 }
 
 // Validate whether ResourceSpec is valid

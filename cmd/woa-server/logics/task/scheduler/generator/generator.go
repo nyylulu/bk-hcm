@@ -222,9 +222,15 @@ func (g *Generator) generateCVMSeparate(kt *kit.Kit, order *types.ApplyOrder, ex
 		return fmt.Errorf("failed to generate cvm, for get zone capacity err: %v", err)
 	}
 
+	// 检查是否有已经失败过的可用区，需要跳过这些失败的可用区
+	failedZoneMap := make(map[string]struct{})
+	if order.Spec != nil && len(order.Spec.FailedZoneIDs) > 0 {
+		failedZoneMap = cvt.StringSliceToMap(order.Spec.FailedZoneIDs)
+	}
+
 	logs.Infof("generateCVMSeparate campus start, subOrderID: %s, createdTotalCount: %d, zoneCapacity: %+v, "+
-		"zoneCreatedCount: %v, availZones: %+v, rid: %s", order.SubOrderId, createdTotalCount, zoneCapacity,
-		zoneCreatedCount, cvt.PtrToSlice(availZones), kt.Rid)
+		"zoneCreatedCount: %v, availZones: %+v, failedZoneMap: %+v, rid: %s", order.SubOrderId, createdTotalCount,
+		zoneCapacity, zoneCreatedCount, cvt.PtrToSlice(availZones), failedZoneMap, kt.Rid)
 
 	// 4. for each zone, calculate replicas and launch cvm
 	mutex := sync.Mutex{}
@@ -242,7 +248,19 @@ func (g *Generator) generateCVMSeparate(kt *kit.Kit, order *types.ApplyOrder, ex
 		genRecordIds = append(genRecordIds, ids...)
 	}
 	maxCount := math.Ceil(float64(order.Total) / 2)
+	failedSkipNum := 0
 	for _, zone := range availZones {
+		// 已经失败过的可用区，直接跳过
+		if _, ok := failedZoneMap[zone.Zone]; ok {
+			// 记录失败跳过的数量
+			failedSkipNum++
+			logs.Warnf("generateCVMSeparate campus loop skip has failed zone, subOrderID: %s, hasFailedZone: %+v, "+
+				"maxCount: %f, createdTotalCount: %d, zoneCapacity: %+v, zoneCreatedCount: %v, availZonesNum: %d, "+
+				"rid: %s", order.SubOrderId, cvt.PtrToVal(zone), maxCount, createdTotalCount, zoneCapacity,
+				zoneCreatedCount, len(availZones), kt.Rid)
+			continue
+		}
+
 		replicas := uint(0)
 		if len(availZones) > 1 {
 			// 一个城市有大于一个campus的话，该campus最多只能生产需求数量的一半
@@ -289,6 +307,15 @@ func (g *Generator) generateCVMSeparate(kt *kit.Kit, order *types.ApplyOrder, ex
 
 		if order.Total <= createdTotalCount {
 			break
+		}
+	}
+
+	// 全部被跳过的情况下，清空所有失败的可用区
+	if failedSkipNum == len(availZones) {
+		if err = g.updateOrderFailedZones(kt, order.SubOrderId, ""); err != nil {
+			// 只记录日志，不应该影响主流程
+			logs.Warnf("failed to update order failed zoneIDs, subOrderID: %s, err: %v, rid: %s",
+				order.SubOrderId, err, kt.Rid)
 		}
 	}
 
@@ -352,6 +379,44 @@ func (g *Generator) UpdateOrderStatus(suborderID string) error {
 
 	if err := model.Operation().ApplyOrder().UpdateApplyOrder(context.Background(), filter, doc); err != nil {
 		logs.Errorf("failed to update apply order, id: %s, err: %v", suborderID, err)
+		return err
+	}
+
+	return nil
+}
+
+// updateOrderFailedZones 更新订单失败的可用区
+func (g *Generator) updateOrderFailedZones(kt *kit.Kit, suborderID string, zone string) error {
+	// 如果传入的是分Campus的可用区，则不需要更新，直接返回
+	if zone == cvmapi.CvmSeparateCampus {
+		return nil
+	}
+
+	var failedZoneIDs []string
+	if len(zone) > 0 {
+		order, err := g.GetApplyOrder(suborderID)
+		if err != nil {
+			logs.Errorf("failed to get apply order, err: %v, subOrderID: %s, rid: %s", err, suborderID, kt.Rid)
+			return fmt.Errorf("failed to get apply order, err: %v, order id: %s", err, suborderID)
+		}
+
+		if order.Spec != nil {
+			failedZoneIDs = order.Spec.FailedZoneIDs
+		}
+		failedZoneIDs = append(failedZoneIDs, zone)
+	}
+
+	filter := &mapstr.MapStr{
+		"suborder_id": suborderID,
+	}
+
+	doc := &mapstr.MapStr{
+		"spec.failed_zone_ids": failedZoneIDs,
+		"update_at":            time.Now(),
+	}
+	if err := model.Operation().ApplyOrder().UpdateApplyOrder(context.Background(), filter, doc); err != nil {
+		logs.Errorf("failed to update apply order failed zones, subOrderID: %s, err: %v, zone: %s, "+
+			"failedZoneIDs: %v, rid: %s", suborderID, err, zone, failedZoneIDs, kt.Rid)
 		return err
 	}
 
@@ -646,7 +711,7 @@ func (g *Generator) batchLaunchCvm(kt *kit.Kit, order *types.ApplyOrder, zone st
 				appendError(err)
 				return nil
 			}
-			logs.Infof("success to launch cvm, sub order id: %s, zone: %s, replicas: %d, generate id: %s, rid: %s",
+			logs.Infof("success to launch cvm, sub order id: %s, zone: %s, replicas: %d, generate id: %d, rid: %s",
 				order.SubOrderId, createCvmReq.Zone, createCvmReq.ApplyNumber, generateID, kt.Rid)
 			appendGenRecord(generateID)
 			return nil
@@ -723,11 +788,13 @@ func (g *Generator) launchCvm(kt *kit.Kit, order *types.ApplyOrder, createCvmReq
 		return fmt.Errorf("failed to launch cvm, order id: %s, err: %v", order.SubOrderId, err)
 	}
 	// check cvm task result and update generate record
-	return g.AddCvmDevices(kt, taskId, generateId, order)
+	return g.AddCvmDevices(kt, taskId, generateId, order, createCvmReq.Zone)
 }
 
 // AddCvmDevices check generated device, create device infos and update generate record status
-func (g *Generator) AddCvmDevices(kt *kit.Kit, taskId string, generateId uint64, order *types.ApplyOrder) error {
+func (g *Generator) AddCvmDevices(kt *kit.Kit, taskId string, generateId uint64,
+	order *types.ApplyOrder, zone string) error {
+
 	// 1. check cvm task result
 	if err := g.CheckCVM(kt, taskId, order.SubOrderId, order.Spec.ChargeType); err != nil {
 		logs.Errorf("scheduler:logics:launch:cvm:failed, failed to create cvm when check generate task, "+
@@ -742,8 +809,17 @@ func (g *Generator) AddCvmDevices(kt *kit.Kit, taskId string, generateId uint64,
 				taskId, errRecord)
 		}
 
-		return fmt.Errorf("failed to launch cvm, order id: %s, task id: %s, err: %v", order.SubOrderId,
-			taskId, err)
+		// 更新失败的可用区到主机申请单
+		if strings.Contains(err.Error(), crpProductFailedMsg) {
+			if orderErr := g.updateOrderFailedZones(kt, order.SubOrderId, zone); orderErr != nil {
+				// 只记录日志，不应该影响主流程
+				logs.Warnf("failed to update order failed zoneIDs, subOrderID: %s, orderErr: %v, err: %v, rid: %s",
+					order.SubOrderId, orderErr, err, kt.Rid)
+			}
+		}
+
+		return fmt.Errorf("failed to launch cvm, order id: %s, task id: %s, zone: %s, err: %v", order.SubOrderId,
+			taskId, zone, err)
 	}
 
 	// 2. get generated cvm instances
@@ -761,8 +837,17 @@ func (g *Generator) AddCvmDevices(kt *kit.Kit, taskId string, generateId uint64,
 				order.SubOrderId, taskId, errRecord)
 		}
 
-		return fmt.Errorf("failed to list created cvm, order id: %s, task id: %s, err: %v",
-			order.SubOrderId, taskId, err)
+		// 更新失败的可用区到主机申请单
+		if strings.Contains(err.Error(), crpProductZeroNumMsg) {
+			if orderErr := g.updateOrderFailedZones(kt, order.SubOrderId, zone); orderErr != nil {
+				// 只记录日志，不应该影响主流程
+				logs.Warnf("failed to update order failed zoneIDs, subOrderID: %s, orderErr: %v, err: %v, rid: %s",
+					order.SubOrderId, orderErr, err, kt.Rid)
+			}
+		}
+
+		return fmt.Errorf("failed to list created cvm, order id: %s, task id: %s, zone: %s, err: %v",
+			order.SubOrderId, taskId, zone, err)
 	}
 	// 3. create device infos
 	return g.createDeviceInfo(kt, order, generateId, hosts, taskId)
@@ -1062,8 +1147,8 @@ func (g *Generator) createGeneratedDevices(kt *kit.Kit, order *types.ApplyOrder,
 	}
 
 	if err = model.Operation().DeviceInfo().CreateDeviceInfos(kt.Ctx, devices); err != nil {
-		logs.Errorf("failed to save device info to db, order id: %s, generateId: %d, err: %v, rid: %s",
-			order.SubOrderId, generateId, err, kt.Rid)
+		logs.Errorf("failed to save device info to db, order id: %s, generateId: %d, err: %v, devicesNum: %d, "+
+			"devices: %+v, rid: %s", order.SubOrderId, generateId, err, len(devices), cvt.PtrToSlice(devices), kt.Rid)
 		return err
 	}
 
@@ -1084,7 +1169,7 @@ func (g *Generator) syncHostToCMDB(kt *kit.Kit, order *types.ApplyOrder, generat
 	// 线上Bug，返回了空的DeviceInfo数组，导致mongo插入失败
 	if len(ips) == 0 && len(assetIds) == 0 {
 		logs.Errorf("failed to sync device info to cc, ips and assetIds is empty, subOrderID: %s, generateId: %s, "+
-			"items: %+v", order.SubOrderId, generateId, cvt.PtrToSlice(items))
+			"items: %+v, rid: %s", order.SubOrderId, generateId, cvt.PtrToSlice(items), kt.Rid)
 		return nil, errf.Newf(errf.RecordNotFound, "failed to sync device info to cc, ips and assetIds is empty, "+
 			"subOrderID: %s", order.SubOrderId)
 	}
@@ -1092,12 +1177,14 @@ func (g *Generator) syncHostToCMDB(kt *kit.Kit, order *types.ApplyOrder, generat
 	// 1. sync device info to cc
 	if order.ResourceType == types.ResourceTypeCvm {
 		if err := g.syncHostByAsset(kt, assetIds); err != nil {
-			logs.Errorf("failed to sync device info to cc, order id: %s, err: %v, rid: %s", order.SubOrderId, err)
+			logs.Errorf("failed to sync device info to cc, order id: %s, err: %v, rid: %s",
+				order.SubOrderId, err, kt.Rid)
 			return nil, err
 		}
 	} else {
 		if err := g.syncHostByIp(ips); err != nil {
-			logs.Errorf("failed to sync device info to cc, order id: %s, err: %v, rid: %s", order.SubOrderId, err)
+			logs.Errorf("failed to sync device info to cc, order id: %s, err: %v, rid: %s",
+				order.SubOrderId, err, kt.Rid)
 			return nil, err
 		}
 	}
@@ -1106,7 +1193,7 @@ func (g *Generator) syncHostToCMDB(kt *kit.Kit, order *types.ApplyOrder, generat
 	// 由于会存在主机在cc，但是此时机器还没有ip, 所以需要通过固资号进行查询
 	ccHosts, err := g.getHostDetail(assetIds)
 	if err != nil {
-		logs.Errorf("failed to get cc host info, order id: %s, err: %v, rid: %s", order.SubOrderId, err)
+		logs.Errorf("failed to get cc host info, order id: %s, err: %v, rid: %s", order.SubOrderId, err, kt.Rid)
 		return nil, err
 	}
 	mapAssetIDToHost := make(map[string]*cmdb.Host)
@@ -1114,8 +1201,8 @@ func (g *Generator) syncHostToCMDB(kt *kit.Kit, order *types.ApplyOrder, generat
 		mapAssetIDToHost[host.BkAssetID] = host
 	}
 
-	logs.Infof("successfully sync device info to cc, subOrderID: %s, ips: %+v, assets: %+v, ccHostNum: %d",
-		order.SubOrderId, ips, assetIds, len(ccHosts))
+	logs.Infof("successfully sync device info to cc, subOrderID: %s, ips: %+v, assets: %+v, ccHostNum: %d, rid: %s",
+		order.SubOrderId, ips, assetIds, len(ccHosts), kt.Rid)
 	devices := g.buildDevicesInfo(items, order, generateId, mapAssetIDToHost)
 	return devices, nil
 }

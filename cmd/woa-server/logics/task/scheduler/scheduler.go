@@ -1753,7 +1753,7 @@ func (s *scheduler) StartApplyOrder(kt *kit.Kit, param *types.StartApplyOrderReq
 	}
 
 	// set order status wait
-	if err := s.startOrder(kt, insts); err != nil {
+	if err = s.startOrder(kt, insts); err != nil {
 		logs.Errorf("failed to start apply order, err: %v, rid: %s", err, kt.Rid)
 		return fmt.Errorf("failed to start apply order, err: %v", err)
 	}
@@ -2058,7 +2058,7 @@ func (s *scheduler) validateReplicas(kt *kit.Kit, order *types.ApplyOrder, param
 	// 获取实际生产成功的数量
 	deviceInfos, err := s.matcher.GetUnreleasedDevice(order.SubOrderId)
 	if err != nil {
-		logs.Errorf("failed to get generate records, subOrderID: %s, err: %v, srid: %s", order.SubOrderId, err, kt.Rid)
+		logs.Errorf("failed to get generate records, subOrderID: %s, err: %v, rid: %s", order.SubOrderId, err, kt.Rid)
 		return err
 	}
 
@@ -2201,22 +2201,23 @@ func (s *scheduler) modifyOrder(kt *kit.Kit, order *types.ApplyOrder, param *typ
 	}
 
 	update := &mapstr.MapStr{
-		"spec.region":       param.Spec.Region,
-		"spec.zone":         param.Spec.Zone,
-		"spec.device_type":  param.Spec.DeviceType,
-		"spec.image_id":     param.Spec.ImageId,
-		"spec.disk_size":    param.Spec.DiskSize,
-		"spec.disk_type":    param.Spec.DiskType,
-		"spec.network_type": param.Spec.NetworkType,
-		"spec.vpc":          param.Spec.Vpc,
-		"spec.subnet":       param.Spec.Subnet,
-		"stage":             types.TicketStageRunning,
-		"status":            types.ApplyStatusWaitForMatch,
-		"total_num":         param.Replicas,
-		"pending_num":       param.Replicas - order.SuccessNum,
-		"retry_time":        0,
-		"modify_time":       order.ModifyTime + 1,
-		"update_at":         now,
+		"spec.region":          param.Spec.Region,
+		"spec.zone":            param.Spec.Zone,
+		"spec.device_type":     param.Spec.DeviceType,
+		"spec.image_id":        param.Spec.ImageId,
+		"spec.disk_size":       param.Spec.DiskSize,
+		"spec.disk_type":       param.Spec.DiskType,
+		"spec.network_type":    param.Spec.NetworkType,
+		"spec.vpc":             param.Spec.Vpc,
+		"spec.subnet":          param.Spec.Subnet,
+		"spec.failed_zone_ids": []string{}, // 修改需求重试时需要清空已失败的可用区，也就是全可用区重试
+		"stage":                types.TicketStageRunning,
+		"status":               types.ApplyStatusWaitForMatch,
+		"total_num":            param.Replicas,
+		"pending_num":          param.Replicas - order.SuccessNum,
+		"retry_time":           0,
+		"modify_time":          order.ModifyTime + 1,
+		"update_at":            now,
 	}
 
 	if err := model.Operation().ApplyOrder().UpdateApplyOrder(context.Background(), filter, update); err != nil {
@@ -2367,10 +2368,8 @@ func (s *scheduler) GetGenerateRecords(kt *kit.Kit, subOrderId string) ([]*types
 }
 
 // AddCvmDevices check and add cvm device
-func (s *scheduler) AddCvmDevices(kt *kit.Kit, taskId string, generateId uint64,
-	order *types.ApplyOrder) error {
-
-	if err := s.generator.AddCvmDevices(kt, taskId, generateId, order); err != nil {
+func (s *scheduler) AddCvmDevices(kt *kit.Kit, taskId string, generateId uint64, order *types.ApplyOrder) error {
+	if err := s.generator.AddCvmDevices(kt, taskId, generateId, order, order.Spec.Zone); err != nil {
 		logs.Errorf("failed to check and update cvm device, orderId: %s, err: %v, rid: %s", err, order.SubOrderId,
 			kt.Rid)
 		return err

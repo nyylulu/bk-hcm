@@ -315,6 +315,22 @@ const (
 	CrpOrderStatusFailed CrpOrderStatus = 129
 )
 
+// StatusName CrpOrderStatus.
+func (cs CrpOrderStatus) StatusName() string {
+	switch cs {
+	case CrpOrderStatusCvm:
+		return "CRP-CVM生产中"
+	case CrpOrderStatusFinish:
+		return "CRP-生产成功"
+	case CrpOrderStatusReject:
+		return "CRP-驳回"
+	case CrpOrderStatusFailed:
+		return "CRP-CVM创建失败"
+	default:
+		return fmt.Sprintf("CRP-unsupported crp order status: %d", cs)
+	}
+}
+
 // CrpOrderStatusCanRevoke 目前 crp 只支持单据处于下列状态时可以发起撤单
 var CrpOrderStatusCanRevoke = []CrpOrderStatus{
 	CrpOrderStatusDeptApprove,

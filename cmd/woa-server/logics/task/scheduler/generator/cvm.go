@@ -38,6 +38,10 @@ import (
 var (
 	// cvmApplyNumReg CVM主机申请匹配数量
 	cvmApplyNumReg = regexp.MustCompile(`计算最终当前可申领量(\d+)`)
+	// crpProductFailedMsg CRP生产失败的错误描述
+	crpProductFailedMsg = "CRP申领失败"
+	// crpProductZeroNumMsg CRP生产数量为0的错误描述
+	crpProductZeroNumMsg = "list cvm instance failed, for result is null"
 )
 
 // createCVM starts a cvm creating task
@@ -279,15 +283,16 @@ func (g *Generator) CheckCVM(kt *kit.Kit, orderId, subOrderID string, chargeType
 			return false, fmt.Errorf("cvm order %s handling", orderId)
 		}
 
+		crpURL := cvmapi.CvmOrderLinkPrefix + resp.Result.Data[0].OrderId
 		if status != enumor.CrpOrderStatusFinish {
-			return true, fmt.Errorf("order %s failed, status: %d", resp.Result.Data[0].OrderId, status)
+			return true, fmt.Errorf("%s，详情可咨询2000(TEG技术支持)，CRP申请单链接: %s, 状态: %s", crpProductFailedMsg,
+				crpURL, status.StatusName())
 		}
 
 		// crp侧订单完成时，不一定代表cvm生产成功，这里需要做处理，如果没有成功创建的实例，则也认为创建失败
 		if resp.Result.Data[0].SucInstanceCount <= 0 {
-			return true, fmt.Errorf("CRP申领失败，详情可咨询2000(TEG技术支持)，CRP申请单链接: %s, status: %d, "+
-				"sucInstanceCount: %d", cvmapi.CvmOrderLinkPrefix+resp.Result.Data[0].OrderId, status,
-				resp.Result.Data[0].SucInstanceCount)
+			return true, fmt.Errorf("%s，详情可咨询2000(TEG技术支持)，CRP申请单链接: %s, 状态: %s, 生产成功的数量: %d",
+				crpProductFailedMsg, crpURL, status.StatusName(), resp.Result.Data[0].SucInstanceCount)
 		}
 
 		return true, nil
@@ -345,14 +350,15 @@ func (g *Generator) listCVM(orderId string) ([]*cvmapi.InstanceItem, error) {
 		return nil, fmt.Errorf("object with order id %s is not a cvm instance response: %+v", orderId, obj)
 	}
 
-	logs.Infof("get cvm instance resp: %+v", resp)
+	logs.Infof("get cvm instance, crpOrderID: %s, resp: %+v", orderId, resp)
 
 	if resp.Error.Code != 0 {
-		return nil, fmt.Errorf("list cvm instance failed, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
+		return nil, fmt.Errorf("list cvm instance failed, code: %d, msg: %s, crpTraceID: %s",
+			resp.Error.Code, resp.Error.Message, resp.TraceId)
 	}
 
 	if resp.Result == nil {
-		return nil, errors.New("list cvm instance failed, for result is null")
+		return nil, errors.New(crpProductZeroNumMsg)
 	}
 
 	return resp.Result.Data, nil
