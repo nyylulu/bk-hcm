@@ -27,11 +27,11 @@ type RecallTask interface {
 	NextSequence(ctx context.Context) (uint64, error)
 	// CreateRecallTask creates resource recall task in db
 	CreateRecallTask(ctx context.Context, inst *table.RecallTask) error
-	// GetRecycleOrder gets resource recall task by filter from db
+	// GetRecallTask gets resource recall task by filter from db
 	GetRecallTask(ctx context.Context, filter *mapstr.MapStr) (*table.RecallTask, error)
-	// CountRecycleOrder gets resource recall task count by filter from db
+	// CountRecallTask gets resource recall task count by filter from db
 	CountRecallTask(ctx context.Context, filter map[string]interface{}) (uint64, error)
-	// FindManyRecycleOrder gets resource recall task list by filter from db
+	// FindManyRecallTask gets resource recall task list by filter from db
 	FindManyRecallTask(ctx context.Context, page metadata.BasePage, filter map[string]interface{}) ([]*table.RecallTask,
 		error)
 	// UpdateRecallTask updates resource recall task by filter and doc in db

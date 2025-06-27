@@ -108,12 +108,12 @@ func (g *Generator) createAndCheckRecallOrder(kt *kit.Kit, order *types.ApplyOrd
 
 	// 1. launch create recall order request
 	req := &pooltypes.CreateRecallOrderReq{
-		DeviceType: recall.DeviceType,
-		Region:     recall.Region,
-		Zone:       recall.Zone,
-		ImageID:    recall.ImageID,
-		OsType:     recall.OsType,
-		Replicas:   uint(recall.Replicas),
+		DeviceType:    recall.DeviceType,
+		ImageID:       recall.ImageID,
+		OsType:        recall.OsType,
+		Replicas:      uint(recall.Replicas),
+		BkCloudRegion: recall.BkCloudRegion,
+		BkCloudZone:   recall.BkCloudZone,
 	}
 
 	recallOrderResp, err := g.poolLogics.Pool().CreateRecallOrder(kt, req)

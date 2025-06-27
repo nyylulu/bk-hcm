@@ -1296,7 +1296,7 @@ func (s *service) MatchPoolDevice(cts *rest.Contexts) (any, error) {
 		return nil, errf.NewFromErr(pkg.CCErrCommParamsIsInvalid, err)
 	}
 
-	if err := s.logics.Scheduler().MatchPoolDevice(cts.Kit, input); err != nil {
+	if err = s.logics.Scheduler().MatchPoolDevice(cts.Kit, input); err != nil {
 		logs.Errorf("failed to match devices, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}

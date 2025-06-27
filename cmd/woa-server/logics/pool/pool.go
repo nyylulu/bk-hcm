@@ -463,7 +463,7 @@ func (p *pool) initAndSaveRecallTask(kt *kit.Kit, param *types.RecallReq) (*tabl
 	}
 	gradeCfg, err := dao.Set().GradeCfg().GetGradeCfg(context.Background(), filter)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get pool grade cfg by device type %s", param.DeviceType)
+		return nil, fmt.Errorf("failed to get pool grade cfg by device type: %s, err: %v", param.DeviceType, err)
 	}
 
 	now := time.Now()
@@ -488,25 +488,25 @@ func (p *pool) initAndSaveRecallTask(kt *kit.Kit, param *types.RecallReq) (*tabl
 		},
 		Replicas: num,
 	}
-	if param.Region != "" {
-		spec.Selector = append(spec.Selector, &table.Selector{
-			Key:      table.RegionKey,
-			Operator: table.SelectOpEqual,
-			Value:    param.Region,
-		})
-	}
-	if param.Zone != "" {
-		spec.Selector = append(spec.Selector, &table.Selector{
-			Key:      table.ZoneKey,
-			Operator: table.SelectOpEqual,
-			Value:    param.Zone,
-		})
-	}
 	if len(param.AssetIDs) > 0 {
 		spec.Selector = append(spec.Selector, &table.Selector{
 			Key:      table.AssetIDKey,
 			Operator: table.SelectOpIn,
 			Value:    param.AssetIDs,
+		})
+	}
+	if param.BkCloudRegion != "" {
+		spec.Selector = append(spec.Selector, &table.Selector{
+			Key:      table.CloudRegionKey,
+			Operator: table.SelectOpEqual,
+			Value:    param.BkCloudRegion,
+		})
+	}
+	if param.BkCloudZone != "" {
+		spec.Selector = append(spec.Selector, &table.Selector{
+			Key:      table.CloudZoneKey,
+			Operator: table.SelectOpEqual,
+			Value:    param.BkCloudZone,
 		})
 	}
 	task := &table.RecallTask{
@@ -525,7 +525,7 @@ func (p *pool) initAndSaveRecallTask(kt *kit.Kit, param *types.RecallReq) (*tabl
 		UpdateAt: now,
 	}
 
-	if err := dao.Set().RecallTask().CreateRecallTask(kt.Ctx, task); err != nil {
+	if err = dao.Set().RecallTask().CreateRecallTask(kt.Ctx, task); err != nil {
 		logs.Errorf("failed to create recall task, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
@@ -1023,11 +1023,11 @@ func (p *pool) CreateRecallOrder(kt *kit.Kit, param *types.CreateRecallOrderReq)
 
 	// 3. init and save recall task
 	taskParam := &types.RecallReq{
-		DeviceType: param.DeviceType,
-		Region:     param.Region,
-		Zone:       param.Zone,
-		AssetIDs:   param.AssetIDs,
-		Replicas:   param.Replicas,
+		DeviceType:    param.DeviceType,
+		AssetIDs:      param.AssetIDs,
+		Replicas:      param.Replicas,
+		BkCloudRegion: param.BkCloudRegion,
+		BkCloudZone:   param.BkCloudZone,
 	}
 	task, err := p.initAndSaveRecallTask(kt, taskParam)
 	if err != nil {
@@ -1401,14 +1401,14 @@ func (p *pool) GetRecallMatchDevice(kt *kit.Kit, param *types.GetRecallMatchDevi
 
 	recallItems := make(map[string]*types.RecallMatchDevice)
 	for _, inst := range insts {
-		key := strings.Join([]string{inst.Labels[table.DeviceTypeKey], inst.Labels[table.RegionKey],
-			inst.Labels[table.ZoneKey]}, ".")
+		key := strings.Join([]string{inst.Labels[table.DeviceTypeKey], inst.Labels[table.CloudRegionKey],
+			inst.Labels[table.CloudZoneKey]}, ".")
 		if _, ok := recallItems[key]; !ok {
 			recallItems[key] = &types.RecallMatchDevice{
-				DeviceType: inst.Labels[table.DeviceTypeKey],
-				Region:     inst.Labels[table.RegionKey],
-				Zone:       inst.Labels[table.ZoneKey],
-				Amount:     0,
+				DeviceType:    inst.Labels[table.DeviceTypeKey],
+				Amount:        0,
+				BkCloudRegion: inst.Labels[table.CloudRegionKey],
+				BkCloudZone:   inst.Labels[table.CloudZoneKey],
 			}
 		}
 		recallItems[key].Amount++
@@ -1430,62 +1430,19 @@ func (p *pool) getRecallMatchDeviceFilter(param *types.GetRecallMatchDeviceReq) 
 	filter := map[string]interface{}{}
 
 	if param.Spec != nil {
-		if param.ResourceType != types.ResourceTypeCvm {
-			if len(param.Spec.Region) != 0 {
-				filter["labels.region"] = map[string]interface{}{
-					pkg.BKDBIN: param.Spec.Region,
-				}
-			}
-			if len(param.Spec.Zone) != 0 {
-				filter["labels.zone"] = map[string]interface{}{
-					pkg.BKDBIN: param.Spec.Zone,
-				}
-			}
-		} else {
-			if len(param.Spec.Zone) > 0 {
-				zoneFilter := mapstr.MapStr{}
-				zoneFilter["zone"] = mapstr.MapStr{
-					pkg.BKDBIN: param.Spec.Zone,
-				}
-				if len(param.Spec.Region) > 0 {
-					zoneFilter["region"] = mapstr.MapStr{
-						pkg.BKDBIN: param.Spec.Region,
-					}
-				}
-				zones, err := dao.Set().Zone().FindManyZone(context.Background(), &zoneFilter)
-				if err != nil {
-					return nil, err
-				}
-				cmdbZoneNames := make([]string, 0)
-				for _, zone := range zones {
-					cmdbZoneNames = append(cmdbZoneNames, zone.CmdbZoneName)
-				}
-				cmdbZoneNames = util.StrArrayUnique(cmdbZoneNames)
-				filter["labels.zone"] = map[string]interface{}{
-					pkg.BKDBIN: cmdbZoneNames,
-				}
-			} else if len(param.Spec.Region) != 0 {
-				zoneFilter := mapstr.MapStr{}
-				zoneFilter["region"] = mapstr.MapStr{
-					pkg.BKDBIN: param.Spec.Region,
-				}
-				zones, err := dao.Set().Zone().FindManyZone(context.Background(), &zoneFilter)
-				if err != nil {
-					return nil, err
-				}
-				cmdbRegionNames := make([]string, 0)
-				for _, zone := range zones {
-					cmdbRegionNames = append(cmdbRegionNames, zone.CmdbRegionName)
-				}
-				cmdbRegionNames = util.StrArrayUnique(cmdbRegionNames)
-				filter["labels.region"] = map[string]interface{}{
-					pkg.BKDBIN: cmdbRegionNames,
-				}
-			}
-		}
 		if len(param.Spec.DeviceType) > 0 {
 			filter["labels.device_type"] = map[string]interface{}{
 				pkg.BKDBIN: param.Spec.DeviceType,
+			}
+		}
+		if len(param.Spec.BkCloudRegions) != 0 {
+			filter["labels.bk_cloud_region"] = map[string]interface{}{
+				pkg.BKDBIN: param.Spec.BkCloudRegions,
+			}
+		}
+		if len(param.Spec.BkCloudZones) != 0 {
+			filter["labels.bk_cloud_zone"] = map[string]interface{}{
+				pkg.BKDBIN: param.Spec.BkCloudZones,
 			}
 		}
 	}

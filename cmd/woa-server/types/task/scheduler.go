@@ -341,12 +341,12 @@ type MatchPoolDeviceReq struct {
 
 // MatchPoolSpec resource apply pool device match specification
 type MatchPoolSpec struct {
-	Region     string `json:"region"`
-	Zone       string `json:"zone"`
-	DeviceType string `json:"device_type"`
-	ImageID    string `json:"image_id"`
-	OsType     string `json:"os_type"`
-	Replicas   int64  `json:"replicas"`
+	DeviceType    string `json:"device_type"`
+	ImageID       string `json:"image_id"`
+	OsType        string `json:"os_type"`
+	Replicas      int64  `json:"replicas"`
+	BkCloudRegion string `json:"bk_cloud_region"`
+	BkCloudZone   string `json:"bk_cloud_zone"`
 }
 
 // Validate whether MatchPoolDeviceReq is valid
@@ -354,40 +354,41 @@ type MatchPoolSpec struct {
 // err: detail reason why errKey is invalid
 func (param *MatchPoolDeviceReq) Validate() (errKey string, err error) {
 	if param.SuborderId == "" {
-		return "suborder_id", errors.New("cannot be empty")
+		return "suborder_id", errors.New("suborder_id cannot be empty")
 	}
 
 	if len(param.Spec) == 0 {
-		return "spec", errors.New("cannot be empty")
+		return "spec", errors.New("spec cannot be empty")
 	}
 
 	for index, spec := range param.Spec {
 		if spec == nil {
-			return fmt.Sprintf("spec[%d]", index), errors.New("cannot be empty")
+			return fmt.Sprintf("spec[%d]", index), errors.New("spec cannot be empty")
 		}
 
-		if spec.Region == "" {
-			return fmt.Sprintf("spec[%d].region", index), errors.New("cannot be empty")
+		if spec.BkCloudRegion == "" {
+			return fmt.Sprintf("spec[%d].bk_cloud_region", index), errors.New("spec.bk_cloud_region cannot be empty")
 		}
 
-		if spec.Zone == "" {
-			return fmt.Sprintf("spec[%d].zone", index), errors.New("cannot be empty")
+		if spec.BkCloudZone == "" {
+			return fmt.Sprintf("spec[%d].bk_cloud_zone", index), errors.New("spec.bk_cloud_zone cannot be empty")
 		}
 
 		if spec.DeviceType == "" {
-			return fmt.Sprintf("spec[%d].device_type", index), errors.New("cannot be empty")
+			return fmt.Sprintf("spec[%d].device_type", index), errors.New("spec.device_type cannot be empty")
 		}
 
 		if spec.ImageID == "" && spec.OsType == "" {
-			return fmt.Sprintf("spec[%d].image_id/os_type", index), errors.New("cannot be empty")
+			return fmt.Sprintf("spec[%d].image_id/os_type", index), errors.New("spec.image_id/os_type cannot be empty")
 		}
 
 		if spec.Replicas <= 0 {
-			return fmt.Sprintf("spec[%d].replicas", index), errors.New("should be positive")
+			return fmt.Sprintf("spec[%d].replicas", index), errors.New("spec.replicas should be positive")
 		}
 
 		if spec.Replicas > pkg.BKMaxInstanceLimit {
-			return fmt.Sprintf("spec[%d].replicas", index), fmt.Errorf("exceed limit %d", pkg.BKMaxInstanceLimit)
+			return fmt.Sprintf("spec[%d].replicas", index), fmt.Errorf("spec.replicas exceed limit %d",
+				pkg.BKMaxInstanceLimit)
 		}
 	}
 

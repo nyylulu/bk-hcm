@@ -16,14 +16,14 @@ POST /api/v1/woa/bizs/{bk_biz_id}/task/commit/apply/pool/match
 | spec	         | object array | 是   | 匹配需求声明        |
 
 #### spec
-| 参数名称      | 参数类型       | 必选 | 描述               |
-|--------------|--------------|------|-------------------|
-| device_type  | string	array | 是   | 机型               |
-| region       | string	array | 是   | 地域               |
-| zone         | string	array | 是   | 可用区             |
-| image_id     | string array | 否   | 镜像ID。QCLOUDCVM必填，用于指定重装操作系统 |
-| os_type	   | string	array | 否   | 操作系统。IDCPM必填，用于指定重装操作系统    |
-| replicas	   | int          | 是   | 待匹配资源数量，最大为500 |
+| 参数名称         | 参数类型       | 必选 | 描述               |
+|-----------------|---------------|------|-------------------|
+| device_type     | string	array | 是   | 机型               |
+| bk_cloud_region | string	array | 是   | 地域ID               |
+| bk_cloud_zone   | string	array | 是   | 可用区ID             |
+| image_id        | string array  | 否   | 镜像ID。QCLOUDCVM必填，用于指定重装操作系统 |
+| os_type	      | string	array | 否   | 操作系统。IDCPM必填，用于指定重装操作系统    |
+| replicas	      | int           | 是   | 待匹配资源数量，最大为500 |
 
 ### 调用示例
 

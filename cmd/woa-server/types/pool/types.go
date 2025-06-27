@@ -53,15 +53,14 @@ type GetLaunchMatchDeviceReq struct {
 
 // MatchSpec resource launch match specification
 type MatchSpec struct {
-	Region      []string `json:"region"`
-	Zone        []string `json:"zone"`
-	DeviceType  []string `json:"device_type"`
-	Image       []string `json:"image"`
-	OsType      []string `json:"os_type"`
-	RaidType    []string `json:"raid_type"`
-	DiskType    []string `json:"disk_type"`
-	NetworkType []string `json:"network_type"`
-	Isp         []string `json:"isp"`
+	Region         []string `json:"region"`
+	Zone           []string `json:"zone"`
+	DeviceType     []string `json:"device_type"`
+	OsType         []string `json:"os_type"`
+	RaidType       []string `json:"raid_type"`
+	Isp            []string `json:"isp"`
+	BkCloudRegions []string `json:"bk_cloud_regions"`
+	BkCloudZones   []string `json:"bk_cloud_zones"`
 }
 
 // Validate whether GetLaunchMatchDeviceReq is valid
@@ -120,12 +119,12 @@ func (param *GetRecallMatchDeviceReq) Validate() error {
 			return fmt.Errorf("spec.device_type exceed limit %d", arrayLimit)
 		}
 
-		if len(param.Spec.Region) > arrayLimit {
-			return fmt.Errorf("spec.region exceed limit %d", arrayLimit)
+		if len(param.Spec.BkCloudRegions) > arrayLimit {
+			return fmt.Errorf("spec.bk_cloud_regions exceed limit %d", arrayLimit)
 		}
 
-		if len(param.Spec.Zone) > arrayLimit {
-			return fmt.Errorf("spec.zone exceed limit %d", arrayLimit)
+		if len(param.Spec.BkCloudZones) > arrayLimit {
+			return fmt.Errorf("spec.bk_cloud_zones exceed limit %d", arrayLimit)
 		}
 	}
 
@@ -140,10 +139,10 @@ type GetRecallMatchDeviceRst struct {
 
 // RecallMatchDevice resource recall match device info
 type RecallMatchDevice struct {
-	DeviceType string `json:"device_type"`
-	Region     string `json:"region"`
-	Zone       string `json:"zone"`
-	Amount     int    `json:"amount"`
+	DeviceType    string `json:"device_type"`
+	Amount        int    `json:"amount"`
+	BkCloudRegion string `json:"bk_cloud_region"`
+	BkCloudZone   string `json:"bk_cloud_zone"`
 }
 
 // LaunchReq create resource launch task request
@@ -168,11 +167,11 @@ func (param *LaunchReq) Validate() error {
 
 // RecallReq create resource recall task request
 type RecallReq struct {
-	DeviceType string  `json:"device_type"`
-	Region     string  `json:"region"`
-	Zone       string  `json:"zone"`
-	AssetIDs   []int64 `json:"asset_ids"`
-	Replicas   uint    `json:"replicas"`
+	DeviceType    string  `json:"device_type"`
+	AssetIDs      []int64 `json:"asset_ids"`
+	Replicas      uint    `json:"replicas"`
+	BkCloudRegion string  `json:"bk_cloud_region"`
+	BkCloudZone   string  `json:"bk_cloud_zone"`
 }
 
 // Validate whether RecallReq is valid
@@ -649,13 +648,13 @@ func (param *ReturnHostReq) Validate() error {
 
 // CreateRecallOrderReq create resource recall order request
 type CreateRecallOrderReq struct {
-	DeviceType string  `json:"device_type"`
-	Region     string  `json:"region"`
-	Zone       string  `json:"zone"`
-	AssetIDs   []int64 `json:"asset_ids"`
-	ImageID    string  `json:"image_id"`
-	OsType     string  `json:"os_type"`
-	Replicas   uint    `json:"replicas"`
+	DeviceType    string  `json:"device_type"`
+	AssetIDs      []int64 `json:"asset_ids"`
+	ImageID       string  `json:"image_id"`
+	OsType        string  `json:"os_type"`
+	Replicas      uint    `json:"replicas"`
+	BkCloudRegion string  `json:"bk_cloud_region"`
+	BkCloudZone   string  `json:"bk_cloud_zone"`
 }
 
 // Validate whether CreateRecallOrderReq is valid

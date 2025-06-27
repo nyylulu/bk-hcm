@@ -16,11 +16,11 @@ POST /api/v1/woa/bizs/{bk_biz_id}/pool/findmany/recall/match/device
 | spec          | object     | 否   | 资源需求声明 |
 
 #### spec
-| 参数名称      | 参数类型       | 必选 | 描述        |
-|--------------|--------------|------|------------|
-| region       | string array | 否   | 地域        |
-| zone         | string array | 否   | 可用区       |
-| device_group | string array | 否   | 机型类别     |
+| 参数名称          | 参数类型       | 必选 | 描述        |
+|------------------|--------------|------|------------|
+| device_group     | string array | 否   | 机型类别     |
+| bk_cloud_regions | string array | 否   | 地域ID数组   |
+| bk_cloud_zones   | string array | 否   | 可用区ID数组 |
 
 ### 调用示例
 
@@ -33,11 +33,11 @@ POST /api/v1/woa/bizs/{bk_biz_id}/pool/findmany/recall/match/device
     "device_type":[
       "IT5.8XLARGE128"
     ],
-    "region":[
-      "上海"
+    "bk_cloud_regions":[
+      "ap-nanjing"
     ],
-    "zone":[
-      "上海-宝信"
+    "bk_cloud_zones":[
+      "ap-nanjing-1"
     ]
   }
 }
@@ -58,15 +58,9 @@ POST /api/v1/woa/bizs/{bk_biz_id}/pool/findmany/recall/match/device
       {
         "resource_type":"QCLOUDCVM",
         "spec":{
-          "device_type":[
-            "IT5.8XLARGE128"
-          ],
-          "region":[
-            "上海"
-          ],
-          "zone":[
-            "上海-宝信"
-          ]
+          "device_type": "IT5.8XLARGE128",
+          "bk_cloud_region": "ap-nanjing",
+          "bk_cloud_zone": "ap-nanjing-1"
         }
       }
     ]
@@ -92,9 +86,9 @@ POST /api/v1/woa/bizs/{bk_biz_id}/pool/findmany/recall/match/device
 
 #### data.info
 
-| 参数名称       | 参数类型  | 描述    |
-|---------------|---------|---------|
-| device_type	| string  | 机型    |
-| region	    | string  | 地域    |
-| zone	        | string  | 园区    |
-| amount	    | int	  | 数量    |
+| 参数名称         | 参数类型  | 描述                     |
+|-----------------|---------|--------------------------|
+| device_type	  | string  | 机型                      |
+| bk_cloud_region | string  | 地域ID，示例：ap-nanjing   |
+| bk_cloud_zone	  | string  | 园区ID，示例：ap-nanjing-1 |
+| amount	      | int	    | 数量                      |
