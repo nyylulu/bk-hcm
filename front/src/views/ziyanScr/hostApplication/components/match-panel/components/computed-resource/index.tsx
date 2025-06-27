@@ -1,17 +1,18 @@
-import { defineComponent, ref, computed } from 'vue';
+import { defineComponent, ref, computed, reactive, watchEffect } from 'vue';
 import './index.scss';
 import http from '@/http';
-import useFormModel from '@/hooks/useFormModel';
-import { Button, Form, Message } from 'bkui-vue';
-import CommonLocalTable from '@/components/CommonLocalTable';
-import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
-import AreaSelector from '@/views/ziyanScr/hostApplication/components/AreaSelector';
-import ZoneSelector from '@/views/ziyanScr/hostApplication/components/ZoneSelector';
-import DevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/index.vue';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
+import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
 
-const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
+import { Button, Form, Message } from 'bkui-vue';
+import CommonLocalTable from '@/components/CommonLocalTable';
+import QcloudRegionSelector from '@/views/ziyanScr/components/qcloud-resource/region-selector.vue';
+import QcloudZoneSelector from '@/views/ziyanScr/components/qcloud-resource/zone-selector.vue';
+import DevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/index.vue';
+import QcloudZoneValue from '@/views/ziyanScr/components/qcloud-resource/zone-value.vue';
+import QcloudRegionValue from '@/views/ziyanScr/components/qcloud-resource/region-value.vue';
+
 const { FormItem } = Form;
 
 export default defineComponent({
@@ -24,32 +25,43 @@ export default defineComponent({
   setup(props) {
     const { getBusinessApiPath } = useWhereAmI();
     const { selections, handleSelectionChange } = useSelection();
-    const Modelform = ref({
-      resource_type: props.formModelData.resource_type,
-      spec: {
-        region: [props.formModelData.spec.region],
-        zone: [props.formModelData.spec.zone],
-        device_type: [props.formModelData.spec.device_type],
-      },
+
+    const options = ref([
+      { value: 'IDCPM', label: 'IDC_物理机' },
+      { value: 'QCLOUDCVM', label: '腾讯云_CVM' },
+    ]);
+
+    const formModel = reactive({
+      resource_type: '',
+      spec: { bk_cloud_regions: [], bk_cloud_zones: [], device_type: [] },
     });
+    watchEffect(() => {
+      const { resource_type: resourceType, spec } = props.formModelData ?? {};
+      const { region, zone, device_type: deviceType } = spec;
+      Object.assign(formModel, {
+        resource_type: resourceType,
+        spec: {
+          bk_cloud_regions: [region],
+          bk_cloud_zones: [zone],
+          device_type: [deviceType],
+        },
+      });
+    });
+
     const tableColumns = ref([
       { type: 'selection', width: 30, minWidth: 30, isDefaultShow: true },
-      {
-        label: '机型',
-        field: 'device_type',
-      },
+      { label: '机型', field: 'device_type' },
       {
         label: '地域',
-        field: 'region',
+        field: 'bk_cloud_region',
+        render: ({ data }: any) => <QcloudRegionValue value={data.bk_cloud_region} />,
       },
       {
         label: '园区',
-        field: 'zone',
+        field: 'bk_cloud_zone',
+        render: ({ data }: any) => <QcloudZoneValue value={data.bk_cloud_zone} />,
       },
-      {
-        label: '数量',
-        field: 'amount',
-      },
+      { label: '数量', field: 'amount' },
       {
         label: '匹配数量',
         width: 250,
@@ -58,120 +70,90 @@ export default defineComponent({
         },
       },
     ]);
-    const domainList = ref([]);
-    const { formModel, forceClear } = useFormModel({ ...Modelform.value });
-    const options = ref([
-      {
-        value: 'IDCPM',
-        label: 'IDC_物理机',
-      },
-      {
-        value: 'QCLOUDCVM',
-        label: '腾讯云_CVM',
-      },
-    ]);
-    const getDomainList = () => {
-      return http.post(
-        `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/${getBusinessApiPath()}pool/findmany/recall/match/device`,
-        removeEmptyFields({
-          resource_type: formModel.resource_type,
-          spec: {
-            device_type: formModel.spec.device_type,
-            region: formModel.spec.region,
-            zone: formModel.spec.zone,
-          },
-        }),
-      );
+    const deviceList = ref([]);
+    const isLoading = ref(false);
+    const getDeviceList = async () => {
+      isLoading.value = true;
+      try {
+        const res = await http.post(
+          `/api/v1/woa/${getBusinessApiPath()}pool/findmany/recall/match/device`,
+          removeEmptyFields({ ...formModel }),
+        );
+        deviceList.value = res.data?.info || [];
+      } finally {
+        isLoading.value = false;
+      }
     };
+    const handleReset = () => {
+      Object.assign(formModel, {
+        resource_type: props.formModelData.resource_type,
+        spec: { bk_cloud_regions: [], bk_cloud_zones: [], device_type: [] },
+      });
+
+      getDeviceList();
+    };
+
     const onRegionChange = () => {
-      formModel.spec.zone = [];
+      formModel.spec.bk_cloud_zones = [];
     };
     const onResourceTypeChange = () => {
-      formModel.spec.region = [];
-      formModel.spec.zone = [];
-      formModel.spec.device_type = [];
+      Object.assign(formModel, { spec: { bk_cloud_regions: [], bk_cloud_zones: [], device_type: [] } });
     };
     const onZoneChange = () => {
       formModel.spec.device_type = [];
     };
 
     const cvmDevicetypeParams = computed(() => {
-      const { region, zone } = formModel.spec;
+      const { bk_cloud_regions: region, bk_cloud_zones: zone } = formModel.spec || {};
       return { region, zone };
     });
 
-    const isLoading = ref(false);
-    const getListData = async () => {
-      isLoading.value = true;
-      try {
-        const { data } = await getDomainList();
-        domainList.value = data.info || [];
-      } finally {
-        isLoading.value = false;
-      }
-    };
-    const loadResource = async () => {
-      getListData();
-    };
     const submitSelectedDevices = async () => {
       const {
         suborder_id,
         spec: { image_id, os_type },
       } = props.formModelData;
       const spec = selections.value.map((device) => {
-        const { device_type, region, zone, replicas } = device;
+        const { device_type, bk_cloud_region, bk_cloud_zone, replicas } = device;
         return {
           device_type,
-          region,
-          zone,
+          bk_cloud_region,
+          bk_cloud_zone,
           replicas,
           image_id,
           os_type,
         };
       });
       await http.post(
-        `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/${getBusinessApiPath()}task/commit/apply/pool/match`,
+        `/api/v1/woa/${getBusinessApiPath()}task/commit/apply/pool/match`,
         { suborder_id, spec },
         { removeEmptyFields: true },
       );
-      Message({
-        message: '匹配成功',
-        theme: 'success',
-      });
+      Message({ message: '匹配成功', theme: 'success' });
       props.handleClose();
     };
     return () => (
       <div class={'apply-list-container'}>
         <div class={'filter-container'}>
           <Form model={formModel} class={'scr-form-wrapper'}>
-            <FormItem label='资源类型'>
+            <FormItem label='资源类型' property='resource_type'>
               <bk-select v-model={formModel.resource_type} onChange={onResourceTypeChange}>
                 {options.value.map((opt) => (
                   <bk-option key={opt.value} value={opt.value} label={opt.label} />
                 ))}
               </bk-select>
             </FormItem>
-            <FormItem label='地域'>
-              <AreaSelector
-                ref='areaSelector'
-                multiple
-                v-model={formModel.spec.region}
-                params={{ resourceType: formModel.resource_type }}
-                onChange={onRegionChange}></AreaSelector>
+            <FormItem label='地域' property='bk_cloud_regions'>
+              <QcloudRegionSelector v-model={formModel.spec.bk_cloud_regions} onChange={onRegionChange} />
             </FormItem>
-            <FormItem label='园区'>
-              <ZoneSelector
-                ref='zoneSelector'
-                multiple
-                v-model={formModel.spec.zone}
-                params={{
-                  resourceType: formModel.resource_type,
-                  region: formModel.spec.region,
-                }}
+            <FormItem label='园区' property='bk_cloud_zones'>
+              <QcloudZoneSelector
+                v-model={formModel.spec.bk_cloud_zones}
+                region={formModel.spec.bk_cloud_regions}
                 onChange={onZoneChange}
               />
             </FormItem>
-            <FormItem label='机型'>
+            <FormItem label='机型' property='device_type'>
               <DevicetypeSelector
                 class='tbkselect'
                 v-model={formModel.spec.device_type}
@@ -182,14 +164,10 @@ export default defineComponent({
             </FormItem>
           </Form>
         </div>
-        <Button theme={'primary'} onClick={loadResource} class={'ml24 mr8'} loading={isLoading.value}>
+        <Button theme={'primary'} class={'ml24 mr8'} loading={isLoading.value} onClick={getDeviceList}>
           查询
         </Button>
-        <Button
-          onClick={() => {
-            forceClear();
-            getListData();
-          }}>
+        <Button disabled={isLoading.value} onClick={handleReset}>
           重置
         </Button>
         <Button theme='success' disabled={selections.value.length === 0} onClick={submitSelectedDevices} class={'ml24'}>
@@ -212,7 +190,7 @@ export default defineComponent({
                 },
               },
             }}
-            tableData={domainList.value}
+            tableData={deviceList.value}
           />
         </div>
       </div>

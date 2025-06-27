@@ -292,36 +292,6 @@ const getAvailDevices = async ({ filter, page }) => {
   return data;
 };
 /**
- * 下架匹配设备查询接口
- * @returns {Promise}
- */
-const getOfflineMatch = async (params) => {
-  const { data } = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/pool/findmany/recall/match/device`, params, {
-    removeEmptyFields: true,
-  });
-  return data;
-};
-/**
- * 匹配资源池设备执行接口
- * @returns {Promise}
- */
-const matchPools = async (params) => {
-  const { data } = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/commit/apply/pool/match`, params, {
-    removeEmptyFields: true,
-  });
-  return data;
-};
-/*
- * 修改资源申请单据接口
- * @returns {Promise}
- */
-const modifyOrder = async (params) => {
-  return await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/modify/apply`, params, {
-    removeEmptyFields: true,
-    transformFields: true,
-  });
-};
-/**
  * 获取资源最大申领量
  * @param {Object} params 参数
  * @param {String} params.bk_biz_id CC 业务 ID
@@ -384,9 +354,6 @@ export default {
   createCvmDevice,
   getOrders,
   getAvailDevices,
-  getOfflineMatch,
-  matchPools,
-  modifyOrder,
   getCvmApplyAuthBizList,
   getCvmRecycleAuthBizList,
 };

@@ -9,7 +9,13 @@ import { ref } from 'vue';
 import type { Ref } from 'vue';
 import { RouteLocationRaw, useRoute, useRouter } from 'vue-router';
 import routerAction from '@/router/utils/action';
-import { CLOUD_HOST_STATUS, VendorEnum, VendorMap, RESOURCE_PLAN_STATUSES_MAP, GLOBAL_BIZS_KEY } from '@/common/constant';
+import {
+  CLOUD_HOST_STATUS,
+  VendorEnum,
+  VendorMap,
+  RESOURCE_PLAN_STATUSES_MAP,
+  GLOBAL_BIZS_KEY,
+} from '@/common/constant';
 import { useRegionsStore } from '@/store/useRegionsStore';
 import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
@@ -44,8 +50,8 @@ import CopyToClipboard from '@/components/copy-to-clipboard/index.vue';
 import { ResourcesDemandsStatus, type IResourcesTicketItem } from '@/typings/resourcePlan';
 import { ChargeType, ChargeTypeMap } from '@/typings/plan';
 import { RESOURCE_DEMANDS_STATUS_NAME, RESOURCE_DEMANDS_STATUS_CLASSES } from '@/components/resource-plan/constants';
-import QcloudZoneValue from '@/views/ziyanScr/resource-manage/children/qcloud-zone-value.vue';
-import QcloudRegionValue from '@/views/ziyanScr/resource-manage/children/qcloud-region-value.vue';
+import QcloudZoneValue from '@/views/ziyanScr/components/qcloud-resource/zone-value.vue';
+import QcloudRegionValue from '@/views/ziyanScr/components/qcloud-resource/region-value.vue';
 
 interface LinkFieldOptions {
   type: string; // 资源类型

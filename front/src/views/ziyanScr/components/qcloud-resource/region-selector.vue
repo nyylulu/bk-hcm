@@ -4,7 +4,7 @@
     :list="list"
     :id-key="idKey"
     :display-key="displayKey"
-    :loading="configQcloudResourceStore.qcloudZoneListLoading"
+    :loading="configQcloudResourceStore.qcloudRegionListLoading"
     :multiple="multiple"
     :multiple-mode="multiple ? 'tag' : 'default'"
     :collapse-tags="collapseTags"
@@ -13,25 +13,26 @@
 
 <script setup lang="ts">
 import { computed, ref, watchEffect } from 'vue';
-import { useConfigQcloudResourceStore, IQcloudZoneItem } from '@/store/config/qcloud-resource';
+import { useConfigQcloudResourceStore, IQcloudRegionItem } from '@/store/config/qcloud-resource';
 
 interface IProps {
-  region: string[];
   multiple?: boolean;
   collapseTags?: boolean;
   idKey?: string;
   displayKey?: string;
 }
 
+defineOptions({ name: 'qcloud-region-selector' });
+
 const model = defineModel<string[] | string>();
-const props = withDefaults(defineProps<IProps>(), {
+withDefaults(defineProps<IProps>(), {
   multiple: true,
   collapseTags: true,
-  idKey: 'zone',
-  displayKey: 'zone_cn',
+  idKey: 'region',
+  displayKey: 'region_cn',
 });
 const emit = defineEmits<{
-  change: [qcloudZones: IQcloudZoneItem[]];
+  change: [qcloudZones: IQcloudRegionItem[]];
 }>();
 
 const configQcloudResourceStore = useConfigQcloudResourceStore();
@@ -41,13 +42,13 @@ const selected = computed({
     return model.value;
   },
   set(val) {
-    const qcloudZones = list.value.filter((item) => val.includes(item.zone));
+    const qcloudZones = list.value.filter((item) => val.includes(item.region));
     emit('change', qcloudZones);
     model.value = val;
   },
 });
-const list = ref<IQcloudZoneItem[]>();
+const list = ref<IQcloudRegionItem[]>();
 watchEffect(async () => {
-  list.value = await configQcloudResourceStore.getQcloudZoneList(props.region);
+  list.value = await configQcloudResourceStore.getQcloudRegionList();
 });
 </script>

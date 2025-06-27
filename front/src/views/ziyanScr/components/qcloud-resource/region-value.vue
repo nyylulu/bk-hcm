@@ -2,6 +2,8 @@
 import { computed, ref, watchEffect } from 'vue';
 import { useConfigQcloudResourceStore } from '@/store/config/qcloud-resource';
 
+defineOptions({ name: 'qcloud-region-value' });
+
 const props = defineProps<{
   value: string | string[];
 }>();
@@ -13,16 +15,15 @@ const localValue = computed(() => {
 });
 
 const displayValue = computed(() => {
-  const names = localValue.value.map((zone) => {
-    return list.value.find((item) => item.zone === zone)?.zone_cn;
+  const names = localValue.value.map((region) => {
+    return list.value.find((item) => item.region === region)?.region_cn;
   });
   return names?.join?.(', ');
 });
 
 const configQcloudRegionStore = useConfigQcloudResourceStore();
 watchEffect(async () => {
-  // display场景，拉取全量，减少缓存及请求数量
-  list.value = await configQcloudRegionStore.getQcloudZoneList();
+  list.value = await configQcloudRegionStore.getQcloudRegionList();
 });
 </script>
 
