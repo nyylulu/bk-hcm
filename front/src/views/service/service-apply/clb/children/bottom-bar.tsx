@@ -166,7 +166,7 @@ export default defineComponent({
           tgwGroupName = undefined;
           vipIsp = undefined;
         } else {
-          // VipIsp不传就是BGP/限速CAP（中小运营商）
+          // VipIsp不传就是BGP/限速CAP
           if (BGP_VIP_ISP_TYPES.includes(vipIsp)) {
             tgwGroupName = vipIsp;
             vipIsp = undefined;
