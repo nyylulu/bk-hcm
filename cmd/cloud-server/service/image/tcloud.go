@@ -54,7 +54,7 @@ func (svc *imageSvc) QueryImage(cts *rest.Contexts) (interface{}, error) {
 
 // TCloudQueryImage ...
 func (svc *imageSvc) TCloudQueryImage(cts *rest.Contexts) (interface{}, error) {
-	req, err := svc.decodeAndValidateTCloudImageListOption(cts)
+	req, err := svc.decodeAndValidateTCloudImageListOpt(cts)
 	if err != nil {
 		logs.Errorf("decode and validate tcloud image list option failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
@@ -88,7 +88,7 @@ func (svc *imageSvc) TCLoudBizQueryImage(cts *rest.Contexts) (interface{}, error
 		return nil, err
 	}
 
-	req, err := svc.decodeAndValidateTCloudImageListOption(cts)
+	req, err := svc.decodeAndValidateTCloudImageListOpt(cts)
 	if err != nil {
 		logs.Errorf("decode and validate tcloud image list option failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
@@ -115,7 +115,7 @@ func (svc *imageSvc) TCLoudBizQueryImage(cts *rest.Contexts) (interface{}, error
 	return svc.tcloudQueryImage(cts, req, bizID, handler.BizOperateAuth)
 }
 
-func (svc *imageSvc) decodeAndValidateTCloudImageListOption(cts *rest.Contexts) (*image.TCloudImageListOption, error) {
+func (svc *imageSvc) decodeAndValidateTCloudImageListOpt(cts *rest.Contexts) (*image.TCloudImageListOption, error) {
 	req := new(image.TCloudImageListOption)
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)

@@ -183,7 +183,6 @@ func (a *Aws) buildQuerySavingsPlanSQL(billInfo *billcore.RootAccountBillConfig[
 	return sql
 }
 
-
 const (
 	// QueryBillSQL 查询云账单的SQL
 	QueryBillSQL = "SELECT %s FROM %s.%s %s "
@@ -212,9 +211,11 @@ const (
 	DatabaseNamePrefix    = "athenacurcfn"
 	CapabilitiesIam       = "CAPABILITY_IAM"
 	BucketRegion          = endpoints.UsEast1RegionID
-	AthenaSavePath        = "s3://{BucketName}/{CurPrefix}/{CurName}/QueryLog"
-	CrawlerCfnFileKey     = "/%s/%s/crawler-cfn.yml"
-	YmlURL                = "https://{BucketName}.s3.amazonaws.com/{CurPrefix}/{CurName}/crawler-cfn.yml"
+	// AthenaSavePath s3://{BucketName}/{CurPrefix}/{CurName}/QueryLog
+	AthenaSavePath    = "s3://%s/%s/%s/QueryLog"
+	CrawlerCfnFileKey = "/%s/%s/crawler-cfn.yml"
+	// YmlURL https://{BucketName}.s3.amazonaws.com/{CurPrefix}/{CurName}/crawler-cfn.yml
+	YmlURL = "https://%s.s3.amazonaws.com/%s/%s/crawler-cfn.yml"
 )
 
 const (
@@ -380,46 +381,7 @@ func (a *Aws) GetAwsAthenaQuery(kt *kit.Kit, query string,
 	}
 
 	if *qrop.QueryExecution.Status.State == "SUCCEEDED" {
-		var ip athena.GetQueryResultsInput
-		ip.SetQueryExecutionId(*result.QueryExecutionId)
-
-		op, err := client.GetQueryResults(&ip)
-		if err != nil {
-			logs.Errorf("aws cloud athena get query result err, queryExecutionId: %s, err: %v, rid: %s",
-				*result.QueryExecutionId, err, kt.Rid)
-			return nil, err
-		}
-
-		list := make([]map[string]string, 0)
-		resultMap := make([]string, 0)
-		for index, row := range op.ResultSet.Rows {
-			// parse table field
-			if index == 0 {
-				for _, column := range row.Data {
-					tmpField := converter.PtrToVal(column.VarCharValue)
-					resultMap = append(resultMap, tmpField)
-				}
-			} else {
-				tmpMap := make(map[string]string, 0)
-				for colKey, column := range row.Data {
-					tmpValue := converter.PtrToVal(column.VarCharValue)
-					if tmpValue == "" || strings.IndexAny(tmpValue, "Ee") == -1 {
-						tmpMap[resultMap[colKey]] = tmpValue
-						continue
-					}
-
-					decimalNum, err := math.NewDecimalFromString(tmpValue)
-					if err != nil {
-						tmpMap[resultMap[colKey]] = tmpValue
-						continue
-					}
-					tmpMap[resultMap[colKey]] = decimalNum.ToString()
-				}
-				list = append(list, tmpMap)
-			}
-		}
-
-		return list, nil
+		return getAwsAthenaQuerySuccessSituation(kt, client, result)
 	}
 
 	var errMsg = *qrop.QueryExecution.Status.State
@@ -432,6 +394,50 @@ func (a *Aws) GetAwsAthenaQuery(kt *kit.Kit, query string,
 	}
 
 	return nil, errf.Newf(errf.DecodeRequestFailed, "Aws Athena Query Failed(%s)", errMsg)
+}
+
+func getAwsAthenaQuerySuccessSituation(kt *kit.Kit, client *athena.Athena, result *athena.StartQueryExecutionOutput) (
+	[]map[string]string, error) {
+
+	var ip athena.GetQueryResultsInput
+	ip.SetQueryExecutionId(*result.QueryExecutionId)
+
+	op, err := client.GetQueryResults(&ip)
+	if err != nil {
+		logs.Errorf("aws cloud athena get query result err, queryExecutionId: %s, err: %v, rid: %s",
+			*result.QueryExecutionId, err, kt.Rid)
+		return nil, err
+	}
+
+	list := make([]map[string]string, 0)
+	resultMap := make([]string, 0)
+	for index, row := range op.ResultSet.Rows {
+		// parse table field
+		if index == 0 {
+			for _, column := range row.Data {
+				tmpField := converter.PtrToVal(column.VarCharValue)
+				resultMap = append(resultMap, tmpField)
+			}
+		} else {
+			tmpMap := make(map[string]string)
+			for colKey, column := range row.Data {
+				tmpValue := converter.PtrToVal(column.VarCharValue)
+				if tmpValue == "" || strings.IndexAny(tmpValue, "Ee") == -1 {
+					tmpMap[resultMap[colKey]] = tmpValue
+					continue
+				}
+
+				decimalNum, err := math.NewDecimalFromString(tmpValue)
+				if err != nil {
+					tmpMap[resultMap[colKey]] = tmpValue
+					continue
+				}
+				tmpMap[resultMap[colKey]] = decimalNum.ToString()
+			}
+			list = append(list, tmpMap)
+		}
+	}
+	return list, nil
 }
 
 func parseCondition(opt *typesBill.AwsBillListOption) (string, error) {
@@ -802,46 +808,7 @@ func (a *Aws) GetRootAccountAwsAthenaQuery(kt *kit.Kit, query string, billInfo *
 	}
 
 	if *qrop.QueryExecution.Status.State == "SUCCEEDED" {
-		var ip athena.GetQueryResultsInput
-		ip.SetQueryExecutionId(*result.QueryExecutionId)
-
-		op, err := client.GetQueryResults(&ip)
-		if err != nil {
-			logs.Errorf("aws cloud athena get query result err, queryExecutionId: %s, err: %v, rid: %s",
-				*result.QueryExecutionId, err, kt.Rid)
-			return nil, err
-		}
-
-		list := make([]map[string]string, 0)
-		resultMap := make([]string, 0)
-		for index, row := range op.ResultSet.Rows {
-			// parse table field
-			if index == 0 {
-				for _, column := range row.Data {
-					tmpField := converter.PtrToVal(column.VarCharValue)
-					resultMap = append(resultMap, tmpField)
-				}
-			} else {
-				tmpMap := make(map[string]string, 0)
-				for colKey, column := range row.Data {
-					tmpValue := converter.PtrToVal(column.VarCharValue)
-					if tmpValue == "" || strings.IndexAny(tmpValue, "Ee") == -1 {
-						tmpMap[resultMap[colKey]] = tmpValue
-						continue
-					}
-
-					decimalNum, err := math.NewDecimalFromString(tmpValue)
-					if err != nil {
-						tmpMap[resultMap[colKey]] = tmpValue
-						continue
-					}
-					tmpMap[resultMap[colKey]] = decimalNum.ToString()
-				}
-				list = append(list, tmpMap)
-			}
-		}
-
-		return list, nil
+		return getRootAccountAwsAthenaQuerySuccessSituation(kt, result, client)
 	}
 
 	var errMsg = *qrop.QueryExecution.Status.State
@@ -855,6 +822,51 @@ func (a *Aws) GetRootAccountAwsAthenaQuery(kt *kit.Kit, query string, billInfo *
 	}
 
 	return nil, errf.Newf(errf.DecodeRequestFailed, "Aws Athena Query Failed(%s)", errMsg)
+}
+
+func getRootAccountAwsAthenaQuerySuccessSituation(kt *kit.Kit, result *athena.StartQueryExecutionOutput,
+	client *athena.Athena) ([]map[string]string, error) {
+
+	var ip athena.GetQueryResultsInput
+	ip.SetQueryExecutionId(*result.QueryExecutionId)
+
+	op, err := client.GetQueryResults(&ip)
+	if err != nil {
+		logs.Errorf("aws cloud athena get query result err, queryExecutionId: %s, err: %v, rid: %s",
+			*result.QueryExecutionId, err, kt.Rid)
+		return nil, err
+	}
+
+	list := make([]map[string]string, 0)
+	resultMap := make([]string, 0)
+	for index, row := range op.ResultSet.Rows {
+		// parse table field
+		if index == 0 {
+			for _, column := range row.Data {
+				tmpField := converter.PtrToVal(column.VarCharValue)
+				resultMap = append(resultMap, tmpField)
+			}
+		} else {
+			tmpMap := make(map[string]string, 0)
+			for colKey, column := range row.Data {
+				tmpValue := converter.PtrToVal(column.VarCharValue)
+				if tmpValue == "" || strings.IndexAny(tmpValue, "Ee") == -1 {
+					tmpMap[resultMap[colKey]] = tmpValue
+					continue
+				}
+
+				decimalNum, err := math.NewDecimalFromString(tmpValue)
+				if err != nil {
+					tmpMap[resultMap[colKey]] = tmpValue
+					continue
+				}
+				tmpMap[resultMap[colKey]] = decimalNum.ToString()
+			}
+			list = append(list, tmpMap)
+		}
+	}
+
+	return list, nil
 }
 
 const (
@@ -948,7 +960,7 @@ func (a *Aws) AwsListRootOutsideMonthBill(kt *kit.Kit, opt *typesBill.AwsMainOut
 	condition += fmt.Sprintf(" AND year = '%d'", opt.Year)
 	condition += fmt.Sprintf(" AND month = '%d'", opt.Month)
 	condition += fmt.Sprintf(`AND (date(line_item_usage_start_date) < date '%d-%02d-01' 
-      	OR date(line_item_usage_start_date) >= date '%d-%02d-01')`,
+		OR date(line_item_usage_start_date) >= date '%d-%02d-01')`,
 		opt.Year, opt.Month, nextBillMonthYear, nextBillMonth)
 
 	if len(opt.UsageAccountIDs) > 0 {
@@ -983,7 +995,7 @@ func (a *Aws) AwsRootBillListByQueryFields(kt *kit.Kit, opt *typesBill.AwsRootDe
 	}
 	if opt.BeginDate != "" && opt.EndDate != "" {
 		condition += fmt.Sprintf(`AND (date(line_item_usage_start_date) >= date '%s' 
-      	AND date(line_item_usage_start_date) <= date '%s')`, opt.BeginDate, opt.EndDate)
+		AND date(line_item_usage_start_date) <= date '%s')`, opt.BeginDate, opt.EndDate)
 	}
 	if len(opt.FieldsMap) > 0 {
 		for key, values := range opt.FieldsMap {

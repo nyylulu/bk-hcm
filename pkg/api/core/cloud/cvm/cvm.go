@@ -17,6 +17,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
+// Package cvm ...
 package cvm
 
 import (
@@ -125,5 +126,5 @@ func (b BaseCvm) GetCloudID() string {
 // Extension cvm extension.
 type Extension interface {
 	TCloudCvmExtension | AwsCvmExtension | HuaWeiCvmExtension | AzureCvmExtension | GcpCvmExtension |
-	OtherCvmExtension | TCloudZiyanCvmExtension | TCloudZiyanHostExtension
+		OtherCvmExtension | TCloudZiyanCvmExtension | TCloudZiyanHostExtension
 }
