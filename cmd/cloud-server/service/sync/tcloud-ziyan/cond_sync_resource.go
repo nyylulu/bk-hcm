@@ -74,9 +74,12 @@ func CondSyncLoadBalancer(kt *kit.Kit, cliSet *client.ClientSet, params *CondSyn
 // CondSyncSecurityGroup ...
 func CondSyncSecurityGroup(kt *kit.Kit, cliSet *client.ClientSet, params *CondSyncParams) error {
 	syncReq := sync.TCloudSyncReq{
-		AccountID:  params.AccountID,
-		CloudIDs:   params.CloudIDs,
-		TagFilters: params.TagFilters,
+		AccountID: params.AccountID,
+		CloudIDs:  params.CloudIDs,
+	}
+	// TagFilters 和 CloudIDs 不能同时传入, 上层调用的时候又默认注入了tagFilter, 因此当CloudIDs为空时, 才TagFilters传入
+	if len(params.CloudIDs) == 0 {
+		syncReq.TagFilters = params.TagFilters
 	}
 	for i := range params.Regions {
 		syncReq.Region = params.Regions[i]

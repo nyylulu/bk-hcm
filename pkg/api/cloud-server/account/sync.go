@@ -36,11 +36,6 @@ type ResCondSyncReq struct {
 
 // Validate ...
 func (r *ResCondSyncReq) Validate() error {
-	if len(r.CloudIDs) > 0 {
-		if len(r.Regions) > 1 {
-			return fmt.Errorf("regions must be one when cloud_ids is specified, got: %v", r.Regions)
-		}
-	}
 	return validator.Validate.Struct(r)
 }
 

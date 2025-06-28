@@ -33,7 +33,7 @@ type Interface interface {
 	// SecurityGroup 同步安全组
 	SecurityGroup(kt *kit.Kit, params *SyncBaseParams, opt *SyncSGOption) (*SyncResult, error)
 	RemoveSecurityGroupDeleteFromCloud(kt *kit.Kit, accountID string, region string) error
-	RemoveSecurityGroupDeleteFromCloudV2(kt *kit.Kit, accountID string, region string,
+	RemoveSecurityGroupDeleteFromCloudV2(kt *kit.Kit, params *SyncRemovedParams,
 		allCloudIDMap map[string]struct{}) error
 	SecurityGroupRule(kt *kit.Kit, params *SyncBaseParams, opt *SyncSGRuleOption) (*SyncResult, error)
 	SecurityGroupUsageBiz(kt *kit.Kit, params *SyncSGUsageBizParams) error
