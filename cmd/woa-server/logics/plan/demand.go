@@ -890,6 +890,9 @@ func (c *Controller) QueryIEGDemands(kt *kit.Kit, req *QueryIEGDemandsReq) ([]*c
 	if len(req.PlanProdNames) > 0 {
 		queryReq.Params.PlanProductName = req.PlanProdNames
 	}
+	if len(req.OpProdNames) > 0 {
+		queryReq.Params.ProductName = req.OpProdNames
+	}
 
 	if len(req.ObsProjects) > 0 {
 		queryReq.Params.ProjectName = req.ObsProjects

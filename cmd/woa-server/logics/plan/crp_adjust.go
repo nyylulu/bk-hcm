@@ -132,7 +132,7 @@ func (c *CrpAdjustTicketCreator) constructCrpAdjustReqParams(kt *kit.Kit, ticket
 	[]*cvmapi.AdjustUpdatedData, error) {
 
 	// 1. 通过通配的方式，查询可修改的CRP原有预测
-	err := c.getAllCRPAdjustAbleDemands(kt, ticket.Demands, ticket.PlanProductName)
+	err := c.getAllCRPAdjustAbleDemands(kt, ticket.Demands, ticket.PlanProductName, ticket.OpProductName)
 	if err != nil {
 		logs.Errorf("failed to get crp adjust able demands, err: %v, rid: %s", err, kt.Rid)
 		return nil, nil, err
@@ -203,7 +203,7 @@ func (c *CrpAdjustTicketCreator) constructCrpAdjustReqParams(kt *kit.Kit, ticket
 
 // getCRPAdjustAbleDemandsForAdjustDemands get all adjustable demands from CRP based on the request's adjust demands.
 func (c *CrpAdjustTicketCreator) getAllCRPAdjustAbleDemands(kt *kit.Kit, demands rpt.ResPlanDemands,
-	planProductName string) error {
+	planProductName string, opProductName string) error {
 
 	for _, demand := range demands {
 		if demand.Original == nil {
@@ -218,6 +218,7 @@ func (c *CrpAdjustTicketCreator) getAllCRPAdjustAbleDemands(kt *kit.Kit, demands
 			DeviceType:      demand.Original.Cvm.DeviceType,
 			ExpectTime:      demand.Original.ExpectTime,
 			PlanProductName: planProductName,
+			OpProductName:   opProductName,
 			ObsProject:      demand.Original.ObsProject,
 			DiskType:        demand.Original.Cbs.DiskType,
 			ResMode:         demand.Original.Cvm.ResMode,
@@ -309,7 +310,7 @@ func (c *CrpAdjustTicketCreator) constructAdjustDemandDetails(kt *kit.Kit, ticke
 	}
 
 	// 追加一条等于调整目标量的预测
-	addItem, err := c.constructAdjustAppendData(kt, ticket.PlanProductID, ticket.PlanProductName, demand)
+	addItem, err := c.constructAdjustAppendData(kt, ticket, demand)
 	if err != nil {
 		logs.Errorf("failed to construct adjust append data, err: %v, rid: %s", err, kt.Rid)
 		return err
@@ -442,8 +443,7 @@ func (c *CrpAdjustTicketCreator) calcAdjustAbleDCanConsumeCPU(kt *kit.Kit, adjus
 }
 
 // constructAdjustAppendData construct adjust append data.
-func (c *CrpAdjustTicketCreator) constructAdjustAppendData(kt *kit.Kit, planProductID int64, planProductName string,
-	demand rpt.ResPlanDemand) (
+func (c *CrpAdjustTicketCreator) constructAdjustAppendData(kt *kit.Kit, ticket *TicketInfo, demand rpt.ResPlanDemand) (
 	*cvmapi.AdjustUpdatedData, error) {
 
 	// 根据HCM的diskType，生成CRP的diskType和diskName
@@ -456,8 +456,10 @@ func (c *CrpAdjustTicketCreator) constructAdjustAppendData(kt *kit.Kit, planProd
 	demandItem := &cvmapi.CvmCbsPlanQueryItem{
 		SliceId:         demand.Original.DemandID,
 		ProjectName:     string(demand.Updated.ObsProject),
-		PlanProductId:   int(planProductID),
-		PlanProductName: planProductName,
+		PlanProductId:   int(ticket.PlanProductID),
+		PlanProductName: ticket.PlanProductName,
+		ProductId:       int(ticket.OpProductID),
+		ProductName:     ticket.OpProductName,
 		InstanceType:    demand.Updated.Cvm.DeviceClass,
 		CityId:          0,
 		CityName:        demand.Updated.RegionName,

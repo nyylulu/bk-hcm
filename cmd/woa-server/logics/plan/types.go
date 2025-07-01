@@ -139,6 +139,7 @@ type QueryIEGDemandsReq struct {
 	CrpSns          []string         `json:"crp_sns" validate:"omitempty"`
 	DeviceClasses   []string         `json:"device_classes" validate:"omitempty"`
 	PlanProdNames   []string         `json:"plan_prod_names" validate:"omitempty"`
+	OpProdNames     []string         `json:"op_prod_names" validate:"omitempty"`
 	ObsProjects     []string         `json:"obs_projects" validate:"omitempty"`
 	RegionNames     []string         `json:"region_names" validate:"omitempty"`
 	ZoneNames       []string         `json:"zone_names" validate:"omitempty"`

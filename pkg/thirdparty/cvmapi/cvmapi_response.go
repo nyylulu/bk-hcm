@@ -136,6 +136,7 @@ type PlanOrderChangeItem struct {
 	BgName            string            `json:"bgName"`
 	DeptName          string            `json:"deptName"`
 	PlanProductName   string            `json:"planProductName"`
+	ProductName       string            `json:"productName"`
 	ProjectName       enumor.ObsProject `json:"projectName"`
 	CityName          string            `json:"cityName"`
 	ZoneName          string            `json:"zoneName"`
@@ -182,6 +183,7 @@ type DemandChangeLogQueryLogItem struct {
 	BgName              string  `json:"bgName"`
 	DeptName            string  `json:"deptName"`
 	PlanProductName     string  `json:"planProductName"`
+	ProductName         string  `json:"productName"`
 	ProjectName         string  `json:"projectName"`
 	CityName            string  `json:"cityName"`
 	ZoneName            string  `json:"zoneName"`
@@ -252,6 +254,8 @@ type CvmCbsPlanQueryItem struct {
 	DeptName           string             `json:"deptName"`
 	PlanProductId      int                `json:"planProductId"`
 	PlanProductName    string             `json:"planProductName"`
+	ProductId          int                `json:"productId"`
+	ProductName        string             `json:"productName"`
 	ProjectName        string             `json:"projectName"`
 	OrderId            string             `json:"orderId"`
 	CityId             int                `json:"cityId"`
@@ -331,6 +335,8 @@ func (i *CvmCbsPlanQueryItem) Clone() *CvmCbsPlanQueryItem {
 		DeptName:              i.DeptName,
 		PlanProductId:         i.PlanProductId,
 		PlanProductName:       i.PlanProductName,
+		ProductId:             i.ProductId,
+		ProductName:           i.ProductName,
 		ProjectName:           i.ProjectName,
 		OrderId:               i.OrderId,
 		CityId:                i.CityId,

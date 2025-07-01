@@ -70,6 +70,10 @@ func convAdjustAbleQueryParam(req *ptypes.AdjustAbleDemandsReq) *cvmapi.CvmCbsAd
 		reqParams.PlanProductName = req.PlanProductName
 	}
 
+	if len(req.OpProductName) > 0 {
+		reqParams.ProductName = req.OpProductName
+	}
+
 	if len(req.ObsProject) > 0 {
 		reqParams.ProjectName = string(req.ObsProject)
 	}

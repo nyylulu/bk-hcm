@@ -171,6 +171,7 @@ type PlanOrderChangeParam struct {
 	BgName          []string `json:"bgName,omitempty"`
 	DeptName        []string `json:"deptName,omitempty"`
 	PlanProductName []string `json:"planProductName,omitempty"`
+	ProductName     []string `json:"productName,omitempty"`
 	InstanceFamily  []string `json:"instanceFamily,omitempty"`
 	InstanceType    []string `json:"instanceType,omitempty"`
 	ProjectName     []string `json:"projectName,omitempty"`
@@ -231,6 +232,7 @@ type CvmCbsPlanQueryParam struct {
 	DeptName        []string `json:"deptName,omitempty"`
 	InstanceType    []string `json:"instanceType,omitempty"`
 	PlanProductName []string `json:"planProductName,omitempty"`
+	ProductName     []string `json:"productName,omitempty"`
 	ProjectName     []string `json:"projectName,omitempty"`
 	CityName        []string `json:"cityName,omitempty"`
 	ZoneName        []string `json:"zoneName,omitempty"`
@@ -250,6 +252,7 @@ type CvmCbsAdjustAblePlanQueryParam struct {
 	InstanceModel   string `json:"instanceModel,omitempty"`
 	UseTime         string `json:"useTime,omitempty"`
 	PlanProductName string `json:"planProductName,omitempty"`
+	ProductName     string `json:"productName,omitempty"`
 	ProjectName     string `json:"projectName,omitempty"`
 	InstanceFamily  string `json:"instanceFamily,omitempty"`
 	DiskTypeName    string `json:"diskTypeName,omitempty"`
@@ -294,6 +297,8 @@ type AdjustBaseInfo struct {
 	DeptName        string `json:"deptName"`
 	PlanProductName string `json:"planProductName"`
 	Desc            string `json:"desc"`
+	IsReview        bool   `json:"isReview"`
+	ReviewMemo      string `json:"reviewMemo"`
 }
 
 // AdjustSrcData adjust source data for cvm and cbs plan info adjust params
@@ -317,10 +322,12 @@ type AddCvmCbsPlanReq struct {
 
 // AddCvmCbsPlanParam add cvm and cbs plan order parameters
 type AddCvmCbsPlanParam struct {
-	Operator string         `json:"operator"`
-	DeptName string         `json:"deptName"`
-	Desc     string         `json:"desc"`
-	Items    []*AddPlanItem `json:"items"`
+	Operator   string         `json:"operator"`
+	DeptName   string         `json:"deptName"`
+	Desc       string         `json:"desc"`
+	IsReview   bool           `json:"isReview"`
+	ReviewMemo string         `json:"reviewMemo"`
+	Items      []*AddPlanItem `json:"items"`
 }
 
 /*
@@ -335,7 +342,8 @@ type AddCvmCbsPlanParam struct {
             {
                 "useTime":"2022-10-12",
                 "projectName":"机房裁撤",
-                "planProductName":"互娱运营支撑产品",
+				"planProductName":"互娱运营支撑产品",
+				"productName":"资源运营服务",
                 "cityName":"上海",
                 "zoneName":"上海五区",
                 "coreTypeName":"小核心",
@@ -357,6 +365,7 @@ type AddPlanItem struct {
 	UseTime         string  `json:"useTime"`
 	ProjectName     string  `json:"projectName"`
 	PlanProductName string  `json:"planProductName"`
+	ProductName     string  `json:"productName"`
 	CityName        string  `json:"cityName"`
 	ZoneName        string  `json:"zoneName"`
 	CoreTypeName    string  `json:"coreTypeName"`

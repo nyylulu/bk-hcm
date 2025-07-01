@@ -441,6 +441,7 @@ type AdjustAbleDemandsReq struct {
 	DeviceType      string            `json:"device_type" validate:"omitempty"`
 	ExpectTime      string            `json:"expect_time" validate:"omitempty"`
 	PlanProductName string            `json:"plan_product_name" validate:"omitempty"`
+	OpProductName   string            `json:"op_product_name" validate:"omitempty"`
 	ObsProject      enumor.ObsProject `json:"obs_project" validate:"omitempty"`
 	DiskType        enumor.DiskType   `json:"disk_type" validate:"omitempty"`
 	ResMode         enumor.ResMode    `json:"res_mode" validate:"omitempty"`

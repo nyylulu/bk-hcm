@@ -41,6 +41,24 @@ type CVMClientInterface interface {
 	QueryRealCvmSubnet(kt *kit.Kit, subnetReq SubnetRealParam) (*SubnetResp, error)
 	// GetApproveLog get approve log
 	GetApproveLog(ctx context.Context, header http.Header, req *GetApproveLogReq) (*GetApproveLogResp, error)
+	// CreateCvmReturnOrder creates cvm return order
+	CreateCvmReturnOrder(ctx context.Context, header http.Header, req *ReturnReq) (*OrderCreateResp, error)
+	// QueryCvmReturnOrders query cvm return order status
+	QueryCvmReturnOrders(ctx context.Context, header http.Header, req *OrderQueryReq) (*ReturnQueryResp, error)
+	// QueryCvmReturnDetail query cvm return order detail
+	QueryCvmReturnDetail(ctx context.Context, header http.Header, req *ReturnDetailReq) (*ReturnDetailResp, error)
+	// GetCvmProcess check if cvm is in any process like "退回"
+	GetCvmProcess(ctx context.Context, header http.Header, req *GetCvmProcessReq) (*GetCvmProcessResp, error)
+	// GetErpProcess check if physical machine is in any process like "退回"
+	GetErpProcess(ctx context.Context, header http.Header, req *GetErpProcessReq) (*GetErpProcessResp, error)
+	// QueryCvmInstanceType query cvm instance type
+	QueryCvmInstanceType(ctx context.Context, header http.Header, req *QueryCvmInstanceTypeReq) (
+		*QueryCvmInstanceTypeResp, error)
+	// GetCvmApproveLogs get cvm approve logs
+	GetCvmApproveLogs(ctx context.Context, header http.Header, req *GetCvmApproveLogReq) (*GetCvmApproveLogsResp, error)
+	// RevokeCvmOrder revoke cvm order
+	RevokeCvmOrder(ctx context.Context, header http.Header, req *RevokeCvmOrderReq) (*RevokeCvmOrderResp, error)
+
 	// QueryCvmCbsPlans query cvm and cbs plan info
 	QueryCvmCbsPlans(ctx context.Context, header http.Header, req *CvmCbsPlanQueryReq) (*CvmCbsPlanQueryResp, error)
 	// QueryAdjustAbleDemand query cvm and cbs plan info which can be adjusted
@@ -60,23 +78,6 @@ type CVMClientInterface interface {
 	// ReportPenaltyRatio report penalty ratio
 	ReportPenaltyRatio(ctx context.Context, header http.Header, req *CvmCbsPlanPenaltyRatioReportReq) (
 		*CvmCbsPlanPenaltyRatioReportResp, error)
-	// CreateCvmReturnOrder creates cvm return order
-	CreateCvmReturnOrder(ctx context.Context, header http.Header, req *ReturnReq) (*OrderCreateResp, error)
-	// QueryCvmReturnOrders query cvm return order status
-	QueryCvmReturnOrders(ctx context.Context, header http.Header, req *OrderQueryReq) (*ReturnQueryResp, error)
-	// QueryCvmReturnDetail query cvm return order detail
-	QueryCvmReturnDetail(ctx context.Context, header http.Header, req *ReturnDetailReq) (*ReturnDetailResp, error)
-	// GetCvmProcess check if cvm is in any process like "退回"
-	GetCvmProcess(ctx context.Context, header http.Header, req *GetCvmProcessReq) (*GetCvmProcessResp, error)
-	// GetErpProcess check if physical machine is in any process like "退回"
-	GetErpProcess(ctx context.Context, header http.Header, req *GetErpProcessReq) (*GetErpProcessResp, error)
-	// QueryCvmInstanceType query cvm instance type
-	QueryCvmInstanceType(ctx context.Context, header http.Header, req *QueryCvmInstanceTypeReq) (
-		*QueryCvmInstanceTypeResp, error)
-	// GetCvmApproveLogs get cvm approve logs
-	GetCvmApproveLogs(ctx context.Context, header http.Header, req *GetCvmApproveLogReq) (*GetCvmApproveLogsResp, error)
-	// RevokeCvmOrder revoke cvm order
-	RevokeCvmOrder(ctx context.Context, header http.Header, req *RevokeCvmOrderReq) (*RevokeCvmOrderResp, error)
 }
 
 // NewCVMClientInterface creates a cvm api instance

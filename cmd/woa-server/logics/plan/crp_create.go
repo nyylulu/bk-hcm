@@ -195,6 +195,7 @@ func (c *Controller) constructAddReq(kt *kit.Kit, ticket *TicketInfo) (*cvmapi.A
 			UseTime:         demand.Updated.ExpectTime,
 			ProjectName:     string(demand.Updated.ObsProject),
 			PlanProductName: ticket.PlanProductName,
+			ProductName:     ticket.OpProductName,
 			CityName:        demand.Updated.RegionName,
 			ZoneName:        demand.Updated.ZoneName,
 			CoreTypeName:    demand.Updated.Cvm.CoreType,
