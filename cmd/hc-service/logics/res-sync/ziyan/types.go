@@ -52,8 +52,9 @@ type SyncResult struct {
 
 // DelHostParams ...
 type DelHostParams struct {
-	BizID      int64   `json:"bk_biz_id" validate:"required"`
-	DelHostIDs []int64 `json:"delete_host_ids"`
+	BizID             int64              `json:"bk_biz_id"`
+	CCBizExistHostIDs map[int64]struct{} `json:"cc_exist_host_ids"`
+	DelHostIDs        []int64            `json:"delete_host_ids"`
 }
 
 // Validate ...

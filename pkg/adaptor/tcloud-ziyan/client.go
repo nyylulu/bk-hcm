@@ -29,6 +29,7 @@ import (
 	typescos "hcm/pkg/adaptor/types/cos"
 	"hcm/pkg/criteria/constant"
 	bpaas "hcm/pkg/thirdparty/tencentcloud/bpaas/v20181217"
+	"hcm/pkg/tools/converter"
 
 	billing "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/billing/v20180709"
 	cam "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cam/v20190116"
@@ -65,11 +66,20 @@ func (c *clientSet) SetRateLimitRetryWithConstInterval() {
 	return
 }
 
+func (c *clientSet) getProfileUseSpecifiedEndpoint(endpoint string) *profile.ClientProfile {
+	newHttpProfile := converter.PtrToVal(c.profile.HttpProfile)
+	newHttpProfile.Endpoint = endpoint
+
+	newProfile := converter.PtrToVal(c.profile)
+	newProfile.HttpProfile = converter.ValToPtr(newHttpProfile)
+
+	return converter.ValToPtr(newProfile)
+}
+
 // CamServiceClient tcloud ziyan sdk cam client
 func (c *clientSet) CamServiceClient(region string) (*cam.Client, error) {
 	// 使用内部域名
-	c.profile.HttpProfile.Endpoint = constant.InternalCamEndpoint
-	client, err := cam.NewClient(c.credential, region, c.profile)
+	client, err := cam.NewClient(c.credential, region, c.getProfileUseSpecifiedEndpoint(constant.InternalCamEndpoint))
 	if err != nil {
 		return nil, err
 	}
@@ -81,8 +91,7 @@ func (c *clientSet) CamServiceClient(region string) (*cam.Client, error) {
 // CvmClient tcloud ziyan sdk cvm client
 func (c *clientSet) CvmClient(region string) (*cvm.Client, error) {
 	// 使用内部域名
-	c.profile.HttpProfile.Endpoint = constant.InternalCvmEndpoint
-	client, err := cvm.NewClient(c.credential, region, c.profile)
+	client, err := cvm.NewClient(c.credential, region, c.getProfileUseSpecifiedEndpoint(constant.InternalCvmEndpoint))
 	if err != nil {
 		return nil, err
 	}
@@ -94,8 +103,7 @@ func (c *clientSet) CvmClient(region string) (*cvm.Client, error) {
 // CbsClient tcloud ziyan sdk cbs client
 func (c *clientSet) CbsClient(region string) (*cbs.Client, error) {
 	// 使用内部域名
-	c.profile.HttpProfile.Endpoint = constant.InternalCbsEndpoint
-	client, err := cbs.NewClient(c.credential, region, c.profile)
+	client, err := cbs.NewClient(c.credential, region, c.getProfileUseSpecifiedEndpoint(constant.InternalCbsEndpoint))
 	if err != nil {
 		return nil, err
 	}
@@ -107,8 +115,7 @@ func (c *clientSet) CbsClient(region string) (*cbs.Client, error) {
 // VpcClient tcloud ziyan sdk vpc client
 func (c *clientSet) VpcClient(region string) (*vpc.Client, error) {
 	// 使用内部域名
-	c.profile.HttpProfile.Endpoint = constant.InternalVpcEndpoint
-	client, err := vpc.NewClient(c.credential, region, c.profile)
+	client, err := vpc.NewClient(c.credential, region, c.getProfileUseSpecifiedEndpoint(constant.InternalVpcEndpoint))
 	if err != nil {
 		return nil, err
 	}
@@ -120,8 +127,8 @@ func (c *clientSet) VpcClient(region string) (*vpc.Client, error) {
 // BillClient tcloud ziyan sdk bill client
 func (c *clientSet) BillClient() (*billing.Client, error) {
 	// 使用内部域名
-	c.profile.HttpProfile.Endpoint = constant.InternalBillingEndpoint
-	client, err := billing.NewClient(c.credential, "", c.profile)
+	client, err := billing.NewClient(c.credential, "",
+		c.getProfileUseSpecifiedEndpoint(constant.InternalBillingEndpoint))
 	if err != nil {
 		return nil, err
 	}
@@ -133,8 +140,7 @@ func (c *clientSet) BillClient() (*billing.Client, error) {
 // ClbClient tcloud clb client
 func (c *clientSet) ClbClient(region string) (*clb.Client, error) {
 	// 使用内部域名
-	c.profile.HttpProfile.Endpoint = constant.InternalClbEndpoint
-	client, err := clb.NewClient(c.credential, region, c.profile)
+	client, err := clb.NewClient(c.credential, region, c.getProfileUseSpecifiedEndpoint(constant.InternalClbEndpoint))
 	if err != nil {
 		return nil, err
 	}
@@ -146,8 +152,7 @@ func (c *clientSet) ClbClient(region string) (*clb.Client, error) {
 // TagClient tcloud tag client
 func (c *clientSet) TagClient() (*tag.Client, error) {
 	// 使用内部域名
-	c.profile.HttpProfile.Endpoint = constant.InternalTagEndpoint
-	client, err := tag.NewClient(c.credential, "", c.profile)
+	client, err := tag.NewClient(c.credential, "", c.getProfileUseSpecifiedEndpoint(constant.InternalTagEndpoint))
 	if err != nil {
 		return nil, err
 	}
@@ -159,8 +164,7 @@ func (c *clientSet) TagClient() (*tag.Client, error) {
 // CertClient tcloud cert client
 func (c *clientSet) CertClient() (*ssl.Client, error) {
 	// 使用内部域名
-	c.profile.HttpProfile.Endpoint = constant.InternalCertEndpoint
-	client, err := ssl.NewClient(c.credential, "", c.profile)
+	client, err := ssl.NewClient(c.credential, "", c.getProfileUseSpecifiedEndpoint(constant.InternalCertEndpoint))
 	if err != nil {
 		return nil, err
 	}
@@ -172,8 +176,7 @@ func (c *clientSet) CertClient() (*ssl.Client, error) {
 // BPaasClient tcloud ziyan sdk bpaas client
 func (c *clientSet) BPaasClient() (*bpaas.Client, error) {
 	// 使用内部域名
-	c.profile.HttpProfile.Endpoint = constant.InternalBPaasEndpoint
-	client, err := bpaas.NewClient(c.credential, "", c.profile)
+	client, err := bpaas.NewClient(c.credential, "", c.getProfileUseSpecifiedEndpoint(constant.InternalBPaasEndpoint))
 	if err != nil {
 		return nil, err
 	}

@@ -492,7 +492,7 @@ func (cli *client) RemoveHostFromCC(kt *kit.Kit, params *DelHostParams) error {
 		return cli.deleteHostByHostID(kt, params.DelHostIDs)
 	}
 
-	return cli.removeHost(kt, params.BizID)
+	return cli.removeBizHost(kt, params.BizID, params.CCBizExistHostIDs)
 }
 
 func (cli *client) deleteHostByHostID(kt *kit.Kit, hostIDs []int64) error {
@@ -514,15 +514,17 @@ func (cli *client) deleteHostByHostID(kt *kit.Kit, hostIDs []int64) error {
 	return nil
 }
 
-func (cli *client) removeHost(kt *kit.Kit, bizID int64) error {
-	ccHosts, err := cli.getHostFromCCByBizID(kt, bizID, []string{"bk_host_id"})
-	if err != nil {
-		logs.Errorf("get host from cc failed, err: %v, bizID: %d, rid: %s", err, bizID, kt.Rid)
-		return err
-	}
-	hostIDMap := make(map[int64]struct{})
-	for _, host := range ccHosts {
-		hostIDMap[host.BkHostID] = struct{}{}
+func (cli *client) removeBizHost(kt *kit.Kit, bizID int64, ccBizExistHostIDs map[int64]struct{}) error {
+	if len(ccBizExistHostIDs) == 0 {
+		ccHosts, err := cli.getHostFromCCByBizID(kt, bizID, []string{"bk_host_id"})
+		if err != nil {
+			logs.Errorf("get host from cc failed, err: %v, bizID: %d, rid: %s", err, bizID, kt.Rid)
+			return err
+		}
+
+		for _, host := range ccHosts {
+			ccBizExistHostIDs[host.BkHostID] = struct{}{}
+		}
 	}
 
 	dbHosts, err := cli.listHostFromDBByBizID(kt, bizID, []string{"id", "bk_host_id"})
@@ -533,7 +535,7 @@ func (cli *client) removeHost(kt *kit.Kit, bizID int64) error {
 
 	delHostIDs := make([]int64, 0)
 	for _, host := range dbHosts {
-		if _, ok := hostIDMap[host.BkHostID]; !ok {
+		if _, ok := ccBizExistHostIDs[host.BkHostID]; !ok {
 			delHostIDs = append(delHostIDs, host.BkHostID)
 		}
 	}

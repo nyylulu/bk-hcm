@@ -20,13 +20,16 @@
 package ziyan
 
 import (
+	"fmt"
 	"strconv"
 
 	ressync "hcm/cmd/hc-service/logics/res-sync"
 	"hcm/cmd/hc-service/logics/res-sync/ziyan"
 	"hcm/cmd/hc-service/service/sync/handler"
 	"hcm/pkg/api/core"
+	corecvm "hcm/pkg/api/core/cloud/cvm"
 	"hcm/pkg/api/hc-service/sync"
+	"hcm/pkg/cc"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/kit"
@@ -38,7 +41,8 @@ import (
 
 // SyncHostWithRelRes ....
 func (svc *service) SyncHostWithRelRes(cts *rest.Contexts) (interface{}, error) {
-	return nil, handler.ResourceSync(cts, &hostHandler{cli: svc.syncCli})
+	return nil, handler.ResourceSyncV2[corecvm.Cvm[corecvm.TCloudZiyanHostExtension]](cts,
+		&hostHandler{cli: svc.syncCli})
 }
 
 // SyncHostWithRelResByCond ....
@@ -50,11 +54,6 @@ func (svc *service) SyncHostWithRelResByCond(cts *rest.Contexts) (interface{}, e
 
 	if err := req.Validate(); err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
-	}
-
-	ids := make([]string, len(req.HostIDs))
-	for i, hostID := range req.HostIDs {
-		ids[i] = strconv.FormatInt(hostID, 10)
 	}
 
 	syncCli, err := svc.syncCli.TCloudZiyan(cts.Kit, req.AccountID)
@@ -105,7 +104,7 @@ type hostHandler struct {
 	offset  uint64
 }
 
-var _ handler.Handler = new(hostHandler)
+var _ handler.HandlerV2[corecvm.Cvm[corecvm.TCloudZiyanHostExtension]] = new(hostHandler)
 
 // Prepare ...
 func (hd *hostHandler) Prepare(cts *rest.Contexts) error {
@@ -130,7 +129,7 @@ func (hd *hostHandler) Prepare(cts *rest.Contexts) error {
 }
 
 // Next ...
-func (hd *hostHandler) Next(kt *kit.Kit) ([]string, error) {
+func (hd *hostHandler) Next(kt *kit.Kit) ([]corecvm.Cvm[corecvm.TCloudZiyanHostExtension], error) {
 	params := &cmdb.ListBizHostParams{
 		BizID:  hd.request.BizID,
 		Fields: []string{"bk_host_id"},
@@ -157,23 +156,26 @@ func (hd *hostHandler) Next(kt *kit.Kit) ([]string, error) {
 		return nil, nil
 	}
 
-	hostIDs := make([]string, 0)
+	hosts := make([]corecvm.Cvm[corecvm.TCloudZiyanHostExtension], 0)
 	for _, host := range result.Info {
-		hostIDs = append(hostIDs, strconv.FormatInt(host.BkHostID, 10))
+		hosts = append(hosts, corecvm.Cvm[corecvm.TCloudZiyanHostExtension]{
+			BaseCvm: corecvm.BaseCvm{CloudID: strconv.FormatInt(host.BkHostID, 10)},
+		})
 	}
 
 	hd.offset += uint64(core.DefaultMaxPageLimit)
 
-	return hostIDs, nil
+	return hosts, nil
 }
 
 // Sync ...
-func (hd *hostHandler) Sync(kt *kit.Kit, hostIDs []string) error {
-	ids := make([]int64, len(hostIDs))
-	for i, v := range hostIDs {
-		id, err := strconv.ParseInt(v, 10, 64)
+func (hd *hostHandler) Sync(kt *kit.Kit, hosts []corecvm.Cvm[corecvm.TCloudZiyanHostExtension]) error {
+	ids := make([]int64, len(hosts))
+	for i, host := range hosts {
+		id, err := strconv.ParseInt(host.GetCloudID(), 10, 64)
 		if err != nil {
-			logs.Errorf("failed to convert value to type int64, err: %v, val: %v, rid: %s", err, v, kt.Rid)
+			logs.Errorf("failed to convert value to type int64, err: %v, val: %v, rid: %s", err, host.GetCloudID(),
+				kt.Rid)
 			return err
 		}
 
@@ -199,9 +201,19 @@ func (hd *hostHandler) SyncByCond(kt *kit.Kit, params *ziyan.SyncHostParams) err
 	return nil
 }
 
-// RemoveDeleteFromCloud ...
-func (hd *hostHandler) RemoveDeleteFromCloud(kt *kit.Kit) error {
-	params := &ziyan.DelHostParams{BizID: hd.request.BizID, DelHostIDs: hd.request.DelHostIDs}
+// RemoveDeletedFromCloud ...
+func (hd *hostHandler) RemoveDeletedFromCloud(kt *kit.Kit, allCloudIDMap map[string]struct{}) error {
+	ccBizExistHostIDs := make(map[int64]struct{}, len(allCloudIDMap))
+	for hostIDStr := range allCloudIDMap {
+		hostID, err := strconv.ParseInt(hostIDStr, 10, 64)
+		if err != nil {
+			logs.Errorf("failed to convert value to type int64, err: %v, val: %v, rid: %s", err, hostIDStr, kt.Rid)
+			return err
+		}
+		ccBizExistHostIDs[hostID] = struct{}{}
+	}
+
+	params := &ziyan.DelHostParams{BizID: hd.request.BizID, CCBizExistHostIDs: ccBizExistHostIDs}
 	return hd.DeleteHost(kt, params)
 }
 
@@ -217,7 +229,26 @@ func (hd *hostHandler) DeleteHost(kt *kit.Kit, params *ziyan.DelHostParams) erro
 	return nil
 }
 
-// Name ...
-func (hd *hostHandler) Name() enumor.CloudResourceType {
+// SyncConcurrent ...
+func (hd *hostHandler) SyncConcurrent() uint {
+	if hd.request != nil && hd.request.Concurrent != 0 {
+		return hd.request.Concurrent
+	}
+	// read from config file
+	_, syncing := cc.HCService().SyncConfig.GetSyncConcurrent(enumor.Ziyan, enumor.CvmCloudResType,
+		cc.ConcurrentWildcard)
+	return max(syncing, 1)
+}
+
+// Describe ...
+func (hd *hostHandler) Describe() string {
+	if hd.request == nil {
+		return fmt.Sprintf("ziyan %s(-)", hd.Resource())
+	}
+	return fmt.Sprintf("ziyan %s(bizID=%d,account=%s)", hd.Resource(), hd.request.BizID, hd.request.AccountID)
+}
+
+// Resource ...
+func (hd *hostHandler) Resource() enumor.CloudResourceType {
 	return enumor.CvmCloudResType
 }

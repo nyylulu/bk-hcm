@@ -98,11 +98,15 @@ func SyncAllResource(kt *kit.Kit, cliSet *client.ClientSet, opt *SyncAllResource
 	var resType enumor.CloudResourceType
 	// 单独开协程处理，自研云主机同步和其他资源的同步不相互影响
 	eg.Go(func() error {
-		if hitErr = SyncHost(kt, cliSet, opt.AccountID, sd); hitErr != nil {
-			resType = enumor.CvmCloudResType
-			return hitErr
+		if syncErr := SyncHost(kt, cliSet, opt.AccountID, sd); syncErr != nil {
+			// 由于自研云主机和其他流程是独立的，所以这里失败时单独更新
+			if err := sd.ResSyncStatusFailed(enumor.CvmCloudResType, syncErr); err != nil {
+				logs.Errorf("sync res detail failed, vendor: %s, res: %s, err: %v, accountID: %s, rid: %s",
+					enumor.TCloudZiyan, enumor.CvmCloudResType, err, sd.AccountID, kt.Rid)
+				return err
+			}
+			return nil
 		}
-
 		return nil
 	})
 

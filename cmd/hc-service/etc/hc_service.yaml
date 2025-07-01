@@ -72,6 +72,9 @@ sync:
     - rule: tcloud/load_balancer/*
       syncConcurrent: 1
       listConcurrent: 1
+    - rule: tcloud-ziyan/cvm/*
+      syncConcurrent: 1
+      listConcurrent: 1
   # if no any rule matched, use this default config
   defaultConcurrent: 1
 

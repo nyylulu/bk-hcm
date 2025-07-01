@@ -9,9 +9,9 @@ import (
 
 // TCloudZiyanSyncHostReq tcloud ziyan sync host request.
 type TCloudZiyanSyncHostReq struct {
-	AccountID  string  `json:"account_id" validate:"required"`
-	BizID      int64   `json:"bk_biz_id" validate:"required"`
-	DelHostIDs []int64 `json:"delete_host_ids"`
+	AccountID  string `json:"account_id" validate:"required"`
+	BizID      int64  `json:"bk_biz_id" validate:"required"`
+	Concurrent uint   `json:"concurrent,omitempty"`
 }
 
 // Validate ...
