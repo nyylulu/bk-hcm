@@ -65,6 +65,23 @@ func Keys[M ~map[K]V, K comparable, V any](m M) []K {
 	return r
 }
 
+// PartitionSortKeys 通过 partFunc 将 map key的列表分组后返回
+// 使 partFunc 返回为 true 的 key，必定排在其他key前边
+func PartitionSortKeys[M ~map[K]V, K comparable, V any](m M, partFunc func(K) bool) []K {
+	priorityKeys := make([]K, 0)
+	restKeys := make([]K, 0)
+
+	for k := range m {
+		if partFunc(k) {
+			priorityKeys = append(priorityKeys, k)
+		} else {
+			restKeys = append(restKeys, k)
+		}
+	}
+
+	return append(priorityKeys, restKeys...)
+}
+
 // Values returns the values of the map m.
 // The values will be in an indeterminate order.
 func Values[M ~map[K]V, K comparable, V any](m M) []V {

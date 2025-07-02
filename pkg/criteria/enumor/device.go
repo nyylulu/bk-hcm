@@ -29,6 +29,8 @@ const (
 	DiskPremium DiskType = "CLOUD_PREMIUM"
 	// DiskSSD disk cloud ssd.
 	DiskSSD DiskType = "CLOUD_SSD"
+	// DiskUnknown 当CRP出现拆单时，会出现云盘类型为空的情况，此时需在某些场景中特殊处理
+	DiskUnknown DiskType = "UNKNOWN"
 )
 
 // Validate DiskType.
@@ -56,6 +58,7 @@ func (t DiskType) GetWithDefault() DiskType {
 var diskTypeNameMap = map[DiskType]string{
 	DiskPremium: "高性能云硬盘",
 	DiskSSD:     "SSD云硬盘",
+	DiskUnknown: "",
 }
 
 // Name return disk type name.

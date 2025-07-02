@@ -774,6 +774,7 @@ func (c *CrpOrderChangeInfo) GetAggregateKey(bkBizID int64, deviceTypes map[stri
 		PlanType:        c.PlanType,
 		ObsProject:      c.ObsProject,
 		ResType:         c.DemandResType,
+		DiskType:        c.DiskType,
 	}
 
 	return key, nil
@@ -797,7 +798,8 @@ type ResPlanDemandKey struct {
 
 // ResPlanDemandAggregateKey 聚合key
 // 为解决CRP模糊调整导致数据出现负数的问题，demandKey需要按照模糊范围查找多条进行调整，避免负数出现
-// 模糊范围：城市、可用范围（当前是整个月，未来可能精确到周）、机型族、核心类型、预测内外、项目类型、资源类型
+// 模糊范围：城市、可用范围（当前是整个月，未来可能精确到周）、机型族、核心类型、预测内外、项目类型、资源类型、云盘类型
+// Note: 云盘类型比较特殊，当云盘类型为 enumor.DiskUnknown 时，模糊范围排除掉云盘类型
 type ResPlanDemandAggregateKey struct {
 	BkBizID         int64
 	RegionID        string
@@ -807,6 +809,7 @@ type ResPlanDemandAggregateKey struct {
 	PlanType        enumor.PlanTypeCode
 	ObsProject      enumor.ObsProject
 	ResType         enumor.DemandResType
+	DiskType        enumor.DiskType
 }
 
 // DemandPenaltyBaseKey is key of demand penalty.

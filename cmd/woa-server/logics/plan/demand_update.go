@@ -165,7 +165,16 @@ func (c *Controller) prepareResPlanDemandChangeReq(kt *kit.Kit, ticket *TicketIn
 
 	batchCreateReq := make([]rpproto.ResPlanDemandCreateReq, 0)
 	batchCreateLogReq := make([]rpproto.DemandChangelogCreate, 0)
-	for aggregateKey, changeDemand := range changeDemandsMap {
+	// 最后再调整disk_type为空的
+	changeDemandsSlice := maps.PartitionSortKeys(changeDemandsMap, func(key ptypes.ResPlanDemandAggregateKey) bool {
+		if key.DiskType == enumor.DiskUnknown {
+			return false
+		}
+		return true
+	})
+	for _, aggregateKey := range changeDemandsSlice {
+		changeDemand := changeDemandsMap[aggregateKey]
+
 		localDemands, err := c.ListResPlanDemandByAggregateKey(kt, aggregateKey)
 		if err != nil {
 			logs.Errorf("failed to get local res plan demands, err: %v, aggregate key: %+v, change demand: %+v, "+
@@ -321,7 +330,6 @@ func (c *Controller) aggregateDemandChangeInfo(kt *kit.Kit, changeDemands []*pty
 			return nil, err
 		}
 
-		// TODO 因CRP会在拆单时改变云盘的类型，且CRP侧目前云盘类型和CVM没有强绑定，因此在调整场景下，暂时不考虑diskType的不同.
 		// 因为CRP的预测和本地的不一定一致，这里需要根据聚合key获取一批通配的预测需求，在范围内调整，只保证通配范围内的总数和CRP对齐
 		aggregateKey, err := changeDemand.GetAggregateKey(ticket.BkBizID, deviceTypeMap, expectTimeRange)
 		if err != nil {
@@ -623,6 +631,10 @@ func (c *Controller) ListResPlanDemandByAggregateKey(kt *kit.Kit, demandKey ptyp
 	listRules = append(listRules, tools.RuleEqual("device_family", demandKey.DeviceFamily))
 	listRules = append(listRules, tools.RuleEqual("core_type", demandKey.CoreType))
 	listRules = append(listRules, tools.RuleEqual("demand_res_type", demandKey.ResType))
+	// DiskType == DiskUnknown 时，允许匹配任何磁盘类型
+	if demandKey.DiskType != enumor.DiskUnknown {
+		listRules = append(listRules, tools.RuleEqual("disk_type", demandKey.DiskType))
+	}
 
 	listFilter := tools.ExpressionAnd(listRules...)
 
