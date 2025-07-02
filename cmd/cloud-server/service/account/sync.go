@@ -21,6 +21,7 @@ package account
 
 import (
 	"fmt"
+	"time"
 
 	"hcm/cmd/cloud-server/logics/account"
 	"hcm/pkg/api/core"
@@ -31,6 +32,9 @@ import (
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/rest"
 )
+
+// AccountSyncDefaultTimeout 账号同步的默认超时时间
+const AccountSyncDefaultTimeout = time.Minute * 10
 
 // SyncCloudResource ...
 func (a *accountSvc) SyncCloudResource(cts *rest.Contexts) (interface{}, error) {

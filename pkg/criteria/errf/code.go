@@ -81,4 +81,6 @@ const (
 	ResPlanVerifyFailed int32 = 2000020
 	// CvmApplyVerifyFailed CVM申请主机校验失败
 	CvmApplyVerifyFailed int32 = 2000021
+	// SyncRepeatLockError CLB、安全组重复同步
+	SyncRepeatLockError int32 = 2000024
 )
