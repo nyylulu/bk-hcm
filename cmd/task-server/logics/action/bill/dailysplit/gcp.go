@@ -78,7 +78,7 @@ func (ds *GcpSplitter) DoSplit(kt *kit.Kit, opt *DailyAccountSplitActionOption, 
 		Cost:          item.BillCost,
 		HcProductCode: item.HcProductCode,
 		// 去除前导空格
-		HcProductName: strings.TrimLeft(item.HcProductName, " \t\n\r"),
+		HcProductName: hcProductName,
 		ResAmount:     item.ResAmount,
 		ResAmountUnit: item.ResAmountUnit,
 		Extension:     cvt.ValToPtr[rawjson.RawMessage](rawExt),
