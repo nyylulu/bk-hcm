@@ -363,6 +363,9 @@ func (cli *client) RemoveSecurityGroupDeleteFromCloudV2(kt *kit.Kit, params *Syn
 		// 支持指定cloud id删除
 		rules = append(rules, tools.RuleIn("cloud_id", params.CloudIDs))
 	}
+	for k := range params.TagFilters {
+		rules = append(rules, tools.RuleJsonIn(getDatabaseTagKey(k), params.TagFilters[k]))
+	}
 	req := &core.ListReq{
 		Filter: tools.ExpressionAnd(rules...),
 		Page:   &core.BasePage{Start: 0, Limit: core.DefaultMaxPageLimit},
