@@ -4,9 +4,7 @@ import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { useTable } from '@/hooks/useTable/useTable';
 import { transferSimpleConditions } from '@/utils/scr/simple-query-builder';
 import { Button, Form, Input } from 'bkui-vue';
-import MemberSelect from '@/components/MemberSelect';
 import useFormModel from '@/hooks/useFormModel';
-import { useUserStore } from '@/store';
 import { useBusinessGlobalStore } from '@/store/business-global';
 import { timeFormatter, applicationTime, isEmpty } from '@/common/util';
 import ExportToExcelButton from '@/components/export-to-excel-button';
@@ -26,7 +24,6 @@ export default defineComponent({
     const clipHostAssetId = computed(() => {
       return selections.value.map((item) => item.asset_id).join('\n');
     });
-    const userStore = useUserStore();
     const businessGlobalStore = useBusinessGlobalStore();
 
     const { formModel, resetForm } = useFormModel({
@@ -128,17 +125,7 @@ export default defineComponent({
               <bk-input v-model={formModel.orderId} clearable type='number' placeholder='请输入单号'></bk-input>
             </FormItem>
             <FormItem label='申请人'>
-              <MemberSelect
-                v-model={formModel.bkUsername}
-                multiple
-                clearable
-                defaultUserlist={[
-                  {
-                    username: userStore.username,
-                    display_name: userStore.username,
-                  },
-                ]}
-              />
+              <hcm-form-user v-model={formModel.bkUsername} />
             </FormItem>
             <FormItem label='交付时间'>
               <bk-date-picker type='daterange' v-model={formModel.dateRange} clearable={false} />

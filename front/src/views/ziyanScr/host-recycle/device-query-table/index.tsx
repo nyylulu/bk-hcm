@@ -4,9 +4,7 @@ import { useTable } from '@/hooks/useTable/useTable';
 import { getDeviceTypeList, getRegionList, getZoneList, getRecycleStageOpts } from '@/api/host/recycle';
 import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
 import { Search } from 'bkui-vue/lib/icon';
-import { useUserStore } from '@/store';
 import { useBusinessGlobalStore } from '@/store/business-global';
-import MemberSelect from '@/components/MemberSelect';
 import ExportToExcelButton from '@/components/export-to-excel-button';
 import FloatInput from '@/components/float-input';
 import dayjs from 'dayjs';
@@ -18,13 +16,11 @@ import { isEmpty } from '@/common/util';
 const { FormItem } = Form;
 export default defineComponent({
   components: {
-    MemberSelect,
     ExportToExcelButton,
     FloatInput,
   },
   emits: ['goBillDetailPage'],
   setup(_, { emit }) {
-    const userStore = useUserStore();
     const businessGlobalStore = useBusinessGlobalStore();
     const defaultDeviceForm = () => ({
       bk_biz_id: businessGlobalStore.getCacheSelected(serviceShareBizSelectedKey) ?? [0],
@@ -195,18 +191,7 @@ export default defineComponent({
               <FloatInput v-model={deviceForm.value.ip} placeholder='请输入IP，多个换行分割' />
             </FormItem>
             <FormItem label='回收人'>
-              <member-select
-                v-model={deviceForm.value.bk_username}
-                multiple
-                clearable
-                defaultUserlist={[
-                  {
-                    username: userStore.username,
-                    display_name: userStore.username,
-                  },
-                ]}
-                placeholder='请输入企业微信名'
-              />
+              <hcm-form-user v-model={deviceForm.value.bk_username} />
             </FormItem>
             <FormItem label='完成时间'>
               <DatePicker v-model={timeForm.value} type='daterange' />
