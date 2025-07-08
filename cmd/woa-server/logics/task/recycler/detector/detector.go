@@ -47,6 +47,15 @@ import (
 
 // Detector detects rejected device for recycle
 type Detector struct {
+	cliSet
+
+	// 仅能作为后台操作kit，不能用到单个单据的执行
+	backendKit *kit.Kit
+
+	StepExecutors map[table.DetectStepName]StepExecutor
+}
+
+type cliSet struct {
 	cc      cmdb.Client
 	xray    xrayapi.XrayClientInterface
 	xship   xshipapi.XshipClientInterface
@@ -60,37 +69,34 @@ type Detector struct {
 	sops    sopsapi.SopsClientInterface
 	ngate   ngateapi.NgateClientInterface
 	bkDbm   bkdbm.Client
-
-	cliSet *client.ClientSet
-
-	// 仅能作为后台操作kit，不能用到单个单据的执行
-	backendKit *kit.Kit
-
-	StepExecutors map[table.DetectStepName]StepExecutor
+	hcm     *client.ClientSet
 }
 
 // New creates a detector
-func New(ctx context.Context, thirdCli *thirdparty.Client, cmdbCli cmdb.Client, cliSet *client.ClientSet) (
+func New(ctx context.Context, thirdCli *thirdparty.Client, cmdbCli cmdb.Client, hcmCli *client.ClientSet) (
 	*Detector, error) {
 
 	kt := core.NewBackendKit()
 	kt.Ctx = ctx
+	cli := cliSet{
+		cc:      cmdbCli,
+		xray:    thirdCli.Xray,
+		xship:   thirdCli.Xship,
+		tmp:     thirdCli.Tmp,
+		tcaplus: thirdCli.Tcaplus,
+		tgw:     thirdCli.TGW,
+		l5:      thirdCli.L5,
+		safety:  thirdCli.Safety,
+		cvm:     thirdCli.CVM,
+		tcOpt:   thirdCli.TencentCloudOpt,
+		sops:    thirdCli.Sops,
+		ngate:   thirdCli.Ngate,
+		bkDbm:   thirdCli.BkDbm,
+		hcm:     hcmCli,
+	}
 	detector := &Detector{
+		cliSet:     cli,
 		backendKit: kt,
-		cc:         cmdbCli,
-		xray:       thirdCli.Xray,
-		xship:      thirdCli.Xship,
-		tmp:        thirdCli.Tmp,
-		tcaplus:    thirdCli.Tcaplus,
-		tgw:        thirdCli.TGW,
-		l5:         thirdCli.L5,
-		safety:     thirdCli.Safety,
-		cvm:        thirdCli.CVM,
-		tcOpt:      thirdCli.TencentCloudOpt,
-		sops:       thirdCli.Sops,
-		ngate:      thirdCli.Ngate,
-		bkDbm:      thirdCli.BkDbm,
-		cliSet:     cliSet,
 	}
 	err := detector.initStepExecutor(detector.backendKit)
 	if err != nil {
@@ -238,20 +244,14 @@ func (d *Detector) executeRecycleStep(step *table.DetectStep, retry int) (int, s
 	// 	attempt, exeInfo, err = d.checkTcaplus(step, retry)
 	// case table.StepCheckDBM:
 	// 	attempt, exeInfo, err = d.checkDbm(step, retry)
-	case table.StepBasicCheck:
-		attempt, exeInfo, err = d.basicCheck(step, retry)
 	// case table.StepCheckOwner:
 	// 	attempt, exeInfo, err = d.checkOwner(step, retry)
-	case table.StepCvmCheck:
-		attempt, exeInfo, err = d.cvmCheck(step, retry)
 	case table.StepCheckSafety:
 		attempt, exeInfo, err = d.checkSecurityBaseline(step, retry)
 	case table.StepCheckReturn:
 		attempt, exeInfo, err = d.checkReturn(step, retry)
 	// case table.StepCheckProcess:
 	// 	attempt, exeInfo, err = d.checkProcess(step, retry)
-	case table.StepCheckPmOuterIP: // 物理机外网IP回收及清理检查
-		attempt, exeInfo, err = d.checkPmOuterIP(step, retry)
 	default:
 		logs.Errorf("unknown recycle step %s", step.StepName)
 		err = fmt.Errorf("unknown recycle step %s", step.StepName)

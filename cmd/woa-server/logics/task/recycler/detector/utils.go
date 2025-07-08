@@ -39,11 +39,11 @@ func init() {
 	cvmLimiter = ratelimit.New(50)
 }
 
-func (d *Detector) isTcDevice(host *cmdb.Host) bool {
+func isTcDevice(host *cmdb.Host) bool {
 	return strings.HasPrefix(host.BkAssetID, "TC")
 }
 
-func (d *Detector) isDockerVM(host *cmdb.Host) bool {
+func isDockerVM(host *cmdb.Host) bool {
 	dashIdx := strings.Index(host.BkAssetID, "-")
 	if dashIdx < 0 {
 		return false
