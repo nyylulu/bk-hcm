@@ -56,6 +56,10 @@ func (d *Detector) initStepExecutor(backendKit *kit.Kit) error {
 		switch stepCfg.Name {
 		case table.StepPreCheck:
 			workgroup = NewPreCheckWorkGroup(d.cc, executor, stepCfg.Worker)
+		case table.StepBasicCheck:
+			workgroup = newCheckBasicWorkGroup(executor, stepCfg.Worker, &d.cliSet)
+		case table.StepCvmCheck:
+			workgroup = newCheckCvmWorkGroup(executor, stepCfg.Worker, &d.cliSet)
 		case table.StepCheckProcess:
 			workgroup = NewCheckProcessWorkGroup(d.sops, d.cc, executor, stepCfg.Worker)
 		case table.StepCheckTcaplus:
@@ -67,6 +71,8 @@ func (d *Detector) initStepExecutor(backendKit *kit.Kit) error {
 		case table.StepCheckUwork:
 			workgroup = NewCheckUworkWorkGroup(d.xray, d.xship, executor, stepCfg.Worker,
 				stepCfg.RateLimitQps, stepCfg.RateLimitBurst)
+		case table.StepCheckPmOuterIP:
+			workgroup = newCheckPmOuterIPWorkGroup(executor, stepCfg.Worker, &d.cliSet)
 		// 	TODO 其他步骤执行器
 		default:
 			return errors.New(string("detect step not supported: " + stepCfg.Name))

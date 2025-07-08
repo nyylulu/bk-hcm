@@ -60,7 +60,7 @@ func (d *Detector) checkLog4j(ip string) error {
 	}
 
 	// check log4j for host
-	if !d.isDockerVM(hostBase[0]) {
+	if !isDockerVM(hostBase[0]) {
 		pass, err := d.safety.CheckLog4jHost(nil, nil, ip)
 		if err != nil {
 			return fmt.Errorf("failed to check log4j, err: %v", err)

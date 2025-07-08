@@ -150,39 +150,43 @@ func CreateDataClearSopsTask(kt *kit.Kit, sopsCli sopsapi.SopsClientInterface, i
 	return jobId, jobUrl, err
 }
 
-// CreateRecycleOuterIPSopsTask 创建回收外网IP任务
-func CreateRecycleOuterIPSopsTask(kt *kit.Kit, sopsCli sopsapi.SopsClientInterface, ip string,
-	bkBizID int64, bkOsType cmdb.OsType) (int64, string, error) {
+// RecycleOuterIPParams ...
+type RecycleOuterIPParams struct {
+	TemplateID int64
+	CreateReq  *sopsapi.CreateTaskReq
+}
 
-	// 操作系统不是Linux、Windows的话，不处理
-	if bkOsType != cmdb.LinuxOsType && bkOsType != cmdb.WindowsOsType {
-		logs.Warnf("sops:process:check:recycle outer ip, host:%s bkOsType is not Linux or Windows, bkOsType: %s",
-			ip, bkOsType)
-		return 0, "", nil
-	}
+// GetRecycleOuterIPParams 获取回收外网IP参数
+func GetRecycleOuterIPParams(kt *kit.Kit, ip string, bkBizID int64, bkOsType cmdb.OsType) (*RecycleOuterIPParams, bool,
+	error) {
 
-	// 操作系统类型(Linux:1 Windows:2)
-	templateID := sopsapi.RecycleOuterIPLinux
-	taskName := fmt.Sprintf(sopsapi.RecycleOuterIPLinuxTaskNamePrefix, ip)
-	if bkOsType == cmdb.WindowsOsType {
+	var templateID int64
+	var taskName string
+	switch bkOsType {
+	case cmdb.LinuxOsType:
+		templateID = sopsapi.RecycleOuterIPLinux
+		taskName = fmt.Sprintf(sopsapi.RecycleOuterIPLinuxTaskNamePrefix, ip)
+	case cmdb.WindowsOsType:
 		templateID = sopsapi.RecycleOuterIPWindows
 		taskName = fmt.Sprintf(sopsapi.RecycleOuterIPWindowsTaskNamePrefix, ip)
+	default:
+		logs.Warnf("host os type is not Linux or Windows, ip: %s, bkOsType: %s, rid: %s", ip, bkOsType, kt.Rid)
+		return &RecycleOuterIPParams{}, false, nil
 	}
 
-	params := map[string]interface{}{
+	constants := map[string]interface{}{
 		"${biz_cc_id}":   bkBizID,
 		"${bk_biz_id}":   bkBizID,
 		"${job_ip_list}": ip,
 	}
 
-	jobId, jobUrl, err := createSopsTask(kt, sopsCli, templateID, taskName, bkBizID, params)
-	if err != nil {
-		logs.Errorf("sops:process:check:recycle outer ip:create sops task failed, bkBizID: %d, taskName: %s, err: %v",
-			bkBizID, taskName, err)
-		return 0, "", err
+	createReq := &sopsapi.CreateTaskReq{
+		TemplateSource: sopsapi.CommonTemplateSource,
+		Name:           taskName,
+		Constants:      constants,
 	}
 
-	return jobId, jobUrl, nil
+	return &RecycleOuterIPParams{TemplateID: templateID, CreateReq: createReq}, true, nil
 }
 
 // createSopsTask create a sops task

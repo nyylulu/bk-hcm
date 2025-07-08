@@ -1,13 +1,20 @@
 /*
- * Tencent is pleased to support the open source community by making 蓝鲸 available.
- * Copyright (C) 2017-2018 THL A29 Limited, a Tencent company. All rights reserved.
- * Licensed under the MIT License (the "License"); you may not use this file except
- * in compliance with the License. You may obtain a copy of the License at
- * http://opensource.org/licenses/MIT
- * Unless required by applicable law or agreed to in writing, software distributed under
- * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
- * either express or implied. See the License for the specific language governing permissions and
- * limitations under the License.
+ * TencentBlueKing is pleased to support the open source community by making
+ * 蓝鲸智云 - 混合云管理平台 (BlueKing - Hybrid Cloud Management System) available.
+ * Copyright (C) 2025 THL A29 Limited,
+ * a Tencent company. All rights reserved.
+ * Licensed under the MIT License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at http://opensource.org/licenses/MIT
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ *
+ * We undertake not to change the open source license (MIT license) applicable
+ *
+ * to the current version of the project delivered to anyone in the future.
  */
 
 // Package detector ...
@@ -18,197 +25,211 @@ import (
 	"strings"
 	"time"
 
-	"hcm/cmd/woa-server/dal/task/table"
+	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/tmpapi"
 
 	"github.com/mitchellh/mapstructure"
 )
 
-func (d *Detector) basicCheck(step *table.DetectStep, retry int) (int, string, error) {
-	attempt := 0
-	exeInfo := ""
-	var err error = nil
-
-	for i := 0; i < retry; i++ {
-		attempt = i
-		exeInfo, err = d.checkStrategies(step.IP)
-		if err == nil {
-			break
-		}
-
-		// retry gap until last retry
-		if (i + 1) < retry {
-			time.Sleep(3 * time.Second)
-		}
-	}
-
-	return attempt, exeInfo, err
+// checkBasicWorkGroup ...
+type checkBasicWorkGroup struct {
+	baseWorkGroup
 }
 
-func (d *Detector) checkStrategies(ip string) (string, error) {
+// newCheckBasicWorkGroup ...
+func newCheckBasicWorkGroup(resultHandler StepResultHandler, workerNum int, cliSet *cliSet) *checkBasicWorkGroup {
+	return &checkBasicWorkGroup{
+		baseWorkGroup: newBaseWorkGroup(enumor.CheckBasicDetectStep, resultHandler, workerNum, checkBasic, cliSet),
+	}
+}
+
+// MaxBatchSize 最大批量数
+func (c *checkBasicWorkGroup) MaxBatchSize() int {
+	return onlyOneBatchSize
+}
+
+// checkBasic ...
+func checkBasic(kt *kit.Kit, steps []*StepMeta, resultHandler StepResultHandler, cliSet *cliSet) {
+	if len(steps) == 0 {
+		logs.Warnf("check base worker receive empty steps, rid: %s", kt.Rid)
+		return
+	}
+
+	for _, step := range steps {
+		exeInfo, retry, err := checkStrategies(kt, step.Step.IP, cliSet)
+		if err != nil {
+			logs.Errorf("recycle detector check basic failed, err: %v, ip: %s, rid: %s", err, step.Step.IP, kt.Rid)
+		}
+		resultHandler.HandleResult(kt, []*StepMeta{step}, err, exeInfo, retry)
+	}
+}
+
+func checkStrategies(kt *kit.Kit, ip string, cliSet *cliSet) (string, bool, error) {
 	exeInfos := make([]string, 0)
 
 	// check tmp
-	tmpExeInfo, errTmp := d.checkTmp(ip)
+	tmpExeInfo, retry, errTmp := checkTmp(kt, ip, cliSet)
 	exeInfos = append(exeInfos, tmpExeInfo)
 	if errTmp != nil {
-		return strings.Join(exeInfos, "\n"), errTmp
+		return strings.Join(exeInfos, "\n"), retry, errTmp
 	}
 
 	// check tgw
-	tgwExeInfo, errTgw := d.checkTgw(ip)
+	tgwExeInfo, retry, errTgw := checkTgw(kt, ip, cliSet)
 	exeInfos = append(exeInfos, tgwExeInfo)
 	if errTgw != nil {
-		return strings.Join(exeInfos, "\n"), errTgw
+		return strings.Join(exeInfos, "\n"), retry, errTgw
 	}
 
 	// check tgw nat
-	tgwNatExeInfo, errTgwNat := d.checkTgwNat(ip)
+	tgwNatExeInfo, retry, errTgwNat := checkTgwNat(kt, ip, cliSet)
 	exeInfos = append(exeInfos, tgwNatExeInfo)
 	if errTgwNat != nil {
-		return strings.Join(exeInfos, "\n"), errTgwNat
+		return strings.Join(exeInfos, "\n"), retry, errTgwNat
 	}
 
 	// check L5
-	l5ExeInfo, errL5 := d.checkL5(ip)
+	l5ExeInfo, retry, errL5 := checkL5(kt, ip, cliSet)
 	exeInfos = append(exeInfos, l5ExeInfo)
 	if errL5 != nil {
-		return strings.Join(exeInfos, "\n"), errL5
+		return strings.Join(exeInfos, "\n"), retry, errL5
 	}
 
-	return strings.Join(exeInfos, "\n"), nil
+	return strings.Join(exeInfos, "\n"), false, nil
 }
 
-func (d *Detector) checkTmp(ip string) (string, error) {
+func checkTmp(kt *kit.Kit, ip string, cliSet *cliSet) (string, bool, error) {
 	exeInfos := make([]string, 0)
 
-	respTmp, err := d.tmp.CheckTMP(nil, nil, ip)
+	respTmp, err := cliSet.tmp.CheckTMP(kt.Ctx, kt.Header(), ip)
 	if err != nil {
-		logs.Errorf("recycle detector check basic tmp failed, ip: %s, err: %v", ip, err)
-		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to check tmp, err: %v", err)
+		logs.Errorf("recycle detector check basic tmp failed, err: %v, ip: %s, rid: %s", err, ip, kt.Rid)
+		return strings.Join(exeInfos, "\n"), true, fmt.Errorf("failed to check tmp, err: %v", err)
 	}
 
-	tmpRespStr := d.structToStr(respTmp)
+	tmpRespStr := structToStr(respTmp)
 	exeInfo := fmt.Sprintf("tmp response: %s", tmpRespStr)
 	exeInfos = append(exeInfos, exeInfo)
 
-	for _, aRule := range respTmp {
+	for _, one := range respTmp {
 		rule := new(tmpapi.AlarmShieldConfig)
-		if err := mapstructure.Decode(aRule, rule); err != nil {
-			return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to check tmp, err: %v", err)
+		if err := mapstructure.Decode(one, rule); err != nil {
+			logs.Errorf("recycle detector check basic tmp failed, failed to decode, err: %v, rid: %s", err, kt.Rid)
+			return strings.Join(exeInfos, "\n"), true, fmt.Errorf("failed to check tmp, err: %v", err)
 		}
 
-		if d.isAllShieldRule(rule) && d.isShieldByIp(rule) {
-			if !d.isShieldEndTimeMoreThanThreeDay(rule) {
+		if isAllShieldRule(rule) && isShieldByIp(rule) {
+			if !isShieldEndTimeMoreThanThreeDay(rule) {
 				continue
 			}
-			logs.Infof("%s has tmp shield strategy", ip)
-			return strings.Join(exeInfos, "\n"), fmt.Errorf("has tmp shield policy")
+			logs.Infof("has tmp shield strategy, ip: %s, rid: %s", ip, kt.Rid)
+			return strings.Join(exeInfos, "\n"), false, fmt.Errorf("has tmp shield policy")
 		}
 	}
 
-	return strings.Join(exeInfos, "\n"), nil
+	return strings.Join(exeInfos, "\n"), false, nil
 }
 
-func (d *Detector) checkTgw(ip string) (string, error) {
+func checkTgw(kt *kit.Kit, ip string, cliSet *cliSet) (string, bool, error) {
 	exeInfos := make([]string, 0)
 
-	respTgw, err := d.tgw.CheckTgw(nil, nil, ip)
+	respTgw, err := cliSet.tgw.CheckTgw(kt.Ctx, kt.Header(), ip)
 	if err != nil {
-		logs.Errorf("recycler:logics:cvm:checkTgw:failed, failed to check tgw, ip: %s, err: %v", ip, err)
-		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to check tgw, err: %v", err)
+		logs.Errorf("failed to check tgw, err: %v, ip: %s, rid: %s", err, ip, kt.Rid)
+		return strings.Join(exeInfos, "\n"), true, fmt.Errorf("failed to check tgw, err: %v", err)
 	}
 
-	tgwRespStr := d.structToStr(respTgw)
+	tgwRespStr := structToStr(respTgw)
 	exeInfo := fmt.Sprintf("tgw response: %s", tgwRespStr)
 	exeInfos = append(exeInfos, exeInfo)
 
 	if respTgw.Errno != 0 {
-		logs.Errorf("recycler:logics:cvm:checkTgw:failed, %s failed to check tgw, errno: %d, err: %s",
-			ip, respTgw.Errno, respTgw.Error)
-		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to check tgw, errno: %d, err: %s", respTgw.Errno,
+		logs.Errorf("failed to check tgw, ip: %s, errno: %d, err: %s, rid: %s", ip, respTgw.Errno, respTgw.Error,
+			kt.Rid)
+		return strings.Join(exeInfos, "\n"), true, fmt.Errorf("failed to check tgw, errno: %d, err: %s", respTgw.Errno,
 			respTgw.Error)
 	}
 
 	if respTgw.L7RuleCount > 0 || len(respTgw.L7RuleList) > 0 {
-		logs.Infof("%s has %d stgw rules", ip, respTgw.L7RuleCount)
-		return strings.Join(exeInfos, "\n"), fmt.Errorf("has %d stgw rules", respTgw.L7RuleCount)
+		logs.Infof("has stgw rules, ip: %s, count: %d, rid: %s", ip, respTgw.L7RuleCount, kt.Rid)
+		return strings.Join(exeInfos, "\n"), false, fmt.Errorf("has %d stgw rules", respTgw.L7RuleCount)
 	}
 
 	if respTgw.RuleCount > 0 || len(respTgw.RuleList) > 0 {
-		logs.Infof("%s has %d tgw rules", ip, respTgw.RuleCount)
-		return strings.Join(exeInfos, "\n"), fmt.Errorf("has %d tgw rules", respTgw.RuleCount)
+		logs.Infof("has tgw rules, ip: %s, count: %d, rid: %s", ip, respTgw.RuleCount, kt.Rid)
+		return strings.Join(exeInfos, "\n"), false, fmt.Errorf("has tgw rules, count: %d", respTgw.RuleCount)
 	}
 
-	return strings.Join(exeInfos, "\n"), nil
+	return strings.Join(exeInfos, "\n"), false, nil
 }
 
-func (d *Detector) checkTgwNat(ip string) (string, error) {
+func checkTgwNat(kt *kit.Kit, ip string, cliSet *cliSet) (string, bool, error) {
 	exeInfos := make([]string, 0)
 
-	respTgwNat, err := d.tgw.CheckTgwNat(nil, nil, ip)
+	respTgwNat, err := cliSet.tgw.CheckTgwNat(kt.Ctx, kt.Header(), ip)
 	if err != nil {
-		logs.Errorf("recycler:logics:cvm:checkTgwNat:failed, failed to check tgw nat, ip: %s, err: %v", ip, err)
-		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to check tgw nat, err: %v", err)
+		logs.Errorf("failed to check tgw nat, ip: %s, err: %v, rid: %s", ip, err, kt.Rid)
+		return strings.Join(exeInfos, "\n"), true, fmt.Errorf("failed to check tgw nat, err: %v", err)
 	}
 
-	tgwNatRespStr := d.structToStr(respTgwNat)
+	tgwNatRespStr := structToStr(respTgwNat)
 	exeInfo := fmt.Sprintf("tgw nat response: %s", tgwNatRespStr)
 	exeInfos = append(exeInfos, exeInfo)
 
 	if respTgwNat.Errno != 0 {
-		logs.Errorf("recycler:logics:cvm:checkTgwNat:failed, %s failed to check tgw nat, errno: %d, err: %s",
-			ip, respTgwNat.Errno, respTgwNat.Error)
-		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to check tgw nat, errno: %d, err: %s", respTgwNat.Errno,
-			respTgwNat.Error)
+		logs.Errorf("failed to check tgw nat, ip: %s, errno: %d, err: %s, rid: %s", ip, respTgwNat.Errno,
+			respTgwNat.Error, kt.Rid)
+		return strings.Join(exeInfos, "\n"), true, fmt.Errorf("failed to check tgw nat, errno: %d, err: %s",
+			respTgwNat.Errno, respTgwNat.Error)
 	}
 
 	if respTgwNat.TotalCount > 0 || len(respTgwNat.RSList) > 0 {
-		logs.Infof("%s has tgw nat policy", ip)
-		return strings.Join(exeInfos, "\n"), fmt.Errorf("has tgw nat policy")
+		logs.Infof("has tgw nat policy, ip: %s, rid: %s", ip, kt.Rid)
+		return strings.Join(exeInfos, "\n"), false, fmt.Errorf("has tgw nat policy")
 	}
 
-	return strings.Join(exeInfos, "\n"), nil
+	return strings.Join(exeInfos, "\n"), false, nil
 }
 
-func (d *Detector) checkL5(ip string) (string, error) {
+func checkL5(kt *kit.Kit, ip string, cliSet *cliSet) (string, bool, error) {
 	exeInfos := make([]string, 0)
 
-	respL5, err := d.l5.CheckL5(nil, nil, ip)
+	respL5, err := cliSet.l5.CheckL5(kt.Ctx, kt.Header(), ip)
 	if err != nil {
-		logs.Errorf("recycler:logics:cvm:checkL5:failed, failed to check l5, ip: %s, err: %v", ip, err)
-		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to check l5, err: %v", err)
+		logs.Errorf("failed to check l5, ip: %s, err: %v, rid: %s", ip, err, kt.Rid)
+		return strings.Join(exeInfos, "\n"), true, fmt.Errorf("failed to check l5, err: %v", err)
 	}
 
-	l5RespStr := d.structToStr(respL5)
+	l5RespStr := structToStr(respL5)
 	exeInfo := fmt.Sprintf("l5 response: %s", l5RespStr)
 	exeInfos = append(exeInfos, exeInfo)
 
 	if respL5.ReturnCode != 0 {
-		logs.Errorf("recycler:logics:cvm:checkL5:failed, %s failed to check l5, code: %d, msg: %s",
-			ip, respL5.ReturnCode, respL5.ReturnMessage)
-		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to check l5, code: %d, msg: %s", respL5.ReturnCode,
-			respL5.ReturnMessage)
+		logs.Errorf("failed to check l5, ip: %s, code: %d, msg: %s, rid: %s", ip, respL5.ReturnCode,
+			respL5.ReturnMessage, kt.Rid)
+		return strings.Join(exeInfos, "\n"), true, fmt.Errorf("failed to check l5, code: %d, msg: %s",
+			respL5.ReturnCode, respL5.ReturnMessage)
 	}
 
 	if len(respL5.Data.SIDList) > 0 {
-		logs.Infof("%s has l5 policy", ip)
-		return strings.Join(exeInfos, "\n"), fmt.Errorf("has l5 policy")
+		logs.Infof("has l5 policy, ip: %s, rid: %s", ip, kt.Rid)
+		return strings.Join(exeInfos, "\n"), false, fmt.Errorf("has l5 policy")
 	}
 
-	return strings.Join(exeInfos, "\n"), nil
+	return strings.Join(exeInfos, "\n"), false, nil
 }
 
-func (d *Detector) isAllShieldRule(rule *tmpapi.AlarmShieldConfig) bool {
+func isAllShieldRule(rule *tmpapi.AlarmShieldConfig) bool {
 	return rule.ShieldRule == `["true"]`
 }
 
-func (d *Detector) isShieldByIp(rule *tmpapi.AlarmShieldConfig) bool {
+func isShieldByIp(rule *tmpapi.AlarmShieldConfig) bool {
 	return strings.HasPrefix(rule.CiSetInfo, "<br>IP:")
 }
 
-func (d *Detector) isShieldEndTimeMoreThanThreeDay(rule *tmpapi.AlarmShieldConfig) bool {
+func isShieldEndTimeMoreThanThreeDay(rule *tmpapi.AlarmShieldConfig) bool {
 	end, _ := time.Parse("2006-01-02", rule.CycleEnd)
 	add, _ := time.ParseDuration("72h")
 	if time.Now().Add(add).After(end) {

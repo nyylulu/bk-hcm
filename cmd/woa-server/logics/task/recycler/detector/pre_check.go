@@ -30,11 +30,6 @@ import (
 // PrecheckMaxBatchSize 检查CC模块和负责人最大批次大小
 const PrecheckMaxBatchSize = 500
 
-type stepBatch struct {
-	kt    *kit.Kit
-	steps []*StepMeta
-}
-
 // PreCheckWorkGroup 检查CC模块和负责人以及业务是否发生变化
 type PreCheckWorkGroup struct {
 	stepBatchChan chan *stepBatch

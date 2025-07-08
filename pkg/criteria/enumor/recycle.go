@@ -57,3 +57,31 @@ const (
 	// 目前主要用于标识disk作为关联资源随cvm回收的类型。
 	RecycleTypeRelated RecycleType = "related"
 )
+
+// DetectStepName 预检步骤名称
+type DetectStepName string
+
+const (
+	// CheckBasicDetectStep check basic detect step
+	CheckBasicDetectStep DetectStepName = "check_basic"
+	// CheckCvmDetectStep check cvm detect step
+	CheckCvmDetectStep DetectStepName = "check_cvm"
+	// CheckDbmDetectStep check dbm detect step
+	CheckDbmDetectStep DetectStepName = "check_dbm"
+	// CheckOwnerDetectStep check owner detect step
+	CheckOwnerDetectStep DetectStepName = "check_owner"
+	// CheckPmOuterIPDetectStep check pm outer ip detect step
+	CheckPmOuterIPDetectStep DetectStepName = "check_pm_outer_ip"
+	// CheckProcessDetectStep check process detect step
+	CheckProcessDetectStep DetectStepName = "check_process"
+	// CheckReturnDetectStep check return detect step
+	CheckReturnDetectStep DetectStepName = "check_return"
+	// CheckSecurityDetectStep check security detect step
+	CheckSecurityDetectStep DetectStepName = "check_security"
+	// CheckTcaplusDetectStep check tcaplus detect step
+	CheckTcaplusDetectStep DetectStepName = "check_tcaplus"
+	// CheckUworkDetectStep check uwork detect step
+	CheckUworkDetectStep DetectStepName = "check_uwork"
+	// PreCheckDetectStep pre check detect step
+	PreCheckDetectStep DetectStepName = "pre_check"
+)
