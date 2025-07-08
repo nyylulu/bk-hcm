@@ -14,20 +14,23 @@
 package tcaplusapi
 
 import (
-	"context"
-	"net/http"
+	"fmt"
 
 	"hcm/pkg/cc"
+	"hcm/pkg/kit"
 	"hcm/pkg/rest"
 	"hcm/pkg/rest/client"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+// TcapulsCheckIPExistsMaxLength 与为了保证性能，需要把`iplist`的长度限制在200以内
+const TcapulsCheckIPExistsMaxLength = 200
+
 // TcaplusClientInterface tcaplus api interface
 type TcaplusClientInterface interface {
 	// CheckTcaplus check if a host has tcaplus records or not
-	CheckTcaplus(ctx context.Context, header http.Header, ip string) (*TcaplusResp, error)
+	CheckTcaplus(kt *kit.Kit, ips []string) (*TcaplusResp, error)
 }
 
 // NewTcaplusClientInterface creates a tcaplus api instance
@@ -58,10 +61,16 @@ type tcaplusApi struct {
 	client rest.ClientInterface
 }
 
-// CheckTcaplus check if a host has tcaplus records or not
-func (t *tcaplusApi) CheckTcaplus(ctx context.Context, header http.Header, ip string) (*TcaplusResp, error) {
+// CheckTcaplus check if a host has tcaplus records or not, currency is limited to 500 qps
+func (t *tcaplusApi) CheckTcaplus(kt *kit.Kit, ips []string) (*TcaplusResp, error) {
+
+	if len(ips) > TcapulsCheckIPExistsMaxLength {
+		return nil, fmt.Errorf("ip list length greater than limit, input length: %d, limit: %d",
+			len(ips), TcapulsCheckIPExistsMaxLength)
+	}
+
 	req := &TcaplusReq{
-		IpList: []string{ip},
+		IpList: ips,
 	}
 
 	subPath := "/app/newoms.php/webservice/host/check-ip-exist"
@@ -70,16 +79,18 @@ func (t *tcaplusApi) CheckTcaplus(ctx context.Context, header http.Header, ip st
 		"ip-type": "sa",
 	}
 	resp := new(TcaplusResp)
-	err := t.client.Post().
-		WithContext(ctx).
+	r := t.client.Post().
+		WithContext(kt.Ctx).
 		Body(req).
 		SubResourcef(subPath).
-		WithHeaders(header).
+		WithHeaders(kt.Header()).
 		WithParams(params).
-		Do().
-		Into(resp)
+		Do()
+	if r.StatusCode >= 400 {
+		return nil, fmt.Errorf("check tcaplus failed, http status: %s, body: %s", r.Status, r.Body)
+	}
 
-	if err != nil {
+	if err := r.Into(resp); err != nil {
 		return nil, err
 	}
 

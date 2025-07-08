@@ -14,16 +14,15 @@
 package xrayapi
 
 import (
-	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"net/http"
 	"strconv"
 	"time"
 
 	"hcm/pkg/cc"
 	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 	"hcm/pkg/rest/client"
@@ -31,10 +30,13 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+// XRayCheckFaultTicketMaxLength xray api check fault ticket max length
+const XRayCheckFaultTicketMaxLength = 1000
+
 // XrayClientInterface xray api interface
 type XrayClientInterface interface {
 	// CheckXrayFaultTickets check if a host xray fault tickets
-	CheckXrayFaultTickets(ctx context.Context, header http.Header, assetID string, isEnd enumor.XrayFaultTicketIsEnd) (
+	CheckXrayFaultTickets(kt *kit.Kit, assetIDs []string, isEnd enumor.XrayFaultTicketIsEnd) (
 		*QueryFaultTicketResponse, error)
 }
 
@@ -79,28 +81,30 @@ func (x *xrayApi) getAuthHeader() (string, string) {
 	return "Authorization", auth
 }
 
-// CheckXrayFaultTickets check if a host xray fault tickets
+// CheckXrayFaultTickets check if a host xray fault tickets, 入参不超过1000，建议QPS 50
 // @doc https://iwiki.woa.com/p/1479549975
-func (x *xrayApi) CheckXrayFaultTickets(ctx context.Context, header http.Header, assetID string,
-	isEnd enumor.XrayFaultTicketIsEnd) (*QueryFaultTicketResponse, error) {
+func (x *xrayApi) CheckXrayFaultTickets(kt *kit.Kit, assetIDs []string, isEnd enumor.XrayFaultTicketIsEnd) (
+	*QueryFaultTicketResponse, error) {
 
+	if len(assetIDs) > XRayCheckFaultTicketMaxLength {
+		return nil, fmt.Errorf("assetIDs length greater than limit, input length: %d, limit: %d",
+			len(assetIDs), XRayCheckFaultTicketMaxLength)
+	}
 	req := &QueryFaultTicketReq{
-		ServerAssetIdList: []string{assetID},
+		ServerAssetIdList: assetIDs,
 		IsEnd:             isEnd,
 	}
 	subPath := "/xray-srv-process-reception/queryMergedFaultInfo"
 
 	key, val := x.getAuthHeader()
-	if header == nil {
-		header = http.Header{}
-	}
+	header := kt.Header()
 	header.Set(key, val)
 	header.Set("Content-Type", "application/json")
 	header.Set("x-client-id", x.opts.ClientID)
 
 	resp := new(QueryFaultTicketResponse)
 	err := x.client.Post().
-		WithContext(ctx).
+		WithContext(kt.Ctx).
 		Body(req).
 		SubResourcef(subPath).
 		WithHeaders(header).
@@ -108,13 +112,15 @@ func (x *xrayApi) CheckXrayFaultTickets(ctx context.Context, header http.Header,
 		Into(resp)
 
 	if err != nil {
-		logs.Errorf("check:xray:fault:ticket:failed, err: %+v, subPath: %s, assetID: %s, req: %+v",
-			err, subPath, assetID, req)
+		logs.Errorf("check:xray:fault:ticket:failed, err: %+v, subPath: %v, req: %+v, rid: %s",
+			err, subPath, req, kt.Rid)
 		return nil, err
 	}
 
 	if resp.Code != "0" {
-		return nil, fmt.Errorf("check:xray:fault:ticket api return err: %s(%s), "+
+		logs.Errorf("check:xray:fault:ticket:return code is not \"0\", message: %s, code: %s, xrayTraceID: %s, rid: %s",
+			resp.Message, resp.Code, resp.TraceID, kt.Rid)
+		return nil, fmt.Errorf("check:xray:fault:ticket return code is not \"0\": %s(%s), "+
 			"xrayTraceID: %s", resp.Message, resp.Code, resp.TraceID)
 	}
 

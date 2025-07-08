@@ -58,6 +58,15 @@ func (d *Detector) initStepExecutor(backendKit *kit.Kit) error {
 			workgroup = NewPreCheckWorkGroup(d.cc, executor, stepCfg.Worker)
 		case table.StepCheckProcess:
 			workgroup = NewCheckProcessWorkGroup(d.sops, d.cc, executor, stepCfg.Worker)
+		case table.StepCheckTcaplus:
+			workgroup = NewCheckTcaplusWorkGroup(d.tcaplus, executor, stepCfg.Worker)
+		case table.StepCheckDBM:
+			workgroup = NewCheckDBMWorkGroup(d.bkDbm, executor, stepCfg.Worker)
+		case table.StepCheckOwner:
+			workgroup = NewCheckOwnerWorkGroup(d.cc, executor, stepCfg.Worker)
+		case table.StepCheckUwork:
+			workgroup = NewCheckUworkWorkGroup(d.xray, d.xship, executor, stepCfg.Worker,
+				stepCfg.RateLimitQps, stepCfg.RateLimitBurst)
 		// 	TODO 其他步骤执行器
 		default:
 			return errors.New(string("detect step not supported: " + stepCfg.Name))
@@ -93,7 +102,7 @@ func (d *Detector) Detect(kt *kit.Kit, order *table.RecycleOrder) error {
 		return err
 	}
 
-	runner := newDetectStepRunner(order.SuborderID, len(stepConfigs))
+	runner := newDetectStepRunner(order.SuborderID, order.BizID, len(stepConfigs))
 	for _, stepCfg := range stepConfigs {
 		executor := d.StepExecutors[stepCfg.Name]
 		if executor == nil {
@@ -225,12 +234,13 @@ func (d *Detector) initAndGetDetectTaskMap(kt *kit.Kit, suborderID string, stepC
 	return taskMap, nil
 }
 
-func newDetectStepRunner(suborderID string, totalSteps int) stepRunner {
+func newDetectStepRunner(suborderID string, bizID int64, totalSteps int) stepRunner {
 	allResult := make(chan *Result)
 	step := stepRunner{
 		suborderID:     suborderID,
-		allResult:      allResult,
+		bizID:          bizID,
 		remainingSteps: &atomic.Int64{},
+		allResult:      allResult,
 	}
 	step.remainingSteps.Add(int64(totalSteps))
 	return step
@@ -239,6 +249,7 @@ func newDetectStepRunner(suborderID string, totalSteps int) stepRunner {
 // stepRunner 预检步骤执行器 封装对预检步骤的执行l流程
 type stepRunner struct {
 	suborderID     string
+	bizID          int64
 	remainingSteps *atomic.Int64
 	allResult      chan *Result
 }
@@ -261,7 +272,7 @@ func (sr *stepRunner) Run(kt *kit.Kit, executor StepExecutor, execSteps, skipSte
 		return
 	}
 	// 初始化预检步骤
-	resultCh, submitErr := executor.SubmitSteps(kt, sr.suborderID, execSteps)
+	resultCh, submitErr := executor.SubmitSteps(kt, sr.suborderID, sr.bizID, execSteps)
 	if submitErr != nil {
 		logs.Errorf("submit step %s failed, order: %s, err: %v, rid: %s",
 			executor.GetStepName(), sr.suborderID, submitErr, kt.Rid)

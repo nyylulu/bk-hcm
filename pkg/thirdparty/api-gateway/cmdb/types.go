@@ -354,6 +354,8 @@ type Host struct {
 	BillingExpireTime time.Time `json:"billing_expire_time,omitempty"`
 	// 运维部门
 	DeptName string `json:"dept_name,omitempty"`
+	// 母机固资号
+	BKSvrOwnerAssetID string `json:"bk_svr_owner_asset_id,omitempty"`
 }
 
 // HostWithCloudID defines cmdb host with cloud id.

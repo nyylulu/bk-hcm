@@ -18,9 +18,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/logics/task/sops"
-	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/api-gateway/cmdb"
@@ -185,27 +183,15 @@ func (g *CheckProcessWorkGroup) queryResultWorker(kt *kit.Kit, idx int) {
 func (g *CheckProcessWorkGroup) createAndStart(kt *kit.Kit, step *StepMeta) {
 	logs.Infof("check process create start, step: %s, rid: %s", step.String(), kt.Rid)
 
-	// 1. 查询主机所在业务，如果业务发生变化，precheck 会失败，所以这里认为回收开始后业务就不会变化
-	flt := mapstr.MapStr{
-		"suborder_id": step.Step.SuborderID,
-		"asset_id":    step.Step.AssetID,
-	}
-	recycleHost, err := dao.Set().RecycleHost().GetRecycleHost(kt.Ctx, &flt)
-	if err != nil {
-		logs.Errorf("fail to get recycle host, err: %v, step: %s, rid: %s", err, step.String(), kt.Rid)
-		g.handleCreateFailed(kt, step, err, fmt.Sprintf("fail to get recycle host, err: %v", err))
-		return
-	}
-
-	// 2. 查询机型
+	// 1. 查询机型
 	hostInfo, err := g.cc.GetHostInfoByHostID(kt, step.Step.HostID)
 	if err != nil {
 		logs.Errorf("fail to get host info by host id, err: %v, step: %s, rid: %s", err, step.String(), kt.Rid)
 		g.handleCreateFailed(kt, step, err, fmt.Sprintf("fail to get host info by host id, err: %v", err))
 		return
 	}
-	// 3. 构造参数
-	idleCheckParams, supported, err := sops.GetIdleCheckParams(kt, hostInfo.BkOsType, step.Step.IP, recycleHost.BizID)
+	// 2. 构造参数
+	idleCheckParams, supported, err := sops.GetIdleCheckParams(kt, hostInfo.BkOsType, step.Step.IP, step.BizID)
 	if err != nil {
 		logs.Errorf("fail to get idle check opt, err: %v, step: %s, rid: %s", err, step.String(), kt.Rid)
 		g.handleCreateFailed(kt, step, err, fmt.Sprintf("fail to get idle check opt, err: %v", err))
@@ -215,26 +201,26 @@ func (g *CheckProcessWorkGroup) createAndStart(kt *kit.Kit, step *StepMeta) {
 		g.handlePass(kt, step, fmt.Sprintf("os type unsupported: %s, skip", hostInfo.BkOsType))
 		return
 	}
-	// 4. 创建标准运维任务
+	// 3. 创建标准运维任务
 	if err := sops.WaitSopsCreateTaskLimiter(kt.Ctx, SopsRateLimiterWaitTimeout); err != nil {
 		logs.Errorf("fail to wait create limiter, err: %v, rid: %s", err, kt.Rid)
 		g.handleCreateFailed(kt, step, err, fmt.Sprintf("fail to wait create limiter, err: %v", err))
 		return
 	}
-	taskResp, err := g.sopsCli.CreateTask(kt.Ctx, kt.Header(), idleCheckParams.TemplateID, recycleHost.BizID,
+	taskResp, err := g.sopsCli.CreateTask(kt.Ctx, kt.Header(), idleCheckParams.TemplateID, step.BizID,
 		idleCheckParams.CreateReq)
 	if err != nil {
 		logs.Errorf("fail to create sops idle check task, err: %v, step: %s, rid: %s", err, step.String(), kt.Rid)
 		g.handleCreateFailed(kt, step, err, fmt.Sprintf("fail to create sops idle check task, err: %v", err))
 		return
 	}
-	// 5. 启动标准运维任务
+	// 4. 启动标准运维任务
 	if err := sops.WaitSopsStartTaskLimiter(kt.Ctx, SopsRateLimiterWaitTimeout); err != nil {
 		logs.Errorf("fail to wait start limiter, err: %v, rid: %s", err, kt.Rid)
 		g.handleStartFailed(kt, step, err, fmt.Sprintf("fail to wait start limiter, err: %v", err))
 		return
 	}
-	_, err = g.sopsCli.StartTask(kt.Ctx, kt.Header(), taskResp.Data.TaskId, recycleHost.BizID)
+	_, err = g.sopsCli.StartTask(kt.Ctx, kt.Header(), taskResp.Data.TaskId, step.BizID)
 	if err != nil {
 		logs.Errorf("fail to start idle check task, err: %v, step: %s,  taskURL: %s, rid: %s",
 			err, step.String(), taskResp.Data.TaskUrl, kt.Rid)
@@ -247,7 +233,7 @@ func (g *CheckProcessWorkGroup) createAndStart(kt *kit.Kit, step *StepMeta) {
 	stepCtx := &checkProcessContext{
 		kt:           kt,
 		step:         step,
-		bizID:        recycleHost.BizID,
+		bizID:        step.BizID,
 		taskID:       taskResp.Data.TaskId,
 		taskURL:      taskResp.Data.TaskUrl,
 		createdAt:    time.Now(),

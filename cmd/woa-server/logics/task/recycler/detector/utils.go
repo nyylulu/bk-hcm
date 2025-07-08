@@ -236,6 +236,10 @@ func (d *Detector) getModuleInfo(bizId int64, moduleIds []int64) ([]*cmdb.Module
 }
 
 func (d *Detector) structToStr(v interface{}) string {
+	return structToStr(v)
+}
+
+func structToStr(v interface{}) string {
 	b, err := json.Marshal(v)
 	if err != nil {
 		logs.Warnf("failed to convert struct to string: %+v", v)
@@ -243,4 +247,11 @@ func (d *Detector) structToStr(v interface{}) string {
 	}
 
 	return string(b)
+}
+
+// HostExecInfo 执行信息辅助结构
+type HostExecInfo struct {
+	*StepMeta
+	ExecLog string
+	Error   error
 }
