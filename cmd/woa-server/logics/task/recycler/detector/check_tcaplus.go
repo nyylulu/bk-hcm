@@ -15,52 +15,104 @@ package detector
 
 import (
 	"fmt"
-	"strings"
-	"time"
+	"sync/atomic"
 
-	"hcm/cmd/woa-server/dal/task/table"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/tcaplusapi"
+	"hcm/pkg/tools/slice"
 )
 
-func (d *Detector) checkTcaplus(step *table.DetectStep, retry int) (int, string, error) {
-	attempt := 0
-	exeInfo := ""
-	var err error = nil
+// CheckTcaplusBatchSize iplist参数建议限制200
+const CheckTcaplusBatchSize = tcaplusapi.TcapulsCheckIPExistsMaxLength
 
-	for i := 0; i < retry; i++ {
-		attempt = i
-		exeInfo, err = d.checkTcaplusIP(step.IP)
-		if err == nil {
-			break
-		}
-
-		// retry gap until last retry
-		if (i + 1) < retry {
-			time.Sleep(3 * time.Second)
-		}
-	}
-
-	return attempt, exeInfo, err
+// CheckTcaplusWorkGroup 检查主机是否存在tcaplus
+type CheckTcaplusWorkGroup struct {
+	stepBatchChan chan *stepBatch
+	started       atomic.Bool
+	currency      int
+	tcaplus       tcaplusapi.TcaplusClientInterface
+	resultHandler StepResultHandler
 }
 
-func (d *Detector) checkTcaplusIP(ip string) (string, error) {
-	exeInfos := make([]string, 0)
+// MaxBatchSize iplist参数建议限制200
+func (t *CheckTcaplusWorkGroup) MaxBatchSize() int {
+	return CheckTcaplusBatchSize
+}
 
-	respTcaplus, err := d.tcaplus.CheckTcaplus(nil, nil, ip)
+// NewCheckTcaplusWorkGroup ...
+func NewCheckTcaplusWorkGroup(tcaplus tcaplusapi.TcaplusClientInterface, resultHandler StepResultHandler,
+	workerNum int) *CheckTcaplusWorkGroup {
+
+	return &CheckTcaplusWorkGroup{
+		tcaplus:       tcaplus,
+		resultHandler: resultHandler,
+		currency:      workerNum,
+		stepBatchChan: make(chan *stepBatch, workerNum),
+	}
+}
+
+// HandleResult ...
+func (t *CheckTcaplusWorkGroup) HandleResult(kt *kit.Kit, steps []*StepMeta, detectErr error, log string,
+	needRetry bool) {
+	t.resultHandler.HandleResult(kt, steps, detectErr, log, needRetry)
+}
+
+// Submit 提交检查
+func (t *CheckTcaplusWorkGroup) Submit(kt *kit.Kit, steps []*StepMeta) {
+	t.stepBatchChan <- &stepBatch{kt: kt, steps: steps}
+}
+
+// Start 启动worker
+func (t *CheckTcaplusWorkGroup) Start(kt *kit.Kit) {
+	if !t.started.CompareAndSwap(false, true) {
+		// already started
+		return
+	}
+
+	for i := 0; i < t.currency; i++ {
+		subKit := kt.NewSubKit()
+		go t.queryWorker(subKit, i)
+	}
+}
+
+func (t *CheckTcaplusWorkGroup) queryWorker(kt *kit.Kit, idx int) {
+	logs.Infof("check tcaplus query worker %d start, rid: %s", idx, kt.Rid)
+	defer logs.Infof("check tcaplus query worker %d exit, rid: %s", idx, kt.Rid)
+
+	for {
+		select {
+		case batch := <-t.stepBatchChan:
+			logs.V(4).Infof("check tcaplus worker %d got steps: %d:%s, rid: %s",
+				idx, len(batch.steps), batch.steps, kt.Rid)
+			t.check(batch.kt, batch.steps)
+		case <-kt.Ctx.Done():
+			return
+		}
+	}
+}
+
+func (t *CheckTcaplusWorkGroup) check(kt *kit.Kit, steps []*StepMeta) {
+	ips := slice.Map(steps, func(step *StepMeta) string { return step.Step.IP })
+	resp, err := t.tcaplus.CheckTcaplus(kt, ips)
+	logs.Infof("DEBUG: check tcaplus resp: %+v, err: %v, rid: %s", resp, err, kt.Rid)
 	if err != nil {
-		logs.Errorf("failed to check tcaplus, ip: %s, err: %v", ip, err)
-		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to check tcaplus, err: %v", err)
+		log := fmt.Sprintf("check tcaplus failed, err: %s", err)
+		t.HandleResult(kt, steps, err, log, true)
+		return
 	}
-
-	tcaplusRespStr := d.structToStr(respTcaplus)
-	exeInfo := fmt.Sprintf("tcaplus response: %s", tcaplusRespStr)
-	exeInfos = append(exeInfos, exeInfo)
-
-	cnt := len(respTcaplus.Data)
-	if cnt > 0 {
-		logs.Infof("%s has tcaplus records, resp: %+v", ip, respTcaplus)
-		return strings.Join(exeInfos, "\n"), fmt.Errorf("has %d tcaplus records", cnt)
+	existsMap := make(map[string][]*tcaplusapi.TcaplusItem, len(resp.Data))
+	for _, item := range resp.Data {
+		existsMap[item.IP] = append(existsMap[item.IP], item)
 	}
-
-	return strings.Join(exeInfos, "\n"), nil
+	for _, step := range steps {
+		if item, ok := existsMap[step.Step.IP]; ok {
+			str := structToStr(item)
+			terr := fmt.Errorf("%s found in tcaplus: %s", step.Step.IP, str)
+			t.HandleResult(kt, []*StepMeta{step}, terr, terr.Error(), false)
+			continue
+		}
+		log := fmt.Sprintf("%s not found in tcaplus, msg: %s", step.Step.IP, resp.Msg)
+		t.HandleResult(kt, []*StepMeta{step}, nil, log, false)
+	}
 }

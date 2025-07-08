@@ -24,6 +24,7 @@ import (
 	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/tools/classifier"
 	cvt "hcm/pkg/tools/converter"
+	"hcm/pkg/tools/maps"
 )
 
 // PrecheckMaxBatchSize 检查CC模块和负责人最大批次大小
@@ -34,7 +35,7 @@ type stepBatch struct {
 	steps []*StepMeta
 }
 
-// PreCheckWorkGroup 检查CC模块和负责人
+// PreCheckWorkGroup 检查CC模块和负责人以及业务是否发生变化
 type PreCheckWorkGroup struct {
 	stepBatchChan chan *stepBatch
 	started       atomic.Bool
@@ -92,13 +93,6 @@ func (p *PreCheckWorkGroup) queryWorker(kt *kit.Kit, idx int) {
 	}
 }
 
-// HostExecInfo 执行信息
-type HostExecInfo struct {
-	*StepMeta
-	ExecLog string
-	Error   error
-}
-
 // Run 执行检查
 func (p *PreCheckWorkGroup) Run(kt *kit.Kit, steps []*StepMeta) {
 	if len(steps) == 0 {
@@ -106,12 +100,11 @@ func (p *PreCheckWorkGroup) Run(kt *kit.Kit, steps []*StepMeta) {
 		return
 	}
 
-	hostMap := make(map[int64]*HostExecInfo, len(steps))
-	hostIDs := make([]int64, 0, len(steps))
+	hostMap := make(map[int64][]*HostExecInfo, len(steps))
 	for _, step := range steps {
-		hostIDs = append(hostIDs, step.Step.HostID)
-		hostMap[step.Step.HostID] = &HostExecInfo{StepMeta: step}
+		hostMap[step.Step.HostID] = append(hostMap[step.Step.HostID], &HostExecInfo{StepMeta: step})
 	}
+	hostIDs := maps.Keys(hostMap)
 
 	worker := preCheckWorker{
 		hostMap:       hostMap,
@@ -129,7 +122,7 @@ func (p *PreCheckWorkGroup) Submit(kt *kit.Kit, steps []*StepMeta) {
 // preCheckWorker worker
 type preCheckWorker struct {
 	cc            CmdbOperator
-	hostMap       map[int64]*HostExecInfo
+	hostMap       map[int64][]*HostExecInfo
 	resultHandler StepResultHandler
 }
 
@@ -164,30 +157,34 @@ func (w *preCheckWorker) checkOperator(kt *kit.Kit, hostIDs []int64) (succeed []
 		host := cmdbHosts[i]
 		delete(leftHostIDSet, host.BkHostID)
 
-		hostExecInfo := w.hostMap[host.BkHostID]
-		if hostExecInfo == nil {
+		hostExecInfos := w.hostMap[host.BkHostID]
+		if len(hostExecInfos) == 0 {
 			continue
 		}
-		// 记录当时主机信息
-		hostExecInfo.ExecLog += fmt.Sprintf("operator: %s, bak operator: %s", host.Operator, host.BkBakOperator)
+		for _, hostExecInfo := range hostExecInfos {
+			// 记录当时主机信息
+			hostExecInfo.ExecLog += fmt.Sprintf("operator: %s, bak operator: %s", host.Operator, host.BkBakOperator)
 
-		if !isValidOperator(&host, hostExecInfo.Step) {
-			logs.Errorf("checkRecyclability failed, %s is not operator or bak operator of host %s(%d), rid: %s",
-				hostExecInfo.Step.User, hostExecInfo.Step.IP, hostExecInfo.Step.HostID, kt.Rid)
-			hostExecInfo.Error = fmt.Errorf("%s is not operator or bak operator of host %s",
-				hostExecInfo.Step.User, hostExecInfo.Step.IP)
+			if !isValidOperator(&host, hostExecInfo.Step) {
+				logs.Errorf("checkRecyclability failed, %s is not operator or bak operator of host %s(%d), rid: %s",
+					hostExecInfo.Step.User, hostExecInfo.Step.IP, hostExecInfo.Step.HostID, kt.Rid)
+				hostExecInfo.Error = fmt.Errorf("%s is not operator or bak operator of host %s",
+					hostExecInfo.Step.User, hostExecInfo.Step.IP)
 
-			w.handleResult(kt, []*HostExecInfo{hostExecInfo}, false)
-			continue
+				w.handleResult(kt, []*HostExecInfo{hostExecInfo}, false)
+				continue
+			}
 		}
+
 		// 检查成功
 		succeed = append(succeed, host.BkHostID)
 	}
 
 	for hostID := range leftHostIDSet {
-		host := w.hostMap[hostID]
-		e := fmt.Errorf("host %s(%d) not found on cmdb", host.Step.IP, host.Step.HostID)
-		w.handleHostError(kt, host, e)
+		for _, host := range w.hostMap[hostID] {
+			e := fmt.Errorf("host %s(%d) not found on cmdb", host.Step.IP, host.Step.HostID)
+			w.handleHostError(kt, host, e)
+		}
 	}
 	return succeed
 }
@@ -241,21 +238,32 @@ func (w *preCheckWorker) checkHostModule(kt *kit.Kit, hostIDs []int64) {
 		// 检查是否在待回收模块
 		for hostID, relList := range hostRelMap {
 			delete(leftHostIDSet, hostID)
-			host := w.hostMap[hostID]
-			w.checkRecycleModule(kt, moduleMap, bizId, host, relList)
+			for _, host := range w.hostMap[hostID] {
+				w.checkRecycleModule(kt, moduleMap, bizId, host, relList)
+			}
 		}
 	}
 
 	for hostID := range leftHostIDSet {
-		host := w.hostMap[hostID]
-		e := fmt.Errorf("host %s(%d) topo relation not found on cmdb", host.Step.IP, host.Step.HostID)
-		w.handleHostError(kt, host, e)
+		for _, host := range w.hostMap[hostID] {
+			e := fmt.Errorf("host %s(%d) topo relation not found on cmdb", host.Step.IP, host.Step.HostID)
+			w.handleHostError(kt, host, e)
+		}
 	}
 	return
 }
 
-func (w *preCheckWorker) checkRecycleModule(kt *kit.Kit, moduleMap map[int64]*cmdb.ModuleInfo, bizId int64,
+func (w *preCheckWorker) checkRecycleModule(kt *kit.Kit, moduleMap map[int64]*cmdb.ModuleInfo, bizID int64,
 	host *HostExecInfo, relList []cmdb.HostTopoRelation) {
+
+	if host.BizID != bizID {
+		host.Error = fmt.Errorf("主机业务发生变化，新业务: %d, 原业务: %d, IP: %s, 固资号：%s",
+			bizID, host.BizID, host.Step.IP, host.Step.AssetID)
+		logs.Errorf("host: %s(%d,%s) topo relation biz changed, new biz: %d, old biz: %d, rid: %s",
+			host.Step.IP, host.Step.HostID, host.Step.AssetID, bizID, host.BizID, kt.Rid)
+		w.handleResult(kt, []*HostExecInfo{host}, false)
+		return
+	}
 
 	for _, rel := range relList {
 		module, ok := moduleMap[rel.BkModuleID]
@@ -263,7 +271,7 @@ func (w *preCheckWorker) checkRecycleModule(kt *kit.Kit, moduleMap map[int64]*cm
 			// 找不到模块
 			e := fmt.Errorf("module: %d of host: %s not found", rel.BkModuleID, host.Step.IP)
 			logs.Errorf("failed to get module info, biz: %d, module: %d, rid: %s",
-				bizId, rel.BkModuleID, kt.Rid)
+				bizID, rel.BkModuleID, kt.Rid)
 			w.handleHostError(kt, host, e)
 			return
 		}
@@ -274,7 +282,7 @@ func (w *preCheckWorker) checkRecycleModule(kt *kit.Kit, moduleMap map[int64]*cm
 			host.Error = fmt.Errorf("主机(%s)不在空闲机池下的待回收模块, 当前模块为: %s(%d,dft:%d)",
 				host.Step.IP, module.BkModuleName, rel.BkModuleID, module.Default)
 			logs.Errorf("module: %d of host: %s is not 待回收, biz: %d, rid: %s",
-				rel.BkModuleID, host.Step.IP, bizId, kt.Rid)
+				rel.BkModuleID, host.Step.IP, bizID, kt.Rid)
 			w.handleResult(kt, []*HostExecInfo{host}, false)
 			return
 		}
@@ -290,9 +298,10 @@ func (w *preCheckWorker) handleHostBatchError(kt *kit.Kit, hostIDs []int64, err 
 	}
 	hostList := make([]*HostExecInfo, 0, len(hostIDs))
 	for _, hostID := range hostIDs {
-		host := w.hostMap[hostID]
-		host.Error = err
-		hostList = append(hostList, host)
+		for _, host := range w.hostMap[hostID] {
+			host.Error = err
+			hostList = append(hostList, host)
+		}
 	}
 	w.handleResult(kt, hostList, true)
 }

@@ -65,7 +65,8 @@ type StepExecutor interface {
 	// GetStepName 获取当前步骤名
 	GetStepName() table.DetectStepName
 	// SubmitSteps 提交子单内的全部主机的当前预检步骤类型的主机
-	SubmitSteps(kt *kit.Kit, suborderID string, currentStepHosts []*table.DetectStep) (<-chan *Result, error)
+	SubmitSteps(kt *kit.Kit, suborderID string, bizID int64, currentStepHosts []*table.DetectStep) (
+		<-chan *Result, error)
 	// Start 启动
 	Start(kt *kit.Kit, workgroup DetectStepWorkGroup)
 	// CancelSuborder 取消指定子单的执行
@@ -75,7 +76,10 @@ type StepExecutor interface {
 // DetectStepWorkGroup 任务执行组
 type DetectStepWorkGroup interface {
 	Start(kt *kit.Kit)
-	// Submit 提交子单内的全部主机的当前预检步骤类型的主机，steps的数量不能超过 MaxBatchSize。单次Submit应该对应对第三方接口的单次请求。
+	// Submit 提交主机进行当前步骤的预检，steps的数量不能超过 MaxBatchSize。单次Submit应该对应对第三方接口的单次请求。
+	// 注意：这里需要处理StepMeta中包含相同主机的情况（固资号、IP、BKHostID相同），他们可能是来自不同业务、不同用户提交的不同子单中。
+	// 如：用户短时间内重复提交同一主机、同业务下不同用户重复提交同一主机、
+	// 某个用户提交后，立刻被转移到其他业务并再次被提交等情况，并被上层调度到同一个Batch中的情况。
 	Submit(kt *kit.Kit, steps []*StepMeta)
 	// MaxBatchSize Submit函数所能接受的最大数量，
 	// 这里应该对应下游第三方系统的单次请求所能接受的参数数量，如果有多个步骤的请求应该以最小的限制为准。
@@ -167,6 +171,7 @@ func (sc *suborderChan) closeWithoutLock() {
 // StepMeta 待执行任务信息
 type StepMeta struct {
 	Step       *table.DetectStep
+	BizID      int64
 	JoinedAt   time.Time
 	Urgent     bool
 	Score      int64
@@ -196,8 +201,8 @@ func (d *DetectStepExecutor) GetStepName() table.DetectStepName {
 }
 
 // SubmitSteps 提交任务
-func (d *DetectStepExecutor) SubmitSteps(kt *kit.Kit, suborderID string, currentStepHosts []*table.DetectStep) (
-	<-chan *Result, error) {
+func (d *DetectStepExecutor) SubmitSteps(kt *kit.Kit, suborderID string, bizID int64,
+	currentStepHosts []*table.DetectStep) (<-chan *Result, error) {
 
 	if len(currentStepHosts) == 0 {
 		return nil, fmt.Errorf("can not submit empty step hosts, suborder: %s", suborderID)
@@ -226,22 +231,23 @@ func (d *DetectStepExecutor) SubmitSteps(kt *kit.Kit, suborderID string, current
 		return nil, fmt.Errorf("suborder %s already exist: %s", suborderID, currentSc.String())
 	}
 
-	d.addStepToWaitList(kt, currentStepHosts)
+	d.addStepToWaitList(kt, bizID, currentStepHosts)
 	return sc.ch, nil
 }
 
-func (d *DetectStepExecutor) addStepToWaitList(kt *kit.Kit, steps []*table.DetectStep) {
+func (d *DetectStepExecutor) addStepToWaitList(kt *kit.Kit, bizID int64, steps []*table.DetectStep) {
 	stepMetas := make([]*StepMeta, 0, len(steps))
 	for i := range steps {
-		stepMetas = append(stepMetas, NewStepMeta(kt, steps[i]))
+		stepMetas = append(stepMetas, NewStepMeta(kt, bizID, steps[i]))
 	}
 	d.waitList.Add(stepMetas)
 }
 
 // NewStepMeta 创建一个stepMeta
-func NewStepMeta(kt *kit.Kit, step *table.DetectStep) *StepMeta {
+func NewStepMeta(kt *kit.Kit, bizID int64, step *table.DetectStep) *StepMeta {
 	return &StepMeta{
 		Step:       step,
+		BizID:      bizID,
 		JoinedAt:   time.Now(),
 		Urgent:     false,
 		Score:      0,
@@ -321,8 +327,9 @@ func (d *DetectStepExecutor) HandleResult(kt *kit.Kit, steps []*StepMeta, detect
 		// 1. 检查任务所属结果channel是否存在，且当前任务的rid和结果channel所属rid相符，否则跳过
 		suborderChan := d.getChannelBySuborderID(kt, step.Step.SuborderID)
 		if suborderChan == nil || suborderChan.ch == nil {
-			logs.Errorf("failed to get channel of suborder %s, got nil data, detectErr: %v, suborderChan: %+v, rid: %s",
-				step.Step.SuborderID, detectErr, suborderChan, kt.Rid)
+			logs.Errorf("failed to get channel of suborder %s, got nil data, stepName: %s, detectErr: %v, log: %s, "+
+				"suborderChan: %+v, rid: %s", step.Step.SuborderID, d.GetStepName(), detectErr, log, suborderChan,
+				kt.Rid)
 			continue
 		}
 		// rid不相符，说明已经被重新入队

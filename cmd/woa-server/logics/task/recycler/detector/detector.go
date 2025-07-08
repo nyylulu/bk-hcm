@@ -232,16 +232,16 @@ func (d *Detector) executeRecycleStep(step *table.DetectStep, retry int) (int, s
 	switch step.StepName {
 	// case table.StepPreCheck:
 	// 	attempt, exeInfo, err = d.preCheck(step, retry)
-	case table.StepCheckUwork:
-		attempt, exeInfo, err = d.checkUwork(step, retry)
-	case table.StepCheckTcaplus:
-		attempt, exeInfo, err = d.checkTcaplus(step, retry)
-	case table.StepCheckDBM:
-		attempt, exeInfo, err = d.checkDbm(step, retry)
+	// case table.StepCheckUwork:
+	// 	attempt, exeInfo, err = d.checkUwork(step, retry)
+	// case table.StepCheckTcaplus:
+	// 	attempt, exeInfo, err = d.checkTcaplus(step, retry)
+	// case table.StepCheckDBM:
+	// 	attempt, exeInfo, err = d.checkDbm(step, retry)
 	case table.StepBasicCheck:
 		attempt, exeInfo, err = d.basicCheck(step, retry)
-	case table.StepCheckOwner:
-		attempt, exeInfo, err = d.checkOwner(step, retry)
+	// case table.StepCheckOwner:
+	// 	attempt, exeInfo, err = d.checkOwner(step, retry)
 	case table.StepCvmCheck:
 		attempt, exeInfo, err = d.cvmCheck(step, retry)
 	case table.StepCheckSafety:
@@ -336,7 +336,6 @@ func (d *Detector) fillTaskHostIDMap(kt *kit.Kit, taskList []*table.DetectTask,
 			delete(taskIPMap, inst.IP)
 		}
 	}
-
 	if len(taskIPMap) > 0 {
 		logs.Errorf("failed to get host id by ip, task ip map: %+v, rid: %s", taskIPMap, kt.Rid)
 		return nil, fmt.Errorf("failed to get host id by ip, task ip map: %+v, rid: %s", taskIPMap, kt.Rid)
