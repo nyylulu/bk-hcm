@@ -5,9 +5,10 @@ import http from '@/http';
 import isEqual from 'lodash/isEqual';
 import type { CvmDeviceType, IProps, OptionsType, SelectionType } from './types';
 
-const { Option } = Select;
-
 defineOptions({ name: 'DeviceTypeSelector' });
+
+const model = defineModel<string | string[]>();
+
 const props = withDefaults(defineProps<IProps>(), {
   params: () => ({}),
   multiple: false,
@@ -17,8 +18,10 @@ const props = withDefaults(defineProps<IProps>(), {
   placeholder: '请选择',
   sort: () => 0,
 });
+
 const emit = defineEmits<(e: 'change', result: SelectionType) => void>();
-const model = defineModel<string | string[]>();
+
+const { Option } = Select;
 
 const triggerChange = (val: string | string[]) => {
   let result: SelectionType;
@@ -117,7 +120,8 @@ watch(
 watch(
   model,
   async (val, oldVal) => {
-    if (!isEqual(val, oldVal)) {
+    // 在一键申请查库存的场景，CPU/内存选择与机型联动，当原始值为undefined时不触发change防止CPU选项值被重置
+    if (oldVal !== undefined && !isEqual(val, oldVal)) {
       if (options.value[props.resourceType].length === 0) {
         await getOptions();
       }

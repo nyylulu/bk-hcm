@@ -17,7 +17,7 @@ const localValue = computed(() => {
 
 const displayValue = computed(() => {
   const names = localValue.value.map((id) => {
-    return list.value.find((item) => item.id === id)?.require_name;
+    return list.value.find((item) => item.require_type === id)?.require_name;
   });
   return names?.join?.(', ');
 });
