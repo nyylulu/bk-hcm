@@ -215,7 +215,6 @@ const (
 	StepBasicCheck     DetectStepName = "BASIC_CHECK"
 	StepCheckOwner     DetectStepName = "CHECK_OWNER"
 	StepCvmCheck       DetectStepName = "CVM_CHECK"
-	StepCheckSafety    DetectStepName = "CHECK_SAFETY"
 	StepCheckReturn    DetectStepName = "CHECK_RETURN"
 	StepCheckProcess   DetectStepName = "CHECK_PROCESS"
 	StepCheckPmOuterIP DetectStepName = "CHECK_PM_OUTERIP" // 物理机外网IP检查

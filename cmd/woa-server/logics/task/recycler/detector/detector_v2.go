@@ -73,7 +73,8 @@ func (d *Detector) initStepExecutor(backendKit *kit.Kit) error {
 				stepCfg.RateLimitQps, stepCfg.RateLimitBurst)
 		case table.StepCheckPmOuterIP:
 			workgroup = newCheckPmOuterIPWorkGroup(executor, stepCfg.Worker, &d.cliSet)
-		// 	TODO 其他步骤执行器
+		case table.StepCheckReturn:
+			workgroup = NewCheckReturnWorkGroup(d.cvm, executor, stepCfg.Worker)
 		default:
 			return errors.New(string("detect step not supported: " + stepCfg.Name))
 		}
