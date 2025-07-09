@@ -40,7 +40,7 @@ export default defineComponent({
       default: () => ({ content: '', disabled: true }),
     },
   },
-  emits: ['update:isShow', 'handleSubmit', 'handleShown'],
+  emits: ['update:isShow', 'handleSubmit', 'handleShown', 'hidden'],
   setup(props, ctx) {
     // use hooks
     const { t } = useI18n();
@@ -62,6 +62,10 @@ export default defineComponent({
       props.handleClose?.();
     };
 
+    const hiddenHidden = () => {
+      ctx.emit('hidden');
+    };
+
     return () => (
       <Sideslider
         renderDirective={props.renderType}
@@ -70,7 +74,8 @@ export default defineComponent({
         isShow={props.isShow}
         title={t(props.title)}
         onClosed={handleClosed}
-        onShown={handleShown}>
+        onShown={handleShown}
+        onHidden={hiddenHidden}>
         {{
           default: () => (
             <div class={[cssModule.content, props.renderType === 'if' ? cssModule.renderIfContent : undefined]}>

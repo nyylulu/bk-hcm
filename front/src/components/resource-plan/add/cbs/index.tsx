@@ -6,15 +6,17 @@ import cssModule from './index.module.scss';
 
 import type { IPlanTicketDemand, IDiskType } from '@/typings/resourcePlan';
 import { AdjustType } from '@/typings/plan';
+import { isEqual } from 'lodash';
 
 export default defineComponent({
   props: {
     planTicketDemand: Object as PropType<IPlanTicketDemand>,
     resourceType: String,
     type: String as PropType<AdjustType>,
+    originPlanTicketDemand: Object as PropType<IPlanTicketDemand>,
   },
 
-  emits: ['update:planTicketDemand'],
+  emits: ['update:planTicketDemand', 'disableTypeChange'],
 
   setup(props, { emit, expose }) {
     const { t } = useI18n();
@@ -39,9 +41,9 @@ export default defineComponent({
       disk_per_size: [
         {
           validator: (value: number) => {
-            return value > 0;
+            return value >= 0;
           },
-          message: isCVM.value ? t('云磁盘容量/实例应大于0') : t('云磁盘容量/块应大于0'),
+          message: isCVM.value ? t('云磁盘容量/实例应大于等于0') : t('云磁盘容量/块应大于等于0'),
           trigger: 'change',
         },
       ],
@@ -57,13 +59,21 @@ export default defineComponent({
     }));
 
     const handleUpdatePlanTicketDemand = (key: string, value: unknown) => {
-      emit('update:planTicketDemand', {
-        ...props.planTicketDemand,
-        cbs: {
-          ...props.planTicketDemand.cbs,
-          [key]: value,
-        },
-      });
+      const newDemand = { ...props.planTicketDemand, cbs: { ...props.planTicketDemand.cbs, [key]: value } };
+
+      if (props.type === AdjustType.none) {
+        emit('update:planTicketDemand', newDemand);
+        return;
+      }
+
+      // 这里只变更cbs信息，可以简化比较逻辑
+      if (!isEqual(props.originPlanTicketDemand.cbs, newDemand.cbs)) {
+        emit('disableTypeChange', AdjustType.time);
+      } else if (isEqual(newDemand, props.originPlanTicketDemand)) {
+        emit('disableTypeChange', AdjustType.none);
+      }
+
+      emit('update:planTicketDemand', newDemand);
     };
 
     const handleUpdateDiskType = (val: string) => {

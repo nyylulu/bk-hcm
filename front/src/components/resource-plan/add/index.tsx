@@ -1,4 +1,4 @@
-import { defineComponent, type PropType, ref, watch } from 'vue';
+import { defineComponent, type PropType, ref, watch, watchEffect } from 'vue';
 import { useResourcePlanStore } from '@/store';
 import CommonSideslider from '@/components/common-sideslider';
 import Basic from './basic';
@@ -9,6 +9,7 @@ import { useI18n } from 'vue-i18n';
 import type { IPlanTicket, IPlanTicketDemand } from '@/typings/resourcePlan';
 import Type from './type';
 import { AdjustType } from '@/typings/plan';
+import { isEqual, omit } from 'lodash';
 
 export default defineComponent({
   props: {
@@ -21,6 +22,10 @@ export default defineComponent({
     initDemand: {
       type: Object as PropType<IPlanTicketDemand>,
     },
+    // 接口原始数据，用于判断某条预测单最终是否变更，不计编辑次数
+    originDemand: {
+      type: Object as PropType<IPlanTicketDemand>,
+    },
     isEdit: {
       type: Boolean,
     },
@@ -30,7 +35,7 @@ export default defineComponent({
     },
   },
 
-  emits: ['update:isShow', 'update:modelValue', 'updateDemand'],
+  emits: ['update:isShow', 'update:modelValue', 'updateDemand', 'hidden'],
 
   setup(props, { emit }) {
     const { t } = useI18n();
@@ -48,11 +53,15 @@ export default defineComponent({
     const planTicketDemand = ref<IPlanTicketDemand>();
     const adjustType = ref();
 
+    // 记录当前次编辑操作的原始数据，用于当前次操作场景的判断
+    let currEditOriginPlanTicketDemand: IPlanTicketDemand;
     const initData = async () => {
-      resourceType.value = props.initDemand?.demand_res_types.length < 2 ? 'cbs' : 'cvm';
+      resourceType.value =
+        props.initDemand?.demand_res_types.length < 2 ? props.initDemand.demand_res_type.toLocaleLowerCase() : 'cvm';
       adjustType.value =
         props.initDemand && props.initDemand.adjustType === AdjustType.time ? AdjustType.time : AdjustType.config;
-      planTicketDemand.value = {
+
+      currEditOriginPlanTicketDemand = {
         obs_project: props.initAddParams?.obs_project || '',
         expect_time: '',
         region_id: props.initAddParams?.region_id || '',
@@ -60,24 +69,12 @@ export default defineComponent({
         demand_source: '指标变化',
         remark: '',
         demand_res_types: ['CVM', 'CBS'],
-        cvm: {
-          res_mode: '按机型',
-          device_class: '',
-          device_type: '',
-          os: 0,
-          cpu_core: 0,
-          memory: 0,
-        },
-        cbs: {
-          disk_type: '',
-          disk_type_name: '',
-          disk_io: 15,
-          disk_size: 0,
-          disk_num: 0,
-          disk_per_size: 0,
-        },
+        cvm: { res_mode: '按机型', device_class: '', device_type: '', os: 0, cpu_core: 0, memory: 0 },
+        cbs: { disk_type: '', disk_type_name: '', disk_io: 15, disk_size: 0, disk_num: 0, disk_per_size: 0 },
         ...props.initDemand,
       };
+
+      planTicketDemand.value = { ...currEditOriginPlanTicketDemand };
 
       // 回填初始的device_type和device_class数据
       if (resourceType.value === 'cvm' && props.initAddParams?.cvm?.device_type) {
@@ -89,9 +86,9 @@ export default defineComponent({
       }
     };
 
-    const isConfigAdjustDisabled = ref(false);
-    const handleExpectTimeChangeInTimeAdjust = (v: boolean) => {
-      isConfigAdjustDisabled.value = v;
+    const disableType = ref<AdjustType>(AdjustType.none);
+    const handleDisableTypeChange = (type: AdjustType) => {
+      disableType.value = type;
     };
 
     const handleClose = () => {
@@ -121,7 +118,9 @@ export default defineComponent({
 
     const handleUpdate = async () => {
       await validate();
-      emit('updateDemand', { ...planTicketDemand.value, adjustType: adjustType.value });
+      const ignoreFields = ['adjustType', 'remark'];
+      const isChanged = !isEqual(omit(props.originDemand, ignoreFields), omit(planTicketDemand.value, ignoreFields));
+      emit('updateDemand', { ...planTicketDemand.value, adjustType: isChanged ? adjustType.value : AdjustType.none });
       handleClose();
     };
 
@@ -137,14 +136,11 @@ export default defineComponent({
       clearValidate();
     };
 
-    watch(
-      () => props.isShow,
-      () => {
-        if (props.isShow) {
-          initData();
-        }
-      },
-    );
+    watchEffect(() => {
+      if (props.isShow) {
+        initData();
+      }
+    });
 
     watch(() => resourceType.value, clearValidate);
 
@@ -159,13 +155,10 @@ export default defineComponent({
         handleClose={handleClose}
         onUpdate:isShow={handleClose}
         onHandleSubmit={props.isEdit ? handleUpdate : handleSubmit}
-        onHandleShown={handleShown}>
+        onHandleShown={handleShown}
+        onHidden={() => emit('hidden')}>
         {props.initDemand && props.isEdit && (
-          <Type
-            v-model={adjustType.value}
-            type={props.initDemand.adjustType}
-            disabledConfig={isConfigAdjustDisabled.value}
-          />
+          <Type v-model={adjustType.value} type={props.initDemand.adjustType} disableType={disableType.value} />
         )}
         <Basic
           ref={basicRef}
@@ -174,7 +167,8 @@ export default defineComponent({
           v-model:planTicketDemand={planTicketDemand.value}
           v-model:resourceType={resourceType.value}
           type={props.isEdit ? adjustType.value : AdjustType.none}
-          onExpectTimeChangeInTimeAdjust={handleExpectTimeChangeInTimeAdjust}
+          originPlanTicketDemand={currEditOriginPlanTicketDemand}
+          onDisableTypeChange={handleDisableTypeChange}
         />
         <CVM
           ref={cvmRef}
@@ -182,6 +176,8 @@ export default defineComponent({
           resourceType={resourceType.value}
           class={cssModule.mt16}
           type={props.isEdit ? adjustType.value : AdjustType.none}
+          originPlanTicketDemand={currEditOriginPlanTicketDemand}
+          onDisableTypeChange={handleDisableTypeChange}
         />
         <CBS
           ref={cbsRef}
@@ -189,6 +185,8 @@ export default defineComponent({
           resourceType={resourceType.value}
           class={cssModule.mt16}
           type={props.isEdit ? adjustType.value : AdjustType.none}
+          originPlanTicketDemand={currEditOriginPlanTicketDemand}
+          onDisableTypeChange={handleDisableTypeChange}
         />
       </CommonSideslider>
     );

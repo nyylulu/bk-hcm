@@ -188,6 +188,7 @@ export interface IPlanTicketDemand {
   demand_class: string;
   remark?: string;
   demand_res_types: string[];
+  demand_res_type: string;
   cvm?: {
     res_mode: string;
     device_class: string;
@@ -195,6 +196,7 @@ export interface IPlanTicketDemand {
     os: string | number;
     cpu_core: number;
     memory: number;
+    [key: string]: any;
   };
   cbs?: {
     disk_type: string;
@@ -203,9 +205,11 @@ export interface IPlanTicketDemand {
     disk_size: number;
     disk_num: number;
     disk_per_size: number;
+    [key: string]: any;
   };
   adjustType: AdjustType;
   demand_id: string;
+  [key: string]: any;
 }
 
 export interface IBizOrgRelation {

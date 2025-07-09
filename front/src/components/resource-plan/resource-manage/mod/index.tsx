@@ -1,4 +1,4 @@
-import { computed, defineComponent, onBeforeUnmount, onMounted, PropType, Ref, ref, watch } from 'vue';
+import { computed, defineComponent, onBeforeUnmount, onMounted, PropType, reactive, Ref, ref, watch } from 'vue';
 import './index.scss';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import { Button, DatePicker, Dialog, Form, InfoBox, Message, PopConfirm, Table } from 'bkui-vue';
@@ -35,10 +35,11 @@ export default defineComponent({
     const route = useRoute();
     const { t } = useI18n();
     const curEditData: Ref<IPlanTicketDemand> = ref<IPlanTicketDemand>({});
+    let curEditOriginData: IPlanTicketDemand;
     const { handleSelectionChange, selections, resetSelections } = useSelection();
     const isRemoveDialogShow = ref(false);
     const isDelayDialogShow = ref(false);
-    const isPlanEditShow = ref(false);
+    const planUpdateSidesliderState = reactive({ isShow: false, isHidden: true });
     const tableRef = ref();
     const delayFormRef = ref();
     const { formModel } = useFormModel({
@@ -62,10 +63,14 @@ export default defineComponent({
               theme='primary'
               class={'mr8'}
               onClick={() => {
-                isPlanEditShow.value = true;
                 const idx = tableData.value.findIndex(({ demand_id }) => demand_id === data.demand_id);
                 curEditData.value = planStore.convertToPlanTicketDemand(tableData.value[idx]);
+                curEditOriginData = planStore.convertToPlanTicketDemand(
+                  originData.value.find(({ demand_id }) => demand_id === data.demand_id),
+                );
                 resetSelections();
+                planUpdateSidesliderState.isHidden = false;
+                planUpdateSidesliderState.isShow = true;
               }}>
               编辑
             </Button>
@@ -316,7 +321,7 @@ export default defineComponent({
           </span>
         </Dialog>
 
-        <CommonDialog title='批量延期' width={680} isShow={isDelayDialogShow.value}>
+        <CommonDialog title='批量延期' width={680} v-model:isShow={isDelayDialogShow.value}>
           {{
             default: () => (
               <Form model={formModel} ref={delayFormRef}>
@@ -391,22 +396,22 @@ export default defineComponent({
           }}
         </CommonDialog>
 
-        <EditPlan
-          isEdit
-          isShow={isPlanEditShow.value}
-          initDemand={curEditData.value}
-          v-model={curEditData.value}
-          onUpdate:isShow={(val) => {
-            isPlanEditShow.value = val;
-            clearSelection();
-          }}
-          onUpdateDemand={(val) => {
-            const idx = tableData.value.findIndex(({ demand_id }) => demand_id === val.demand_id);
-            const originItem = tableData.value[idx];
-            const tmp = planStore.convertToDemandListDetail(val, originItem);
-            tableData.value.splice(idx, 1, tmp);
-          }}
-        />
+        {!planUpdateSidesliderState.isHidden && (
+          <EditPlan
+            v-model={curEditData.value}
+            v-model:isShow={planUpdateSidesliderState.isShow}
+            isEdit
+            initDemand={curEditData.value}
+            originDemand={curEditOriginData}
+            onUpdateDemand={(val) => {
+              const idx = tableData.value.findIndex(({ demand_id }) => demand_id === val.demand_id);
+              const originItem = tableData.value[idx];
+              const tmp = planStore.convertToDemandListDetail(val, originItem);
+              tableData.value.splice(idx, 1, tmp);
+            }}
+            onHidden={() => (planUpdateSidesliderState.isHidden = true)}
+          />
+        )}
       </div>
     );
   },

@@ -38,6 +38,7 @@ export interface IDemandListDetail {
   demand_source: string; // 变更原因
   res_mode: string; // 资源模式
   delay_os?: string;
+  demand_res_type: string;
 }
 
 export enum AdjustType {

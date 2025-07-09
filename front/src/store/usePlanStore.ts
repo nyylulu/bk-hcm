@@ -151,8 +151,8 @@ export default defineStore('planStore', () => {
    * IDemandListDetail 转换为 IPlanTicketDemand
    */
   function convertToPlanTicketDemand(detail: IDemandListDetail): IPlanTicketDemand {
-    const demand_res_types: string[] = ['cbs'];
-    if (detail.demand_class === 'CVM') demand_res_types.push('cvm');
+    const demand_res_types: string[] = [detail.demand_res_type];
+    if (detail.demand_res_type === 'CVM') demand_res_types.push('CBS');
 
     const cvm =
       +detail.remained_os > 0

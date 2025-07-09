@@ -1,5 +1,5 @@
 // 资源管理 (业务)下 资源预测
-import { defineComponent, reactive, ref } from 'vue';
+import { defineComponent, ref } from 'vue';
 import Table from '@/components/resource-plan/resource-manage/list/table';
 import Search from '@/components/resource-plan/resource-manage/list/search';
 import cssModule from './index.module.scss';
@@ -14,7 +14,7 @@ export default defineComponent({
       tableRef.value?.searchTableData(searchModel);
     };
 
-    const expectTimeRange = reactive({
+    const expectTimeRange = ref({
       start: dayjs().startOf('month').subtract(1, 'week').startOf('day').format('YYYY-MM-DD'),
       end: dayjs().add(14, 'week').endOf('day').format('YYYY-MM-DD'),
     });
@@ -22,8 +22,8 @@ export default defineComponent({
     return () => (
       <>
         <section class={cssModule.home}>
-          <Search isBiz={true} v-model:expectTimeRange={expectTimeRange} onSearch={handleSearch}></Search>
-          <Table isBiz={true} ref={tableRef} expectTimeRange={expectTimeRange}></Table>
+          <Search isBiz={true} v-model:expectTimeRange={expectTimeRange.value} onSearch={handleSearch}></Search>
+          <Table isBiz={true} ref={tableRef} expectTimeRange={expectTimeRange.value}></Table>
         </section>
       </>
     );

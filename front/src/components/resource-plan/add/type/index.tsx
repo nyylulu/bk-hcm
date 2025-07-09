@@ -11,7 +11,7 @@ export default defineComponent({
   props: {
     modelValue: String as PropType<AdjustType>,
     type: String as PropType<AdjustType>,
-    disabledConfig: Boolean,
+    disableType: String as PropType<AdjustType>,
   },
   emits: ['update:modelValue'],
   setup(props, { emit }) {
@@ -28,21 +28,28 @@ export default defineComponent({
             <BkRadioGroup modelValue={props.modelValue} onChange={triggerUpdate}>
               <BkRadioButton
                 label={AdjustType.config}
-                disabled={props.type === AdjustType.time || props.disabledConfig}
+                disabled={props.type === AdjustType.time || props.disableType === AdjustType.config}
                 v-bk-tooltips={
                   props.type === AdjustType.time
                     ? { content: t('已延期，不支持调整'), disabled: props.type !== AdjustType.time }
-                    : { content: t('期望到货日期已变更，不可更改调整方式'), disabled: !props.disabledConfig }
+                    : {
+                        content: t('期望到货日期已变更，不可更改调整方式'),
+                        disabled: props.disableType !== AdjustType.config,
+                      }
                 }>
                 {t('调整配置')}
               </BkRadioButton>
               <BkRadioButton
                 label={AdjustType.time}
-                disabled={props.type === AdjustType.config}
-                v-bk-tooltips={{
-                  content: t('已修改配置，不支持调整'),
-                  disabled: props.type !== AdjustType.config,
-                }}>
+                disabled={props.type === AdjustType.config || props.disableType === AdjustType.time}
+                v-bk-tooltips={
+                  props.type === AdjustType.config
+                    ? { content: t('已修改配置，不支持调整'), disabled: props.type !== AdjustType.config }
+                    : {
+                        content: t('配置已变更，不可更改调整方式'),
+                        disabled: props.disableType !== AdjustType.time,
+                      }
+                }>
                 {t('调整时间')}
               </BkRadioButton>
             </BkRadioGroup>

@@ -6,15 +6,17 @@ import cssModule from './index.module.scss';
 
 import type { IPlanTicketDemand, IDeviceType } from '@/typings/resourcePlan';
 import { AdjustType } from '@/typings/plan';
+import { isEqual } from 'lodash';
 
 export default defineComponent({
   props: {
     planTicketDemand: Object as PropType<IPlanTicketDemand>,
     resourceType: String,
     type: String as PropType<AdjustType>,
+    originPlanTicketDemand: Object as PropType<IPlanTicketDemand>,
   },
 
-  emits: ['update:planTicketDemand'],
+  emits: ['update:planTicketDemand', 'disableTypeChange'],
 
   setup(props, { emit, expose }) {
     const { t } = useI18n();
@@ -53,13 +55,21 @@ export default defineComponent({
     const deviceTypeInfo = ref('');
 
     const handleUpdatePlanTicketDemand = (cvmInfo: Partial<IPlanTicketDemand['cvm']>) => {
-      emit('update:planTicketDemand', {
-        ...props.planTicketDemand,
-        cvm: {
-          ...props.planTicketDemand.cvm,
-          ...cvmInfo,
-        },
-      });
+      const newDemand = { ...props.planTicketDemand, cvm: { ...props.planTicketDemand.cvm, ...cvmInfo } };
+
+      if (props.type === AdjustType.none) {
+        emit('update:planTicketDemand', newDemand);
+        return;
+      }
+
+      // 这里只变更cvm信息，可以简化比较逻辑
+      if (!isEqual(props.originPlanTicketDemand.cvm, newDemand.cvm)) {
+        emit('disableTypeChange', AdjustType.time);
+      } else if (isEqual(newDemand, props.originPlanTicketDemand)) {
+        emit('disableTypeChange', AdjustType.none);
+      }
+
+      emit('update:planTicketDemand', newDemand);
     };
 
     const getDeviceClasses = () => {
@@ -104,10 +114,7 @@ export default defineComponent({
       const osNum = +props.planTicketDemand.cvm.os;
 
       nextTick(() => {
-        handleUpdatePlanTicketDemand({
-          cpu_core: perCpuCore * osNum,
-          memory: perMemory * osNum,
-        });
+        handleUpdatePlanTicketDemand({ cpu_core: perCpuCore * osNum, memory: perMemory * osNum });
         nextTick(() => {
           validate();
         });
@@ -134,6 +141,7 @@ export default defineComponent({
       },
     );
 
+    // 计算项不参与checkChange业务，避免副作用影响了操作场景的判断
     watch(
       [() => props.planTicketDemand.cvm.device_type, () => props.planTicketDemand.cvm.os, () => deviceTypes.value],
       calcCpuAndMemory,

@@ -12,6 +12,7 @@ import { timeFormatter } from '@/common/util';
 import { AdjustType, IExceptTimeRange } from '@/typings/plan';
 import { isDateInRange } from '@/utils/plan';
 import useFormModel from '@/hooks/useFormModel';
+import { isEqual } from 'lodash';
 
 dayjs.extend(isBetween);
 dayjs.extend(isoWeek);
@@ -22,6 +23,7 @@ export default defineComponent({
     resourceType: String,
     type: String as PropType<AdjustType>,
     submitTooltips: Object as PropType<string | { content: string; disabled: boolean }>,
+    originPlanTicketDemand: Object as PropType<IPlanTicketDemand>,
   },
 
   emits: [
@@ -29,7 +31,7 @@ export default defineComponent({
     'update:resourceType',
     'update:submitTooltips',
     'update:isSubmitDisabled',
-    'expectTimeChangeInTimeAdjust',
+    'disableTypeChange',
   ],
 
   setup(props, { emit, expose }) {
@@ -45,9 +47,6 @@ export default defineComponent({
       start: timeRange.date_range_in_week?.start || '',
       end: timeRange.date_range_in_week?.end || '',
     }));
-
-    // 记录原始到货期望时间（修改预测需求）
-    const originExpectTime = props.type !== AdjustType.none ? props.planTicketDemand.expect_time : '';
 
     const projectTypes = ref<string[]>([]);
     const regions = ref<IRegion[]>([]);
@@ -65,11 +64,30 @@ export default defineComponent({
       return expectedDate.isSame(futureDate, 'day');
     });
 
+    const DISABLE_TIME_KEYS = ['obs_project', 'region_id', 'zone_id'];
+    const DISABLE_CONFIG_KEY = 'expect_time';
+
     const handleUpdatePlanTicketDemand = (key: string, value: unknown) => {
-      emit('update:planTicketDemand', {
-        ...props.planTicketDemand,
-        [key]: value,
-      });
+      const newDemand = { ...props.planTicketDemand, [key]: value };
+
+      if (props.type === AdjustType.none) {
+        emit('update:planTicketDemand', newDemand);
+        return;
+      }
+
+      const isValueChanged = !isEqual(props.originPlanTicketDemand[key], value);
+
+      if (isValueChanged) {
+        if (DISABLE_TIME_KEYS.includes(key)) {
+          emit('disableTypeChange', AdjustType.time);
+        } else if (key === DISABLE_CONFIG_KEY) {
+          emit('disableTypeChange', AdjustType.config);
+        }
+      } else if (isEqual(newDemand, props.originPlanTicketDemand)) {
+        emit('disableTypeChange', AdjustType.none);
+      }
+
+      emit('update:planTicketDemand', newDemand);
     };
 
     const handleUpdateResourceType = (value: string) => {
@@ -297,13 +315,7 @@ export default defineComponent({
               clearable
               modelValue={props.planTicketDemand.expect_time}
               disabledDate={getDisabledDate}
-              onChange={(val: string) => {
-                // 调整方式为『调整时间』，并且期望到货日期变更后，不可以再更改调整方式为『调整配置』
-                if (props.type === AdjustType.time) {
-                  emit('expectTimeChangeInTimeAdjust', originExpectTime !== val);
-                }
-                handleUpdatePlanTicketDemand('expect_time', val);
-              }}>
+              onChange={(val: string) => handleUpdatePlanTicketDemand('expect_time', val)}>
               {{
                 footer: () => (
                   <div
