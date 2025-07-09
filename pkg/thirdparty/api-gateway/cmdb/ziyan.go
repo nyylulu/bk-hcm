@@ -93,6 +93,44 @@ func (c *cmdbApiGateWay) SearchBizCompanyCmdbInfo(kt *kit.Kit, params *SearchBiz
 	if err := params.Validate(); err != nil {
 		return nil, err
 	}
+	// MOCK: reborn(213) 运营产品数据
+	if len(params.BizIDs) > 0 && params.BizIDs[0] == 213 {
+		return &[]CompanyCmdbInfo{{
+			BkBizID:          params.BizIDs[0],
+			BizName:          "reborn",
+			BkProductID:      1279,
+			BkProductName:    "互娱资源公共平台",
+			PlanProductID:    54,
+			PlanProductName:  "互娱运营支撑产品",
+			BusinessDeptID:   3,
+			BusinessDeptName: "互动娱乐事业部",
+			Bs1Name:          "CC_reborn",
+			Bs1NameID:        42649,
+			Bs2Name:          "CC_reborn",
+			Bs2NameID:        42694,
+			VirtualDeptID:    1041,
+			VirtualDeptName:  "IEG技术运营部",
+		}}, nil
+	}
+	// MOCK: IEG-FinOps(5012076) 运营产品数据
+	if len(params.BizIDs) > 0 && params.BizIDs[0] == 5012076 {
+		return &[]CompanyCmdbInfo{{
+			BkBizID:          params.BizIDs[0],
+			BizName:          "IEG-FinOps",
+			BkProductID:      7802,
+			BkProductName:    "IEG-FinOps",
+			PlanProductID:    54,
+			PlanProductName:  "互娱运营支撑产品",
+			BusinessDeptID:   3,
+			BusinessDeptName: "互动娱乐事业部",
+			Bs1Name:          "CC_IEG-FinOps",
+			Bs1NameID:        4424751,
+			Bs2Name:          "CC_IEG-FinOps",
+			Bs2NameID:        4425681,
+			VirtualDeptID:    1041,
+			VirtualDeptName:  "IEG技术运营部",
+		}}, nil
+	}
 	return apigateway.ApiGatewayCall[SearchBizCompanyCmdbInfoParams, []CompanyCmdbInfo](c.client, c.config,
 		rest.POST, kt, params, "/sidecar/findmany/business/cost_info_relation")
 }
