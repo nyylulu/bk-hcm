@@ -62,13 +62,7 @@ func (l *logics) getBizIDNameByName(kt *kit.Kit, names []string, groupIDs []stri
 		Fields: []string{"bk_biz_id", "bk_biz_name", "bk_oper_grp_name_id"},
 		Page:   cmdb.BasePage{Start: 0, Limit: pkg.BKMaxInstanceLimit},
 	}
-	start := 0
-	end := len(names)
-	if len(names) > pkg.BKMaxInstanceLimit {
-		end = pkg.BKMaxInstanceLimit
-	}
-
-	for {
+	for _, batch := range slice.Split(names, pkg.BKMaxInstanceLimit) {
 		req.BizPropertyFilter = &cmdb.QueryFilter{
 			Rule: cmdb.CombinedRule{
 				Condition: cmdb.ConditionAnd,
@@ -76,7 +70,7 @@ func (l *logics) getBizIDNameByName(kt *kit.Kit, names []string, groupIDs []stri
 					cmdb.AtomRule{
 						Field:    "bk_biz_name",
 						Operator: cmdb.OperatorIn,
-						Value:    names[start:end],
+						Value:    batch,
 					},
 				},
 			},
@@ -95,18 +89,6 @@ func (l *logics) getBizIDNameByName(kt *kit.Kit, names []string, groupIDs []stri
 
 			bizIDName[info.BizID] = info.BizName
 		}
-
-		if len(resp.Info) < pkg.BKMaxInstanceLimit {
-			break
-		}
-
-		start = end
-		if end+pkg.BKMaxInstanceLimit > len(names) {
-			end = len(names)
-			continue
-		}
-
-		end += pkg.BKMaxInstanceLimit
 	}
 
 	return bizIDName, nil
