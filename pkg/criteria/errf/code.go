@@ -81,6 +81,11 @@ const (
 	ResPlanVerifyFailed int32 = 2000020
 	// CvmApplyVerifyFailed CVM申请主机校验失败
 	CvmApplyVerifyFailed int32 = 2000021
+
+	// DeviceTypeExistLocally 设备类型已存在本地
+	DeviceTypeExistLocally int32 = 2000022
+	// DeviceTypeAbsentInCRP 设备类型不存在于CRP
+	DeviceTypeAbsentInCRP int32 = 2000023
 	// SyncRepeatLockError CLB、安全组重复同步
 	SyncRepeatLockError int32 = 2000024
 )

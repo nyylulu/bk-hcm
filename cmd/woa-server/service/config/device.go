@@ -14,6 +14,7 @@
 package config
 
 import (
+	"errors"
 	"strconv"
 
 	types "hcm/cmd/woa-server/types/config"
@@ -157,6 +158,23 @@ func (s *service) CreateManyDevice(cts *rest.Contexts) (interface{}, error) {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
+	crpDeviceTypeMap, err := s.planLogics.ListCvmInstanceTypeFromCrp(cts.Kit, []string{input.DeviceType})
+	if err != nil {
+		logs.Errorf("failed to get device type from CRP, err: %v, deviceType: %s, rid: %s", err, input.DeviceType,
+			cts.Kit.Rid)
+		return nil, err
+	}
+
+	crpDeviceInfo, exists := crpDeviceTypeMap[input.DeviceType]
+	if !exists && !input.ForceCreate {
+		logs.Errorf("device type not exist in CRP, input: %+v, rid: %s", input, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.DeviceTypeAbsentInCRP, errors.New("device type not exist in CRP"))
+	}
+
+	// 当机型存在于crp时，那么创建时以crp的实例族为准
+	if exists {
+		input.DeviceGroup = crpDeviceInfo.DeviceFamily
+	}
 	if err = s.logics.Device().CreateManyDevice(cts.Kit, input); err != nil {
 		logs.Errorf("failed to create device in batch, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
 		return nil, err

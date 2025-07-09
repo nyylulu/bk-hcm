@@ -289,8 +289,8 @@ func (d *device) CreateDevice(kt *kit.Kit, input *types.DeviceInfo) (mapstr.MapS
 	}
 
 	if cnt != 0 {
-		logs.Errorf("device exist, need not create again, rid: %s", kt.Rid)
-		return nil, errors.New("device exist, need not create again")
+		logs.Errorf("device exist locally, need not create again, rid: %s", kt.Rid)
+		return nil, errf.NewFromErr(errf.DeviceTypeExistLocally, errors.New("device exist locally, need not create again"))
 	}
 
 	// create instance

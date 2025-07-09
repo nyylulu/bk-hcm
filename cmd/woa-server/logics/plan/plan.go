@@ -96,6 +96,8 @@ type Logics interface {
 	GetAllDeviceTypeMap(kt *kit.Kit) (map[string]wdt.WoaDeviceTypeTable, error)
 	// SyncDeviceTypesFromCRP sync device types from crp.
 	SyncDeviceTypesFromCRP(kt *kit.Kit, deviceTypes []string) error
+	// ListCvmInstanceTypeFromCrp get device type info from crp.
+	ListCvmInstanceTypeFromCrp(kt *kit.Kit, deviceTypes []string) (map[string]wdt.WoaDeviceTypeTable, error)
 }
 
 // Controller motivates the resource plan ticket status flow.

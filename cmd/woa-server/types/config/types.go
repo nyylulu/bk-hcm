@@ -363,6 +363,8 @@ type CreateManyDeviceParam struct {
 	Cpu         int64                `json:"cpu" validate:"required,min=1"`
 	Mem         int64                `json:"mem" validate:"required,min=1"`
 	Remark      string               `json:"remark"`
+	// ForceCreate 当机型在CRP中不存在时是否仍然创建
+	ForceCreate bool `json:"force_create" validate:"omitempty"`
 }
 
 // Validate whether GetDeviceParam is valid
