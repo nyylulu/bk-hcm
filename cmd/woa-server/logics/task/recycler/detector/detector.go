@@ -35,7 +35,6 @@ import (
 	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/thirdparty/l5api"
 	"hcm/pkg/thirdparty/ngateapi"
-	"hcm/pkg/thirdparty/safetyapi"
 	"hcm/pkg/thirdparty/tcaplusapi"
 	"hcm/pkg/thirdparty/tgwapi"
 	"hcm/pkg/thirdparty/tmpapi"
@@ -63,7 +62,6 @@ type cliSet struct {
 	tcaplus tcaplusapi.TcaplusClientInterface
 	tgw     tgwapi.TgwClientInterface
 	l5      l5api.L5ClientInterface
-	safety  safetyapi.SafetyClientInterface
 	cvm     cvmapi.CVMClientInterface
 	tcOpt   cc.TCloudCli
 	sops    sopsapi.SopsClientInterface
@@ -86,7 +84,6 @@ func New(ctx context.Context, thirdCli *thirdparty.Client, cmdbCli cmdb.Client, 
 		tcaplus: thirdCli.Tcaplus,
 		tgw:     thirdCli.TGW,
 		l5:      thirdCli.L5,
-		safety:  thirdCli.Safety,
 		cvm:     thirdCli.CVM,
 		tcOpt:   thirdCli.TencentCloudOpt,
 		sops:    thirdCli.Sops,
@@ -227,37 +224,6 @@ func prepareStepForTask(task *table.DetectTask, cfg *table.DetectStepCfg) *table
 		UpdateAt:   now,
 	}
 	return step
-}
-
-// TODO 原逻辑参考 改造完删除
-func (d *Detector) executeRecycleStep(step *table.DetectStep, retry int) (int, string, error) {
-	attempt := 0
-	exeInfo := ""
-	var err error
-
-	switch step.StepName {
-	// case table.StepPreCheck:
-	// 	attempt, exeInfo, err = d.preCheck(step, retry)
-	// case table.StepCheckUwork:
-	// 	attempt, exeInfo, err = d.checkUwork(step, retry)
-	// case table.StepCheckTcaplus:
-	// 	attempt, exeInfo, err = d.checkTcaplus(step, retry)
-	// case table.StepCheckDBM:
-	// 	attempt, exeInfo, err = d.checkDbm(step, retry)
-	// case table.StepCheckOwner:
-	// 	attempt, exeInfo, err = d.checkOwner(step, retry)
-	case table.StepCheckSafety:
-		attempt, exeInfo, err = d.checkSecurityBaseline(step, retry)
-	case table.StepCheckReturn:
-		attempt, exeInfo, err = d.checkReturn(step, retry)
-	// case table.StepCheckProcess:
-	// 	attempt, exeInfo, err = d.checkProcess(step, retry)
-	default:
-		logs.Errorf("unknown recycle step %s", step.StepName)
-		err = fmt.Errorf("unknown recycle step %s", step.StepName)
-	}
-
-	return attempt, exeInfo, err
 }
 
 func (d *Detector) updateRecycleStep(step *table.DetectStep, status table.DetectStatus, attempt int, msg,
