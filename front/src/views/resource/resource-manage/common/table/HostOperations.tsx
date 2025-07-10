@@ -1,5 +1,5 @@
 import { Button, Checkbox, Dialog, Loading, Message, bkTooltips } from 'bkui-vue';
-import { PropType, computed, defineComponent, inject, reactive, ref, watch, withDirectives } from 'vue';
+import { PropType, Ref, computed, defineComponent, inject, reactive, ref, watch, withDirectives } from 'vue';
 import './index.scss';
 import { usePreviousState } from '@/hooks/usePreviousState';
 import { useResourceStore } from '@/store';
@@ -107,7 +107,7 @@ export default defineComponent({
     const resourceStore = useResourceStore();
     const resourceAccountStore = useResourceAccountStore();
 
-    const isOtherVendor = inject<boolean>('isOtherVendor');
+    const isOtherVendor = inject<Ref<boolean>>('isOtherVendor');
 
     const isDialogShow = computed(() => {
       return operationType.value !== OperationActions.NONE;
@@ -380,7 +380,9 @@ export default defineComponent({
         <HcmAuth sign={{ type: AUTH_UPDATE_IAAS_RESOURCE, relation: [resourceAccountStore.resourceAccount?.id] }}>
           {{
             default: ({ noPerm }: { noPerm: boolean }) => (
-              <HcmDropdown ref={dropdownOperationRef} disabled={noPerm || isOtherVendor || operationsDisabled.value}>
+              <HcmDropdown
+                ref={dropdownOperationRef}
+                disabled={noPerm || isOtherVendor.value || operationsDisabled.value}>
                 {{
                   default: () => (
                     <>
