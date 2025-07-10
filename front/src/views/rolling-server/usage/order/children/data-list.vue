@@ -12,11 +12,13 @@ import routerAction from '@/router/utils/action';
 import usageOrderViewProperties from '@/model/rolling-server/usage-order.view';
 import { GLOBAL_BIZS_KEY } from '@/common/constant';
 import { timeFormatter } from '@/common/util';
+import { RollingServerRecordItem } from '@/store';
 
 withDefaults(defineProps<IDataListProps>(), {});
 
 const emit = defineEmits<{
   'show-returned-records': [id: string];
+  'show-not-notice': [row: RollingServerRecordItem];
 }>();
 
 const rollingServerStore = useRollingServerStore();
@@ -34,6 +36,7 @@ const fieldIds = [
   'not_returned_core',
   'exec_rate',
   'creator',
+  'not_notice',
 ];
 const columConfig: Record<string, PropertyColumnConfig> = {
   suborder_id: {
@@ -137,6 +140,9 @@ const { settings } = useTableSettings(renderColumns.value);
             退还记录
           </bk-button>
           <template v-else>--</template>
+          <bk-button class="ml8" theme="primary" text :disabled="row.not_notice" @click="emit('show-not-notice', row)">
+            {{ row.not_notice ? '确认状态' : '屏蔽通知' }}
+          </bk-button>
         </template>
       </bk-table-column>
     </bk-table>

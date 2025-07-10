@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, useTemplateRef, watch } from 'vue';
+import { reactive, ref, useTemplateRef, watch } from 'vue';
 import { type LocationQuery, useRoute } from 'vue-router';
 import useSearchQs from '@/hooks/use-search-qs';
 import usePage from '@/hooks/use-page';
@@ -14,6 +14,7 @@ import { ISearchCondition, IView } from '../typings';
 import Search from './children/search.vue';
 import DataList from './children/data-list.vue';
 import ReturnedRecordsDialog from './children/returned-records-dialog.vue';
+import NotNoticeDialog from './children/not-notice-dialog.vue';
 
 const route = useRoute();
 const rollingServerStore = useRollingServerStore();
@@ -125,6 +126,22 @@ const returnedRecordsDialogRef = useTemplateRef<typeof ReturnedRecordsDialog>('r
 const handleReturnedRecords = (id: string) => {
   returnedRecordsDialogRef.value.show(docList.value.find((item) => item.id === id));
 };
+
+const notNoticeDialogState = reactive({ isHidden: true, isShow: false, details: null });
+const handleShowNotNotice = async (details: RollingServerRecordItem) => {
+  recordsPoll.pause();
+  Object.assign(notNoticeDialogState, {
+    isHidden: false,
+    isShow: true,
+    details: { ...details, roll_date: String(details.roll_date) },
+  });
+};
+const handleNotNoticeSuccess = () => {
+  recordsPoll.resume();
+};
+const handleNotNoticeHidden = () => {
+  Object.assign(notNoticeDialogState, { isHidden: true, details: null });
+};
 </script>
 
 <template>
@@ -136,6 +153,15 @@ const handleReturnedRecords = (id: string) => {
     :pagination="pagination"
     :summary-info="summaryInfo"
     @show-returned-records="handleReturnedRecords"
+    @show-not-notice="handleShowNotNotice"
   />
   <returned-records-dialog ref="returned-records-dialog" />
+  <template v-if="!notNoticeDialogState.isHidden">
+    <not-notice-dialog
+      v-model="notNoticeDialogState.isShow"
+      :details="notNoticeDialogState.details"
+      @success="handleNotNoticeSuccess"
+      @hidden="handleNotNoticeHidden"
+    />
+  </template>
 </template>

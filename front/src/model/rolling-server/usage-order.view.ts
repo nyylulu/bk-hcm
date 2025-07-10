@@ -44,4 +44,5 @@ export default [
   { id: 'exec_rate', name: t('执行率'), type: 'string' },
   { id: 'status', name: t('状态'), type: 'number' },
   { id: 'require_type', name: t('需求类型'), type: 'number' },
+  { id: 'not_notice', name: t('退还通知'), type: 'bool', option: { trueText: t('不通知'), falseText: t('需通知') } },
 ] as ModelProperty[];

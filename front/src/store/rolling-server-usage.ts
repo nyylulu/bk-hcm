@@ -27,6 +27,7 @@ interface IRollingServerBaseRecordItem {
   day: string;
   creator: string;
   created_at: string;
+  [key: string]: any;
 }
 
 export interface IRollingServerAppliedRecordItem extends IRollingServerBaseRecordItem {
@@ -123,6 +124,21 @@ export const useRollingServerUsageStore = defineStore('rolling-server-usage', ()
     }
   };
 
+  const updateAppliedRecordsNoticeDisabledLoading = ref(false);
+  const updateAppliedRecordsNoticeDisabled = async (ids: string[]) => {
+    updateAppliedRecordsNoticeDisabledLoading.value = true;
+    const api = `/api/v1/woa/${getBusinessApiPath()}rolling_servers/applied_records/notice/disabled/update`;
+    try {
+      const res = await http.post(api, { ids });
+      return res;
+    } catch (error) {
+      console.error(error);
+      return Promise.reject(error);
+    } finally {
+      updateAppliedRecordsNoticeDisabledLoading.value = false;
+    }
+  };
+
   return {
     appliedRecordsListLoading,
     getAppliedRecordList,
@@ -130,5 +146,7 @@ export const useRollingServerUsageStore = defineStore('rolling-server-usage', ()
     getReturnedRecordList,
     cpuCoreSummaryLoading,
     getCpuCoreSummary,
+    updateAppliedRecordsNoticeDisabledLoading,
+    updateAppliedRecordsNoticeDisabled,
   };
 });
