@@ -321,12 +321,12 @@ watch(
   },
 );
 
-// 状态保持
-watch(activeTab, () => {
+// 状态保持，accountId数据更新是后置的，需要监听确保为最新数据
+watch([activeTab, accountId], ([tab, account]) => {
   router.replace({
     query: {
-      type: activeTab.value,
-      accountId: accountId.value || undefined,
+      type: tab,
+      accountId: account || undefined,
     },
   });
 });
@@ -629,7 +629,7 @@ onMounted(() => {
 
 .navigation-resource {
   min-height: 88px;
-  margin: -24px -24px 24px -24px;
+  margin: -24px -24px 24px;
 }
 
 .card-layout {
@@ -666,7 +666,7 @@ onMounted(() => {
 }
 
 .error-message-alert {
-  margin: -8px 0 16px 0;
+  margin: -8px 0 16px;
 }
 </style>
 

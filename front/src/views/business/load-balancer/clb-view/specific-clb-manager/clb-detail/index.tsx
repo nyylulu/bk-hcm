@@ -7,14 +7,14 @@ import Confirm from '@/components/confirm';
 import { useRouteLinkBtn, TypeEnum, IDetail } from '@/hooks/useRouteLinkBtn';
 import StatusNormal from '@/assets/image/Status-normal.png';
 import StatusUnknown from '@/assets/image/Status-unknown.png';
-import { timeFormatter, formatTags } from '@/common/util';
+import { timeFormatter, formatTags, parseTimeFromNow } from '@/common/util';
 import { CHARGE_TYPE, CLB_SPECS, LB_ISP, LB_TYPE_MAP } from '@/common/constant';
 import { useBusinessStore } from '@/store';
 import { useRegionsStore } from '@/store/useRegionsStore';
 import { IP_VERSION_MAP } from '@/constants';
 import { QueryRuleOPEnum } from '@/typings';
 import { useI18n } from 'vue-i18n';
-import { getInstVip } from '@/utils';
+import { formatBandwidth, getInstVip } from '@/utils';
 import './index.scss';
 import { FieldList } from '@/views/resource/resource-manage/common/info-list/types';
 
@@ -154,6 +154,11 @@ export default defineComponent({
           return formatTags(val);
         },
       },
+      {
+        name: '同步时间',
+        prop: 'sync_time',
+        render: () => `${timeFormatter(props.detail.sync_time)}(${parseTimeFromNow(props.detail.sync_time)})`,
+      },
     ];
 
     const configFields: FieldList = [
@@ -187,23 +192,12 @@ export default defineComponent({
       },
       {
         name: '带宽上限',
-        render: () => {
-          const bandwidth = props.detail?.extension?.internet_max_bandwidth_out;
-          if (bandwidth === undefined || bandwidth === null) return '--';
-
-          if (bandwidth >= 1024) {
-            const gbpsValue = (bandwidth / 1024).toFixed(2);
-            return `${gbpsValue.replace(/\.00$/, '')} Gbps`;
-          }
-          return `${bandwidth} Mbps`;
-        },
+        render: () => formatBandwidth(props.detail?.bandwidth),
       },
       {
         name: '运营商',
         render: () => {
-          const displayValue = props.detail?.extension?.vip_isp
-            ? LB_ISP[props.detail.extension.vip_isp] ?? props.detail.extension.vip_isp
-            : '--';
+          const displayValue = props.detail?.isp ? LB_ISP[props.detail.isp] ?? props.detail.isp : '--';
           return displayValue;
         },
       },
