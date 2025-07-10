@@ -23,6 +23,8 @@ import (
 	"fmt"
 	"strings"
 
+	loadbalancer "hcm/pkg/adaptor/types/load-balancer"
+	"hcm/pkg/criteria/constant"
 	cvt "hcm/pkg/tools/converter"
 )
 
@@ -148,7 +150,18 @@ func (a *ApplicationOfCreateZiyanLB) renderBaseInfo() ([]formItem, error) {
 	if req.VipIsp != nil {
 		isp = *req.VipIsp
 	}
+	if req.LoadBalancerType == loadbalancer.InternalLoadBalancerType {
+		isp = "内网流量"
+	}
+	if req.TgwGroupName != nil && cvt.PtrToVal(req.TgwGroupName) == constant.TgwGroupNameZiyan {
+		isp = "限速CAP"
+	}
 	formItems = append(formItems, formItem{Label: "运营商", Value: isp})
+
+	if req.InternetMaxBandwidthOut != nil {
+		formItems = append(formItems,
+			formItem{Label: "带宽", Value: fmt.Sprintf("%dMbps", cvt.PtrToVal(req.InternetMaxBandwidthOut))})
+	}
 
 	// 标签信息
 	for _, tag := range req.Tags {

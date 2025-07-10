@@ -73,3 +73,9 @@ const (
 	// GPUDeviceTypeChargeMonth GPU机型-计费模式-72个月
 	GPUDeviceTypeChargeMonth uint = 72
 )
+
+// TgwGroupNameZiyan Tgw独占集群标签
+// TGW：Tencent GateWay， 是负载均衡 （Load Balancer，LB）， 在公司内部简称TGW了；
+// 原理TGW包含了TGW，伪7层TGW（定制了tgw_forward），伪7层已经2年多不维护2020年全面下线，可以使用STGW替代接入（TGW+nginx+加解密）；
+// CLB：负载均衡（Cloud Load Balancer，CLB），是腾讯云产品化的名称，CLB 4层就对应自研的TGW， CLB 7层对应自研的STGW；
+const TgwGroupNameZiyan = "ziyan"
