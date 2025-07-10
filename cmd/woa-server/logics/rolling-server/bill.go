@@ -165,7 +165,7 @@ func (l *logics) syncBizBills(kt *kit.Kit, req *rollingserver.RollingBillSyncReq
 	startDate := rollingserver.AppliedRecordDate{Year: startYear, Month: startMonth, Day: startDay}
 	endYear, endMonth, endDay := subDay(req.Year, req.Month, req.Day, constant.CalculateFineStartDay)
 	endDate := rollingserver.AppliedRecordDate{Year: endYear, Month: endMonth, Day: endDay}
-	appliedRecords, err := l.findAppliedRecords(kt, req.BkBizID, startDate, endDate)
+	appliedRecords, err := l.findAppliedRecords(kt, req.BkBizID, startDate, endDate, true)
 	if err != nil {
 		logs.Errorf("find rolling applied records failed, err: %v, req: %+v, rid: %s", err, *req, kt.Rid)
 		return err

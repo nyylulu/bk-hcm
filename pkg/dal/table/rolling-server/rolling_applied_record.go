@@ -48,6 +48,7 @@ var RollingAppliedRecordColumnDescriptor = utils.ColumnDescriptors{
 	{Column: "delivered_core", NamedC: "delivered_core", Type: enumor.Numeric},
 	{Column: "instance_group", NamedC: "instance_group", Type: enumor.String},
 	{Column: "core_type", NamedC: "core_type", Type: enumor.String},
+	{Column: "not_notice", NamedC: "not_notice", Type: enumor.Boolean},
 	{Column: "creator", NamedC: "creator", Type: enumor.String},
 	{Column: "created_at", NamedC: "created_at", Type: enumor.Time},
 	{Column: "updated_at", NamedC: "updated_at", Type: enumor.Time},
@@ -83,6 +84,8 @@ type RollingAppliedRecord struct {
 	InstanceGroup string `db:"instance_group" json:"instance_group"`
 	// CoreType 机型核心类型
 	CoreType enumor.CoreType `db:"core_type" json:"core_type"`
+	// NotNotice 是否不通知
+	NotNotice *bool `db:"not_notice" json:"not_notice"`
 	// Creator 创建者
 	Creator string `db:"creator" json:"creator"`
 	// CreatedAt 创建时间

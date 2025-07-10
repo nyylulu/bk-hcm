@@ -62,6 +62,7 @@ func (svc *service) BatchCreateRollingAppliedRecord(cts *rest.Contexts) (interfa
 				DeliveredCore: cvt.ValToPtr(createReq.DeliveredCore),
 				InstanceGroup: createReq.InstanceGroup,
 				CoreType:      createReq.CoreType,
+				NotNotice:     cvt.ValToPtr(createReq.NotNotice),
 				Creator:       cts.Kit.User,
 			})
 		}

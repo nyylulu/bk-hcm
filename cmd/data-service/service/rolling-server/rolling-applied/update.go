@@ -58,6 +58,9 @@ func (svc *service) BatchUpdateRollingAppliedRecord(cts *rest.Contexts) (interfa
 			if updateReq.DeliveredCore != nil {
 				recordReq.DeliveredCore = updateReq.DeliveredCore
 			}
+			if updateReq.NotNotice != nil {
+				recordReq.NotNotice = updateReq.NotNotice
+			}
 			if err := svc.dao.RollingAppliedRecord().Update(
 				cts.Kit, txn, tools.EqualExpression("id", updateReq.ID), recordReq); err != nil {
 				return nil, fmt.Errorf("update rolling applied record failed, err: %v, id: %s", err, updateReq.ID)

@@ -24,6 +24,7 @@ import (
 	"hcm/cmd/data-service/service/audit/cloud/firewall"
 	loadbalancer "hcm/cmd/data-service/service/audit/cloud/load-balancer"
 	networkinterface "hcm/cmd/data-service/service/audit/cloud/network-interface"
+	rollingserver "hcm/cmd/data-service/service/audit/cloud/rolling-server"
 	routetable "hcm/cmd/data-service/service/audit/cloud/route-table"
 	securitygroup "hcm/cmd/data-service/service/audit/cloud/security-group"
 	"hcm/cmd/data-service/service/audit/cloud/subnet"
@@ -41,6 +42,7 @@ func NewCloudAudit(dao dao.Set) *Audit {
 		networkInterface: networkinterface.NewNetworkInterface(dao),
 		routeTable:       routetable.NewRouteTable(dao),
 		loadBalancer:     loadbalancer.NewLoadBalancer(dao),
+		rsAppliedRecord:  rollingserver.NewRsAppliedRecord(dao),
 	}
 }
 
@@ -54,4 +56,5 @@ type Audit struct {
 	networkInterface *networkinterface.NetworkInterface
 	routeTable       *routetable.RouteTable
 	loadBalancer     *loadbalancer.LoadBalancer
+	rsAppliedRecord  *rollingserver.RsAppliedRecord
 }

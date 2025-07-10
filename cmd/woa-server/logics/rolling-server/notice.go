@@ -134,7 +134,7 @@ func (l *logics) pushBizReturnNotification(kt *kit.Kit, bizID int64, bizName str
 	startYear, startMonth, startDay := subDay(now.Year(), int(now.Month()), now.Day(), constant.CalculateFineEndDay)
 	startDate := rstypes.AppliedRecordDate{Year: startYear, Month: startMonth, Day: startDay}
 	endDate := rstypes.AppliedRecordDate{Year: now.Year(), Month: int(now.Month()), Day: now.Day()}
-	unReturnedSubOrderMsgs, err := l.findUnReturnedSubOrderMsg(kt, bizID, startDate, endDate)
+	unReturnedSubOrderMsgs, err := l.findUnReturnedSubOrderMsg(kt, bizID, startDate, endDate, false)
 	if err != nil {
 		logs.Errorf("find unreturned sub order msg failed, err: %v, bizID: %d, startDate: %v, endDate: %v, rid: %s",
 			err, bizID, startDate, endDate, kt.Rid)

@@ -72,6 +72,8 @@ func (s *service) initService(h *rest.Handler) {
 		s.ListQuotaOffsetsAdjustRecords)
 
 	h.Add("ListAppliedRecords", http.MethodPost, "/applied_records/list", s.ListAppliedRecords)
+	h.Add("UpdateAppliedRecordsNoticeState", http.MethodPost, "/applied_records/notice/{state}/update",
+		s.UpdateAppliedRecordsNoticeState)
 	h.Add("ListReturnedRecords", http.MethodPost, "/returned_records/list", s.ListReturnedRecords)
 	h.Add("GetCpuCoreSummary", http.MethodPost, "/cpu_core/summary", s.GetCpuCoreSummary)
 
@@ -86,6 +88,8 @@ func (s *service) initService(h *rest.Handler) {
 // bizService 业务下的接口
 func (s *service) bizService(h *rest.Handler) {
 	h.Add("ListBizAppliedRecords", http.MethodPost, "/applied_records/list", s.ListBizAppliedRecords)
+	h.Add("UpdateBizAppliedRecordsNoticeState", http.MethodPost, "/applied_records/notice/{state}/update",
+		s.UpdateBizAppliedRecordsNoticeState)
 	h.Add("ListBizReturnedRecords", http.MethodPost, "/returned_records/list", s.ListBizReturnedRecords)
 	h.Add("GetBizCpuCoreSummary", http.MethodPost, "/cpu_core/summary", s.GetBizCpuCoreSummary)
 

@@ -61,6 +61,7 @@ type RollingAppliedRecordCreateReq struct {
 	DeliveredCore int64              `json:"delivered_core" validate:"omitempty"`
 	InstanceGroup string             `json:"instance_group" validate:"required"`
 	CoreType      enumor.CoreType    `json:"core_type" validate:"required"`
+	NotNotice     bool               `json:"not_notice" validate:"omitempty"`
 }
 
 // Validate ...
@@ -107,6 +108,7 @@ type RollingAppliedRecordUpdateReq struct {
 	AppliedType   enumor.AppliedType `json:"applied_type" validate:"omitempty"`
 	AppliedCore   *int64             `json:"applied_core" validate:"omitempty"`
 	DeliveredCore *int64             `json:"delivered_core" validate:"omitempty"`
+	NotNotice     *bool              `json:"not_notice" validate:"omitempty"`
 }
 
 // Validate ...
@@ -121,4 +123,14 @@ type RollingCpuCoreSummaryResult = core.BaseResp[*RollingCpuCoreSummaryItem]
 type RollingCpuCoreSummaryItem struct {
 	SumDeliveredCore       int64 `json:"sum_delivered_core" db:"sum_delivered_core"`
 	SumReturnedAppliedCore int64 `json:"sum_returned_applied_core" db:"sum_returned_applied_core"`
+}
+
+// AppliedRecordUpdateNoticeStateReq update request
+type AppliedRecordUpdateNoticeStateReq struct {
+	IDs []string `json:"ids" validate:"required,min=1,max=100"`
+}
+
+// Validate ...
+func (req *AppliedRecordUpdateNoticeStateReq) Validate() error {
+	return validator.Validate.Struct(req)
 }

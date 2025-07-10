@@ -151,3 +151,36 @@ func GetRsUnReturnedSubOrderFineState(appliedTime, curTime time.Time) (RsUnRetur
 
 	return "", fmt.Errorf("applied date %v, cur date: %v is not support", appliedTime, curTime)
 }
+
+// RsAppliedRecordNoticeState is rolling applied record notice state.
+type RsAppliedRecordNoticeState string
+
+const (
+	// EnableRsAppliedRecordNotice enable rolling applied record notice.
+	EnableRsAppliedRecordNotice = "enabled"
+	// DisableRsAppliedRecordNotice disable rolling applied record notice.
+	DisableRsAppliedRecordNotice = "disabled"
+)
+
+// Validate RsAppliedRecordNoticeState.
+func (r RsAppliedRecordNoticeState) Validate() error {
+	switch r {
+	case EnableRsAppliedRecordNotice, DisableRsAppliedRecordNotice:
+	default:
+		return fmt.Errorf("unsupported rolling applied record notice state: %s", r)
+	}
+
+	return nil
+}
+
+// IsNotNotice is rolling applied record not notice.
+func (r RsAppliedRecordNoticeState) IsNotNotice() bool {
+	switch r {
+	case EnableRsAppliedRecordNotice:
+		return false
+	case DisableRsAppliedRecordNotice:
+		return true
+	default:
+		return false
+	}
+}

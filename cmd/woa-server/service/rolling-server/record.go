@@ -21,9 +21,14 @@
 package rollingserver
 
 import (
+	"errors"
+
 	"hcm/pkg/api/core"
+	protoaudit "hcm/pkg/api/data-service/audit"
 	rsproto "hcm/pkg/api/data-service/rolling-server"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
+	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -157,4 +162,103 @@ func (s *service) listReturnedRecords(kt *kit.Kit, filter *filter.Expression, pa
 		Page:   page,
 	}
 	return s.client.DataService().Global.RollingServer.ListReturnedRecord(kt, listReq)
+}
+
+// UpdateAppliedRecordsNoticeState update applied records notice state.
+func (s *service) UpdateAppliedRecordsNoticeState(cts *rest.Contexts) (any, error) {
+	err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.RollingServerManage, Action: meta.Find}})
+	if err != nil {
+		logs.Errorf("update applied records notice state auth failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return s.updateAppliedRecordsNoticeState(cts)
+}
+
+// UpdateBizAppliedRecordsNoticeState update biz applied records notice state.
+func (s *service) UpdateBizAppliedRecordsNoticeState(cts *rest.Contexts) (any, error) {
+	bizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: bizID,
+	})
+	if err != nil {
+		logs.Errorf("update biz applied records notice state auth failed, err: %v, bizID: %d, rid: %s", err, bizID,
+			cts.Kit.Rid)
+		return nil, err
+	}
+
+	return s.updateAppliedRecordsNoticeState(cts)
+}
+
+func (s *service) updateAppliedRecordsNoticeState(cts *rest.Contexts) (any, error) {
+	req := new(rsproto.AppliedRecordUpdateNoticeStateReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	state := enumor.RsAppliedRecordNoticeState(cts.PathParameter("state").String())
+	if err := state.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+	notNotice := cvt.ValToPtr(state.IsNotNotice())
+
+	countReq := rsproto.RollingAppliedRecordListReq{
+		Filter: tools.ContainersExpression("id", req.IDs),
+		Page:   core.NewCountPage(),
+	}
+	countResult, err := s.client.DataService().Global.RollingServer.ListAppliedRecord(cts.Kit, &countReq)
+	if err != nil {
+		logs.Errorf("failed to list applied records, err: %v, req: %+v, rid: %s", err, countReq, cts.Kit.Rid)
+		return nil, err
+	}
+	if countResult.Count != uint64(len(req.IDs)) {
+		return nil, errf.NewFromErr(errf.InvalidParameter, errors.New("some applied records not found"))
+	}
+
+	appliedRecords := make([]rsproto.RollingAppliedRecordUpdateReq, 0)
+	for _, id := range req.IDs {
+		appliedRecords = append(appliedRecords, rsproto.RollingAppliedRecordUpdateReq{
+			ID:        id,
+			NotNotice: notNotice,
+		})
+	}
+
+	// add audit
+	updateLogs := make([]protoaudit.CloudResourceUpdateInfo, 0)
+	for _, id := range req.IDs {
+		updateFields := map[string]interface{}{"not_notice": notNotice}
+		updateLogs = append(updateLogs, protoaudit.CloudResourceUpdateInfo{
+			ResType:      enumor.RsAppliedRecordAuditResType,
+			ResID:        id,
+			UpdateFields: updateFields,
+		})
+	}
+	auditReq := protoaudit.CloudResourceUpdateAuditReq{Updates: updateLogs}
+	err = s.client.DataService().Global.Audit.CloudResourceUpdateAudit(cts.Kit.Ctx, cts.Kit.Header(), &auditReq)
+	if err != nil {
+		logs.Errorf("failed to add audit, err: %v, req: %+v, rid: %s", err, req, cts.Kit.Rid)
+		return nil, err
+	}
+
+	updateReq := rsproto.BatchUpdateRollingAppliedRecordReq{
+		AppliedRecords: appliedRecords,
+	}
+	if err = s.client.DataService().Global.RollingServer.UpdateAppliedRecord(cts.Kit, &updateReq); err != nil {
+		logs.Errorf("failed to update applied records notice state, err: %v, req: %+v, rid: %s", err, updateReq,
+			cts.Kit.Rid)
+		return nil, err
+	}
+
+	return nil, nil
 }

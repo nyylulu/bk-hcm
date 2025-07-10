@@ -529,8 +529,8 @@ func subDay(year, month, day int, subDay int) (int, int, int) {
 }
 
 // findAppliedRecords find applied records
-func (l *logics) findAppliedRecords(kt *kit.Kit, bizID int64, startDate, endDate rstypes.AppliedRecordDate) (
-	[]*rstable.RollingAppliedRecord, error) {
+func (l *logics) findAppliedRecords(kt *kit.Kit, bizID int64, startDate, endDate rstypes.AppliedRecordDate,
+	includeNotNoticeRecord bool) ([]*rstable.RollingAppliedRecord, error) {
 
 	records := make([]*rstable.RollingAppliedRecord, 0)
 	listReq := &rsproto.RollingAppliedRecordListReq{
@@ -554,6 +554,12 @@ func (l *logics) findAppliedRecords(kt *kit.Kit, bizID int64, startDate, endDate
 			Start: 0,
 			Limit: constant.BatchOperationMaxLimit,
 		},
+	}
+
+	if !includeNotNoticeRecord {
+		listReq.Filter.Rules = append(listReq.Filter.Rules, &filter.AtomRule{
+			Field: "not_notice", Op: filter.Equal.Factory(), Value: false,
+		})
 	}
 
 	for {
@@ -621,11 +627,11 @@ func (l *logics) findReturnedRecords(kt *kit.Kit, appliedRecordIDs []string) (
 	return recordMap, nil
 }
 
-func (l *logics) findUnReturnedSubOrderMsg(kt *kit.Kit, bizID int64, startDate, endDate rstypes.AppliedRecordDate) (
-	[]rstypes.UnReturnedSubOrderMsg, error) {
+func (l *logics) findUnReturnedSubOrderMsg(kt *kit.Kit, bizID int64, startDate, endDate rstypes.AppliedRecordDate,
+	includeNotNoticeRecord bool) ([]rstypes.UnReturnedSubOrderMsg, error) {
 
 	// 1.查询业务滚服申请记录
-	appliedRecords, err := l.findAppliedRecords(kt, bizID, startDate, endDate)
+	appliedRecords, err := l.findAppliedRecords(kt, bizID, startDate, endDate, includeNotNoticeRecord)
 	if err != nil {
 		logs.Errorf("find rolling applied records failed, err: %v, bizID: %d, rid: %s", err, bizID, kt.Rid)
 		return nil, err
