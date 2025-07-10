@@ -64,6 +64,11 @@ func New(ctx context.Context, thirdCli *thirdparty.Client, cmdbCli cmdb.Client) 
 
 // DealRecycleOrder deals with recycle order by running returning tasks
 func (r *Returner) DealRecycleOrder(kt *kit.Kit, order *table.RecycleOrder) *event.Event {
+	if order.BizID > 0 {
+		err := fmt.Errorf("【测试中】单据提交到当前状态时间：%s", time.Since(order.CommittedAt))
+		return &event.Event{Type: event.ReturnFailed, Error: err}
+	}
+
 	task, err := r.initReturnTask(order)
 	if err != nil {
 		logs.Errorf("failed to init return task for order %s, err: %v, rid: %s", order.SuborderID, err, kt.Rid)
