@@ -269,8 +269,14 @@ export default defineComponent({
           },
           {
             label: `需求数`,
-            width: 90,
+            width: 120,
             field: 'total_num',
+            render: ({ row, cell }: any) => {
+              if (row.modify_time > 0) {
+                return `${row.total_num}(原需求数${row.origin_num})`;
+              }
+              return cell;
+            },
           },
           {
             label: '待交付数',

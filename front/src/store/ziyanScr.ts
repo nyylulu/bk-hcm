@@ -1,3 +1,4 @@
+import { ref } from 'vue';
 import http from '@/http';
 import { CreateRecallTaskModal } from '@/typings/scr';
 import { defineStore } from 'pinia';
@@ -14,6 +15,7 @@ import type {
   IDissolveRecycledModuleListParam,
   IApplyCrpTicketAudit,
   ITaskApplyRecordInitItem,
+  IApplyOrderItem,
 } from '@/typings/ziyanScr';
 import { transferSimpleConditions } from '@/utils/scr/simple-query-builder';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
@@ -234,6 +236,43 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
     return http.post('/api/v1/woa/task/start/recycle/order/by/recycle_type', data);
   };
 
+  const applyOrdersLoading = ref(false);
+  const getApplyOrderList = async (params: {
+    bk_biz_id?: number[];
+    suborder_id?: string[];
+    page?: { start?: number; limit: number }; // 不传的时候，默认拉取全部
+    get_product?: boolean; // 是否获取CVM生产数据，用于修改生产需求
+  }) => {
+    applyOrdersLoading.value = true;
+    try {
+      const res = await http.post(`/api/v1/woa/${getBusinessApiPath()}task/findmany/apply`, params);
+      return (res.data?.info || []) as IApplyOrderItem[];
+    } catch (error) {
+      return Promise.reject(error);
+    } finally {
+      applyOrdersLoading.value = false;
+    }
+  };
+
+  const modifyApplyOrderLoading = ref(false);
+  const modifyApplyOrder = async (params: {
+    suborder_id: string;
+    bk_username: string;
+    replicas: number;
+    remark?: string;
+    spec: IApplyOrderItem['spec'];
+  }) => {
+    modifyApplyOrderLoading.value = true;
+    try {
+      const res = await http.post(`/api/v1/woa/${getBusinessApiPath()}task/modify/apply`, params);
+      return res;
+    } catch (error) {
+      return Promise.reject(error);
+    } finally {
+      modifyApplyOrderLoading.value = false;
+    }
+  };
+
   return {
     listVpc,
     listSubnet,
@@ -264,5 +303,9 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
     getRecycleOrderHost,
     startRecycleOrder,
     startRecycleOrderByRecycleType,
+    applyOrdersLoading,
+    getApplyOrderList,
+    modifyApplyOrderLoading,
+    modifyApplyOrder,
   };
 });

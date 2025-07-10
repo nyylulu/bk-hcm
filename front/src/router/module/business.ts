@@ -573,7 +573,7 @@ const businessMenus: RouteRecordRaw[] = [
           {
             path: 'host-application/modify',
             name: 'HostApplicationsModify',
-            component: () => import('@/views/ziyanScr/hostApplication/components/application-modify/index'),
+            component: () => import('@/views/ziyanScr/hostApplication/components/application-modify/index.vue'),
             meta: {
               activeKey: 'applications',
               notMenu: true,

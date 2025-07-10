@@ -3,6 +3,7 @@ interface CvmDeviceTypeReqParams {
   region?: string | string[];
   zone?: string | string[];
   device_group?: string[];
+  device_size?: string;
   cpu?: number | string;
   mem?: number | string;
   disk?: number | string;

@@ -210,7 +210,7 @@ const updateCvmDeviceTypeConfigs = async ({ ids, properties }) => {
  * CVM机型配置信息创建接口
  * @returns {Promise}
  */
-const createCvmDevice = async (params: ICvmDeviceCreateModel & { enable_create: boolean }, config?: any) => {
+const createCvmDevice = async (params: ICvmDeviceCreateModel & { force_create: boolean }, config?: any) => {
   const res = await http.post(
     `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/config/createmany/config/cvm/device`,
     params,

@@ -73,6 +73,7 @@ export type PropertySearchConfig = {
 export type PropertyDisplayConfig = {
   appearance?: string;
   format?: (value: any) => any;
+  render?: (value: any) => VNode | string;
 };
 
 // 与列展示场景相关，联合列的配置属性

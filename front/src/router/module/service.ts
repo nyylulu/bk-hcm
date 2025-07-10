@@ -180,7 +180,7 @@ const serviceMenus: RouteRecordRaw[] = [
       {
         path: '/service/hostApplication/modify',
         name: '修改主机申请',
-        component: () => import('@/views/ziyanScr/hostApplication/components/application-modify/index'),
+        component: () => import('@/views/ziyanScr/hostApplication/components/application-modify/index.vue'),
         meta: {
           activeKey: 'apply',
           notMenu: true,

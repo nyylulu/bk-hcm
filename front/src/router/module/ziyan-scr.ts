@@ -47,7 +47,7 @@ const ziyanScr: RouteRecordRaw[] = [
       {
         path: '/ziyanScr/hostApplication/modify',
         name: '修改主机申请',
-        component: () => import('@/views/ziyanScr/hostApplication/components/application-modify/index'),
+        component: () => import('@/views/ziyanScr/hostApplication/components/application-modify/index.vue'),
         meta: {
           activeKey: 'zjsq',
           notMenu: true,

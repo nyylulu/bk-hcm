@@ -46,7 +46,7 @@ export default defineComponent({
       mem: 1,
       remark: '',
     });
-    const isEnableCreate = ref(false);
+    const isForceCreate = ref(false);
 
     const handleRegionChange = () => {
       formModel.zone = [];
@@ -57,7 +57,7 @@ export default defineComponent({
     const disabledSubmit = computed(() => {
       const rules = [
         validateDeviceState.code === 2000022,
-        validateDeviceState.code === 2000023 && !isEnableCreate.value,
+        validateDeviceState.code === 2000023 && !isForceCreate.value,
       ];
       return rules.some((rule) => rule);
     });
@@ -67,7 +67,7 @@ export default defineComponent({
       isSubmitLoading.value = true;
       try {
         const res = await apiService.createCvmDevice(
-          { ...formModel, enable_create: isEnableCreate.value },
+          { ...formModel, force_create: isForceCreate.value },
           { globalError: false },
         );
 
@@ -92,7 +92,7 @@ export default defineComponent({
         // 当表单值变化时，重置校验状态
         if (validateDeviceState.code !== 0) {
           validateDeviceState.code = 0;
-          isEnableCreate.value = false;
+          isForceCreate.value = false;
         }
       },
       { deep: true },
@@ -158,7 +158,7 @@ export default defineComponent({
                 <span class='mr-auto text-danger'>机型已存在，无需重复添加</span>
               )}
               {validateDeviceState.code === 2000023 && (
-                <bk-checkbox v-model={isEnableCreate.value} class='mr-auto'>
+                <bk-checkbox v-model={isForceCreate.value} class='mr-auto'>
                   该机型在CRP不存在，请确认是否添加
                 </bk-checkbox>
               )}

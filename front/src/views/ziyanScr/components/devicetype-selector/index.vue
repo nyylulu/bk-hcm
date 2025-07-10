@@ -54,7 +54,8 @@ const loading = ref(false);
 const getOptions = async () => {
   if (props.disabled) return;
   const { resourceType, params, sort } = props;
-  const { require_type, region, zone, device_group, cpu, mem, disk, enable_capacity, enable_apply } = params;
+  const { require_type, region, zone, device_group, device_size, cpu, mem, disk, enable_capacity, enable_apply } =
+    params;
 
   // 小额与春保资源池时使用常规需求类型，require_type可能是多选，这里暂仅考虑主机申请与修改场景单选
   const requireType = [7, 8].includes(require_type as number) ? 1 : require_type;
@@ -77,6 +78,7 @@ const getOptions = async () => {
     { field: 'region', value: region },
     { field: 'zone', value: zone },
     { field: 'label.device_group', value: device_group },
+    { field: 'label.device_size', value: device_size },
     { field: 'cpu', value: cpu },
     { field: 'mem', value: mem },
     { field: 'disk', value: disk },

@@ -63,8 +63,12 @@ export default defineComponent({
       {
         label: '总数',
         field: 'total_num',
-        width: 80,
-        render: ({ row, cell }: any) => (detail.value?.stage === 'AUDIT' ? row.replicas : cell),
+        width: 120,
+        render: ({ row, cell }: any) => {
+          if (detail.value?.stage === 'AUDIT') return row.replicas;
+          if (row.modify_time > 0) return `${row.total_num}(原总数${row.origin_num})`;
+          return cell;
+        },
       },
       {
         label: '待交付',

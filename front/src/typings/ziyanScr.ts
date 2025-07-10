@@ -199,3 +199,51 @@ export interface ITaskApplyRecordInitItem {
   start_at: string;
   end_at: string;
 }
+
+export interface IApplyOrderItem {
+  order_id: number;
+  suborder_id: string;
+  bk_biz_id: number;
+  bk_username: string;
+  require_type: number;
+  resource_type: string;
+  expect_time: string;
+  description: string;
+  remark: string;
+  spec: {
+    region: string;
+    zone: string;
+    device_group: string;
+    device_size: string;
+    device_type: string;
+    image_id: string;
+    image: string;
+    disk_size: number;
+    disk_type: string;
+    network_type: string;
+    vpc: string;
+    subnet: string;
+    os_type: string;
+    raid_type: string;
+    isp: string;
+    mount_path: string;
+    cpu_provider: string;
+    kernel: string;
+    charge_type: string;
+    charge_months: number;
+    inherit_instance_id: string;
+    failed_zone_ids: string[];
+  };
+  anti_affinity_level: string;
+  enable_disk_check: boolean;
+  stage: string;
+  status: string;
+  origin_num: number;
+  total_num: number;
+  success_num: number;
+  pending_num: number;
+  product_num: number;
+  modify_time: number;
+  create_at: string;
+  update_at: string;
+}

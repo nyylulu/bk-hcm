@@ -24,6 +24,9 @@ export default defineComponent({
   },
   emits: ['update:modelValue'],
   setup(props, { attrs, emit }) {
+    // 需要跟后端、产品确定哪些字段不展示
+    const FIELD_BLACK_LIST = ['replicas'];
+
     const { getBusinessApiPath } = useWhereAmI();
     const { getFieldCn, getFieldCnVal } = useFieldVal();
     const isDisplay = ref(false);
@@ -91,13 +94,16 @@ export default defineComponent({
     ];
     const handleDetail = (detail: any) => {
       return Object.keys(detail?.cur_data).reduce((prev, cur) => {
-        const obj = {
-          key: cur,
-          prev: detail.pre_data[cur],
-          cur: detail.cur_data[cur],
-          hasChange: detail.pre_data[cur] !== detail.cur_data[cur],
-        };
-        prev.push(obj);
+        if (!FIELD_BLACK_LIST.includes(cur)) {
+          const obj = {
+            key: cur,
+            prev: detail.pre_data[cur],
+            cur: detail.cur_data[cur],
+            hasChange: detail.pre_data[cur] !== detail.cur_data[cur],
+          };
+          prev.push(obj);
+        }
+
         return prev;
       }, []);
     };

@@ -35,8 +35,8 @@ export const module = Object.freeze({
   type: String,
 });
 
-export const replicas = Object.freeze({
-  name: 'replicas',
+export const totalNum = Object.freeze({
+  name: 'total_num',
   cn: '需求数量',
 });
 
