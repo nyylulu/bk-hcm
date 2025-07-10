@@ -36,6 +36,7 @@ type ModifyDetail struct {
 
 // ModifyData apply order modified data
 type ModifyData struct {
+	TotalNum    uint            `json:"total_num" bson:"total_num"`
 	Replicas    uint            `json:"replicas" bson:"replicas"`
 	Region      string          `json:"region" bson:"region"`
 	Zone        string          `json:"zone" bson:"zone"`

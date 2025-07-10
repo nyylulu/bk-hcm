@@ -225,7 +225,7 @@ func (r *applyRecoverer) recoverInitOrder(kt *kit.Kit, generateRecord *types.Gen
 	wg.Wait()
 
 	// update init step
-	if err := record.UpdateInitStep(order.SubOrderId, order.Total); err != nil {
+	if err := record.UpdateInitStep(order.SubOrderId, order.TotalNum); err != nil {
 		logs.Errorf("failed to update init step, err: %v, subOrderId: %s, rid: %s", err, order.SubOrderId, kt.Rid)
 		return err
 	}

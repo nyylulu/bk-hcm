@@ -134,7 +134,7 @@ func (d *Dispatcher) dispatchHandler(kt *kit.Kit, key string) error {
 	if err := d.generateDevices(kt, applyOrder); err != nil {
 		logs.Errorf("failed to generate device, order id: %s, err: %v", key, err)
 		// update generate step record
-		if errStep := record.UpdateGenerateStep(applyOrder.SubOrderId, applyOrder.Total, err); errStep != nil {
+		if errStep := record.UpdateGenerateStep(applyOrder.SubOrderId, applyOrder.TotalNum, err); errStep != nil {
 			logs.Errorf("failed to generate device, order id: %s, err: %v", key, errStep)
 			return errStep
 		}
@@ -149,7 +149,7 @@ func (d *Dispatcher) dispatchHandler(kt *kit.Kit, key string) error {
 	}
 
 	// update generate step record
-	if err := record.UpdateGenerateStep(applyOrder.SubOrderId, applyOrder.Total, nil); err != nil {
+	if err := record.UpdateGenerateStep(applyOrder.SubOrderId, applyOrder.TotalNum, nil); err != nil {
 		logs.Errorf("failed to generate device, order id: %s, err: %v", key, err)
 		return err
 	}

@@ -69,7 +69,7 @@ func (r *applyRecoverer) recoverDeliverOrder(kt *kit.Kit, generateRecord *types.
 
 	}
 	// update deliver step
-	if err := record.UpdateDeliverStep(order.SubOrderId, order.Total); err != nil {
+	if err := record.UpdateDeliverStep(order.SubOrderId, order.TotalNum); err != nil {
 		logs.Errorf("failed to update deliverStep step, subOrderId: %s, err: %v, rid: %s", order.SubOrderId, err,
 			kt.Rid)
 		return err

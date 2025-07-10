@@ -42,7 +42,7 @@ POST /api/v1/woa/task/find/apply/record/modify
         "bk_username":"xxx",
         "details":{
           "pre_data":{
-            "replicas":4,
+            "total_num":4,
             "region":"ap-shanghai",
             "zone":"ap-shanghai-5",
             "device_type":"SA3.4XLARGE64",
@@ -54,7 +54,8 @@ POST /api/v1/woa/task/find/apply/record/modify
             "subnet":""
           },
           "cur_data":{
-            "replicas":4,
+            "total_num":4,
+            "replicas":1,
             "region":"ap-shanghai",
             "zone":"ap-shanghai-4",
             "device_type":"SA3.4XLARGE64",
@@ -105,14 +106,16 @@ POST /api/v1/woa/task/find/apply/record/modify
 | cur_data	  | object	 | 变更后申请单据信息 |
 
 #### data.info.details.pre_data && cur_data
-| 参数名称      | 参数类型    | 描述              |
-|--------------|-----------|-------------------|
-| region       | string	   | 地域               |
-| zone         | string	   | 可用区             |
-| device_type  | string	   | 机型               |
-| image_id     | string    | 镜像ID             |
-| disk_size    | int       | 数据盘磁盘大小，单位G |
-| disk_type	   | string	   | 数据盘磁盘类型。"CLOUD_SSD": SSD云硬盘, "CLOUD_PREMIUM": 高性能云盘 |
-| network_type | string	   | 网络类型。"ONETHOUSAND": 千兆, "TENTHOUSAND": 万兆 |
-| vpc	       | string    | 私有网络，默认为空    |
-| subnet       | string    | 私有子网，默认为空    |
+| 参数名称         | 参数类型    | 描述                 |
+|-----------------|-----------|----------------------|
+| total_num       | int       | 需要交付的需求数量      |
+| replicas        | int       | 用户输入的剩余可申请数量 |
+| region          | string	  | 地域                  |
+| zone            | string	  | 可用区                |
+| device_type     | string	  | 机型                  |
+| image_id        | string    | 镜像ID                |
+| disk_size       | int       | 数据盘磁盘大小，单位G    |
+| disk_type	      | string	  | 数据盘磁盘类型。"CLOUD_SSD": SSD云硬盘, "CLOUD_PREMIUM": 高性能云盘 |
+| network_type    | string	  | 网络类型。"ONETHOUSAND": 千兆, "TENTHOUSAND": 万兆 |
+| vpc	          | string    | 私有网络，默认为空       |
+| subnet          | string    | 私有子网，默认为空       |

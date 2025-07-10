@@ -283,8 +283,8 @@ func (m *Matcher) UpdateApplyOrderStatus(order *types.ApplyOrder) error {
 	pendingCnt := 0
 	status := types.ApplyStatusDone
 	stage := types.TicketStageDone
-	if matchedCnt < int(order.Total) {
-		pendingCnt = int(order.Total) - matchedCnt
+	if matchedCnt < int(order.TotalNum) {
+		pendingCnt = int(order.TotalNum) - matchedCnt
 		// do not set status to MATCHED_SOME if there are matching tasks
 		status = types.ApplyStatusMatchedSome
 		if hasGenRecordMatching {
@@ -293,7 +293,7 @@ func (m *Matcher) UpdateApplyOrderStatus(order *types.ApplyOrder) error {
 		stage = types.TicketStageRunning
 	}
 
-	if isSuspend && suspendCnt+matchedCnt >= int(order.Total) {
+	if isSuspend && suspendCnt+matchedCnt >= int(order.TotalNum) {
 		status = types.ApplyStatusTerminate
 		stage = types.TicketStageTerminate
 		if err := m.updateSuspendSteps(order); err != nil {
@@ -482,7 +482,7 @@ func (m *Matcher) InitDevices(order *types.ApplyOrder, unreleased []*types.Devic
 	}
 
 	// update init step
-	if err := record.UpdateInitStep(order.SubOrderId, order.Total); err != nil {
+	if err := record.UpdateInitStep(order.SubOrderId, order.TotalNum); err != nil {
 		logs.Errorf("failed to update init step, subOrderID: %s, err: %v", order.SubOrderId, err)
 		return nil, err
 	}
@@ -508,7 +508,7 @@ func (m *Matcher) DeliverDevices(order *types.ApplyOrder, observeDevices []*type
 	}
 
 	// update deliver step
-	if err := record.UpdateDeliverStep(order.SubOrderId, order.Total); err != nil {
+	if err := record.UpdateDeliverStep(order.SubOrderId, order.TotalNum); err != nil {
 		logs.Errorf("failed to update init step, subOrderId: %s, err: %v", order.SubOrderId, err)
 		return err
 	}
@@ -986,7 +986,7 @@ func (m *Matcher) RunDiskCheck(order *types.ApplyOrder, devices []*types.DeviceI
 	wg.Wait()
 
 	// update disk check step
-	if err := record.UpdateDiskCheckStep(order.SubOrderId, order.Total); err != nil {
+	if err := record.UpdateDiskCheckStep(order.SubOrderId, order.TotalNum); err != nil {
 		logs.Errorf("failed to update init step, order id: %s, err: %v", order.SubOrderId, err)
 		return nil, err
 	}

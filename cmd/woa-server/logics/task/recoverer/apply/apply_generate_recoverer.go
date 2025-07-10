@@ -83,7 +83,7 @@ func (r *applyRecoverer) recoverPmHandling(kt *kit.Kit, generateRecord *types.Ge
 			"generateId: %d, status: %d", order.SubOrderId, generateRecord.GenerateId, generateRecord.Status)
 	}
 
-	if len(devices) >= int(order.Total) {
+	if len(devices) >= int(order.TotalNum) {
 		successIps := make([]string, 0)
 		for _, host := range devices {
 			successIps = append(successIps, host.Ip)
@@ -96,7 +96,7 @@ func (r *applyRecoverer) recoverPmHandling(kt *kit.Kit, generateRecord *types.Ge
 			return "", err
 		}
 		// update generate step record
-		if err = record.UpdateGenerateStep(order.SubOrderId, order.Total, nil); err != nil {
+		if err = record.UpdateGenerateStep(order.SubOrderId, order.TotalNum, nil); err != nil {
 			logs.Errorf("failed to update generate step, subOrderId: %s, err: %v, rid: %s", order.SubOrderId, err,
 				kt.Rid)
 			return "", err
@@ -234,7 +234,7 @@ func (r *applyRecoverer) recoverGenerateSuccess(kt *kit.Kit, order *types.ApplyO
 	generateRecord *types.GenerateRecord) error {
 
 	// update generate step record
-	if err := record.UpdateGenerateStep(order.SubOrderId, order.Total, nil); err != nil {
+	if err := record.UpdateGenerateStep(order.SubOrderId, order.TotalNum, nil); err != nil {
 		logs.Errorf("failed to update generate step, err: %v, subOrderId: %s, rid: %s", err, order.SubOrderId, kt.Rid)
 		return err
 	}
@@ -307,7 +307,7 @@ func (r *applyRecoverer) recoverGenerateHandling(kt *kit.Kit, order *types.Apply
 	}
 
 	// update generate step record, skip err, continue generate devices
-	if err := record.UpdateGenerateStep(order.SubOrderId, order.Total, nil); err != nil {
+	if err := record.UpdateGenerateStep(order.SubOrderId, order.TotalNum, nil); err != nil {
 		logs.Errorf("failed to update generate step, err: %v, subOrderId: %s, rid: %s", err, order.SubOrderId, kt.Rid)
 	}
 

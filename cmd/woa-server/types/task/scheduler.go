@@ -47,7 +47,8 @@ type ApplyOrder struct {
 	Remark            string             `json:"remark" bson:"remark"`
 	Stage             TicketStage        `json:"stage" bson:"stage"`
 	Status            ApplyStatus        `json:"status" bson:"status"`
-	Total             uint               `json:"total_num" bson:"total_num"`
+	OriginNum         uint               `json:"origin_num" bson:"origin_num"` // 原始需求总数量，不会修改
+	TotalNum          uint               `json:"total_num" bson:"total_num"`   // 需要交付的总数量，业务会修改
 	SuccessNum        uint               `json:"success_num" bson:"success_num"`
 	PendingNum        uint               `json:"pending_num" bson:"pending_num"`
 	// AppliedCore 注意：该字段目前只会记录虚拟机申请的核心数量
@@ -768,7 +769,8 @@ func (s *Suborder) Validate() (errKey string, err error) {
 type ResourceSpec struct {
 	Region      string          `json:"region" bson:"region"`
 	Zone        string          `json:"zone" bson:"zone"`
-	DeviceGroup string          `json:"device_group" bson:"device_group"`
+	DeviceGroup string          `json:"device_group" bson:"device_group"` // 机型族
+	DeviceSize  enumor.CoreType `json:"device_size" bson:"device_size"`   // 机型核心类型(小核心、中核心、大核心)
 	DeviceType  string          `json:"device_type" bson:"device_type"`
 	ImageId     string          `json:"image_id" bson:"image_id"`
 	Image       string          `json:"image" bson:"image"`
@@ -888,9 +890,11 @@ type UnifyOrder struct {
 	EnableDiskCheck   bool               `json:"enable_disk_check" bson:"enable_disk_check"`
 	Stage             TicketStage        `json:"stage" bson:"stage"`
 	Status            ApplyStatus        `json:"status" bson:"status"`
-	Total             uint               `json:"total_num" bson:"total_num"`
+	OriginNum         uint               `json:"origin_num" bson:"origin_num"` // 原始需求总数量，不会修改
+	TotalNum          uint               `json:"total_num" bson:"total_num"`   // 需要交付的总数量，业务会修改
 	SuccessNum        uint               `json:"success_num" bson:"success_num"`
 	PendingNum        uint               `json:"pending_num" bson:"pending_num"`
+	ProductNum        uint               `json:"product_num" bson:"product_num"` // 实际生产成功的总数量
 	ModifyTime        uint               `json:"modify_time" bson:"modify_time"`
 	CreateAt          time.Time          `json:"create_at" bson:"create_at"`
 	UpdateAt          time.Time          `json:"update_at" bson:"update_at"`
@@ -907,6 +911,7 @@ type GetApplyParam struct {
 	Start       string            `json:"start" bson:"start"`
 	End         string            `json:"end" bson:"end"`
 	Page        metadata.BasePage `json:"page" bson:"page"`
+	GetProduct  bool              `json:"get_product" bson:"get_product"` // 是否获取CVM生产数据
 }
 
 // Validate whether GetApplyParam is valid
@@ -1412,7 +1417,9 @@ func (param *TerminateApplyOrderReq) Validate() error {
 type ModifyApplyReq struct {
 	SuborderID string        `json:"suborder_id" bson:"suborder_id"`
 	User       string        `json:"bk_username" bson:"bk_username"`
-	Replicas   uint          `json:"replicas" bson:"replicas"`
+	Replicas   uint          `json:"replicas" bson:"replicas"` // 剩余生产数量，不是总数量
+	TotalNum   uint          `json:"-"`                        // 需要交付的总数量
+	ProductNum uint          `json:"-"`                        // 已生产成功的总数量
 	Spec       *ResourceSpec `json:"spec" bson:"spec"`
 }
 

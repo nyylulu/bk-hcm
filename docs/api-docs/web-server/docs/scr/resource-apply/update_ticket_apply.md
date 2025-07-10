@@ -14,7 +14,7 @@ POST /api/v1/woa/task/modify/apply
 |---------------|--------------|------|-----------------|
 | suborder_id   | string	   | 是	  | 资源申请子单号     |
 | bk_username   | string       | 是	  | 资源申请提单人     |
-| replicas      | int          | 是	  | 需求资源数量      |
+| replicas      | int          | 是	  | 剩余生产数量      |
 | remark	    | string       | 否	  | 备注             |
 | spec	        | object       | 是   | 资源需求声明       |
 

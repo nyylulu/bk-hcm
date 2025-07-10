@@ -752,7 +752,8 @@ func (s *scheduler) createSubOrders(kt *kit.Kit, orderId uint64) error {
 			Remark:            suborder.Remark,
 			Stage:             types.TicketStageRunning,
 			Status:            types.ApplyStatusWaitForMatch,
-			Total:             suborder.Replicas,
+			OriginNum:         suborder.Replicas,
+			TotalNum:          suborder.Replicas,
 			PendingNum:        suborder.Replicas,
 			SuccessNum:        0,
 			AppliedCore:       suborder.AppliedCore,
@@ -770,7 +771,7 @@ func (s *scheduler) createSubOrders(kt *kit.Kit, orderId uint64) error {
 		}
 
 		// init all step record
-		if err := s.initAllSteps(kt, subOrder.SubOrderId, subOrder.Total, subOrder.EnableDiskCheck); err != nil {
+		if err := s.initAllSteps(kt, subOrder.SubOrderId, subOrder.TotalNum, subOrder.EnableDiskCheck); err != nil {
 			logs.Errorf("failed to init apply step record, err: %v, rid: %s", err, kt.Rid)
 			return err
 		}
@@ -950,7 +951,7 @@ func (s *scheduler) CreateApplyOrder(kt *kit.Kit, param *types.ApplyReq) (*types
 	var err error = nil
 
 	if param.RequireType == enumor.RequireTypeRollServer {
-		if err := s.checkRollingServer(kt, param); err != nil {
+		if err = s.checkRollingServer(kt, param); err != nil {
 			logs.Errorf("failed to check rolling server, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
 		}
@@ -993,7 +994,7 @@ func (s *scheduler) CreateApplyOrder(kt *kit.Kit, param *types.ApplyReq) (*types
 			return err
 		}
 
-		if err := s.setTicketId(sessionKit, rst.OrderId, resp.Data.Sn); err != nil {
+		if err = s.setTicketId(sessionKit, rst.OrderId, resp.Data.Sn); err != nil {
 			logs.Errorf("failed to create apply order, for set ticket id err: %v, rid: %s, orderId: %d, sn: %s",
 				err, kt.Rid, rst.OrderId, resp.Data.Sn)
 			return err
@@ -1139,6 +1140,11 @@ func (s *scheduler) fillCVMAppliedCore(kt *kit.Kit, param *types.ApplyReq) (*typ
 		}
 
 		param.Suborders[i].AppliedCore = uint(deviceTypeInfo.CPUAmount) * suborder.Replicas
+		// 补充机型族、大小核心数据
+		if param.Suborders[i].Spec != nil {
+			param.Suborders[i].Spec.DeviceGroup = deviceTypeInfo.DeviceGroup
+			param.Suborders[i].Spec.DeviceSize = deviceTypeInfo.CoreType
+		}
 	}
 
 	return param, nil
@@ -1163,7 +1169,7 @@ func (s *scheduler) setTicketId(kt *kit.Kit, orderId uint64, itsmTicketId string
 }
 
 // GetApplyOrder gets resource apply order info
-func (s *scheduler) GetApplyOrder(kit *kit.Kit, param *types.GetApplyParam) (*types.GetApplyOrderRst, error) {
+func (s *scheduler) GetApplyOrder(kt *kit.Kit, param *types.GetApplyParam) (*types.GetApplyOrderRst, error) {
 	orderFilter := param.GetFilter(false)
 	ticketFilter := param.GetFilter(true)
 
@@ -1173,23 +1179,23 @@ func (s *scheduler) GetApplyOrder(kit *kit.Kit, param *types.GetApplyParam) (*ty
 		Start: 0,
 	}
 
-	tickets, err := model.Operation().ApplyTicket().FindManyApplyTicket(kit.Ctx, page, ticketFilter)
+	tickets, err := model.Operation().ApplyTicket().FindManyApplyTicket(kt.Ctx, page, ticketFilter)
 	if err != nil {
-		logs.Errorf("get apply ticket failed, err: %v, rid: %s", err, kit.Rid)
+		logs.Errorf("get apply ticket failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
-	orders, err := model.Operation().ApplyOrder().FindManyApplyOrder(kit.Ctx, page, orderFilter)
+	orders, err := model.Operation().ApplyOrder().FindManyApplyOrder(kt.Ctx, page, orderFilter)
 	if err != nil {
-		logs.Errorf("get apply order failed, err: %v, rid: %s", err, kit.Rid)
+		logs.Errorf("get apply order failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
-	mergedOrders := s.mergeApplyTicketOrder(tickets, orders)
+	mergedOrders := s.mergeApplyTicketOrder(kt, tickets, orders, param.GetProduct)
 	total := len(mergedOrders)
 
 	// 翻页超过当前总数，直接返回空列表
 	if param.Page.Start > total {
-		logs.Warnf("start out of range, cnt: %d, param page: %+v, rid: %s", total, param.Page, kit.Rid)
+		logs.Warnf("start out of range, cnt: %d, param page: %+v, rid: %s", total, param.Page, kt.Rid)
 		return &types.GetApplyOrderRst{
 			Count: int64(total),
 			Info:  []*types.UnifyOrder{},
@@ -1210,13 +1216,13 @@ func (s *scheduler) GetApplyOrder(kit *kit.Kit, param *types.GetApplyParam) (*ty
 	return rst, nil
 }
 
-func (s *scheduler) mergeApplyTicketOrder(tickets []*types.ApplyTicket,
-	orders []*types.ApplyOrder) []*types.UnifyOrder {
+func (s *scheduler) mergeApplyTicketOrder(kt *kit.Kit, tickets []*types.ApplyTicket,
+	orders []*types.ApplyOrder, getProduct bool) []*types.UnifyOrder {
 
 	mergeOrders := types.UnifyOrderList{}
 
 	unifyTickets := s.ticketToUnifyOrder(tickets)
-	unifyOrders := s.orderToUnifyOrder(orders)
+	unifyOrders := s.orderToUnifyOrder(kt, orders, getProduct)
 
 	mergeOrders = append(mergeOrders, unifyTickets...)
 	mergeOrders = append(mergeOrders, unifyOrders...)
@@ -1241,7 +1247,7 @@ func (s *scheduler) ticketToUnifyOrder(tickets []*types.ApplyTicket) []*types.Un
 			ExpectTime:  ticket.ExpectTime,
 			Description: ticket.Remark,
 			Stage:       ticket.Stage,
-			Total:       total,
+			TotalNum:    total,
 			CreateAt:    ticket.CreateAt,
 			UpdateAt:    ticket.UpdateAt,
 		}
@@ -1252,11 +1258,23 @@ func (s *scheduler) ticketToUnifyOrder(tickets []*types.ApplyTicket) []*types.Un
 	return unifyOrders
 }
 
-func (s *scheduler) orderToUnifyOrder(orders []*types.ApplyOrder) []*types.UnifyOrder {
+func (s *scheduler) orderToUnifyOrder(kt *kit.Kit, orders []*types.ApplyOrder, getProduct bool) []*types.UnifyOrder {
 	unifyOrders := make([]*types.UnifyOrder, 0)
 
 	for _, order := range orders {
-		order := &types.UnifyOrder{
+		// 获取实际生产成功的总数量
+		productNum := uint(0)
+		if getProduct {
+			deviceInfos, err := s.matcher.GetUnreleasedDevice(order.SubOrderId)
+			if err != nil {
+				// 记录日志不影响获取订单信息
+				logs.Warnf("order to unify get has product device list failed, subOrderID: %s, err: %v, rid: %s",
+					order.SubOrderId, err, kt.Rid)
+			}
+			productNum = uint(len(deviceInfos))
+		}
+
+		unifyOrder := &types.UnifyOrder{
 			OrderId:           order.OrderId,
 			SubOrderId:        order.SubOrderId,
 			BkBizId:           order.BkBizId,
@@ -1271,14 +1289,16 @@ func (s *scheduler) orderToUnifyOrder(orders []*types.ApplyOrder) []*types.Unify
 			EnableDiskCheck:   order.EnableDiskCheck,
 			Stage:             order.Stage,
 			Status:            order.Status,
-			Total:             order.Total,
+			OriginNum:         order.OriginNum,
+			TotalNum:          order.TotalNum,
 			SuccessNum:        order.SuccessNum,
 			PendingNum:        order.PendingNum,
+			ProductNum:        productNum,
 			ModifyTime:        order.ModifyTime,
 			CreateAt:          order.CreateAt,
 			UpdateAt:          order.UpdateAt,
 		}
-		unifyOrders = append(unifyOrders, order)
+		unifyOrders = append(unifyOrders, unifyOrder)
 	}
 
 	return unifyOrders
@@ -1871,9 +1891,9 @@ func (s *scheduler) retryFailedDevices(oldKt *kit.Kit, subOrderID string) error 
 		}
 
 		// 在主机生产的主流程中，如果生产的数量已经大于子单所需要的数量时，也会触发失败主机的重试，所以这里不需要重复操作了
-		if len(devices) >= int(order.Total) {
+		if len(devices) >= int(order.TotalNum) {
 			logs.Infof("devices len(%d) greater than order total(%d), sub order id: %s, rid: %s", len(devices),
-				order.Total, subOrderID, kt.Rid)
+				order.TotalNum, subOrderID, kt.Rid)
 			return nil
 		}
 
@@ -1995,20 +2015,21 @@ func (s *scheduler) ModifyApplyOrder(kt *kit.Kit, param *types.ModifyApplyReq) e
 	}
 
 	// validate modification
-	if err := s.validateModification(kt, order, param); err != nil {
-		logs.Errorf("modification is invalid, err: %v, rid: %s", err, kt.Rid)
+	if err = s.validateModification(kt, order, param); err != nil {
+		logs.Errorf("modification is invalid, subOrderID: %s, err: %v, rid: %s", order.SubOrderId, err, kt.Rid)
 		return err
 	}
 
 	// modify apply order
-	if err := s.modifyOrder(kt, order, param); err != nil {
-		logs.Errorf("failed to modify apply order, err: %v, rid: %s", err, kt.Rid)
+	if err = s.modifyOrder(kt, order, param); err != nil {
+		logs.Errorf("failed to modify apply order, subOrderID: %s, err: %v, rid: %s", order.SubOrderId, err, kt.Rid)
 		return fmt.Errorf("failed to modify apply order, err: %v", err)
 	}
 
 	// create apply order modify record
-	if err := s.createModifyRecord(kt, order, param); err != nil {
-		logs.Errorf("failed to create apply order modify record, err: %v, rid: %s", err, kt.Rid)
+	if err = s.createModifyRecord(kt, order, param); err != nil {
+		logs.Errorf("failed to create apply order modify record, subOrderID: %s, err: %v, rid: %s",
+			order.SubOrderId, err, kt.Rid)
 		return err
 	}
 
@@ -2016,22 +2037,23 @@ func (s *scheduler) ModifyApplyOrder(kt *kit.Kit, param *types.ModifyApplyReq) e
 }
 
 func (s *scheduler) validateModification(kt *kit.Kit, order *types.ApplyOrder, param *types.ModifyApplyReq) error {
-	// validate replicas
-	if err := s.validateReplicas(kt, order, param); err != nil {
+	// validate replicas and modify param
+	param, err := s.validateReplicasAndModifyParam(kt, order, param)
+	if err != nil {
 		logs.Errorf("failed to validate modify replicas num, subOrderID: %s, err: %v, rid: %s",
 			order.SubOrderId, err, kt.Rid)
 		return err
 	}
 
 	// validate device type
-	if err := s.validateModifyDeviceType(kt, order, param); err != nil {
+	if err = s.validateModifyDeviceType(kt, order, param); err != nil {
 		logs.Errorf("failed to validate modify device type, subOrderID: %s, err: %v, rid: %s",
 			order.SubOrderId, err, kt.Rid)
 		return err
 	}
 
 	// validate zone
-	if err := s.validateModifyZone(order, param); err != nil {
+	if err = s.validateModifyZone(kt, order, param); err != nil {
 		logs.Errorf("failed to validate modify zone, subOrderID: %s, err: %v, rid: %s", order.SubOrderId, err, kt.Rid)
 		return err
 	}
@@ -2039,50 +2061,90 @@ func (s *scheduler) validateModification(kt *kit.Kit, order *types.ApplyOrder, p
 	return nil
 }
 
-func (s *scheduler) validateReplicas(kt *kit.Kit, order *types.ApplyOrder, param *types.ModifyApplyReq) error {
-	if param.Replicas > order.Total {
-		logs.Errorf("modified replicas cannot exceeds origin value %d, subOrderID: %s, rid: %s",
-			order.Total, order.SubOrderId, kt.Rid)
-		return fmt.Errorf("modified replicas cannot exceeds origin value %d", order.Total)
-	}
+func (s *scheduler) validateReplicasAndModifyParam(kt *kit.Kit, order *types.ApplyOrder, param *types.ModifyApplyReq) (
+	*types.ModifyApplyReq, error) {
+
 	if param.Replicas <= 0 {
 		logs.Errorf("modified replicas should be positive integer, subOrderID: %s, rid: %s", order.SubOrderId, kt.Rid)
-		return errors.New("modified replicas should be positive integer")
-	}
-	if param.Replicas < order.SuccessNum {
-		logs.Errorf("modified replicas cannot be less than successfully delivered amount %d, subOrderID: %s, rid: %s",
-			order.SuccessNum, order.SubOrderId, kt.Rid)
-		return fmt.Errorf("modified replicas cannot be less than successfully delivered amount %d", order.SuccessNum)
+		return nil, errors.New("modified replicas should be positive integer")
 	}
 
 	// 获取实际生产成功的数量
 	deviceInfos, err := s.matcher.GetUnreleasedDevice(order.SubOrderId)
 	if err != nil {
 		logs.Errorf("failed to get generate records, subOrderID: %s, err: %v, rid: %s", order.SubOrderId, err, kt.Rid)
-		return err
+		return nil, err
 	}
 
-	// 修改的剩余可申请数量，不能小于已生产成功的数量
-	hasGenSuccCount := len(deviceInfos)
-	if int(param.Replicas) < hasGenSuccCount {
-		logs.Errorf("modified replicas cannot be less than success generator amount %d, subOrderID: %s, rid: %s",
-			hasGenSuccCount, order.SubOrderId, kt.Rid)
-		return fmt.Errorf("modified replicas cannot be less than success generator amount %d", hasGenSuccCount)
+	productSuccCount := uint(len(deviceInfos))
+	// 剩余生产数量 + 已生产的数量 不能大于 原始需求总数量
+	if param.Replicas+productSuccCount > order.OriginNum {
+		logs.Errorf("modified replicas && successfully generator amount exceeds origin value, subOrderID: %s, "+
+			"productNum: %d, originNum: %d, rid: %s", order.SubOrderId, productSuccCount, order.OriginNum, kt.Rid)
+		return nil, fmt.Errorf("modified replicas && successfully generator amount %d exceeds origin value %d",
+			productSuccCount, order.OriginNum)
 	}
 
-	return nil
+	// 核心数的校验
+	deviceTypeInfoMap, err := s.configLogics.Device().ListCvmInstanceInfoByDeviceTypes(
+		kt, []string{param.Spec.DeviceType})
+	if err != nil {
+		logs.Errorf("modified replicas get cvm instance info by device type failed, err: %v, device_type: %s, rid: %s",
+			err, param.Spec.DeviceType, kt.Rid)
+		return nil, err
+	}
+
+	deviceTypeInfo, ok := deviceTypeInfoMap[param.Spec.DeviceType]
+	if !ok {
+		logs.Errorf("modified replicas can not find device_type, subOrderID: %s, deviceType: %s, rid: %s",
+			order.SubOrderId, param.Spec.DeviceType, kt.Rid)
+		return nil, fmt.Errorf("can not find device_type, deviceType: %s", param.Spec.DeviceType)
+	}
+
+	// 获取“已生产”的机型及数量并计算“已生产”的总核数
+	deviceTypeCountMap := calProductDeviceTypeCountMap(deviceInfos, false)
+	productSuccCPUCore, err := s.matcher.GetCpuCoreSum(kt, deviceTypeCountMap)
+	if err != nil {
+		logs.Errorf("get product cpu core failed, subOrderID: %s, err: %v, deviceTypeCountMap: %v, rid: %s",
+			order.SubOrderId, err, deviceTypeCountMap, kt.Rid)
+		return nil, err
+	}
+
+	modifySumCPUCore := uint(deviceTypeInfo.CPUAmount) * param.Replicas
+	// 修改的设备类型总核数 + “已生产”的总核数 不能大于 申请总核数
+	if modifySumCPUCore+uint(productSuccCPUCore) > order.AppliedCore {
+		logs.Errorf("modified replicas cpuCore && delivered cpuCore exceeds applied cpuCore, subOrderID: %s, "+
+			"modifySumCPUCore: %d, productSuccCPUCore: %d, deliveredCore: %d, appliedCore: %d, rid: %s",
+			order.SubOrderId, modifySumCPUCore, productSuccCPUCore, order.DeliveredCore, order.AppliedCore, kt.Rid)
+		return nil, fmt.Errorf("modified replicas cpuCore %d && product cpuCore %d exceeds applied cpuCore %d",
+			modifySumCPUCore, productSuccCPUCore, order.AppliedCore)
+	}
+
+	// 需要交付的总数量
+	param.TotalNum = param.Replicas + productSuccCount
+	// 已生产成功的总数量
+	param.ProductNum = productSuccCount
+
+	logs.Infof("validate order replicas success, subOrderID: %s, productSuccCount: %d, deviceCore: %d, "+
+		"modifySumCPUCore: %d, param: %+v, rid: %s", order.SubOrderId, productSuccCount, deviceTypeInfo.CPUAmount,
+		modifySumCPUCore, cvt.PtrToVal(param), kt.Rid)
+
+	return param, nil
 }
 
 func (s *scheduler) validateModifyDeviceType(kt *kit.Kit, order *types.ApplyOrder, param *types.ModifyApplyReq) error {
-	originDeviceGroup, err := s.getDeviceGroup(kt, order.RequireType, order.Spec.DeviceType, order.Spec.Region,
-		order.Spec.Zone)
+	// 小额绿通需要按常规项目去校验 --story=125266150
+	requireType := order.RequireType.ToRequireTypeWhenGetDevice()
+
+	originDeviceGroup, originDeviceSize, err := s.getDeviceGroup(kt, requireType, order.Spec.DeviceType,
+		order.Spec.Region, order.Spec.Zone)
 	if err != nil {
 		logs.Errorf("failed to get device group, err: %v", err)
 		return err
 	}
 
-	modifiedDeviceGroup, err := s.getDeviceGroup(kt, order.RequireType, param.Spec.DeviceType, param.Spec.Region,
-		param.Spec.Zone)
+	modifiedDeviceGroup, modifiedDeviceSize, err := s.getDeviceGroup(kt, requireType, param.Spec.DeviceType,
+		param.Spec.Region, param.Spec.Zone)
 	if err != nil {
 		logs.Errorf("failed to get device group, err: %v", err)
 		return err
@@ -2093,16 +2155,29 @@ func (s *scheduler) validateModifyDeviceType(kt *kit.Kit, order *types.ApplyOrde
 		return nil
 	}
 
+	// 机型族不一致
 	if originDeviceGroup != modifiedDeviceGroup {
-		logs.Errorf("modify device type is invalid, for its device group changed")
-		return errors.New("modify device type is invalid, for its device group changed")
+		logs.Errorf("modify device type is invalid, for its device group changed, subOrderID: %s, "+
+			"originDeviceGroup: %s, modifiedDeviceGroup: %s, rid: %s",
+			order.SubOrderId, originDeviceGroup, modifiedDeviceGroup, kt.Rid)
+		return errf.Newf(errf.InvalidParameter, "modify device type is invalid, for its device group changed, "+
+			"originDeviceGroup: %s, modifiedDeviceGroup: %s", originDeviceGroup, modifiedDeviceGroup)
+	}
+
+	// 大小核心不一致
+	if originDeviceSize != modifiedDeviceSize {
+		logs.Errorf("modify device size is invalid, for its device group changed, subOrderID: %s, "+
+			"originDeviceSize: %s, modifiedDeviceSize: %s, rid: %s",
+			order.SubOrderId, originDeviceSize, modifiedDeviceSize, kt.Rid)
+		return errf.Newf(errf.InvalidParameter, "modify device type is invalid, for its device size changed, "+
+			"originDeviceSize: %s, modifiedDeviceSize: %s", originDeviceSize, modifiedDeviceSize)
 	}
 
 	return nil
 }
 
 func (s *scheduler) getDeviceGroup(kt *kit.Kit, requireType enumor.RequireType, deviceType, region, zone string) (
-	string, error) {
+	string, string, error) {
 
 	rules := []querybuilder.Rule{
 		querybuilder.AtomRule{
@@ -2146,34 +2221,44 @@ func (s *scheduler) getDeviceGroup(kt *kit.Kit, requireType enumor.RequireType, 
 	deviceInfo, err := s.configLogics.Device().GetDevice(kt, req)
 	if err != nil {
 		logs.Errorf("failed to get device info, err: %v", err)
-		return "", err
+		return "", "", err
 	}
 
 	num := len(deviceInfo.Info)
 	if num == 0 {
 		// return empty when found no device config
-		return "", nil
+		return "", "", nil
 	} else if num != 1 {
 		logs.Errorf("failed to get device info, for len %d != 1", num)
-		return "", fmt.Errorf("failed to get device info, for len %d != 1", num)
+		return "", "", fmt.Errorf("failed to get device info, for len %d != 1", num)
 	}
 
+	// 机型族
 	deviceGroup, ok := deviceInfo.Info[0].Label["device_group"]
 	if !ok {
-		return "", errors.New("get invalid empty device group")
+		return "", "", errors.New("get invalid empty device group")
 	}
-
-	ret, ok := deviceGroup.(string)
+	deviceGroupStr, ok := deviceGroup.(string)
 	if !ok {
-		return "", errors.New("get invalid non-string device group")
+		return "", "", errors.New("get invalid non-string device group")
 	}
 
-	return ret, nil
+	// 机型核心类型
+	deviceSize, ok := deviceInfo.Info[0].Label["device_size"]
+	if !ok {
+		return "", "", errors.New("get invalid empty device size")
+	}
+	deviceSizeStr, ok := deviceSize.(string)
+	if !ok {
+		return "", "", errors.New("get invalid non-string device size")
+	}
+
+	return deviceGroupStr, deviceSizeStr, nil
 }
 
-func (s *scheduler) validateModifyZone(order *types.ApplyOrder, param *types.ModifyApplyReq) error {
+func (s *scheduler) validateModifyZone(kt *kit.Kit, order *types.ApplyOrder, param *types.ModifyApplyReq) error {
 	if param.Spec.Region != order.Spec.Region {
-		logs.Errorf("region cannot be modified")
+		logs.Errorf("validate modify region cannot be modified, subOrderID: %s, rid: %s", order.SubOrderId, kt.Rid)
 		return errors.New("region cannot be modified")
 	}
 
@@ -2213,8 +2298,8 @@ func (s *scheduler) modifyOrder(kt *kit.Kit, order *types.ApplyOrder, param *typ
 		"spec.failed_zone_ids": []string{}, // 修改需求重试时需要清空已失败的可用区，也就是全可用区重试
 		"stage":                types.TicketStageRunning,
 		"status":               types.ApplyStatusWaitForMatch,
-		"total_num":            param.Replicas,
-		"pending_num":          param.Replicas - order.SuccessNum,
+		"total_num":            param.TotalNum,
+		"pending_num":          param.TotalNum - param.ProductNum,
 		"retry_time":           0,
 		"modify_time":          order.ModifyTime + 1,
 		"update_at":            now,
@@ -2238,17 +2323,18 @@ func (s *scheduler) modifyOrder(kt *kit.Kit, order *types.ApplyOrder, param *typ
 func (s *scheduler) createModifyRecord(kt *kit.Kit, order *types.ApplyOrder, param *types.ModifyApplyReq) error {
 	id, err := dao.Set().ModifyRecord().NextSequence(kt.Ctx)
 	if err != nil {
-		logs.Errorf("failed to get modify record next sequence id, order id: %s, err: %v", err)
+		logs.Errorf("failed to get modify record next sequence id, subOrderID: %s, err: %v, rid: %s",
+			order.SubOrderId, err, kt.Rid)
 		return errf.Newf(pkg.CCErrObjectDBOpErrno, err.Error())
 	}
 
-	record := &table.ModifyRecord{
+	modifyRecord := &table.ModifyRecord{
 		ID:         id,
 		SuborderID: order.SubOrderId,
 		User:       kt.User,
 		Details: &table.ModifyDetail{
 			PreData: &table.ModifyData{
-				Replicas:    order.Total,
+				TotalNum:    order.TotalNum,
 				Region:      order.Spec.Region,
 				Zone:        order.Spec.Zone,
 				DeviceType:  order.Spec.DeviceType,
@@ -2260,6 +2346,7 @@ func (s *scheduler) createModifyRecord(kt *kit.Kit, order *types.ApplyOrder, par
 				Subnet:      order.Spec.Subnet,
 			},
 			CurData: &table.ModifyData{
+				TotalNum:    param.TotalNum,
 				Replicas:    param.Replicas,
 				Region:      param.Spec.Region,
 				Zone:        param.Spec.Zone,
@@ -2275,8 +2362,8 @@ func (s *scheduler) createModifyRecord(kt *kit.Kit, order *types.ApplyOrder, par
 		CreateAt: time.Now(),
 	}
 
-	if err := dao.Set().ModifyRecord().CreateModifyRecord(kt.Ctx, record); err != nil {
-		logs.Errorf("failed to create modify record, err: %v", err)
+	if err = dao.Set().ModifyRecord().CreateModifyRecord(kt.Ctx, modifyRecord); err != nil {
+		logs.Errorf("failed to create modify record, subOrderID: %s, err: %v, rid: %s", order.SubOrderId, err, kt.Rid)
 		return err
 	}
 
@@ -2865,4 +2952,20 @@ func (s *scheduler) revokeApplyOrder(kt *kit.Kit, subOrderId string, taskIDs []s
 	}
 
 	return nil
+}
+
+// calProductDeviceTypeCountMap calculate device type count map
+func calProductDeviceTypeCountMap(devices []*types.DeviceInfo, checkDelivered bool) map[string]int {
+	deviceTypeCountMap := make(map[string]int)
+	for _, device := range devices {
+		if checkDelivered && !device.IsDelivered {
+			continue
+		}
+
+		if _, ok := deviceTypeCountMap[device.DeviceType]; !ok {
+			deviceTypeCountMap[device.DeviceType] = 0
+		}
+		deviceTypeCountMap[device.DeviceType]++
+	}
+	return deviceTypeCountMap
 }

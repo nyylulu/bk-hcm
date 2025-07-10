@@ -10,16 +10,18 @@ POST /api/v1/woa/task/findmany/apply
 
 ### 输入参数
 
-| 参数名称         | 参数类型         | 必选 | 描述                                                                |
-|--------------|--------------|----|-------------------------------------------------------------------|
-| bk_biz_id    | int          | 否  | 业务ID                                                              |
-| order_id	    | int	         | 否  | 资源申请单号                                                            |
-| bk_username  | string	      | 否  | 提单人                                                               |
-| require_type | int array    | 否  | 需求类型。1: 常规项目; 2: 春节保障; 3: 机房裁撤; 6: 滚服项目; 7: 小额绿通                  |
-| stage        | string array | 否  | 单据执行阶段。"UNCOMMIT": 未提交, "AUDIT": 审核中, "RUNNING": 生产中, "DONE": 已完成 |
-| start        | string	      | 否  | 单据创建时间过滤条件起点日期，格式如"2022-05-01"                                    |
-| end          | string	      | 否  | 单据创建时间过滤条件终点日期，格式如"2022-05-01"                                    |
-| page         | object	      | 是  | 分页信息                                                              |
+| 参数名称         | 参数类型    | 必选 | 描述                                                               |
+|--------------|--------------|----|---------------------------------------------------------------------|
+| bk_biz_id    | int array    | 否  | 业务ID                                                              |
+| order_id	   | int array    | 否  | 资源申请单号，数量上限20个                                                          |
+| suborder_id  | string array | 否  | 资源申请子单号，数量上限20个                                                        |
+| bk_username  | string	array | 否  | 提单人，数量上限20个                                                               |
+| require_type | int array    | 否  | 需求类型。1: 常规项目; 2: 春节保障; 3: 机房裁撤; 6: 滚服项目; 7: 小额绿通，数量上限20个    |
+| stage        | string array | 否  | 单据执行阶段。"UNCOMMIT": 未提交, "AUDIT": 审核中, "RUNNING": 生产中, "DONE": 已完成，数量上限20个 |
+| start        | string	      | 否  | 单据创建时间过滤条件起点日期，格式如"2022-05-01"                          |
+| end          | string	      | 否  | 单据创建时间过滤条件终点日期，格式如"2022-05-01"                          |
+| page         | object	      | 否  | 分页信息                                                              |
+| get_product  | bool         | 否  | 是否获取CVM生产数据                                                    |
 
 #### page
 
@@ -36,9 +38,10 @@ POST /api/v1/woa/task/findmany/apply
 
 ```json
 {
-  "bk_biz_id": 213,
-  "order_id": 1001,
-  "bk_username": "xxx",
+  "bk_biz_id": [213],
+  "order_id": [1001],
+  "suborder_id": ["1001-1"],
+  "bk_username": ["xxx"],
   "require_type": [
     1
   ],
@@ -52,7 +55,8 @@ POST /api/v1/woa/task/findmany/apply
   "page": {
     "start": 0,
     "limit": 20
-  }
+  },
+  "get_product": false
 }
 ```
 
@@ -90,9 +94,11 @@ POST /api/v1/woa/task/findmany/apply
         "anti_affinity_level": "ANTI_NONE",
         "stage": "RUNNING",
         "status": "Matching",
+        "origin_num": 10,
         "total_num": 10,
         "success_num": 5,
         "pending_num": 5,
+        "product_num": 5,
         "create_at": "2022-01-02T15:04:05.004Z",
         "update_at": "2022-01-02T15:04:05.004Z"
       }
@@ -133,9 +139,11 @@ POST /api/v1/woa/task/findmany/apply
 | anti_affinity_level | 	string   | 反亲和策略，默认值为"ANTI_NONE"。 "ANTI_NONE": 无要求, "ANTI_CAMPUS": 分Campus, "ANTI_MODULE": 分Module, "ANTI_RACK": 分机架 |
 | stage	              | string    | 单据执行阶段。"UNCOMMIT": 未提交, "AUDIT": 审核中, "RUNNING": 生产中, "DONE": 已完成                                         |
 | status              | 	string   | 单据状态。WaitForMatch：待匹配，Matching：匹配执行中，MatchedSome：已完成部分资源匹配，Paused：已暂停，Done：完成                             |
+| origin_num          |     int      | 原始需求总数(不会变动)                                                                                           |
 | total_num           | 	int	     | 资源需求总数                                                                                                    |
 | success_num         | 	int	     | 已交付的资源数量                                                                                                  |
 | pending_num         | 	int	     | 待匹配的资源数量                                                                                                  |
+| product_num         | 	int	     | 已生产的资源数量(get_product为true时返回该字段)                                                                    |
 | start_at	           | timestamp | 	步骤开始时间                                                                                                   |
 | end_at	             | timestamp | 	步骤结束时间                                                                                                   |
 

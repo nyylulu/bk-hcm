@@ -121,7 +121,7 @@ func (g *Generator) GenerateCVM(kt *kit.Kit, order *types.ApplyOrder) error {
 
 	// check if need generate cvm
 	existCount := uint(len(existDevices))
-	if existCount >= order.Total {
+	if existCount >= order.TotalNum {
 		logs.Infof("apply order %s has been scheduled %d cvm", order.SubOrderId, existCount)
 		// check if need retry match task
 		if err := g.retryMatchDevice(existDevices); err != nil {
@@ -186,7 +186,7 @@ func (g *Generator) retryMatchDevice(devices []*types.DeviceInfo) error {
 func (g *Generator) generateCVMConcentrate(kt *kit.Kit, order *types.ApplyOrder,
 	existDevices []*types.DeviceInfo) error {
 
-	replicas := order.Total - uint(len(existDevices))
+	replicas := order.TotalNum - uint(len(existDevices))
 	genRecordIds, errs := g.batchLaunchCvm(kt, order, order.Spec.Zone, replicas)
 	return g.checkLaunchCvmResult(kt, order.SubOrderId, genRecordIds, errs)
 }
@@ -247,7 +247,7 @@ func (g *Generator) generateCVMSeparate(kt *kit.Kit, order *types.ApplyOrder, ex
 		defer mutex.Unlock()
 		genRecordIds = append(genRecordIds, ids...)
 	}
-	maxCount := math.Ceil(float64(order.Total) / 2)
+	maxCount := math.Ceil(float64(order.TotalNum) / 2)
 	failedSkipNum := 0
 	for _, zone := range availZones {
 		// 已经失败过的可用区，直接跳过
@@ -269,12 +269,12 @@ func (g *Generator) generateCVMSeparate(kt *kit.Kit, order *types.ApplyOrder, ex
 				maxCount-float64(zoneCreatedCount[zone.Zone]),
 				0)
 			replicas = uint(math.Min(
-				math.Min(float64(order.Total-createdTotalCount), float64(zoneCapacity[zone.Zone])),
+				math.Min(float64(order.TotalNum-createdTotalCount), float64(zoneCapacity[zone.Zone])),
 				campusMax))
 		} else {
 			// 一个城市只有一个campus的话，全部生产
 			replicas = uint(math.Min(
-				math.Min(float64(order.Total-createdTotalCount), float64(zoneCapacity[zone.Zone])),
+				math.Min(float64(order.TotalNum-createdTotalCount), float64(zoneCapacity[zone.Zone])),
 				maxCount))
 		}
 
@@ -305,7 +305,7 @@ func (g *Generator) generateCVMSeparate(kt *kit.Kit, order *types.ApplyOrder, ex
 			}
 		}(order, zone.Zone, replicas)
 
-		if order.Total <= createdTotalCount {
+		if order.TotalNum <= createdTotalCount {
 			break
 		}
 	}
@@ -440,7 +440,7 @@ func (g *Generator) GenerateDVM(kt *kit.Kit, order *types.ApplyOrder) error {
 	}
 
 	existCount := uint(len(existDevices))
-	if existCount >= order.Total {
+	if existCount >= order.TotalNum {
 		logs.Infof("apply order %s has been scheduled %d docker vm", order.SubOrderId, existCount)
 		return nil
 	}
@@ -509,9 +509,9 @@ func (g *Generator) GenerateDVM(kt *kit.Kit, order *types.ApplyOrder) error {
 		genRecordIds = append(genRecordIds, id)
 	}
 
-	maxCount := order.Total
+	maxCount := order.TotalNum
 	if order.AntiAffinityLevel != types.AntiNone {
-		maxCount = uint(math.Ceil(float64(order.Total) / 2))
+		maxCount = uint(math.Ceil(float64(order.TotalNum) / 2))
 		if maxCount == 0 {
 			maxCount = 1
 		}
@@ -523,7 +523,7 @@ func (g *Generator) GenerateDVM(kt *kit.Kit, order *types.ApplyOrder) error {
 			math.Min(
 				math.Min(
 					// 还需要生产的数量
-					float64(order.Total-existNum),
+					float64(order.TotalNum-existNum),
 					// 每台母机剩余的可生产数
 					float64(host.AllocatableCount)),
 				// 最大虚拟比
@@ -533,7 +533,7 @@ func (g *Generator) GenerateDVM(kt *kit.Kit, order *types.ApplyOrder) error {
 		))
 
 		logs.V(5).Infof("host %s, module name: %s, total: %d, created: %d, allocatable: %d, observed replicas: %d",
-			host.IP, host.ModuleName, order.Total, existNum, host.AllocatableCount, replicas)
+			host.IP, host.ModuleName, order.TotalNum, existNum, host.AllocatableCount, replicas)
 
 		if replicas <= 0 {
 			continue
@@ -556,7 +556,7 @@ func (g *Generator) GenerateDVM(kt *kit.Kit, order *types.ApplyOrder) error {
 			}
 		}(order, selector, &host, replicas)
 
-		if order.Total <= g.sumReplicas(antiAffinityReplicas) {
+		if order.TotalNum <= g.sumReplicas(antiAffinityReplicas) {
 			break
 		}
 	}
@@ -1522,7 +1522,7 @@ func (g *Generator) MatchPM(kt *kit.Kit, order *types.ApplyOrder) error {
 
 	// 2. check if need generate device
 	existCount := uint(len(existDevices))
-	if existCount >= order.Total {
+	if existCount >= order.TotalNum {
 		logs.Infof("apply order %s has been scheduled %d pm", order.SubOrderId, existCount)
 		// check if need retry match task
 		if err = g.retryMatchDevice(existDevices); err != nil {

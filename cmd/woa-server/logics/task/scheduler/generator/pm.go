@@ -29,7 +29,7 @@ import (
 
 // matchPM match pm devices
 func (g *Generator) matchPM(kt *kit.Kit, order *types.ApplyOrder, existDevices []*types.DeviceInfo) error {
-	replicas := order.Total - uint(len(existDevices))
+	replicas := order.TotalNum - uint(len(existDevices))
 
 	// 1. init generate record
 	generateId, err := g.initGenerateRecord(order.ResourceType, order.SubOrderId, replicas, false)

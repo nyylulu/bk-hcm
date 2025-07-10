@@ -62,7 +62,7 @@ func (r *Recommender) GetApplyRecommendation(suborderID string) (*types.Recommen
 
 	rst := &types.RecommendApplyRst{
 		SuborderID: order.SubOrderId,
-		Replicas:   order.Total,
+		Replicas:   order.TotalNum,
 		Spec:       order.Spec,
 	}
 
