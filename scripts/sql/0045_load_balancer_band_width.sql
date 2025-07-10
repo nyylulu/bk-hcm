@@ -18,7 +18,7 @@
  */
 
 /*
-    SQLVER=9999,HCMVER=v9.9.9
+    SQLVER=0045,HCMVER=v1.8.1.5
 
     Notes:
     1. 修改`load_balancer`表，增加`band_width`、`isp`字段
@@ -33,6 +33,6 @@ alter table load_balancer
     add isp varchar(64) not null default '' after status;
 
 CREATE OR REPLACE VIEW `hcm_version`(`hcm_ver`, `sql_ver`) AS
-SELECT 'v9.9.9' as `hcm_ver`, '9999' as `sql_ver`;
+SELECT 'v1.8.1.5' as `hcm_ver`, '0045' as `sql_ver`;
 
 COMMIT;
