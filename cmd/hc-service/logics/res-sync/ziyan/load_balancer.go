@@ -540,8 +540,9 @@ func convCloudToDBCreate(cloud typeslb.TCloudClb, accountID string, region strin
 		CloudExpiredTime: cvt.PtrToVal(cloud.ExpireTime),
 		Tags:             cloud.GetTagMap(),
 		// 备注字段云上没有
-		Memo: nil,
-		Isp:  cvt.PtrToVal(cloud.VipIsp),
+		Memo:     nil,
+		Isp:      cvt.PtrToVal(cloud.VipIsp),
+		SyncTime: times.ConvStdTimeFormat(time.Now()),
 	}
 	if cloud.NetworkAttributes != nil {
 		lb.BandWidth = cvt.PtrToVal(cloud.NetworkAttributes.InternetMaxBandwidthOut)
