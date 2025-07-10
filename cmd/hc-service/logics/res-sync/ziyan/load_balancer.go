@@ -715,6 +715,9 @@ func isZiyanLBChange(cloud typeslb.TCloudClb, db corelb.TCloudLoadBalancer) bool
 	if db.CloudSubnetID != cvt.PtrToVal(cloud.SubnetId) {
 		return true
 	}
+	if db.Isp != cvt.PtrToVal(cloud.VipIsp) {
+		return true
+	}
 
 	if len(cloud.LoadBalancerVips) != 0 {
 		var dbIPList []string
@@ -758,6 +761,9 @@ func isLBExtensionChange(cloud typeslb.TCloudClb, db corelb.TCloudLoadBalancer) 
 	if cloud.NetworkAttributes != nil {
 		if !assert.IsPtrInt64Equal(db.Extension.InternetMaxBandwidthOut,
 			cloud.NetworkAttributes.InternetMaxBandwidthOut) {
+			return true
+		}
+		if db.BandWidth != cvt.PtrToVal(cloud.NetworkAttributes.InternetMaxBandwidthOut) {
 			return true
 		}
 		if !assert.IsPtrStringEqual(db.Extension.InternetChargeType, cloud.NetworkAttributes.InternetChargeType) {
