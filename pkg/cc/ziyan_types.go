@@ -985,12 +985,17 @@ func (c AlarmCli) validate() error {
 
 // Secret ...
 type Secret struct {
-	ID  string `yaml:"id"`
-	Key string `yaml:"key"`
+	SubAccountID string `yaml:"sub_account_id"`
+	ID           string `yaml:"id"`
+	Key          string `yaml:"key"`
 }
 
 // Validate ...
 func (s Secret) Validate() error {
+	if len(s.SubAccountID) == 0 {
+		return errors.New("sub account id is not set")
+	}
+
 	if len(s.ID) == 0 {
 		return errors.New("secret id is not set")
 	}

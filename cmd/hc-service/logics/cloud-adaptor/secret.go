@@ -74,6 +74,7 @@ func (cli *SecretClient) TCloudZiyanSecret(kt *kit.Kit, accountID string) (*type
 	}
 
 	secret := &types.BaseSecret{
+		CloudAccountID: account.Extension.CloudSubAccountID,
 		CloudSecretID:  account.Extension.CloudSecretID,
 		CloudSecretKey: account.Extension.CloudSecretKey,
 	}

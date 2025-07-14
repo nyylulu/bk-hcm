@@ -29,10 +29,16 @@ func WrapZiyanMultiSecret(mainSecret *BaseSecret) *MultiSecret {
 		return nil
 	}
 	secrets := cc.HCService().ZiyanSecrets
-	var backupSecrets = make([]BaseSecret, len(secrets))
-	for i := range secrets {
-		backupSecrets[i].CloudSecretID = secrets[i].ID
-		backupSecrets[i].CloudSecretKey = secrets[i].Key
+	var backupSecrets = make([]BaseSecret, 0)
+	for _, secret := range secrets {
+		if mainSecret.CloudAccountID == "" || mainSecret.CloudAccountID != secret.SubAccountID {
+			continue
+		}
+		backupSecrets = append(backupSecrets, BaseSecret{
+			CloudSecretID:  secret.ID,
+			CloudSecretKey: secret.Key,
+			CloudAccountID: secret.SubAccountID,
+		})
 	}
 
 	return NewMultiSecretWithRandomIndex(*mainSecret, backupSecrets...)

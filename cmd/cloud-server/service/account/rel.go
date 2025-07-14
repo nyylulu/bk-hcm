@@ -66,8 +66,11 @@ func (a *accountSvc) ListByBkBizID(cts *rest.Contexts) (interface{}, error) {
 	// 查询自研云账号
 	ziyanResp, err := a.client.DataService().Global.Account.List(cts.Kit.Ctx, cts.Kit.Header(),
 		&protocloud.AccountListReq{
-			Filter: tools.EqualExpression("vendor", enumor.TCloudZiyan),
-			Page:   core.NewDefaultBasePage(),
+			Filter: tools.ExpressionAnd(
+				tools.RuleEqual("vendor", enumor.TCloudZiyan),
+				tools.RuleEqual("type", enumor.ResourceAccount),
+			),
+			Page: core.NewDefaultBasePage(),
 		})
 	if err != nil {
 		logs.Errorf("fail to query ziyan account, err: %v, rid:%s", err, cts.Kit.Rid)
