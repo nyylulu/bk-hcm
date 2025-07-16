@@ -217,3 +217,18 @@ func GetTodayRemainDuration() int64 {
 	tomorrowTimestamp := GetTomorrowStartTime()
 	return min(0, tomorrowTimestamp-time.Now().Unix())
 }
+
+// ParseDateTime parse date time from string.
+func ParseDateTime(layout, t string) (time.Time, error) {
+	if len(t) == 0 {
+		return time.Time{}, errf.New(errf.InvalidParameter, "empty date time")
+	}
+
+	pdTime, err := time.Parse(layout, t)
+	if err != nil {
+		return time.Time{}, errf.Newf(errf.InvalidParameter, "invalid date time format, should be like %s, err: %v",
+			layout, err)
+	}
+
+	return pdTime, nil
+}
