@@ -46,3 +46,29 @@ export const TENTHOUSAND = 'TENTHOUSAND';
  * @const {String} ONETHOUSAND 千兆
  */
 export const ONETHOUSAND = 'ONETHOUSAND';
+
+export const ImageType = {
+  LINUX: 'Linux',
+  WINDOWS: 'Windows',
+};
+
+export const ImageState = {
+  RECOMMENDED: 'RECOMMENDED',
+  DEPRECATED: 'DEPRECATED',
+  PENDING_DEPRECATION: 'PENDING_DEPRECATION',
+};
+
+// 操作系统版本使用限制 - 镜像列表
+export const ImageConfigMap = new Map([
+  ['img-gqmik24x', { type: ImageType.LINUX, state: ImageState.RECOMMENDED }],
+  ['img-9qrfy1xt', { type: ImageType.LINUX, state: ImageState.RECOMMENDED }],
+  ['img-8itxara7', { type: ImageType.WINDOWS, state: ImageState.RECOMMENDED }],
+  ['img-eqv9gmpl', { type: ImageType.WINDOWS, state: ImageState.RECOMMENDED }],
+  ['img-fjxtfi0n', { type: ImageType.LINUX, state: ImageState.DEPRECATED }],
+  ['img-evitcbqz', { type: ImageType.LINUX, state: ImageState.DEPRECATED }],
+  ['img-bh86p0sv', { type: ImageType.LINUX, state: ImageState.DEPRECATED }],
+  ['img-r5igp4bv', { type: ImageType.LINUX, state: ImageState.DEPRECATED }],
+  ['img-7ffj221n', { type: ImageType.WINDOWS, state: ImageState.PENDING_DEPRECATION }],
+  ['img-kmzf9bvp', { type: ImageType.WINDOWS, state: ImageState.DEPRECATED }],
+  ['img-mvbqvzfn', { type: ImageType.WINDOWS, state: ImageState.DEPRECATED }],
+]);

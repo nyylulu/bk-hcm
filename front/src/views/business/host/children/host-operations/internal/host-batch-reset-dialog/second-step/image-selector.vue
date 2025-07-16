@@ -1,30 +1,63 @@
 <template>
-  <select-column
-    ref="selectRef"
-    style="height: 42px"
-    id-key="cloud_id"
-    display-key="name"
-    v-model="localValue"
-    :clearable="false"
-    :loading="isLoading"
-    :scroll-loading="isScrollLoading"
-    :list="selectList"
-    :remote-method="remoteMethod"
-    @change="handleChange"
-    @scroll-end="handleScrollEnd"
-  />
+  <div class="image-selector-container">
+    <select-column
+      ref="selectRef"
+      style="height: 42px"
+      id-key="cloud_id"
+      display-key="name"
+      v-model="localValue"
+      :clearable="false"
+      :loading="isLoading"
+      :scroll-loading="isScrollLoading"
+      :list="selectList"
+      :remote-method="remoteMethod"
+      @change="handleChange"
+      @scroll-end="handleScrollEnd"
+    />
+    <template v-if="selected?.cloud_id">
+      <span
+        v-if="imageType === 'PUBLIC_IMAGE'"
+        v-bk-tooltips="{
+          content: isAllowed
+            ? h('span', [
+                `所选镜像为 ${selectImageName}，如需了解更多信息，请参考`,
+                h('a', { href: iwikiUrl, target: '_blank', style: { color: '#3a84ff' } }, iwikiUrl),
+              ])
+            : h('span', [
+                `所选镜像为 ${selectImageName}，不在公司允许操作列表范围内，请参考`,
+                h('a', { href: iwikiUrl, target: '_blank', style: { color: '#3a84ff' } }, iwikiUrl),
+              ]),
+        }"
+      >
+        <info v-if="isAllowed" class="tips-icon icon-info" />
+        <warn v-else class="tips-icon icon-warn" />
+      </span>
+      <span
+        v-else
+        v-bk-tooltips="{
+          content: h('span', [
+            `所选镜像为私有镜像 ${selectImageName}，可能不在公司允许操作列表范围内，请参考`,
+            h('a', { href: iwikiUrl, target: '_blank', style: { color: '#3a84ff' } }, iwikiUrl),
+          ]),
+        }"
+      >
+        <info class="tips-icon icon-info" />
+      </span>
+    </template>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, watch, watchEffect } from 'vue';
+import { computed, reactive, ref, watch, watchEffect, h } from 'vue';
 import { debounce } from 'lodash';
-
+import { ImageConfigMap } from '@/constants/scr';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
 import type { IListItem } from '@blueking/ediatable/typings/components/select-column.vue';
 import type { IListResData } from '@/typings';
 import http from '@/http';
 
 import { SelectColumn } from '@blueking/ediatable';
+import { Warn, Info } from 'bkui-vue/lib/icon';
 
 interface Props {
   modelValue?: string;
@@ -65,6 +98,8 @@ const emit = defineEmits<(e: 'change', v: IImageItem) => void>();
 
 const { getBusinessApiPath } = useWhereAmI();
 
+const iwikiUrl = 'https://iwiki.woa.com/p/4015588910';
+
 const selectRef = ref();
 const localValue = ref(props.modelValue);
 
@@ -78,10 +113,17 @@ const params = reactive<Params>({
   filters: [],
   page: { limit: 100, offset: 0 },
 });
+const selected = ref<IImageItem>();
+
+const selectImageName = computed(() => selected.value?.name ?? '--');
+
+const allowedIds = [...ImageConfigMap.keys()];
+const isAllowed = computed(() => allowedIds.includes(selected.value?.cloud_id));
 
 const handleChange = async () => {
   const value = await selectRef.value.getValue();
   const target = selectList.value.find((item) => item.cloud_id === value);
+  selected.value = target;
   emit('change', target);
 };
 
@@ -89,6 +131,7 @@ const reset = () => {
   Object.assign(params, { filters: [], page: { limit: 100, offset: 0 } });
   selectList.value = [];
   totalCount.value = 0;
+  selected.value = null;
 };
 
 const getList = async () => {
@@ -157,3 +200,26 @@ watchEffect(() => {
   localValue.value = props.modelValue;
 });
 </script>
+
+<style lang="scss" scoped>
+.image-selector-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+
+  .tips-icon {
+    position: absolute;
+    top: 16px;
+    right: 24px;
+    z-index: 1;
+  }
+
+  .icon-warn {
+    color: #ea3636;
+  }
+
+  .icon-info {
+    color: #3a84ff;
+  }
+}
+</style>

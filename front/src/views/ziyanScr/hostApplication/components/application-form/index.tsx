@@ -12,6 +12,7 @@ import DiskTypeSelect from '../DiskTypeSelect';
 import NetworkInfoCollapsePanel from '../network-info-collapse-panel/index.vue';
 import AntiAffinityLevelSelect from '../AntiAffinityLevelSelect';
 import CvmDevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/cvm-devicetype-selector.vue';
+import FormCvmImageSelector from '@/views/ziyanScr/components/ostype-selector/form-cvm-image-selector.vue';
 import ChargeMonthsSelector from '@/views/ziyanScr/cvm-produce/component/create-order/children/charge-months-selector.vue';
 import applicationSideslider from '../application-sideslider/index.vue';
 import WName from '@/components/w-name';
@@ -393,9 +394,6 @@ export default defineComponent({
     const loadImages = async () => {
       const { info } = await apiService.getImages([resourceForm.value.region]);
       images.value = info;
-      if (QCLOUDCVMForm.value.spec.image_id === '') {
-        QCLOUDCVMForm.value.spec.image_id = 'img-fjxtfi0n';
-      }
     };
     // 获取 IDCPM机型列表
     const IDCPMOsTypes = async () => {
@@ -1549,15 +1547,12 @@ export default defineComponent({
                               />
                             </bk-form-item>
                             <bk-form-item label='镜像' required property='image_id'>
-                              <bk-select
+                              <FormCvmImageSelector
                                 class={'commonCard-form-select'}
                                 v-model={QCLOUDCVMForm.value.spec.image_id}
+                                region={[resourceForm.value.region]}
                                 disabled={resourceForm.value.region === ''}
-                                filterable>
-                                {images.value.map((item) => (
-                                  <bk-option key={item.image_id} label={item.image_name} value={item.image_id} />
-                                ))}
-                              </bk-select>
+                              />
                             </bk-form-item>
                             <bk-form-item label='数据盘' property='disk_size'>
                               <div

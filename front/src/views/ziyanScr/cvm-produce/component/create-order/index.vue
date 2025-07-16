@@ -22,14 +22,13 @@ import ChargeMonthsSelector from './children/charge-months-selector.vue';
 import ChargeTypeSelector from './children/charge-type-selector.vue';
 import NetworkInfoCollapsePanel from '@/views/ziyanScr/hostApplication/components/network-info-collapse-panel/index.vue';
 import CvmDevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/cvm-devicetype-selector.vue';
-import CvmImageSelector from '@/views/ziyanScr/components/ostype-selector/cvm-image-selector.vue';
+import FormCvmImageSelector from '@/views/ziyanScr/components/ostype-selector/form-cvm-image-selector.vue';
 import DiskTypeSelect from '@/views/ziyanScr/hostApplication/components/DiskTypeSelect';
 import CvmMaxCapacity from '@/views/ziyanScr/components/cvm-max-capacity/index.vue';
-import ImageDialog from './children/image-dialog';
 import DialogFooter from '@/components/common-dialog/dialog-footer.vue';
 
-const props = defineProps<{ cvmDeviceDetail: ICvmDeviceDetailItem }>();
 const model = defineModel<boolean>();
+const props = defineProps<{ cvmDeviceDetail: ICvmDeviceDetailItem }>();
 const emit = defineEmits<(e: 'confirm-success' | 'closed') => void>();
 
 const userStore = useUserStore();
@@ -161,14 +160,6 @@ const handleDeviceTypeChange = (result: {
   chargeMonthsDisabledState.value = result?.chargeMonthsDisabledState;
 };
 
-// 镜像
-const isImageDialogShow = ref(false);
-watchEffect(() => {
-  if (['img-bh86p0sv', 'img-r5igp4bv'].includes(formModel.spec.image_id)) {
-    isImageDialogShow.value = true;
-  }
-});
-
 // 需求数量
 const cvmMaxCapacityQueryParams = computed(() => {
   const { require_type } = formModel;
@@ -221,7 +212,7 @@ watchEffect(() => {
 </script>
 
 <template>
-  <bk-dialog v-model:isShow="model" :title="t('CVM生产')" width="1500" show-mask class="create-cvm-dialog">
+  <bk-dialog v-model:is-show="model" :title="t('CVM生产')" width="1500" show-mask class="create-cvm-dialog">
     <bk-form ref="formRef" label-width="150" :model="formModel" :rules="formRules">
       <!-- 基本信息 -->
       <panel :title="t('基本信息')" class="mb12">
@@ -341,7 +332,7 @@ watchEffect(() => {
           />
         </bk-form-item>
         <bk-form-item :label="t('镜像')" required property="spec.image_id">
-          <cvm-image-selector
+          <form-cvm-image-selector
             class="form-controls-item"
             v-model="formModel.spec.image_id"
             :region="[formModel.spec.region]"
@@ -394,9 +385,6 @@ watchEffect(() => {
       />
     </template>
   </bk-dialog>
-  <template v-if="isImageDialogShow">
-    <image-dialog v-model="isImageDialogShow" />
-  </template>
 </template>
 
 <style scoped lang="scss">

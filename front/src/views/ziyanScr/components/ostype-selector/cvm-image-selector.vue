@@ -3,7 +3,7 @@ import { computed, ref, watchEffect } from 'vue';
 import type { IQueryResData } from '@/typings';
 import http from '@/http';
 
-interface ICvmImage {
+export interface ICvmImage {
   image_id: string;
   image_name: string;
   [key: string]: string;
@@ -17,9 +17,11 @@ interface IProps {
   clearable?: boolean;
   filterable?: boolean;
   disabled?: boolean;
+  transform?: (options: ICvmImage[]) => ICvmImage[];
 }
 
 defineOptions({ name: 'cvm-image-selector' });
+const model = defineModel<string | string[]>();
 const props = withDefaults(defineProps<IProps>(), {
   idKey: 'image_id',
   displayKey: 'image_name',
@@ -28,7 +30,8 @@ const props = withDefaults(defineProps<IProps>(), {
   filterable: true,
   disabled: false,
 });
-const model = defineModel<string | string[]>();
+
+const emit = defineEmits(['change']);
 
 const localModel = computed({
   get() {
@@ -50,7 +53,13 @@ const getOptions = async (region: string[]) => {
     const res: IQueryResData<{ info: ICvmImage[] }> = await http.post('/api/v1/woa/config/findmany/config/cvm/image', {
       region,
     });
-    options.value = res.data.info;
+    const list = res.data.info;
+
+    if (props.transform) {
+      options.value = props.transform(list);
+    } else {
+      options.value = list;
+    }
   } catch (error) {
     console.error(error);
     options.value = [];
@@ -62,6 +71,15 @@ const getOptions = async (region: string[]) => {
 watchEffect(() => {
   getOptions(props.region);
 });
+
+const handleChange = (val: string | string[]) => {
+  const vals = Array.isArray(val) ? val : [val];
+  emit(
+    'change',
+    vals,
+    options.value.filter((item) => vals.includes(item[props.idKey])),
+  );
+};
 </script>
 
 <template>
@@ -72,8 +90,16 @@ watchEffect(() => {
     :clearable="clearable"
     :filterable="filterable"
     :disabled="disabled"
+    @change="handleChange"
   >
-    <bk-option v-for="(option, index) in options" :id="option[idKey]" :key="index" :name="option[displayKey]" />
+    <bk-option v-for="(option, index) in options" :id="option[idKey]" :key="index" :name="option[displayKey]">
+      <template v-if="$slots['option-item']">
+        <slot name="option-item" :option="option"></slot>
+      </template>
+      <template v-else>
+        <span class="bk-select-option-item">{{ option[displayKey] }}</span>
+      </template>
+    </bk-option>
   </bk-select>
 </template>
 

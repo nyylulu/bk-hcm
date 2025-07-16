@@ -19,6 +19,6 @@ export const IDC_SVC_SOURCE_TYPE_IDS = ['1', '2', '3'];
 export const CVM_SVC_SOURCE_TYPE_IDS = ['4', '5'];
 
 export const IMAGE_TYPE_NAME = {
-  [ImageType.PRIVATE_IMAGE]: t('私有镜像'),
   [ImageType.PUBLIC_IMAGE]: t('公共镜像'),
+  [ImageType.PRIVATE_IMAGE]: t('私有镜像'),
 };
