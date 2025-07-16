@@ -270,10 +270,9 @@ func (g *CheckProcessWorkGroup) queryResult(kt *kit.Kit, stepCtx *checkProcessCo
 	}
 	stepCtx.queriedTimes++
 	state := statusResp.Data.State
-
+	queryCost := time.Since(stepCtx.createdAt)
 	// 2. 判断任务状态
 	if state == sopsapi.TaskStateRunning || state == sopsapi.TaskStateCreated {
-		queryCost := time.Since(stepCtx.createdAt)
 		if queryCost > SopsCheckProcessTimeout {
 			// 超时失败
 			err := fmt.Errorf("task state query timeout, sops url: %s, cost: %s, current: %s",
@@ -285,6 +284,8 @@ func (g *CheckProcessWorkGroup) queryResult(kt *kit.Kit, stepCtx *checkProcessCo
 		go g.delayQuery(SopsCheckProcessRunningCheckInterval, stepCtx)
 		return
 	}
+
+	g.recordMetric(state, queryCost)
 
 	if state != sopsapi.TaskStateFinished {
 		// 2.3 任务状态异常，返回上层
@@ -299,13 +300,18 @@ func (g *CheckProcessWorkGroup) queryResult(kt *kit.Kit, stepCtx *checkProcessCo
 		if jobInstURL != "" {
 			jobErrMsg = fmt.Sprintf("作业平台(JOB): %s,", jobInstURL)
 		}
-		err := fmt.Errorf("host %s failed to check process, sops url: %s, state: %s, %s",
-			stepCtx.step.Step.IP, stepCtx.taskURL, state, jobErrMsg)
+		err := fmt.Errorf("host %s failed to check process, sops url: %s, state: %s%s, cost: %s",
+			stepCtx.step.Step.IP, stepCtx.taskURL, state, jobErrMsg, queryCost)
 		g.handleNotPass(kt, stepCtx.step, err, err.Error())
 		return
 	}
 
 	// 2.4 成功
-	msg := fmt.Sprintf("sops url: %s, task state: %s", stepCtx.taskURL, state)
+	msg := fmt.Sprintf("sops url: %s, task state: %s, cost: %s", stepCtx.taskURL, state, queryCost)
 	g.handlePass(kt, stepCtx.step, msg)
+}
+
+func (g *CheckProcessWorkGroup) recordMetric(state string, queryCost time.Duration) {
+	labels := map[string]string{labelSopsState: state}
+	detectorMetrics.SopsStepCostSec.With(labels).Observe(queryCost.Seconds())
 }

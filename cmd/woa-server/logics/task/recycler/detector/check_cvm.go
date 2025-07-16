@@ -501,6 +501,5 @@ func checkCLB(kt *kit.Kit, clients *tencentCloudClients, host *cmdb.Host) (strin
 		return exeInfo, false, fmt.Errorf("has binding clb: %s", lbInfo)
 	}
 
-	fmt.Println(resp.ToJsonString())
 	return exeInfo, false, nil
 }

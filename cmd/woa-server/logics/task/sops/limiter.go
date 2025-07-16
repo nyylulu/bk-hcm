@@ -37,8 +37,8 @@ type sopsLimit float64
 const (
 	// writeLimit 标准运维写接口限制10/s
 	writeLimit sopsLimit = 10
-	// readLimit  标准运维读接口限制20/s
-	readLimit sopsLimit = 20
+	// readLimit  标准运维读接口限制15/s，理论上20/s, 实际上15的时候就会出现较多失败
+	readLimit sopsLimit = 15
 )
 
 // sopsApi 标准运维接口
@@ -59,7 +59,9 @@ func getSopsLimiter(api sopsApi, limit sopsLimit) *rate.Limiter {
 	defer mu.Unlock()
 
 	if _, exist := sopsApiLimiters[api]; !exist {
-		sopsApiLimiters[api] = rate.NewLimiter(rate.Limit(limit), int(limit))
+		// 标准运维并发能力有限，限制桶大小
+		burst := int(limit/2) + 1
+		sopsApiLimiters[api] = rate.NewLimiter(rate.Limit(limit), burst)
 	}
 
 	return sopsApiLimiters[api]

@@ -16,6 +16,7 @@ package transit
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -27,7 +28,10 @@ import (
 	"hcm/pkg"
 	"hcm/pkg/api/core"
 	"hcm/pkg/cc"
+	"hcm/pkg/client"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty"
@@ -36,7 +40,11 @@ import (
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/metadata"
 	"hcm/pkg/tools/querybuilder"
+	"hcm/pkg/tools/slice"
 )
+
+// Host2CrTransitDefaultBatchSize once 100 hosts at most, if not specified, use 10
+const Host2CrTransitDefaultBatchSize = 10
 
 // Transit deal with device transit tasks
 type Transit struct {
@@ -44,18 +52,20 @@ type Transit struct {
 	tmp     tmpapi.TMPClientInterface
 	rsLogic rslogics.Logics
 
-	ctx context.Context
+	ctx    context.Context
+	cliSet *client.ClientSet
 }
 
 // New creates a device transit station
-func New(ctx context.Context, thirdCli *thirdparty.Client, cmdbCli cmdb.Client, rsLogic rslogics.Logics) (
-	*Transit, error) {
+func New(ctx context.Context, thirdCli *thirdparty.Client, cmdbCli cmdb.Client, rsLogic rslogics.Logics,
+	cliSet *client.ClientSet) (*Transit, error) {
 
 	transit := &Transit{
 		cc:      cmdbCli,
 		tmp:     thirdCli.Tmp,
 		ctx:     ctx,
 		rsLogic: rsLogic,
+		cliSet:  cliSet,
 	}
 
 	return transit, nil
@@ -391,40 +401,53 @@ func (t *Transit) TransferHost2BizTransit(kt *kit.Kit, hosts []*table.RecycleHos
 		remainAssetIds = append(remainAssetIds, host.BkAssetID)
 	}
 
-	// once 10 hosts at most
-	maxNum := 10
-	begin := 0
-	end := begin
-	length := len(remainAssetIds)
-
-	for begin < length {
-		end += maxNum
-		if end > length {
-			end = length
-		}
-
-		req := &cmdb.CrTransitReq{
-			From: cmdb.CrTransitSrcInfo{
-				FromBizID:    srcBizID,
-				FromModuleID: srcModuleID,
-				AssetIDs:     remainAssetIds[begin:end],
-			},
-			To: cmdb.CrTransitDstInfo{
-				ToBizID: destBizId,
-			},
-		}
-
-		_, err := t.cc.Hosts2CrTransit(kit.New(), req)
+	req := &cmdb.CrTransitReq{
+		From: cmdb.CrTransitSrcInfo{
+			FromBizID:    srcBizID,
+			FromModuleID: srcModuleID,
+		},
+		To: cmdb.CrTransitDstInfo{
+			ToBizID: destBizId,
+		},
+	}
+	for _, assetBatch := range slice.Split(remainAssetIds, t.getHost2CrTransitBatchSize(kt)) {
+		req.From.AssetIDs = assetBatch
+		_, err := t.cc.Hosts2CrTransit(kt, req)
 		if err != nil {
 			logs.Errorf("recycler:logics:cvm:transferHost2BizTransit:failed, failed to transfer host to "+
 				"CR transit module, err: %v, req: %+v", err, cvt.PtrToVal(req))
 			return fmt.Errorf("failed to transfer host to CR transit module, err: %v", err)
 		}
-
-		begin = end
 	}
-
 	return nil
+}
+
+func (t *Transit) getHost2CrTransitBatchSize(kt *kit.Kit) (batchSize int) {
+
+	batchSize = Host2CrTransitDefaultBatchSize
+	req := &core.ListReq{
+		Filter: tools.ExpressionAnd(
+			tools.RuleEqual("config_type", constant.GlobalConfigTypeRecycle),
+			tools.RuleJSONEqual("config_key", constant.RecycleTransitHost2CRBatchSizeConfigKey),
+		),
+		Page: core.NewDefaultBasePage(),
+	}
+	cfgResp, err := t.cliSet.DataService().Global.GlobalConfig.List(kt, req)
+	if err != nil {
+		logs.Errorf("failed to get host2cr batchsize by global config, using default %d, err: %v, req: %+v, rid: %s",
+			batchSize, err, cvt.PtrToVal(req), kt.Rid)
+		return batchSize
+	}
+	if len(cfgResp.Details) == 0 {
+		return batchSize
+	}
+	err = json.Unmarshal([]byte(cfgResp.Details[0].ConfigValue), &batchSize)
+	if err != nil {
+		logs.Errorf("failed to unmarshal global config host2cr value, using default %d, err: %v, raw: %v, rid: %s",
+			batchSize, err, cfgResp.Details, kt.Rid)
+		return batchSize
+	}
+	return batchSize
 }
 
 // shieldTMPAlarm add shield TMP alarm config

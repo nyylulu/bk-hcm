@@ -25,6 +25,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+const (
+	labelStepName  = "step_name"
+	labelSopsState = "state"
+)
+
 // detectorMetrics is used to collect detector metrics.
 var detectorMetrics *metric
 
@@ -37,9 +42,9 @@ func InitDetectorMetrics(reg prometheus.Registerer) {
 		Subsystem: metrics.HostRecycleSubSys,
 		Name:      "detect_step_cost_seconds",
 		Help:      "the cost seconds to specific detect step",
-		Buckets: []float64{0.1, 0.25, 0.5, 1, 2, 3, 5, 10, 20, 30, 45, 90,
-			120, 180, 300, 600, 1800, 3600, 7200, 10800, 21600, 43200, 86400},
-	}, []string{"step_name"})
+		Buckets: []float64{0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.85, 1, 2, 3, 4, 5, 10, 12.5, 15, 17.5, 20, 22.5, 25, 30,
+			35, 40, 45, 50, 55, 60, 65, 75, 90, 120, 180, 300, 600, 1800, 3600},
+	}, []string{labelStepName})
 	reg.MustRegister(m.DetectStepCostSec)
 
 	m.DetectStepErrCounter = prometheus.NewCounterVec(
@@ -48,8 +53,18 @@ func InitDetectorMetrics(reg prometheus.Registerer) {
 			Subsystem: metrics.HostRecycleSubSys,
 			Name:      "detect_step_err_count",
 			Help:      "the total error count to specific detect step",
-		}, []string{"step_name"})
+		}, []string{labelStepName})
 	reg.MustRegister(m.DetectStepErrCounter)
+
+	m.SopsStepCostSec = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: metrics.Namespace,
+		Subsystem: metrics.HostRecycleSubSys,
+		Name:      "sops_phase_cost_seconds",
+		Help:      "the cost seconds to sops",
+		Buckets: []float64{0.5, 1, 2.5, 5, 7.5, 10, 12.5, 15, 17.5, 20, 21, 22, 23, 24, 25, 27.5, 30,
+			35, 40, 45, 50, 55, 60, 65, 75, 90, 120, 180, 300, 600, 1800, 3600},
+	}, []string{labelSopsState})
+	reg.MustRegister(m.SopsStepCostSec)
 
 	detectorMetrics = m
 }
@@ -60,4 +75,6 @@ type metric struct {
 	DetectStepCostSec *prometheus.HistogramVec
 	// 回收预检步骤错误计数器
 	DetectStepErrCounter *prometheus.CounterVec
+	// 标准运维预检不同阶段（启动、查询到结果）耗时
+	SopsStepCostSec *prometheus.HistogramVec
 }

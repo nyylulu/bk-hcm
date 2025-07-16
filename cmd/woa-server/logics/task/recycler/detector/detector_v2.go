@@ -31,6 +31,7 @@ import (
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/concurrence"
 	"hcm/pkg/tools/metadata"
 )
 
@@ -109,7 +110,7 @@ func (d *Detector) Detect(kt *kit.Kit, order *table.RecycleOrder) error {
 		return err
 	}
 
-	runner := newDetectStepRunner(order.SuborderID, order.BizID, len(stepConfigs))
+	runner := newDetectStepRunner(order.SuborderID, order.BizID, len(stepConfigs), len(taskMap))
 	for _, stepCfg := range stepConfigs {
 		executor := d.StepExecutors[stepCfg.Name]
 		if executor == nil {
@@ -131,7 +132,7 @@ func (d *Detector) Detect(kt *kit.Kit, order *table.RecycleOrder) error {
 		go runner.Run(kt, executor, toExecuteSteps, toSkipSteps)
 	}
 
-	return d.handleDetectResult(kt, order.SuborderID, runner.ReadResult, taskMap)
+	return d.handleDetectResult(kt, order.SuborderID, runner.ReadResults, taskMap)
 }
 
 // Cancel 单据取消入口, 会终止当前执行中单据，并丢弃现有结果。若单据未在执行中，不会报错
@@ -157,50 +158,55 @@ func (d *Detector) Cancel(kt *kit.Kit, suborderID string) error {
 }
 
 // handleDetectResult 收集预检步骤结果，更新预检进度
-func (d *Detector) handleDetectResult(kt *kit.Kit, suborderID string, getResult func() (result *Result, ok bool),
+func (d *Detector) handleDetectResult(kt *kit.Kit, suborderID string, getResults func() (result []*Result, ok bool),
 	taskMap map[int64]*table.DetectTask) error {
 
 	defer logs.Infof("suborder all detect step done, order: %s, rid: %s", suborderID, kt.Rid)
 
 	// 等待单内所有主机的所有预检步骤结果
 	for {
-		result, ok := getResult()
+		results, ok := getResults()
 		if !ok {
 			// 所有步骤处理完毕
 			break
 		}
-		if result == nil {
-			logs.Warnf("detect result is nil, order: %s, rid: %s", suborderID, kt.Rid)
+		if len(results) == 0 {
+			logs.Warnf("detect result is empty, order: %s, rid: %s", suborderID, kt.Rid)
 			continue
 		}
+		// 合并同主机的更新结果，降低DB压力
+		updatedTasks := make(map[int64]*table.DetectTask, len(taskMap))
+		for _, result := range results {
+			task := taskMap[result.HostID]
+			if task == nil {
+				logs.Warnf("detect task of host %d not found, order: %s, rid: %s", result.HostID, suborderID, kt.Rid)
+				continue
+			}
+			logs.V(4).Infof("detector suborder: %s/%s got result: %s, rid: %s",
+				suborderID, task.IP, result.String(), kt.Rid)
 
-		task := taskMap[result.HostID]
-		if task == nil {
-			logs.Warnf("detect task of host %d not found, order: %s, rid: %s", result.HostID, suborderID, kt.Rid)
-			continue
+			if result.Error != nil {
+				task.FailedNum++
+				task.Status = table.DetectStatusFailed
+				task.Message += result.Error.Error() + "\n"
+			} else {
+				task.SuccessNum++
+				if task.Status != table.DetectStatusFailed {
+					task.Status = table.DetectStatusSuccess
+				}
+			}
+			task.PendingNum--
+			updatedTasks[task.HostID] = task
 		}
-		logs.V(4).Infof("handleDetectResult suborder: %s/%s got result: %s, rid: %s",
-			suborderID, task.IP, result.String(), kt.Rid)
-
-		if result.Error != nil {
-			task.FailedNum++
-			task.Status = table.DetectStatusFailed
-			task.Message += result.Error.Error() + "\n"
-		} else {
-			task.SuccessNum++
-			if task.Status != table.DetectStatusFailed {
-				task.Status = table.DetectStatusSuccess
+		for _, task := range updatedTasks {
+			// 更新recycle task, recycle host 的状态
+			err := d.updateRecycleTaskAndHostStatus(kt, task)
+			if err != nil {
+				logs.Errorf("skip update task %s failed, order: %s, err: %v, rid: %s",
+					task.TaskID, suborderID, err, kt.Rid)
+				// 忽略单次失败，防止阻塞Channel
 			}
 		}
-		task.PendingNum--
-		// 更新recycle task, recycle host 的状态
-		err := d.updateRecycleTaskAndHostStatus(kt, task)
-		if err != nil {
-			logs.Errorf("skip update task %s failed, order: %s, err: %v, rid: %s",
-				task.TaskID, suborderID, err, kt.Rid)
-			// 忽略单次失败，防止阻塞Channel
-		}
-
 	}
 
 	return nil
@@ -241,15 +247,15 @@ func (d *Detector) initAndGetDetectTaskMap(kt *kit.Kit, suborderID string, stepC
 	return taskMap, nil
 }
 
-func newDetectStepRunner(suborderID string, bizID int64, totalSteps int) stepRunner {
-	allResult := make(chan *Result)
+func newDetectStepRunner(suborderID string, bizID int64, stepTypeCount, hostCount int) stepRunner {
+	allResult := make(chan *Result, stepTypeCount*hostCount)
 	step := stepRunner{
 		suborderID:     suborderID,
 		bizID:          bizID,
 		remainingSteps: &atomic.Int64{},
 		allResult:      allResult,
 	}
-	step.remainingSteps.Add(int64(totalSteps))
+	step.remainingSteps.Add(int64(stepTypeCount))
 	return step
 }
 
@@ -289,7 +295,8 @@ func (sr *stepRunner) Run(kt *kit.Kit, executor StepExecutor, execSteps, skipSte
 	for result := range resultCh {
 		sr.SendResult(result)
 	}
-
+	logs.Infof("detect step runner finished, order: %s, stepName: %s, rid: %s",
+		sr.suborderID, executor.GetStepName(), kt.Rid)
 }
 
 // Done 当前步骤执行结束
@@ -305,10 +312,13 @@ func (sr *stepRunner) SendResult(result *Result) {
 	sr.allResult <- result
 }
 
-// ReadResult 读取结果
-func (sr *stepRunner) ReadResult() (result *Result, ok bool) {
-	result, ok = <-sr.allResult
-	return result, ok
+const stepRunnerBatchReadDefaultLength = 1000
+const stepRunnerBatchReadDefaultTimeout = time.Millisecond * 200
+
+// ReadResults 读取结果
+func (sr *stepRunner) ReadResults() (result []*Result, ok bool) {
+	return concurrence.BatchReadChannel(sr.allResult, stepRunnerBatchReadDefaultLength,
+		stepRunnerBatchReadDefaultTimeout)
 }
 
 // prepareDetectStep 为给定task准备预检步骤：无则创建，若已失败则更新。最后返回所有预检步骤，包括已成功的
