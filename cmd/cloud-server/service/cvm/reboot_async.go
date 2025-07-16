@@ -36,7 +36,7 @@ func (svc *cvmSvc) BatchAsyncRebootCvm(cts *rest.Contexts) (interface{}, error) 
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
-	if err := req.Validate(); err != nil {
+	if err := req.Validate(true); err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
@@ -54,7 +54,7 @@ func (svc *cvmSvc) BatchAsyncRebootBizCvm(cts *rest.Contexts) (interface{}, erro
 	if err = cts.DecodeInto(req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
-	if err = req.Validate(); err != nil {
+	if err = req.Validate(true); err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
@@ -118,8 +118,8 @@ func (svc *cvmSvc) BatchSopsAsyncRebootCvm(cts *rest.Contexts) (interface{}, err
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
 
-	if len(req.IDs) < 1 || len(req.IDs) > 500 {
-		return nil, errf.Newf(errf.InvalidParameter, "cvm id list length must be between 1 and 500")
+	if err := req.Validate(false); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
 	return svc.batchAsyncRebootCvmSvc(cts, constant.UnassignedBiz, handler.ResOperateAuth, req, false)
@@ -137,8 +137,8 @@ func (svc *cvmSvc) BatchSopsAsyncRebootBizCvm(cts *rest.Contexts) (interface{}, 
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
 
-	if len(req.IDs) < 1 || len(req.IDs) > 500 {
-		return nil, errf.Newf(errf.InvalidParameter, "cvm id list length must be between 1 and 500")
+	if err = req.Validate(false); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
 	return svc.batchAsyncRebootCvmSvc(cts, bizID, handler.BizOperateAuth, req, false)

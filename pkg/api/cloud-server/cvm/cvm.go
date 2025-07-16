@@ -183,12 +183,16 @@ func (req *BatchRebootCvmReq) Validate() error {
 // BatchCvmPowerOperateReq batch cvm operate req.
 type BatchCvmPowerOperateReq struct {
 	IDs       []string                    `json:"ids" validate:"required,min=1,max=500,dive,gt=0"`
-	SessionID string                      `json:"session_id" validate:"required"`
+	SessionID string                      `json:"session_id" validate:"omitempty"`
 	Source    enumor.TaskManagementSource `json:"source" validate:"omitempty"`
 }
 
 // Validate ...
-func (req *BatchCvmPowerOperateReq) Validate() error {
+func (req *BatchCvmPowerOperateReq) Validate(checkSessionID bool) error {
+	if checkSessionID && len(req.SessionID) == 0 {
+		return errf.New(errf.InvalidParameter, "session_id is required")
+	}
+
 	return validator.Validate.Struct(req)
 }
 

@@ -61,7 +61,7 @@ func (svc *cvmSvc) batchAsyncStartCvmSvc(cts *rest.Contexts, bkBizID int64, vali
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
-	if err := req.Validate(); err != nil {
+	if err := req.Validate(true); err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
