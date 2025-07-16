@@ -48,6 +48,9 @@ type Result struct {
 
 // String ...
 func (r *Result) String() string {
+	if r == nil {
+		return "<R nil>"
+	}
 	return fmt.Sprintf("<R %s:%d,%s,E:%v>", r.StepName, r.HostID, r.TaskID, r.Error)
 }
 
@@ -128,10 +131,11 @@ type suborderChan struct {
 }
 
 // SendResult ...
-func (sc *suborderChan) SendResult(r *Result) (allFinished bool) {
+func (sc *suborderChan) SendResult(kt *kit.Kit, r *Result) (allFinished bool) {
 	sc.locker.Lock()
 	defer sc.locker.Unlock()
 	if sc.ch == nil {
+		logs.Errorf("suborderChan is closed, but got result: %s, rid: %s", r.String(), kt.Rid)
 		return true
 	}
 	sc.remaining--
@@ -370,7 +374,7 @@ func (d *DetectStepExecutor) HandleResult(kt *kit.Kit, steps []*StepMeta, detect
 			TaskID:   step.Step.TaskID,
 			Error:    detectErr,
 		}
-		allFinished := suborderChan.SendResult(result)
+		allFinished := suborderChan.SendResult(kt, result)
 		if allFinished {
 			// 发送完毕，清理信息
 			d.suborderChanMap.Delete(step.Step.SuborderID)
@@ -491,7 +495,7 @@ func (d *DetectStepExecutor) addStepMeta(step *StepMeta) {
 
 func (d *DetectStepExecutor) recordMetric(step *StepMeta, err error) {
 	labels := map[string]string{
-		"step_name": string(step.Step.StepName),
+		labelStepName: string(step.Step.StepName),
 	}
 
 	sinceJoined := time.Since(step.JoinedAt)
@@ -541,7 +545,8 @@ func (wl *syncList) PopTopK(scoreFunc ScoreFunc, k int) (steps []*StepMeta) {
 	})
 
 	// 2.2 取出优先级最高的k个
-	topK := wl.list[length-k:]
+	topK := make([]*StepMeta, 0, len(wl.list[length-k:]))
+	topK = append(topK, wl.list[length-k:]...)
 	wl.list = wl.list[:length-k]
 	return topK
 }

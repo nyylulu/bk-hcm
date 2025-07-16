@@ -171,7 +171,10 @@ func New(ctx context.Context, thirdCli *thirdparty.Client, cmdbCli cmdb.Client, 
 	}
 
 	// new transit
-	moduleTransit, err := transit.New(ctx, thirdCli, cmdbCli, rsLogic)
+	moduleTransit, err := transit.New(ctx, thirdCli, cmdbCli, rsLogic, cliSet)
+	if err != nil {
+		return nil, err
+	}
 
 	// new dispatcher
 	dispatch, err := dispatcher.New(ctx, moduleDetector, moduleReturner, moduleTransit, rsLogic)
@@ -1868,11 +1871,6 @@ func (r *recycler) GetDetectStepCfg(kit *kit.Kit) (*types.GetDetectStepCfgRst, e
 
 	return rst, nil
 }
-
-// RunRecycleTask runs recycle task
-// func (r *recycler) RunRecycleTask(task *table.DetectTask, startStep uint) {
-// 	r.dispatcher.GetDetector().RunDetectTask(task)
-// }
 
 // CheckDetectStatus check recycle task info
 func (r *recycler) CheckDetectStatus(orderId string) error {

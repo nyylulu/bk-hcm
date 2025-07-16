@@ -943,11 +943,11 @@ type CrTransitSrcInfo struct {
 	FromBizID    int64 `json:"bk_biz_id" validate:"required"`
 	FromModuleID int64 `json:"bk_module_id" validate:"required"`
 	// AssetIDs 要转移的公司cmdb固资编号数组
-	AssetIDs []string `json:"asset_ids" validate:"omitempty,max=10"`
+	AssetIDs []string `json:"asset_ids" validate:"omitempty,max=100"`
 	// InnerIps 要新增的公司cmdb内网ip数组
-	InnerIps []string `json:"inner_ips" validate:"omitempty,max=10"`
+	InnerIps []string `json:"inner_ips" validate:"omitempty,max=100"`
 	// SvrIDs 要转移的公司cmdb主机ID数组
-	SvrIDs []int64 `json:"svr_ids" validate:"omitempty,max=10"`
+	SvrIDs []int64 `json:"svr_ids" validate:"omitempty,max=100"`
 }
 
 // Validate validate CrTransitSrcInfo
