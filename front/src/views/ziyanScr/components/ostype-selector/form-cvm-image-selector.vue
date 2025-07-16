@@ -76,7 +76,11 @@ const handleChange = (value: string | string[], items: ICvmImage[]) => {
       <div class="image-option-item">
         <div>{{ option[displayKey] }}（{{ option[idKey] }}）</div>
         <bk-tag v-if="option.type" size="small">{{ option.type }}</bk-tag>
-        <bk-tag v-if="option.state" size="small" :theme="StateTheme[option.state]">
+        <bk-tag
+          v-if="option.state && option.state === ImageState.RECOMMENDED"
+          size="small"
+          :theme="StateTheme[option.state]"
+        >
           {{ StateText[option.state] }}
         </bk-tag>
       </div>
