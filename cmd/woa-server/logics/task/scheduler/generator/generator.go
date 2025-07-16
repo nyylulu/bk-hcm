@@ -836,8 +836,8 @@ func (g *Generator) AddCvmDevices(kt *kit.Kit, taskId string, generateId uint64,
 				taskId, errRecord)
 		}
 
-		// 更新失败的可用区到主机申请单
-		if strings.Contains(err.Error(), crpProductFailedMsg) {
+		// 更新失败的可用区到主机申请单（只有分Campus生产失败，才需要记录）
+		if strings.Contains(err.Error(), crpProductFailedMsg) && order.Spec.Zone == cvmapi.CvmSeparateCampus {
 			if orderErr := g.updateOrderFailedZones(kt, order.SubOrderId, zone); orderErr != nil {
 				// 只记录日志，不应该影响主流程
 				logs.Warnf("failed to update order failed zoneIDs, subOrderID: %s, orderErr: %v, err: %v, rid: %s",
@@ -864,8 +864,8 @@ func (g *Generator) AddCvmDevices(kt *kit.Kit, taskId string, generateId uint64,
 				order.SubOrderId, taskId, errRecord)
 		}
 
-		// 更新失败的可用区到主机申请单
-		if strings.Contains(err.Error(), crpProductZeroNumMsg) {
+		// 更新失败的可用区到主机申请单（只有分Campus生产失败，才需要记录）
+		if strings.Contains(err.Error(), crpProductZeroNumMsg) && order.Spec.Zone == cvmapi.CvmSeparateCampus {
 			if orderErr := g.updateOrderFailedZones(kt, order.SubOrderId, zone); orderErr != nil {
 				// 只记录日志，不应该影响主流程
 				logs.Warnf("failed to update order failed zoneIDs, subOrderID: %s, orderErr: %v, err: %v, rid: %s",

@@ -90,7 +90,14 @@ func (svc *cvmSvc) batchAsyncStartCvmSvc(cts *rest.Contexts, bkBizID int64, vali
 		return "", err
 	}
 
-	taskManagementID, err := svc.cvmLgc.CvmPowerOperation(cts.Kit, bkBizID, uniqueID, enumor.TaskStartCvm, cvmList)
+	// 请求来源
+	source := enumor.TaskManagementSourceAPI
+	if len(req.Source) > 0 {
+		source = req.Source
+	}
+
+	taskManagementID, err := svc.cvmLgc.CvmPowerOperation(cts.Kit, bkBizID, uniqueID,
+		source, enumor.TaskStartCvm, cvmList)
 	if err != nil {
 		logs.Errorf("build flow and task management failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err

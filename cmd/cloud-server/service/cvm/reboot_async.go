@@ -32,22 +32,6 @@ import (
 
 // BatchAsyncRebootCvm batch stop cvm.
 func (svc *cvmSvc) BatchAsyncRebootCvm(cts *rest.Contexts) (interface{}, error) {
-	return svc.batchAsyncRebootCvmSvc(cts, constant.UnassignedBiz, handler.ResOperateAuth)
-}
-
-// BatchAsyncRebootBizCvm batch stop biz cvm.
-func (svc *cvmSvc) BatchAsyncRebootBizCvm(cts *rest.Contexts) (interface{}, error) {
-	bizID, err := cts.PathParameter("bk_biz_id").Int64()
-	if err != nil {
-		return nil, err
-	}
-	return svc.batchAsyncRebootCvmSvc(cts, bizID, handler.BizOperateAuth)
-}
-
-func (svc *cvmSvc) batchAsyncRebootCvmSvc(cts *rest.Contexts, bkBizID int64,
-	validHandler handler.ValidWithAuthHandler) (
-	interface{}, error) {
-
 	req := new(proto.BatchCvmPowerOperateReq)
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
@@ -56,13 +40,41 @@ func (svc *cvmSvc) batchAsyncRebootCvmSvc(cts *rest.Contexts, bkBizID int64,
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
+	return svc.batchAsyncRebootCvmSvc(cts, constant.UnassignedBiz, handler.ResOperateAuth, req, true)
+}
+
+// BatchAsyncRebootBizCvm batch stop biz cvm.
+func (svc *cvmSvc) BatchAsyncRebootBizCvm(cts *rest.Contexts) (interface{}, error) {
+	bizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+
+	req := new(proto.BatchCvmPowerOperateReq)
+	if err = cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+	if err = req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	return svc.batchAsyncRebootCvmSvc(cts, bizID, handler.BizOperateAuth, req, true)
+}
+
+func (svc *cvmSvc) batchAsyncRebootCvmSvc(cts *rest.Contexts, bkBizID int64,
+	validHandler handler.ValidWithAuthHandler, req *proto.BatchCvmPowerOperateReq, verifyMoa bool) (
+	interface{}, error) {
+
 	if err := svc.validateAuthorize(cts, req.IDs, validHandler); err != nil {
 		logs.Errorf("validate authorize and create audit failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
-	if err := svc.validateMOAResult(cts.Kit, enumor.MoaSceneCVMReboot, req.SessionID); err != nil {
-		logs.Errorf("validate moa result failed, err: %v, sessionID: %s, rid: %s", err, req.SessionID, cts.Kit.Rid)
-		return nil, err
+	// verify moa result
+	if verifyMoa {
+		if err := svc.validateMOAResult(cts.Kit, enumor.MoaSceneCVMReboot, req.SessionID); err != nil {
+			logs.Errorf("validate moa result failed, err: %v, sessionID: %s, rid: %s", err, req.SessionID, cts.Kit.Rid)
+			return nil, err
+		}
 	}
 	if err := svc.createAudit(cts, audit.Reboot, req.IDs); err != nil {
 		logs.Errorf("create audit for %s failed, err: %v, rid: %s", audit.Reboot, err, cts.Kit.Rid)
@@ -81,7 +93,14 @@ func (svc *cvmSvc) batchAsyncRebootCvmSvc(cts *rest.Contexts, bkBizID int64,
 		return "", err
 	}
 
-	taskManagementID, err := svc.cvmLgc.CvmPowerOperation(cts.Kit, bkBizID, uniqueID, enumor.TaskRebootCvm, cvmList)
+	// 请求来源
+	source := enumor.TaskManagementSourceAPI
+	if len(req.Source) > 0 {
+		source = req.Source
+	}
+
+	taskManagementID, err := svc.cvmLgc.CvmPowerOperation(cts.Kit, bkBizID, uniqueID,
+		source, enumor.TaskRebootCvm, cvmList)
 	if err != nil {
 		logs.Errorf("build flow and task management failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
@@ -90,4 +109,37 @@ func (svc *cvmSvc) batchAsyncRebootCvmSvc(cts *rest.Contexts, bkBizID int64,
 	return proto.BatchCvmOperateResp{
 		TaskManagementID: taskManagementID,
 	}, nil
+}
+
+// BatchSopsAsyncRebootCvm batch reboot cvm for sops.
+func (svc *cvmSvc) BatchSopsAsyncRebootCvm(cts *rest.Contexts) (interface{}, error) {
+	req := new(proto.BatchCvmPowerOperateReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if len(req.IDs) < 1 || len(req.IDs) > 500 {
+		return nil, errf.Newf(errf.InvalidParameter, "cvm id list length must be between 1 and 500")
+	}
+
+	return svc.batchAsyncRebootCvmSvc(cts, constant.UnassignedBiz, handler.ResOperateAuth, req, false)
+}
+
+// BatchSopsAsyncRebootBizCvm batch reboot biz cvm for sops.
+func (svc *cvmSvc) BatchSopsAsyncRebootBizCvm(cts *rest.Contexts) (interface{}, error) {
+	bizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+
+	req := new(proto.BatchCvmPowerOperateReq)
+	if err = cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if len(req.IDs) < 1 || len(req.IDs) > 500 {
+		return nil, errf.Newf(errf.InvalidParameter, "cvm id list length must be between 1 and 500")
+	}
+
+	return svc.batchAsyncRebootCvmSvc(cts, bizID, handler.BizOperateAuth, req, false)
 }

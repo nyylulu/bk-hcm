@@ -182,8 +182,9 @@ func (req *BatchRebootCvmReq) Validate() error {
 
 // BatchCvmPowerOperateReq batch cvm operate req.
 type BatchCvmPowerOperateReq struct {
-	IDs       []string `json:"ids" validate:"required,min=1,max=500,dive,gt=0"`
-	SessionID string   `json:"session_id" validate:"required"`
+	IDs       []string                    `json:"ids" validate:"required,min=1,max=500,dive,gt=0"`
+	SessionID string                      `json:"session_id" validate:"required"`
+	Source    enumor.TaskManagementSource `json:"source" validate:"omitempty"`
 }
 
 // Validate ...
