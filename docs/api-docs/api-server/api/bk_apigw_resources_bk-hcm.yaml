@@ -555,7 +555,7 @@ paths:
           description: ''
       x-bk-apigateway-resource:
         isPublic: false
-        allowApplyPermission: true
+        allowApplyPermission: false
         matchSubpath: false
         backend:
           type: HTTP
