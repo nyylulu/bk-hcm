@@ -29,6 +29,7 @@ import (
 	ttypes "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
+	wdt "hcm/pkg/dal/table/resource-plan/woa-device-type"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/cvmapi"
@@ -48,50 +49,30 @@ func (c *Controller) VerifyResPlanDemandV2(kt *kit.Kit, bkBizID int64, requireTy
 	}
 
 	result := make([]ptypes.VerifyResPlanDemandElem, len(subOrders))
-	indexMap := make(map[int]int)
+	resultIndex := make(map[int]int)
 	verifySlice := make([]VerifyResPlanElemV2, 0)
 
 	for idx, subOrder := range subOrders {
-		// if resource type is not cvm, set verify result to not involved.
-		if subOrder.ResourceType != ttypes.ResourceTypeCvm {
+		// if resource type is not cvm or upgrade_cvm, set verify result to not involved.
+		if subOrder.ResourceType != ttypes.ResourceTypeCvm && subOrder.ResourceType != ttypes.ResourceTypeUpgradeCvm {
 			result[idx] = ptypes.VerifyResPlanDemandElem{
 				VerifyResult: enumor.VerifyResPlanRstNotInvolved,
 			}
 			continue
 		}
 
-		// 是否包年包月
-		isPrePaid := true
-		if subOrder.Spec.ChargeType.GetWithDefault() != cvmapi.ChargeTypePrePaid {
-			isPrePaid = false
-		}
-
-		nowDemandYear, nowDemandMonth, err := c.demandTime.GetDemandYearMonth(kt, time.Now())
+		cpuCores, diskSizes := c.getVerifyCoreSize(deviceTypeMap, subOrder)
+		verifyElems, err := c.getVerifyElems(kt, subOrder, bkBizID, obsProject, cpuCores, diskSizes)
 		if err != nil {
-			logs.Errorf("failed to get demand year month, err: %v, rid: %s", err, kt.Rid)
-			return nil, errf.NewFromErr(errf.Aborted, err)
-		}
-		availableTime := NewAvailableTime(nowDemandYear, nowDemandMonth)
-
-		var cpuCore int64
-		if deviceInfo, ok := deviceTypeMap[subOrder.Spec.DeviceType]; ok {
-			cpuCore = deviceInfo.CpuCore
+			logs.Errorf("failed to get verify res plan elem, err: %v, suborder spec: %+v, rid: %s", err,
+				subOrder.Spec, kt.Rid)
+			return nil, err
 		}
 
-		indexMap[len(verifySlice)] = idx
-		verifySlice = append(verifySlice, VerifyResPlanElemV2{
-			IsPrePaid:     isPrePaid,
-			AvailableTime: availableTime,
-			DeviceType:    subOrder.Spec.DeviceType,
-			ObsProject:    obsProject,
-			BkBizID:       bkBizID,
-			DemandClass:   enumor.DemandClassCVM,
-			RegionID:      subOrder.Spec.Region,
-			ZoneID:        subOrder.Spec.Zone,
-			DiskType:      subOrder.Spec.DiskType.GetWithDefault(),
-			CpuCore:       int64(subOrder.Replicas) * cpuCore,
-			DiskSize:      int64(subOrder.Replicas) * subOrder.Spec.DiskSize,
-		})
+		for _, elem := range verifyElems {
+			resultIndex[len(verifySlice)] = idx
+			verifySlice = append(verifySlice, elem)
+		}
 	}
 
 	// call verify resource plan demands to verify each cvm demands.
@@ -109,15 +90,176 @@ func (c *Controller) VerifyResPlanDemandV2(kt *kit.Kit, bkBizID int64, requireTy
 
 	// set result.
 	for idx, ele := range rst {
-		result[indexMap[idx]] = ptypes.VerifyResPlanDemandElem{
-			VerifyResult: ele.VerifyResult,
-			Reason:       ele.Reason,
+		subOrderIdx := resultIndex[idx]
+		result[subOrderIdx].NeedCPUCore += ele.NeedCPUCore
+		result[subOrderIdx].ResPlanCore += ele.ResPlanCore
+		if result[subOrderIdx].VerifyResult == enumor.VerifyResPlanRstFailed {
+			continue
+		}
+		result[subOrderIdx].VerifyResult = ele.VerifyResult
+		result[subOrderIdx].Reason = ele.Reason
+	}
+
+	for i, res := range result {
+		// 同一子单可能拆分多组 VerifyResPlanElemV2 用于校验预测，在这里统一合并计算失败的具体总核数
+		if res.NeedCPUCore != 0 && res.VerifyResult == enumor.VerifyResPlanRstFailed {
+			result[i].Reason = fmt.Sprintf("可用预测量不足，需要%d核，余量%d核", res.NeedCPUCore, res.ResPlanCore)
 		}
 	}
 
 	logs.Infof("verify res plan demand v2 end, bkBizID: %d, verifySlice: %+v, result: %+v, rid: %s",
 		bkBizID, verifySlice, result, kt.Rid)
 	return result, nil
+}
+
+func (c *Controller) getVerifyCoreSize(deviceTypeMap map[string]wdt.WoaDeviceTypeTable,
+	subOrder ttypes.Suborder) (cpuCores, diskSizes []int64) {
+
+	switch subOrder.ResourceType {
+	case ttypes.ResourceTypeUpgradeCvm:
+		// 升降配不修改云盘，不考虑云盘预测的大小
+		diskSizes = make([]int64, len(subOrder.UpgradeCVMList))
+		cpuCores = make([]int64, 0, len(subOrder.UpgradeCVMList))
+		for _, device := range subOrder.UpgradeCVMList {
+			var cpuCore int64
+			if deviceInfo, ok := deviceTypeMap[device.TargetInstanceType]; ok {
+				cpuCore = deviceInfo.CpuCore
+			}
+			cpuCores = append(cpuCores, cpuCore)
+		}
+	default:
+		// 常规申领，每个子单仅需要计算一个总核心数\总云盘大小
+		var cpuCore int64
+		if deviceInfo, ok := deviceTypeMap[subOrder.Spec.DeviceType]; ok {
+			cpuCore = deviceInfo.CpuCore
+		}
+		cpuCores = append(cpuCores, int64(subOrder.Replicas)*cpuCore)
+		diskSizes = append(diskSizes, int64(subOrder.Replicas)*subOrder.Spec.DiskSize)
+	}
+
+	return cpuCores, diskSizes
+}
+
+func (c *Controller) getVerifyElems(kt *kit.Kit, subOrder ttypes.Suborder, bkBizID int64, obsProject enumor.ObsProject,
+	cpuCores, diskSizes []int64) ([]VerifyResPlanElemV2, error) {
+
+	// 是否包年包月
+	isPrePaid := true
+	// 升降配需同时校验预测内和预测外，按照按量计费模式校验
+	if subOrder.ResourceType == ttypes.ResourceTypeUpgradeCvm ||
+		subOrder.Spec.ChargeType.GetWithDefault() != cvmapi.ChargeTypePrePaid {
+		isPrePaid = false
+	}
+
+	nowDemandYear, nowDemandMonth, err := c.demandTime.GetDemandYearMonth(kt, time.Now())
+	if err != nil {
+		logs.Errorf("failed to get demand year month, err: %v, rid: %s", err, kt.Rid)
+		return nil, errf.NewFromErr(errf.Aborted, err)
+	}
+	availableTime := NewAvailableTime(nowDemandYear, nowDemandMonth)
+
+	createElem := func(deviceType, regionID, zoneID string, cpuCore int64, diskType enumor.DiskType,
+		diskSize int64) VerifyResPlanElemV2 {
+
+		return VerifyResPlanElemV2{
+			IsPrePaid:     isPrePaid,
+			AvailableTime: availableTime,
+			DeviceType:    deviceType,
+			ObsProject:    obsProject,
+			BkBizID:       bkBizID,
+			DemandClass:   enumor.DemandClassCVM,
+			RegionID:      regionID,
+			ZoneID:        zoneID,
+			DiskType:      diskType,
+			CpuCore:       cpuCore,
+			DiskSize:      diskSize,
+		}
+	}
+
+	switch subOrder.ResourceType {
+	case ttypes.ResourceTypeUpgradeCvm:
+		if len(cpuCores) != len(subOrder.UpgradeCVMList) {
+			logs.Errorf("cpu core length not equal to upgrade cvm list length, rid: %s", kt.Rid)
+			return nil, fmt.Errorf("cpu core length not equal to upgrade cvm list length")
+		}
+		verifyElems := make([]VerifyResPlanElemV2, 0, len(subOrder.UpgradeCVMList))
+		for i, device := range subOrder.UpgradeCVMList {
+			verifyElems = append(verifyElems, createElem(
+				device.TargetInstanceType,
+				device.RegionID,
+				device.ZoneID,
+				cpuCores[i],
+				"",
+				0,
+			))
+		}
+		return verifyElems, nil
+	default:
+		if len(cpuCores) != 1 || len(diskSizes) != 1 {
+			logs.Errorf("cannot get cpu core num for device_type: %s, rid: %s", subOrder.Spec.DeviceType, kt.Rid)
+			return nil, fmt.Errorf("cannot get cpu core num for device_type: %s", subOrder.Spec.DeviceType)
+		}
+		return []VerifyResPlanElemV2{
+			createElem(
+				subOrder.Spec.DeviceType,
+				subOrder.Spec.Region,
+				subOrder.Spec.Zone,
+				cpuCores[0],
+				subOrder.Spec.DiskType.GetWithDefault(),
+				diskSizes[0],
+			),
+		}, nil
+	}
+}
+
+func (c *Controller) fillVerifyElems(kt *kit.Kit, subOrder ttypes.Suborder, bkBizID int64, obsProject enumor.ObsProject,
+	verifyGroups []VerifyResPlanElemV2) ([]VerifyResPlanElemV2, error) {
+
+	// 是否包年包月
+	isPrePaid := true
+	// 升降配需同时校验预测内和预测外，按照按量计费模式校验
+	if subOrder.ResourceType == ttypes.ResourceTypeUpgradeCvm ||
+		subOrder.Spec.ChargeType.GetWithDefault() != cvmapi.ChargeTypePrePaid {
+		isPrePaid = false
+	}
+
+	nowDemandYear, nowDemandMonth, err := c.demandTime.GetDemandYearMonth(kt, time.Now())
+	if err != nil {
+		logs.Errorf("failed to get demand year month, err: %v, rid: %s", err, kt.Rid)
+		return nil, errf.NewFromErr(errf.Aborted, err)
+	}
+	availableTime := NewAvailableTime(nowDemandYear, nowDemandMonth)
+
+	createElem := func(deviceType, regionID, zoneID string, cpuCore int64, diskType enumor.DiskType,
+		diskSize int64) VerifyResPlanElemV2 {
+
+		return VerifyResPlanElemV2{
+			IsPrePaid:     isPrePaid,
+			AvailableTime: availableTime,
+			DeviceType:    deviceType,
+			ObsProject:    obsProject,
+			BkBizID:       bkBizID,
+			DemandClass:   enumor.DemandClassCVM,
+			RegionID:      regionID,
+			ZoneID:        zoneID,
+			DiskType:      diskType,
+			CpuCore:       cpuCore,
+			DiskSize:      diskSize,
+		}
+	}
+
+	verifyElems := make([]VerifyResPlanElemV2, 0, len(verifyGroups))
+	for _, elem := range verifyGroups {
+		verifyElems = append(verifyElems, createElem(
+			elem.DeviceType,
+			elem.RegionID,
+			elem.ZoneID,
+			elem.CpuCore,
+			elem.DiskType,
+			elem.DiskSize,
+		))
+	}
+	return verifyElems, nil
 }
 
 // GetPlanTypeAvlDeviceTypesV2 get plan type available device types v2.

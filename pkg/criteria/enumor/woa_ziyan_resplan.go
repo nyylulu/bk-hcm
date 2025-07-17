@@ -417,7 +417,7 @@ func (p PlanTypeCode) Validate() error {
 
 // GetPlanTypeCodeHcmMembers get hcm PlanTypeCode's members.
 func GetPlanTypeCodeHcmMembers() []PlanTypeCode {
-	return []PlanTypeCode{PlanTypeCodeInPlan, PlanTypeCodeOutPlan}
+	return []PlanTypeCode{PlanTypeCodeOutPlan, PlanTypeCodeInPlan}
 }
 
 // PlanTypeMaps is plan type maps.

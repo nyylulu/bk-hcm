@@ -36,17 +36,13 @@ import (
 	rpproto "hcm/pkg/api/data-service/resource-plan"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
-	"hcm/pkg/criteria/errf"
 	"hcm/pkg/criteria/mapstr"
-	"hcm/pkg/dal/dao/orm"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
 	rtypes "hcm/pkg/dal/dao/types/resource-plan"
 	rpd "hcm/pkg/dal/table/resource-plan/res-plan-demand"
-	rpdc "hcm/pkg/dal/table/resource-plan/res-plan-demand-changelog"
 	rpt "hcm/pkg/dal/table/resource-plan/res-plan-ticket"
 	wdt "hcm/pkg/dal/table/resource-plan/woa-device-type"
-	tableTypes "hcm/pkg/dal/table/types"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/runtime/filter"
@@ -57,7 +53,6 @@ import (
 	"hcm/pkg/tools/metadata"
 	"hcm/pkg/tools/times"
 
-	"github.com/jmoiron/sqlx"
 	"github.com/shopspring/decimal"
 )
 
@@ -1593,20 +1588,14 @@ func (c *Controller) getApplyOrderConsumePoolMapV2(kt *kit.Kit, subOrders []*tas
 
 	orderConsumePoolMap := make(ResPlanConsumePool)
 	for _, subOrderInfo := range subOrders {
-		// TODO 目前预测只关注CVM类型的主机
-		if subOrderInfo.ResourceType != tasktypes.ResourceTypeCvm {
+		// TODO 目前预测只关注CVM类型的主机 + 升降配主机
+		if subOrderInfo.ResourceType != tasktypes.ResourceTypeCvm &&
+			subOrderInfo.ResourceType != tasktypes.ResourceTypeUpgradeCvm {
 			continue
 		}
 		// 如果项目类型是常规，则RequireType也需要是对应的常规项目
 		if subOrderInfo.ObsProject == enumor.ObsProjectNormal && subOrderInfo.RequireType != enumor.RequireTypeRegular {
 			continue
-		}
-
-		planType, err := c.GetPlanTypeByChargeType(subOrderInfo.Spec.ChargeType)
-		if err != nil {
-			logs.Errorf("failed to get plan type by charge type, err: %v, subOrder: %+v, rid: %s", err,
-				*subOrderInfo, kt.Rid)
-			return nil, err
 		}
 
 		demandYear, demandMonth, err := c.demandTime.GetDemandYearMonth(kt, subOrderInfo.CreateAt)
@@ -1616,25 +1605,40 @@ func (c *Controller) getApplyOrderConsumePoolMapV2(kt *kit.Kit, subOrders []*tas
 			return nil, err
 		}
 
-		consumePoolKey := ResPlanPoolKeyV2{
-			PlanType:      planType,
-			AvailableTime: NewAvailableTime(demandYear, demandMonth),
-			DeviceType:    subOrderInfo.Spec.DeviceType,
-			ObsProject:    subOrderInfo.ObsProject,
-			BkBizID:       subOrderInfo.BkBizId,
-			DemandClass:   enumor.DemandClassCVM,
-			RegionID:      subOrderInfo.Spec.Region,
-			ZoneID:        subOrderInfo.Spec.Zone,
-			DiskType:      subOrderInfo.Spec.DiskType,
-		}
-		// 机房裁撤需要忽略预测内、预测外 --story=121848852
-		if subOrderInfo.RequireType == enumor.RequireTypeDissolve {
-			consumePoolKey.PlanType = ""
-		}
+		for _, expendPlan := range subOrderInfo.PlanExpendGroup {
+			var planType enumor.PlanTypeCode
+			switch subOrderInfo.ResourceType {
+			case tasktypes.ResourceTypeUpgradeCvm:
+				// 升降配需要忽略预测内外
+				planType = ""
+			default:
+				planType, err = c.GetPlanTypeByChargeType(subOrderInfo.Spec.ChargeType)
+				if err != nil {
+					logs.Errorf("failed to get plan type by charge type, err: %v, subOrder: %+v, rid: %s", err,
+						*subOrderInfo, kt.Rid)
+					return nil, err
+				}
+			}
 
-		// 交付的核心数量(消耗预测CRP的核心数)
-		consumeCpuCore := int64(subOrderInfo.DeliveredCore)
-		orderConsumePoolMap[consumePoolKey] += consumeCpuCore
+			consumePoolKey := ResPlanPoolKeyV2{
+				PlanType:      planType,
+				AvailableTime: NewAvailableTime(demandYear, demandMonth),
+				DeviceType:    expendPlan.DeviceType,
+				ObsProject:    subOrderInfo.ObsProject,
+				BkBizID:       subOrderInfo.BkBizId,
+				DemandClass:   enumor.DemandClassCVM,
+				RegionID:      expendPlan.Region,
+				DiskType:      expendPlan.DiskType,
+			}
+			// 机房裁撤需要忽略预测内、预测外 --story=121848852
+			if subOrderInfo.RequireType == enumor.RequireTypeDissolve {
+				consumePoolKey.PlanType = ""
+			}
+
+			// 交付的核心数量(消耗预测CRP的核心数)
+			consumeCpuCore := expendPlan.CPUCore
+			orderConsumePoolMap[consumePoolKey] += consumeCpuCore
+		}
 	}
 
 	return orderConsumePoolMap, nil
@@ -1696,26 +1700,15 @@ func (c *Controller) GetProdResRemainPoolMatch(kt *kit.Kit, bkBizID int64, requi
 
 	// matching.
 	for prodResPlanKey, consumeCpuCore := range prodConsumePool {
-		// zone name should not be empty, it may use resource plan which zone name is equal or zone name is empty.
-		planMap, ok := prodPlanPool[prodResPlanKey]
-		if ok {
-			for demandID, planCore := range planMap {
-				canConsume := max(min(planCore, consumeCpuCore), 0)
-				prodPlanPool[prodResPlanKey][demandID] -= canConsume
-				prodMaxAvailablePool[prodResPlanKey][demandID] -= canConsume
-				consumeCpuCore -= canConsume
-			}
+		// 当未显示指定预测内外时，需按 预测外 -> 预测内 的顺序依次尝试匹配
+		matchPlanType := []enumor.PlanTypeCode{prodResPlanKey.PlanType}
+		if prodResPlanKey.PlanType == "" {
+			matchPlanType = enumor.GetPlanTypeCodeHcmMembers()
 		}
 
-		// 主机申领的时候允许模糊可用区，例如用户可以在南京一区申领机器，消耗南京二区的预测
-		zoneIDMap, err := c.GetZoneMapByRegionIDs(kt, []string{prodResPlanKey.RegionID})
-		if err != nil {
-			return nil, nil, err
-		}
-
-		for zoneID := range zoneIDMap {
-			keyLoopZone := ResPlanPoolKeyV2{
-				PlanType:      prodResPlanKey.PlanType,
+		for _, planType := range matchPlanType {
+			keyLoop := ResPlanPoolKeyV2{
+				PlanType:      planType,
 				AvailableTime: prodResPlanKey.AvailableTime,
 				DeviceType:    prodResPlanKey.DeviceType,
 				ObsProject:    prodResPlanKey.ObsProject,
@@ -1723,22 +1716,42 @@ func (c *Controller) GetProdResRemainPoolMatch(kt *kit.Kit, bkBizID int64, requi
 				DemandClass:   prodResPlanKey.DemandClass,
 				RegionID:      prodResPlanKey.RegionID,
 				DiskType:      prodResPlanKey.DiskType,
-				ZoneID:        zoneID,
 			}
 
-			planMap, ok = prodPlanPool[keyLoopZone]
+			planMap, ok := prodPlanPool[keyLoop]
 			if ok {
 				for demandID, planCore := range planMap {
 					canConsume := max(min(planCore, consumeCpuCore), 0)
-					prodPlanPool[keyLoopZone][demandID] -= canConsume
-					prodMaxAvailablePool[keyLoopZone][demandID] -= canConsume
+					prodPlanPool[keyLoop][demandID] -= canConsume
+					prodMaxAvailablePool[keyLoop][demandID] -= canConsume
 					consumeCpuCore -= canConsume
 				}
 			}
+
+			// 优先匹配diskType相同的预测，匹配不完时尝试匹配其他diskType
+			for _, diskType := range enumor.GetDiskTypeMembers() {
+				if diskType == prodResPlanKey.DiskType {
+					continue
+				}
+				if consumeCpuCore <= 0 {
+					break
+				}
+
+				keyLoop.DiskType = diskType
+				planMap, ok = prodPlanPool[keyLoop]
+				if ok {
+					for demandID, planCore := range planMap {
+						canConsume := max(min(planCore, consumeCpuCore), 0)
+						prodPlanPool[keyLoop][demandID] -= canConsume
+						prodMaxAvailablePool[keyLoop][demandID] -= canConsume
+						consumeCpuCore -= canConsume
+					}
+				}
+			}
+			logs.Infof("biz resource plan pool is loop matched, bkBizID: %d, record: %+v, ok: %v, plan: %+v, "+
+				"prodPlanPool: %+v, maxAvailablePool: %+v, consumeCpuCore: %d, rid: %s", bkBizID, prodResPlanKey, ok,
+				planMap, prodPlanPool, prodMaxAvailablePool, consumeCpuCore, kt.Rid)
 		}
-		logs.Infof("biz resource plan pool is loop matched, bkBizID: %d, record: %+v, ok: %v, plan: %+v, "+
-			"zoneIDMap: %+v, prodPlanPool: %+v, maxAvailablePool: %+v, consumeCpuCore: %d, rid: %s", bkBizID,
-			prodResPlanKey, ok, planMap, zoneIDMap, prodPlanPool, prodMaxAvailablePool, consumeCpuCore, kt.Rid)
 	}
 
 	return prodPlanPool, prodMaxAvailablePool, nil
@@ -1838,7 +1851,6 @@ func (c *Controller) GetProdResPlanPoolMatch(kt *kit.Kit, bkBizID int64, startDa
 			BkBizID:       demand.BkBizID,
 			DemandClass:   demand.DemandClass,
 			RegionID:      demand.RegionID,
-			ZoneID:        demand.ZoneID,
 			DiskType:      demand.DiskType,
 		}
 		// 机房裁撤需要忽略预测内、预测外 --story=121848852
@@ -1965,7 +1977,8 @@ func (c *Controller) getDemandMatchResult(kt *kit.Kit, requireType enumor.Requir
 		}
 
 		// 没匹配上的核心数也不够，返回差多少核心
-		verifyRes.Reason = fmt.Sprintf("可用预测量不足，需要%d核，余量%d核", need.CpuCore, allResPlanCore)
+		verifyRes.NeedCPUCore = need.CpuCore
+		verifyRes.ResPlanCore = allResPlanCore
 		return verifyRes, nil
 	}
 
@@ -2005,120 +2018,6 @@ func isDiffDemandMatch(key ResPlanPoolKeyV2, need VerifyResPlanElemV2) (bool, st
 	}
 
 	return false, ""
-}
-
-// getMatchedPlanDemandIDs get matched plan demand ids.
-func (c *Controller) getMatchedPlanDemandIDs(kt *kit.Kit, bkBizID int64, subOrder *tasktypes.ApplyOrder) (
-	[]string, error) {
-
-	// 是否包年包月
-	isPrePaid := true
-	if subOrder.Spec.ChargeType != cvmapi.ChargeTypePrePaid {
-		isPrePaid = false
-	}
-
-	nowDemandYear, nowDemandMonth, err := c.demandTime.GetDemandYearMonth(kt, time.Now())
-	if err != nil {
-		logs.Errorf("failed to get now demand year month, err: %v, bkBizID: %d, rid: %s", err, bkBizID, kt.Rid)
-		return nil, err
-	}
-	availableTime := NewAvailableTime(nowDemandYear, nowDemandMonth)
-
-	verifySlice := make([]VerifyResPlanElemV2, 0)
-	verifySlice = append(verifySlice, VerifyResPlanElemV2{
-		IsPrePaid:     isPrePaid,
-		AvailableTime: availableTime,
-		DeviceType:    subOrder.Spec.DeviceType,
-		ObsProject:    subOrder.ObsProject,
-		BkBizID:       bkBizID,
-		DemandClass:   enumor.DemandClassCVM,
-		RegionID:      subOrder.Spec.Region,
-		ZoneID:        subOrder.Spec.Zone,
-		DiskType:      subOrder.Spec.DiskType,
-		CpuCore:       int64(subOrder.AppliedCore),
-	})
-
-	// call verify resource plan demands to verify each cvm demands.
-	ret, err := c.VerifyProdDemandsV2(kt, bkBizID, subOrder.RequireType, verifySlice)
-	if err != nil {
-		logs.Errorf("failed to get matched resource plan demand ids, err: %v, bkBizID: %d, subOrder: %+v, rid: %s",
-			err, bkBizID, cvt.PtrToVal(subOrder), kt.Rid)
-		return nil, err
-	}
-
-	if len(ret) != 1 {
-		return nil, errf.Newf(errf.InvalidParameter, "get matched plan demand result length is not 1, "+
-			"verify result: %+v", ret)
-	}
-
-	return ret[0].MatchDemandIDs, nil
-}
-
-// AddMatchedPlanDemandExpendLogs add matched plan demand expend logs.
-func (c *Controller) AddMatchedPlanDemandExpendLogs(kt *kit.Kit, bkBizID int64, subOrder *tasktypes.ApplyOrder) error {
-	// if resource type is not cvm,	return success.
-	if subOrder.ResourceType != tasktypes.ResourceTypeCvm {
-		return nil
-	}
-
-	demandIDs, err := c.getMatchedPlanDemandIDs(kt, bkBizID, subOrder)
-	if err != nil {
-		logs.Errorf("failed to get matched plan demand ids, err: %v, bkBizID: %d, subOrder: %+v, rid: %s",
-			err, bkBizID, cvt.PtrToVal(subOrder), kt.Rid)
-		return err
-	}
-
-	if len(demandIDs) == 0 {
-		logs.Infof("get matched plan demand ids empty, bkBizID: %d, demandIDs: %v, subOrder: %+v, rid: %s",
-			bkBizID, demandIDs, cvt.PtrToVal(subOrder), kt.Rid)
-		return nil
-	}
-
-	// 记录日志方便排查问题
-	logs.Infof("get matched plan demand ids success, bkBizID: %d, demandIDs: %v, subOrder: %+v, rid: %s",
-		bkBizID, demandIDs, cvt.PtrToVal(subOrder), kt.Rid)
-
-	demadOpt := &types.ListOption{
-		Filter: tools.ContainersExpression("id", demandIDs),
-		Page:   core.NewDefaultBasePage(),
-	}
-	demandListResp, err := c.dao.ResPlanDemand().List(kt, demadOpt)
-	if err != nil {
-		logs.Errorf("list resource plan demand by ids failed, err: %v, demandIDs: %v, rid: %s", err, demandIDs, kt.Rid)
-		return fmt.Errorf("list resource plan demand by ids failed, err: %v, demandIDs: %v", err, demandIDs)
-	}
-	if len(demandListResp.Details) == 0 {
-		logs.Infof("matched list plan demand from db ids empty, bkBizID: %d, demandIDs: %v, subOrder: %+v, rid: %s",
-			bkBizID, demandIDs, cvt.PtrToVal(subOrder), kt.Rid)
-		return nil
-	}
-
-	inserts := make([]rpdc.DemandChangelogTable, len(demandIDs))
-	for idx, demandItem := range demandListResp.Details {
-		inserts[idx] = rpdc.DemandChangelogTable{
-			DemandID:       demandItem.ID,
-			SuborderID:     subOrder.SubOrderId,
-			Type:           enumor.DemandChangelogTypeExpend,
-			ExpectTime:     demandItem.ExpectTime,
-			ObsProject:     subOrder.ObsProject,
-			RegionName:     demandItem.RegionName,
-			ZoneName:       demandItem.ZoneName,
-			DeviceType:     subOrder.Spec.DeviceType,
-			CpuCoreChange:  cvt.ValToPtr(int64(-subOrder.AppliedCore)),
-			OSChange:       &tableTypes.Decimal{},
-			MemoryChange:   cvt.ValToPtr(int64(0)),
-			DiskSizeChange: cvt.ValToPtr(int64(0)),
-			Remark:         subOrder.Remark,
-		}
-	}
-	_, err = c.dao.Txn().AutoTxn(kt, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
-		return c.dao.ResPlanDemandChangelog().CreateWithTx(kt, txn, inserts)
-	})
-	if err != nil {
-		logs.Errorf("failed to create plan crp demand log, err: %v, bkBizID: %d, demandIDs: %v, subOrder: %+v, rid: %s",
-			err, bkBizID, demandIDs, cvt.PtrToVal(subOrder), kt.Rid)
-	}
-	return nil
 }
 
 // GetAllDeviceTypeMap get all device type map.

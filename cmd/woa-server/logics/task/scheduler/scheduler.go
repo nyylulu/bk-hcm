@@ -130,7 +130,7 @@ type Interface interface {
 	// AddCvmDevices check and update cvm device
 	AddCvmDevices(kit *kit.Kit, taskId string, generateId uint64, order *types.ApplyOrder) error
 	// UpdateOrderStatus check generate record by order id
-	UpdateOrderStatus(suborderID string) error
+	UpdateOrderStatus(resType types.ResourceType, suborderID string) error
 	// UpdateHostOperator update operator of host
 	UpdateHostOperator(info *types.DeviceInfo, hostId int64, operator string) error
 	// ProcessInitStep process init step
@@ -158,6 +158,9 @@ type Interface interface {
 	CancelApplyTicketCrp(kt *kit.Kit, req *types.CancelApplyTicketCrpReq) error
 	// VerifyCvmGPUChargeMonth verify cvm gpu charge month
 	VerifyCvmGPUChargeMonth(kt *kit.Kit, subOrders []*types.Suborder) error
+
+	// CreateUpgradeTicketANDOrder create upgrade ticket and order
+	CreateUpgradeTicketANDOrder(kt *kit.Kit, param *types.ApplyReq) (*types.CreateUpgradeCrpOrderResult, error)
 }
 
 // scheduler provides resource apply service
@@ -1770,6 +1773,12 @@ func (s *scheduler) StartApplyOrder(kt *kit.Kit, param *types.StartApplyOrderReq
 			return fmt.Errorf("cannot terminate order %s, for its stage %s != %s", order.SubOrderId, order.Stage,
 				types.TicketStageSuspend)
 		}
+
+		// TODO 暂不支持重试升降配类型单据
+		if order.ResourceType == types.ResourceTypeUpgradeCvm {
+			logs.Errorf("cannot start order %s, for its resource type is %s", order.SubOrderId, order.ResourceType)
+			return fmt.Errorf("CVM升降配单据暂不支持重试")
+		}
 	}
 
 	// set order status wait
@@ -2014,6 +2023,12 @@ func (s *scheduler) ModifyApplyOrder(kt *kit.Kit, param *types.ModifyApplyReq) e
 			types.TicketStageSuspend)
 	}
 
+	// TODO 暂不支持重试升降配类型单据
+	if order.ResourceType == types.ResourceTypeUpgradeCvm {
+		logs.Errorf("cannot modify order %s, for its resource type is %s", order.SubOrderId, order.ResourceType)
+		return fmt.Errorf("CVM升降配暂不支持修改单据重试")
+	}
+
 	// validate modification
 	if err = s.validateModification(kt, order, param); err != nil {
 		logs.Errorf("modification is invalid, subOrderID: %s, err: %v, rid: %s", order.SubOrderId, err, kt.Rid)
@@ -2102,11 +2117,11 @@ func (s *scheduler) validateReplicasAndModifyParam(kt *kit.Kit, order *types.App
 	}
 
 	// 获取“已生产”的机型及数量并计算“已生产”的总核数
-	deviceTypeCountMap := calProductDeviceTypeCountMap(deviceInfos, false)
-	productSuccCPUCore, err := s.matcher.GetCpuCoreSum(kt, deviceTypeCountMap)
+	_, deliverGroupCntMap := calProductDeviceTypeCountMap(deviceInfos, false)
+	productSuccCPUCore, _, err := s.matcher.GetCpuCoreSum(kt, deliverGroupCntMap)
 	if err != nil {
-		logs.Errorf("get product cpu core failed, subOrderID: %s, err: %v, deviceTypeCountMap: %v, rid: %s",
-			order.SubOrderId, err, deviceTypeCountMap, kt.Rid)
+		logs.Errorf("get product cpu core failed, subOrderID: %s, err: %v, deviceTypeCountMap: %+v, rid: %s",
+			order.SubOrderId, err, deliverGroupCntMap, kt.Rid)
 		return nil, err
 	}
 
@@ -2456,7 +2471,16 @@ func (s *scheduler) GetGenerateRecords(kt *kit.Kit, subOrderId string) ([]*types
 
 // AddCvmDevices check and add cvm device
 func (s *scheduler) AddCvmDevices(kt *kit.Kit, taskId string, generateId uint64, order *types.ApplyOrder) error {
-	if err := s.generator.AddCvmDevices(kt, taskId, generateId, order, order.Spec.Zone); err != nil {
+	var err error
+	switch order.ResourceType {
+	// 升降配使用不同的CRP接口轮询单据状态
+	case types.ResourceTypeUpgradeCvm:
+		err = s.generator.AddUpgradeCvmDevices(kt, taskId, generateId, order)
+	default:
+		err = s.generator.AddCvmDevices(kt, taskId, generateId, order, order.Spec.Zone)
+	}
+
+	if err != nil {
 		logs.Errorf("failed to check and update cvm device, orderId: %s, err: %v, rid: %s", err, order.SubOrderId,
 			kt.Rid)
 		return err
@@ -2465,8 +2489,8 @@ func (s *scheduler) AddCvmDevices(kt *kit.Kit, taskId string, generateId uint64,
 }
 
 // UpdateOrderStatus check generate record by order id
-func (s *scheduler) UpdateOrderStatus(suborderID string) error {
-	return s.generator.UpdateOrderStatus(suborderID)
+func (s *scheduler) UpdateOrderStatus(resType types.ResourceType, suborderID string) error {
+	return s.generator.UpdateOrderStatus(resType, suborderID)
 }
 
 // GetMatcher get matcher
@@ -2955,8 +2979,12 @@ func (s *scheduler) revokeApplyOrder(kt *kit.Kit, subOrderId string, taskIDs []s
 }
 
 // calProductDeviceTypeCountMap calculate device type count map
-func calProductDeviceTypeCountMap(devices []*types.DeviceInfo, checkDelivered bool) map[string]int {
+func calProductDeviceTypeCountMap(devices []*types.DeviceInfo, checkDelivered bool) (
+	map[string]int, map[types.DeliveredCVMKey]int) {
+
 	deviceTypeCountMap := make(map[string]int)
+	deliverGroupCntMap := make(map[types.DeliveredCVMKey]int)
+
 	for _, device := range devices {
 		if checkDelivered && !device.IsDelivered {
 			continue
@@ -2966,6 +2994,17 @@ func calProductDeviceTypeCountMap(devices []*types.DeviceInfo, checkDelivered bo
 			deviceTypeCountMap[device.DeviceType] = 0
 		}
 		deviceTypeCountMap[device.DeviceType]++
+
+		deliveredKey := types.DeliveredCVMKey{
+			DeviceType: device.DeviceType,
+			Region:     device.CloudRegion,
+			Zone:       device.CloudZone,
+		}
+
+		if _, ok := deliverGroupCntMap[deliveredKey]; !ok {
+			deliverGroupCntMap[deliveredKey] = 0
+		}
+		deliverGroupCntMap[deliveredKey]++
 	}
-	return deviceTypeCountMap
+	return deviceTypeCountMap, deliverGroupCntMap
 }

@@ -103,6 +103,13 @@ func (kt *Kit) NewSubKitWithRid(subRid string) *Kit {
 	return newSubKit
 }
 
+// NewSubKitWithCtx 生成子kit, 变更context
+func (kt *Kit) NewSubKitWithCtx(newCtx context.Context) *Kit {
+	newSubKit := converter.ValToPtr(*kt)
+	newSubKit.Ctx = newCtx
+	return newSubKit
+}
+
 // WithAsyncSource 生成子kit 设置对应的请求来源为 AsynchronousTasks
 func (kt *Kit) WithAsyncSource() *Kit {
 	newKit := converter.ValToPtr(*kt)
@@ -217,4 +224,12 @@ func (kt *Kit) SetBackendTenantID() {
 	}
 
 	kt.TenantID = constant.DefaultTenantID
+}
+
+// Clone the kit and returns the new kit with a new context.
+// usually used for go routines to avoid the kit's context being canceled after the calling function ends
+func (kt *Kit) Clone() *Kit {
+	newKit := converter.ValToPtr(*kt)
+	newKit.Ctx = context.WithValue(context.TODO(), constant.RidKey, kt.Rid)
+	return newKit
 }
