@@ -285,7 +285,8 @@ func (m *Matcher) UpdateApplyOrderStatus(order *types.ApplyOrder) error {
 		}
 	}
 
-	pendingCnt, status, stage := m.calcApplyOrderStatus(matchedCnt, order.TotalNum, hasGenRecordMatching)
+	pendingCnt, status, stage := m.calcApplyOrderStatus(order.ResourceType, matchedCnt, order.TotalNum,
+		hasGenRecordMatching)
 
 	if isSuspend && suspendCnt+matchedCnt >= int(order.TotalNum) {
 		status = types.ApplyStatusTerminate
@@ -316,14 +317,20 @@ func (m *Matcher) UpdateApplyOrderStatus(order *types.ApplyOrder) error {
 	return nil
 }
 
-func (m *Matcher) calcApplyOrderStatus(matchedCnt int, totalNum uint, hasGenRecordMatching bool) (
-	int, types.ApplyStatus, types.TicketStage) {
+func (m *Matcher) calcApplyOrderStatus(resType types.ResourceType, matchedCnt int, totalNum uint,
+	hasGenRecordMatching bool) (int, types.ApplyStatus, types.TicketStage) {
 
 	pendingCnt := 0
 	status := types.ApplyStatusDone
 	stage := types.TicketStageDone
 	if matchedCnt < int(totalNum) {
 		pendingCnt = int(totalNum) - matchedCnt
+		// TODO 临时，升降配order不进入matchedSome，直接失败
+		if resType == types.ResourceTypeUpgradeCvm {
+			stage = types.TicketStageSuspend
+			status = types.ApplyStatusTerminate
+		}
+
 		// do not set status to MATCHED_SOME if there are matching tasks
 		status = types.ApplyStatusMatchedSome
 		if hasGenRecordMatching {
