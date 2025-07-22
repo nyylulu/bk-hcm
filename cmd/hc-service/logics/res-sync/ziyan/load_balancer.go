@@ -412,7 +412,9 @@ func (cli *client) updateLoadBalancer(kt *kit.Kit, accountID string, region stri
 	var updateReq protocloud.TCloudClbBatchUpdateReq
 
 	for id, clb := range updateMap {
-		updateReq.Lbs = append(updateReq.Lbs, convCloudToDBUpdate(id, clb, vpcMap, subnetMap, region))
+		one := convCloudToDBUpdate(id, clb, vpcMap, subnetMap, region)
+		logs.Infof("convCloudToDBUpdate, one: %+v, rid: %s", one, kt.Rid)
+		updateReq.Lbs = append(updateReq.Lbs, one)
 	}
 	if err := cli.dbCli.TCloudZiyan.LoadBalancer.BatchUpdate(kt, &updateReq); err != nil {
 		logs.Errorf("[%s] call data service to update load balancer failed, err: %v, rid: %s",

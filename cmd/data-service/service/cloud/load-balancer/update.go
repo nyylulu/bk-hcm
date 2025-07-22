@@ -107,6 +107,7 @@ func batchUpdateLoadBalancer[T corelb.Extension](cts *rest.Contexts, svc *lbSvc)
 				Memo:             lb.Memo,
 				Reviser:          cts.Kit.User,
 			}
+			logs.Infof("update loadbalancer, req: %+v, rid: %s", update, cts.Kit.Rid)
 
 			if lb.Extension != nil {
 				extension, exist := extensionMap[lb.ID]
