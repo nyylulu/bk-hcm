@@ -26,6 +26,7 @@ import (
 	"hcm/pkg"
 	"hcm/pkg/api/core"
 	"hcm/pkg/api/core/cloud/cvm"
+	protocloud "hcm/pkg/api/data-service/cloud"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/tools"
@@ -122,7 +123,7 @@ func (s *service) getInstanceDetails(kt *kit.Kit, bkBizID int64, user string, up
 	// generate upgrade cvm list
 	rst := make([]*types.UpgradeCVMSpec, 0, len(upgradeList))
 	for _, item := range upgradeList {
-		var cvmDetail cvm.BaseCvm
+		var cvmDetail cvm.Cvm[cvm.TCloudZiyanHostExtension]
 		var exists bool
 		if item.InstanceID != "" {
 			cvmDetail, exists = instanceIDsDetails[item.InstanceID]
@@ -144,11 +145,14 @@ func (s *service) getInstanceDetails(kt *kit.Kit, bkBizID int64, user string, up
 			return nil, fmt.Errorf("instance %s is not belong to biz %d", item.InstanceID, bkBizID)
 		}
 		rst = append(rst, &types.UpgradeCVMSpec{
-			InstanceID:         cvmDetail.CloudID,
-			DeviceType:         cvmDetail.MachineType,
-			RegionID:           cvmDetail.Region,
-			ZoneID:             cvmDetail.Zone,
-			TargetInstanceType: item.TargetInstanceType,
+			InstanceID:           cvmDetail.CloudID,
+			PrivateIPv4Addresses: cvmDetail.PrivateIPv4Addresses,
+			PrivateIPv6Addresses: cvmDetail.PrivateIPv6Addresses,
+			BkAssetID:            cvmDetail.Extension.BkAssetID,
+			DeviceType:           cvmDetail.MachineType,
+			RegionID:             cvmDetail.Region,
+			ZoneID:               cvmDetail.Zone,
+			TargetInstanceType:   item.TargetInstanceType,
 		})
 	}
 
@@ -156,39 +160,43 @@ func (s *service) getInstanceDetails(kt *kit.Kit, bkBizID int64, user string, up
 }
 
 func (s *service) listCVMByInstanceIDANDBkHostID(kt *kit.Kit, bkHostIDs []int64, instanceIDs []string) (
-	map[int64]cvm.BaseCvm, map[string]cvm.BaseCvm, error) {
+	map[int64]cvm.Cvm[cvm.TCloudZiyanHostExtension],
+	map[string]cvm.Cvm[cvm.TCloudZiyanHostExtension], error) {
 
-	listReq := &core.ListReq{
+	listField := []string{"id", "cloud_id", "bk_biz_id", "bk_host_id", "machine_type", "region", "zone",
+		"private_ipv4_addresses", "private_ipv6_addresses", "extension"}
+
+	listReq := &protocloud.CvmListReq{
 		Filter: tools.ContainersExpression("bk_host_id", bkHostIDs),
 		Page:   core.NewDefaultBasePage(),
-		Fields: []string{"id", "cloud_id", "bk_biz_id", "bk_host_id", "machine_type", "region", "zone"},
+		Field:  listField,
 	}
-	cvms, err := s.client.DataService().Global.Cvm.ListCvm(kt, listReq)
+	cvms, err := s.client.DataService().TCloudZiyan.Cvm.ListCvmExt(kt.Ctx, kt.Header(), listReq)
 	if err != nil {
 		logs.Errorf("failed to get instance details by bk_host_id, err: %v, bk_host_id: %v, rid: %s", err,
 			bkHostIDs, kt.Rid)
 		return nil, nil, err
 	}
-	bkHostIDDetails := make(map[int64]cvm.BaseCvm)
+	bkHostIDDetails := make(map[int64]cvm.Cvm[cvm.TCloudZiyanHostExtension])
 	for _, item := range cvms.Details {
 		bkHostIDDetails[item.BkHostID] = item
 	}
 
-	listReq2 := &core.ListReq{
+	listReq2 := &protocloud.CvmListReq{
 		Filter: tools.ExpressionAnd(
 			tools.RuleEqual("vendor", enumor.TCloudZiyan),
 			tools.RuleIn("cloud_id", instanceIDs),
 		),
-		Page:   core.NewDefaultBasePage(),
-		Fields: []string{"id", "cloud_id", "bk_biz_id", "bk_host_id", "machine_type", "region", "zone"},
+		Page:  core.NewDefaultBasePage(),
+		Field: listField,
 	}
-	cvms, err = s.client.DataService().Global.Cvm.ListCvm(kt, listReq2)
+	cvms, err = s.client.DataService().TCloudZiyan.Cvm.ListCvmExt(kt.Ctx, kt.Header(), listReq2)
 	if err != nil {
 		logs.Errorf("failed to get instance details by cloud_id, err: %v, cloud_ids: %v, rid: %s", err,
 			instanceIDs, kt.Rid)
 		return nil, nil, err
 	}
-	instanceIDsDetails := make(map[string]cvm.BaseCvm)
+	instanceIDsDetails := make(map[string]cvm.Cvm[cvm.TCloudZiyanHostExtension])
 	for _, item := range cvms.Details {
 		instanceIDsDetails[item.CloudID] = item
 	}

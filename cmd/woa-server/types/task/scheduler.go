@@ -68,11 +68,14 @@ type ApplyOrder struct {
 
 // UpgradeCVMSpec cvm升降配规格
 type UpgradeCVMSpec struct {
-	InstanceID         string `json:"instance_id" bson:"instance_id"`
-	DeviceType         string `json:"device_type" bson:"device_type"`
-	RegionID           string `json:"region_id" bson:"region_id"`
-	ZoneID             string `json:"zone_id" bson:"zone_id"`
-	TargetInstanceType string `json:"target_instance_type" bson:"target_instance_type"`
+	InstanceID           string   `json:"instance_id" bson:"instance_id"`
+	PrivateIPv4Addresses []string `json:"private_ipv4_addresses" bson:"private_ipv4_addresses"`
+	PrivateIPv6Addresses []string `json:"private_ipv6_addresses" bson:"private_ipv6_addresses"`
+	BkAssetID            string   `json:"bk_asset_id" bson:"bk_asset_id"`
+	DeviceType           string   `json:"device_type" bson:"device_type"`
+	RegionID             string   `json:"region_id" bson:"region_id"`
+	ZoneID               string   `json:"zone_id" bson:"zone_id"`
+	TargetInstanceType   string   `json:"target_instance_type" bson:"target_instance_type"`
 }
 
 // ResourceType resource type
