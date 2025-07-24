@@ -173,14 +173,22 @@ func (g *Generator) upgradeCvmAndWatch(kt *kit.Kit, order *types.ApplyOrder, req
 	// check cvm task result and update generate record
 	go func() {
 		defer func() {
+			// 临时的异步实现，需在generate完成后更新step和order status
 			logs.Infof("update generate step, order id: %s, err: %v, rid: %s", order.SubOrderId, err, kt.Rid)
 			if subErr := record.UpdateGenerateStep(order.SubOrderId, order.TotalNum, err); subErr != nil {
 				logs.Errorf("failed to generate device, order id: %s, err: %v", order.SubOrderId, subErr)
 				return
 			}
+			if err != nil {
+				// check all generate records and update apply order status
+				if subErr := g.UpdateOrderStatus(order.ResourceType, order.SubOrderId); subErr != nil {
+					logs.Errorf("failed to update order status, subOrderId: %s, err: %v, rid: %s",
+						order.SubOrderId, subErr, kt.Rid)
+				}
+			}
 		}()
 
-		err := g.AddUpgradeCvmDevices(backendKt, crpOrderID, generateID, order)
+		err = g.AddUpgradeCvmDevices(backendKt, crpOrderID, generateID, order)
 		if err != nil {
 			logs.Errorf("failed to upgrade cvm when add upgrade cvm devices, order id: %s, crp id: %s, err: %v, rid: %s",
 				order.SubOrderId, crpOrderID, err, backendKt.Rid)
