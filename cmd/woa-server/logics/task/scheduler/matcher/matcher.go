@@ -400,6 +400,7 @@ func (m *Matcher) calDeviceTypeCountMap(devices []*types.DeviceInfo, diskType en
 			deliverGroupCntMap[deliveredKey] = 0
 		}
 		deliverGroupCntMap[deliveredKey]++
+		logs.Infof("deliverGroupCntMap: %v", deliverGroupCntMap)
 	}
 	return deviceTypeCountMap, deliverGroupCntMap
 }
@@ -486,6 +487,8 @@ func (m *Matcher) GetCpuCoreSum(kt *kit.Kit, deviceTypeCountMap map[types.Delive
 			DiskType:   deliverGroup.DiskType,
 		}
 		verifyGroupMap[verifyGroupKey] += deliveredCore
+		logs.Infof("get deliver group: %+v, count: %d, cpu core: %d, verify_group: %+v, verify_map: %+v, rid: %s",
+			deliverGroup, count, deviceTypeInfo.CPUAmount, verifyGroupKey, verifyGroupMap)
 	}
 
 	verifyGroups := make([]plan.VerifyResPlanElemV2, 0, len(verifyGroupMap))
