@@ -627,7 +627,7 @@ func (g *Generator) buildUpgradeDevicesInfo(items []*types.DeviceInfo, order *ty
 				item.AssetId)
 		} else {
 			// update device type from cc
-			device.DeviceType = host.SvrDeviceClass
+			// device.DeviceType = host.SvrDeviceClass
 			device.ZoneName = host.SubZone
 			zoneId, err := strconv.Atoi(host.SubZoneId)
 			if err != nil {
