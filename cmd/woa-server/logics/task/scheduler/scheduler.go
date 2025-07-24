@@ -75,7 +75,8 @@ type Interface interface {
 	// GetApplyAuditItsm gets resource apply ticket itsm audit info
 	GetApplyAuditItsm(kit *kit.Kit, param *types.GetApplyAuditItsmReq) (*types.GetApplyAuditItsmRst, error)
 	// GetApplyAuditCrp gets resource apply ticket crp audit info
-	GetApplyAuditCrp(kit *kit.Kit, param *types.GetApplyAuditCrpReq) (*types.GetApplyAuditCrpRst, error)
+	GetApplyAuditCrp(kit *kit.Kit, param *types.GetApplyAuditCrpReq, resType types.ResourceType) (
+		*types.GetApplyAuditCrpRst, error)
 	// AuditTicket audit resource apply ticket
 	AuditTicket(kit *kit.Kit, param *types.ApplyAuditReq) error
 	// AutoAuditTicket system automatic audit resource apply ticket callback
@@ -452,7 +453,7 @@ func (s *scheduler) getItsmApplyAuditRst(kt *kit.Kit, param *types.GetApplyAudit
 }
 
 // GetApplyAuditCrp gets resource apply ticket audit info
-func (s *scheduler) GetApplyAuditCrp(kit *kit.Kit, param *types.GetApplyAuditCrpReq) (
+func (s *scheduler) GetApplyAuditCrp(kit *kit.Kit, param *types.GetApplyAuditCrpReq, resType types.ResourceType) (
 	*types.GetApplyAuditCrpRst, error) {
 
 	logsReq := cvmapi.NewCvmQueryApproveLogReq(&cvmapi.GetCvmApproveLogParams{OrderId: param.CrpTicketId})
@@ -473,22 +474,22 @@ func (s *scheduler) GetApplyAuditCrp(kit *kit.Kit, param *types.GetApplyAuditCrp
 		return nil, fmt.Errorf("cvm approve logs is empty")
 	}
 
-	orderReq := cvmapi.NewOrderQueryReq(&cvmapi.OrderQueryParam{OrderId: []string{param.CrpTicketId}})
-	orderResp, err := s.crpCli.QueryCvmOrders(kit.Ctx, kit.Header(), orderReq)
-	if err != nil {
-		logs.Errorf("failed to query cvm order, err: %v, rid: %s", err, kit.Rid)
-		return nil, err
-	}
-
-	if orderResp.Error.Code != 0 {
-		logs.Errorf("failed to query cvm order, err: %v, trace id: %s, rid: %s",
-			orderResp.Error.Message, orderResp.TraceId, kit.Rid)
-		return nil, errors.New(orderResp.Error.Message)
-	}
-
-	if orderResp.Result == nil || len(orderResp.Result.Data) == 0 {
-		logs.Errorf("crp order is empty, trace id: %s, rid: %s", orderResp.TraceId, kit.Rid)
-		return nil, fmt.Errorf("crp order is empty")
+	currentStepStatus := new(cvmapi.OrderItem)
+	switch resType {
+	case types.ResourceTypeUpgradeCvm:
+		currentStepStatus, err = s.getUpgradeCurrentStepStatus(kit, param.CrpTicketId)
+		if err != nil {
+			logs.Errorf("failed to get upgrade current step status, err: %v, ticket_id: %s, rid: %s", err,
+				param.CrpTicketId, kit.Rid)
+			return nil, err
+		}
+	default:
+		currentStepStatus, err = s.getCVMCurrentStepStatus(kit, param.CrpTicketId)
+		if err != nil {
+			logs.Errorf("failed to get cvm current step status, err: %v, ticket_id: %s, rid: %s", err,
+				param.CrpTicketId, kit.Rid)
+			return nil, err
+		}
 	}
 
 	resp := &types.GetApplyAuditCrpRst{
@@ -498,8 +499,6 @@ func (s *scheduler) GetApplyAuditCrp(kit *kit.Kit, param *types.GetApplyAuditCrp
 			CurrentStep: types.ApplyAuditCrpStep{
 				CurrentTaskNo:   logsResp.Result.CurrentTaskNo,
 				CurrentTaskName: logsResp.Result.CurrentTaskName,
-				Status:          orderResp.Result.Data[0].Status,
-				StatusDesc:      orderResp.Result.Data[0].StatusDesc,
 			},
 		},
 	}
@@ -515,8 +514,77 @@ func (s *scheduler) GetApplyAuditCrp(kit *kit.Kit, param *types.GetApplyAuditCrp
 		})
 	}
 
-	for _, failedInfo := range orderResp.Result.Data[0].FailInstanceInfos {
-		resp.CurrentStep.FailInstanceInfo = append(resp.CurrentStep.FailInstanceInfo, types.FailInstanceInfo{
+	resp = generateApplyAuditCurStep(resp, currentStepStatus)
+
+	return resp, nil
+}
+
+func (s *scheduler) getCVMCurrentStepStatus(kt *kit.Kit, crpTicketID string) (*cvmapi.OrderItem, error) {
+	orderReq := cvmapi.NewOrderQueryReq(&cvmapi.OrderQueryParam{OrderId: []string{crpTicketID}})
+	orderResp, err := s.crpCli.QueryCvmOrders(kt.Ctx, kt.Header(), orderReq)
+	if err != nil {
+		logs.Errorf("failed to query cvm order, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	if orderResp.Error.Code != 0 {
+		logs.Errorf("failed to query cvm order, err: %v, trace id: %s, rid: %s",
+			orderResp.Error.Message, orderResp.TraceId, kt.Rid)
+		return nil, errors.New(orderResp.Error.Message)
+	}
+
+	if orderResp.Result == nil || len(orderResp.Result.Data) == 0 {
+		logs.Errorf("crp order is empty, trace id: %s, rid: %s", orderResp.TraceId, kt.Rid)
+		return nil, fmt.Errorf("crp order is empty")
+	}
+
+	return orderResp.Result.Data[0], nil
+}
+
+func (s *scheduler) getUpgradeCurrentStepStatus(kt *kit.Kit, crpTicketID string) (*cvmapi.OrderItem, error) {
+	orderReq := cvmapi.NewCvmUpgradeDetailReq(&cvmapi.UpgradeDetailParam{OrderID: crpTicketID})
+	orderResp, err := s.crpCli.QueryCvmUpgradeDetail(kt, orderReq)
+	if err != nil {
+		logs.Errorf("failed to query upgrade order, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	if orderResp.Error.Code != 0 {
+		logs.Errorf("failed to query upgrade order, err: %v, trace id: %s, rid: %s",
+			orderResp.Error.Message, orderResp.TraceId, kt.Rid)
+		return nil, errors.New(orderResp.Error.Message)
+	}
+
+	if orderResp.Result == nil {
+		logs.Errorf("crp upgrade order is empty, trace id: %s, rid: %s", orderResp.TraceId, kt.Rid)
+		return nil, fmt.Errorf("crp upgrade order is empty")
+	}
+
+	orderInfo := &cvmapi.OrderItem{
+		OrderId:           crpTicketID,
+		Status:            int(orderResp.Result.Status),
+		StatusDesc:        orderResp.Result.StatusMsg,
+		FailInstanceInfos: nil,
+		CreateTime:        orderResp.Result.CreateTime,
+	}
+
+	if orderResp.Result.Status == enumor.CrpUpgradeOrderFailed {
+		orderInfo.FailInstanceInfos = append(orderInfo.FailInstanceInfos, cvmapi.FailInstanceInfo{
+			ErrorMsg: orderResp.Result.StatusMsg,
+		})
+	}
+	return orderInfo, nil
+}
+
+// generateApplyAuditCurStep generate apply audit current step
+func generateApplyAuditCurStep(auditRst *types.GetApplyAuditCrpRst,
+	crpOrderRst *cvmapi.OrderItem) *types.GetApplyAuditCrpRst {
+
+	auditRst.CurrentStep.Status = crpOrderRst.Status
+	auditRst.CurrentStep.StatusDesc = crpOrderRst.StatusDesc
+
+	for _, failedInfo := range crpOrderRst.FailInstanceInfos {
+		auditRst.CurrentStep.FailInstanceInfo = append(auditRst.CurrentStep.FailInstanceInfo, types.FailInstanceInfo{
 			ErrorMsgTypeEn: failedInfo.ErrorMsgTypeEn,
 			ErrorType:      failedInfo.ErrorType,
 			ErrorMsgTypeCn: failedInfo.ErrorMsgTypeCn,
@@ -527,7 +595,7 @@ func (s *scheduler) GetApplyAuditCrp(kit *kit.Kit, param *types.GetApplyAuditCrp
 		})
 	}
 
-	return resp, nil
+	return auditRst
 }
 
 // AuditTicket audit resource apply ticket
