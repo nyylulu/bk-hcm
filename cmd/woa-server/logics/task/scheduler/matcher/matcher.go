@@ -1008,8 +1008,12 @@ func (m *Matcher) notifyApplyDone(orderId uint64) error {
 		}
 		createTime = ticket.CreateAt.In(location).Format(constant.DateTimeLayout)
 	}
+	resType := types.ResourceTypeCvm
+	if len(ticket.Suborders) > 0 && ticket.Suborders[0] != nil {
+		resType = ticket.Suborders[0].ResourceType
+	}
 	content := fmt.Sprintf(noticeFmt, orderId, orderId, ticket.User, bizName, requireName, createTime, ticket.Remark,
-		orderId, ticket.BkBizId)
+		orderId, ticket.BkBizId, resType)
 
 	for _, user := range users {
 		resp, err := m.bkchat.SendApplyDoneMsg(nil, nil, user, content)

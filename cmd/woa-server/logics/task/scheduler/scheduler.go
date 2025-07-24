@@ -1052,7 +1052,12 @@ func (s *scheduler) CreateApplyOrder(kt *kit.Kit, param *types.ApplyReq) (*types
 			return err
 		}
 
-		resp, err := s.itsm.CreateApplyTicket(sessionKit, param.User, rst.OrderId, param.BkBizId, param.Remark)
+		resType := types.ResourceTypeCvm
+		if len(param.Suborders) > 0 && param.Suborders[0] != nil {
+			resType = param.Suborders[0].ResourceType
+		}
+		resp, err := s.itsm.CreateApplyTicket(sessionKit, param.User, rst.OrderId, param.BkBizId, param.Remark,
+			string(resType))
 		if err != nil {
 			logs.Errorf("failed to create apply order, for create itsm ticket err: %v, rid: %s, orderId: %d, BkBIzId: %d",
 				err, kt.Rid, rst.OrderId, param.BkBizId)
