@@ -485,6 +485,7 @@ func (g *Generator) createUpgradeDeviceInfo(kt *kit.Kit, order *types.ApplyOrder
 			Ip:               "",
 			AssetId:          host.InstanceAssetID,
 			InstanceID:       host.InstanceID,
+			DeviceType:       host.TargetInstanceType,
 			GenerateTaskId:   taskID,
 			GenerateTaskLink: cvmapi.CvmUpgradeLinkPrefix + taskID,
 			Deliverer:        "icr",
