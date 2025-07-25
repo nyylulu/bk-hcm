@@ -292,20 +292,29 @@ func (c *Controller) convResPlanDemandRespAndFilter(kt *kit.Kit, req *ptypes.Lis
 		}
 		demandItem := convListResPlanDemandItemByTable(demand, expectDateStr)
 
-		// 计算已消耗/剩余的核心数和实例数
-		if allAppliedCpuCore, ok := planAppliedCore[demandKey]; ok {
-			demandAppliedCpuCore := min(allAppliedCpuCore, demandItem.TotalCpuCore)
-			demandItem.AppliedCpuCore = demandAppliedCpuCore
-			planAppliedCore[demandKey] -= demandAppliedCpuCore
+		// 对一个预测，如果未通过固定的planType消耗完，尝试匹配不带planType的申领记录（目前主要是升降配类型）
+		matchPlanType := []enumor.PlanTypeCode{demandKey.PlanType, enumor.PlanTypeCodeIgnore}
+		for _, planType := range matchPlanType {
+			demandKey.PlanType = planType
+			// 计算已消耗/剩余的核心数和实例数
+			if allAppliedCpuCore, ok := planAppliedCore[demandKey]; ok {
+				demandAppliedCpuCore := min(allAppliedCpuCore, demandItem.RemainedCpuCore)
+				demandItem.AppliedCpuCore = demandAppliedCpuCore
+				planAppliedCore[demandKey] -= demandAppliedCpuCore
 
-			deviceCpuCore := decimal.NewFromInt(deviceTypes[demandItem.DeviceType].CpuCore)
-			deviceMemory := decimal.NewFromInt(deviceTypes[demandItem.DeviceType].Memory)
-			demandItem.AppliedOS = decimal.NewFromInt(demandAppliedCpuCore).Div(deviceCpuCore)
-			demandItem.AppliedMemory = demandItem.AppliedOS.Mul(deviceMemory).IntPart()
+				deviceCpuCore := decimal.NewFromInt(deviceTypes[demandItem.DeviceType].CpuCore)
+				deviceMemory := decimal.NewFromInt(deviceTypes[demandItem.DeviceType].Memory)
+				demandItem.AppliedOS = decimal.NewFromInt(demandAppliedCpuCore).Div(deviceCpuCore)
+				demandItem.AppliedMemory = demandItem.AppliedOS.Mul(deviceMemory).IntPart()
+			}
+			demandItem.RemainedOS = demandItem.TotalOS.Sub(demandItem.AppliedOS)
+			demandItem.RemainedCpuCore = demandItem.TotalCpuCore - demandItem.AppliedCpuCore
+			demandItem.RemainedMemory = demandItem.TotalMemory - demandItem.AppliedMemory
+
+			if demandItem.RemainedCpuCore <= 0 {
+				break
+			}
 		}
-		demandItem.RemainedOS = demandItem.TotalOS.Sub(demandItem.AppliedOS)
-		demandItem.RemainedCpuCore = demandItem.TotalCpuCore - demandItem.AppliedCpuCore
-		demandItem.RemainedMemory = demandItem.TotalMemory - demandItem.AppliedMemory
 
 		// 不在筛选范围内的，过滤
 		belong, err := c.demandBelongListReq(kt, demandItem, req)
@@ -317,46 +326,58 @@ func (c *Controller) convResPlanDemandRespAndFilter(kt *kit.Kit, req *ptypes.Lis
 			continue
 		}
 
-		// 计算demand状态，can_apply（可申领）、not_ready（未到申领时间）、expired（已过期）
-		status, demandRange, err := c.demandTime.GetDemandStatusByExpectTime(kt, demandItem.ExpectTime)
-		if err != nil {
-			logs.Warnf("failed to get demand status, err: %v, demand_id: %s, rid: %s", err, demand.ID, kt.Rid)
-		} else {
-			demandItem.SetStatus(status)
-			demandItem.CanApplyTime = demandRange.Start // 可申领时间
-			demandItem.ExpiredTime = demandRange.End    // 截止申领时间
-		}
-
-		// 目前即将过期核心数的逻辑等于可申领数（当月申领、当月过期）
-		if status == enumor.DemandStatusCanApply {
-			demandItem.ExpiringCpuCore = demandItem.RemainedCpuCore
-		}
-		if cvt.PtrToVal(demand.Locked) == enumor.CrpDemandLocked {
-			demandItem.Status = enumor.DemandStatusLocked
-		}
-		demandItem.StatusName = demandItem.Status.Name()
-
-		// 过滤状态的查询条件
+		// 更新demand状态并过滤状态的查询条件
+		demandItem = c.setDemandStatus(kt, demand.ID, cvt.PtrToVal(demand.Locked), demandItem)
 		if len(req.Statuses) > 0 && !slices.Contains(req.Statuses, demandItem.Status) {
 			continue
 		}
 
 		// 计算overview
-		overview.TotalCpuCore += demandItem.TotalCpuCore
-		overview.TotalAppliedCore += demandItem.AppliedCpuCore
-		overview.ExpiringCpuCore += demandItem.ExpiringCpuCore
-		if demand.PlanType.InPlan() {
-			overview.InPlanCpuCore += demandItem.TotalCpuCore
-			overview.InPlanAppliedCpuCore += demandItem.AppliedCpuCore
-		} else {
-			overview.OutPlanCpuCore += demandItem.TotalCpuCore
-			overview.OutPlanAppliedCpuCore += demandItem.AppliedCpuCore
-		}
-
+		calcDemandListOverview(overview, demandItem, demand.PlanType)
 		demandDetails = append(demandDetails, demandItem)
 	}
 
 	return overview, demandDetails, nil
+}
+
+func (c *Controller) setDemandStatus(kt *kit.Kit, demandID string, demandLockedStatus enumor.CrpDemandLockStatus,
+	demandItem *ptypes.ListResPlanDemandItem) *ptypes.ListResPlanDemandItem {
+
+	// 计算demand状态，can_apply（可申领）、not_ready（未到申领时间）、expired（已过期）
+	status, demandRange, err := c.demandTime.GetDemandStatusByExpectTime(kt, demandItem.ExpectTime)
+	if err != nil {
+		logs.Warnf("failed to get demand status, err: %v, demand_id: %s, rid: %s", err, demandID, kt.Rid)
+	} else {
+		demandItem.SetStatus(status)
+		demandItem.CanApplyTime = demandRange.Start // 可申领时间
+		demandItem.ExpiredTime = demandRange.End    // 截止申领时间
+	}
+
+	// 目前即将过期核心数的逻辑等于可申领数（当月申领、当月过期）
+	if status == enumor.DemandStatusCanApply {
+		demandItem.ExpiringCpuCore = demandItem.RemainedCpuCore
+	}
+	if demandLockedStatus == enumor.CrpDemandLocked {
+		demandItem.Status = enumor.DemandStatusLocked
+	}
+	demandItem.StatusName = demandItem.Status.Name()
+
+	return demandItem
+}
+
+func calcDemandListOverview(overview *ptypes.ListResPlanDemandOverview, demandItem *ptypes.ListResPlanDemandItem,
+	planType enumor.PlanTypeCode) {
+
+	overview.TotalCpuCore += demandItem.TotalCpuCore
+	overview.TotalAppliedCore += demandItem.AppliedCpuCore
+	overview.ExpiringCpuCore += demandItem.ExpiringCpuCore
+	if planType.InPlan() {
+		overview.InPlanCpuCore += demandItem.TotalCpuCore
+		overview.InPlanAppliedCpuCore += demandItem.AppliedCpuCore
+	} else {
+		overview.OutPlanCpuCore += demandItem.TotalCpuCore
+		overview.OutPlanAppliedCpuCore += demandItem.AppliedCpuCore
+	}
 }
 
 func (c *Controller) getDemandExpendKeyFromTable(kt *kit.Kit, demand rpd.ResPlanDemandTable, expectTime string,
@@ -386,6 +407,7 @@ func (c *Controller) getDemandExpendKeyFromTable(kt *kit.Kit, demand rpd.ResPlan
 		ObsProject:    demand.ObsProject,
 		RegionID:      demand.RegionID,
 	}
+	// TODO
 	// 机房裁撤需要忽略预测内、预测外 --story=121848852
 	if enumor.IsDissolveObsProjectForResPlan(demand.ObsProject) {
 		resPlanDemandExpendKey.PlanType = ""
@@ -410,8 +432,10 @@ func convListResPlanDemandItemByTable(table rpd.ResPlanDemandTable, expectTime s
 		DeviceType:       table.DeviceType,
 		TotalOS:          table.OS.Decimal,
 		AppliedOS:        decimal.NewFromInt(0),
+		RemainedOS:       table.OS.Decimal,
 		TotalCpuCore:     cvt.PtrToVal(table.CpuCore),
 		AppliedCpuCore:   0,
+		RemainedCpuCore:  cvt.PtrToVal(table.CpuCore),
 		TotalMemory:      cvt.PtrToVal(table.Memory),
 		TotalDiskSize:    cvt.PtrToVal(table.DiskSize),
 		RemainedDiskSize: cvt.PtrToVal(table.DiskSize),
@@ -1700,6 +1724,7 @@ func (c *Controller) GetProdResRemainPoolMatch(kt *kit.Kit, bkBizID int64, requi
 
 	// matching.
 	for prodResPlanKey, consumeCpuCore := range prodConsumePool {
+		// TODO 参考
 		// 当未显示指定预测内外时，需按 预测外 -> 预测内 的顺序依次尝试匹配
 		matchPlanType := []enumor.PlanTypeCode{prodResPlanKey.PlanType}
 		if prodResPlanKey.PlanType == "" {
