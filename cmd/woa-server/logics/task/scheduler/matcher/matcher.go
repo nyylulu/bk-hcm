@@ -729,8 +729,22 @@ func (m *Matcher) initDevice(info *types.DeviceInfo) (*types.DeviceInitMsg, erro
 		return &types.DeviceInitMsg{Device: info}, nil
 	}
 
+	// 检查是否有进行中的初始化任务
+	initRecord, err := record.GetInitRecord(core.NewBackendKit(), info.SubOrderId, info.Ip)
+	if err != nil {
+		logs.Errorf("failed to get init record, err: %v, subOrderID: %s, ip: %s", err, info.SubOrderId, info.Ip)
+		return nil, err
+	}
+
+	// 把进行中的任务返回，不需要重复创建新的标准运维任务
+	if initRecord != nil && initRecord.Status == types.InitStatusHandling {
+		logs.Infof("init device host is initialing, need not init, subOrderID: %s, ip: %s", info.SubOrderId, info.Ip)
+		return &types.DeviceInitMsg{Device: info, JobUrl: initRecord.TaskLink, JobID: initRecord.TaskId,
+			BizID: int64(info.BkBizId)}, nil
+	}
+
 	// create init record
-	if err := record.CreateInitRecord(info.SubOrderId, info.Ip); err != nil {
+	if err = record.CreateInitRecord(info.SubOrderId, info.Ip); err != nil {
 		logs.Errorf("host %s failed to initialize, err: %v", info.Ip, err)
 		return nil, fmt.Errorf("host %s failed to initialize, err: %v", info.Ip, err)
 	}
