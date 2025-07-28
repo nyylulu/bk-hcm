@@ -15,6 +15,7 @@ package matcher
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"sync"
@@ -27,6 +28,7 @@ import (
 	"hcm/cmd/woa-server/logics/task/scheduler/record"
 	"hcm/cmd/woa-server/logics/task/sops"
 	"hcm/cmd/woa-server/model/task"
+	daltypes "hcm/cmd/woa-server/storage/dal/types"
 	cfgtype "hcm/cmd/woa-server/types/config"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
@@ -733,7 +735,7 @@ func (m *Matcher) initDevice(info *types.DeviceInfo) (*types.DeviceInitMsg, erro
 	initRecord, err := record.GetInitRecord(core.NewBackendKit(), info.SubOrderId, info.Ip)
 	logs.Infof("DEBUG:initDevice:sops:process:check:matcher:ieod init, subOrderID: %s, ip: %s, infoBkBizID: %d, "+
 		"err: %v, initRecord: %+v", info.SubOrderId, info.Ip, info.BkBizId, err, cvt.PtrToVal(initRecord))
-	if err != nil {
+	if err != nil && !errors.Is(err, daltypes.ErrDocumentNotFound) {
 		logs.Errorf("failed to get init record, err: %v, subOrderID: %s, ip: %s", err, info.SubOrderId, info.Ip)
 		return nil, err
 	}
@@ -761,8 +763,7 @@ func (m *Matcher) initDevice(info *types.DeviceInfo) (*types.DeviceInitMsg, erro
 
 	// 把进行中的任务返回，不需要重复创建新的标准运维任务
 	if initRecord != nil && initRecord.Status == types.InitStatusHandling {
-		logs.Infof("DEBUG:initDevice:init device host is initialing, need not init, subOrderID: %s, ip: %s",
-			info.SubOrderId, info.Ip)
+		logs.Infof("DEBUG:initDevice:init device host is initialing, need not init, subOrderID: %s, ip: %s", info.SubOrderId, info.Ip)
 		return &types.DeviceInitMsg{Device: info, JobUrl: initRecord.TaskLink, JobID: initRecord.TaskId,
 			BizID: bkBizID}, nil
 	}
