@@ -736,20 +736,6 @@ func (m *Matcher) initDevice(info *types.DeviceInfo) (*types.DeviceInitMsg, erro
 		return nil, err
 	}
 
-	// 把进行中的任务返回，不需要重复创建新的标准运维任务
-	if initRecord != nil && initRecord.Status == types.InitStatusHandling {
-		logs.Infof("init device host is initialing, need not init, subOrderID: %s, ip: %s", info.SubOrderId, info.Ip)
-		return &types.DeviceInitMsg{Device: info, JobUrl: initRecord.TaskLink, JobID: initRecord.TaskId,
-			BizID: int64(info.BkBizId)}, nil
-	}
-
-	// create init record
-	if err = record.CreateInitRecord(info.SubOrderId, info.Ip); err != nil {
-		logs.Errorf("host %s failed to initialize, err: %v", info.Ip, err)
-		return nil, fmt.Errorf("host %s failed to initialize, err: %v", info.Ip, err)
-	}
-
-	// 1. create job
 	// 根据IP获取主机信息
 	hostInfo, err := m.cc.GetHostInfoByIP(m.kt, info.Ip, 0)
 	if err != nil {
@@ -770,6 +756,21 @@ func (m *Matcher) initDevice(info *types.DeviceInfo) (*types.DeviceInitMsg, erro
 		logs.Errorf("can not find biz id by host id: %d", hostInfo.BkHostID)
 		return nil, fmt.Errorf("can not find biz id by host id: %d", hostInfo.BkHostID)
 	}
+
+	// 把进行中的任务返回，不需要重复创建新的标准运维任务
+	if initRecord != nil && initRecord.Status == types.InitStatusHandling {
+		logs.Infof("init device host is initialing, need not init, subOrderID: %s, ip: %s", info.SubOrderId, info.Ip)
+		return &types.DeviceInitMsg{Device: info, JobUrl: initRecord.TaskLink, JobID: initRecord.TaskId,
+			BizID: bkBizID}, nil
+	}
+
+	// create init record
+	if err = record.CreateInitRecord(info.SubOrderId, info.Ip); err != nil {
+		logs.Errorf("host %s failed to initialize, err: %v", info.Ip, err)
+		return nil, fmt.Errorf("host %s failed to initialize, err: %v", info.Ip, err)
+	}
+
+	// 1. create job
 	jobId, jobUrl, err := sops.CreateInitSopsTask(m.kt, m.sops, info.Ip, m.sopsOpt.DevnetIP, bkBizID, hostInfo.BkOsType,
 		info.SubOrderId)
 	if err != nil {
