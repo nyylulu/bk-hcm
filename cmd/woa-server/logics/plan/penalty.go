@@ -606,6 +606,11 @@ func (c *Controller) listPenaltyBaseCore(kt *kit.Kit, listFilter *filter.Express
 		}
 
 		for _, detail := range rst.Details {
+			// 预测罚金，需要过滤掉提报滚服项目的业务
+			if detail.BkBizID == enumor.ResourcePlanRollServerBiz {
+				continue
+			}
+
 			baseKey := ptypes.DemandPenaltyBaseKey{
 				BkBizID:      detail.BkBizID,
 				AreaName:     detail.AreaName,

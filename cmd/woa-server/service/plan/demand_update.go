@@ -60,6 +60,11 @@ func (s *service) AdjustBizResPlanDemand(cts *rest.Contexts) (rst interface{}, e
 		return nil, err
 	}
 
+	// 验证预测提报参数
+	if err = s.validateAdjustResPlan(req, bkBizID); err != nil {
+		return nil, err
+	}
+
 	// get biz org relation.
 	bizOrgRel, err := s.bizLogics.GetBizOrgRel(cts.Kit, bkBizID)
 	if err != nil {
@@ -74,6 +79,22 @@ func (s *service) AdjustBizResPlanDemand(cts *rest.Contexts) (rst interface{}, e
 	}
 
 	return map[string]interface{}{"id": ticketID}, nil
+}
+
+func (s *service) validateAdjustResPlan(req *ptypes.AdjustRPDemandReq, bkBizID int64) error {
+	for _, item := range req.Adjusts {
+		// 只允许931业务提报滚服项目
+		if item.OriginalInfo != nil && item.OriginalInfo.ObsProject == enumor.ObsProjectRollServer &&
+			bkBizID != enumor.ResourcePlanRollServerBiz {
+			return errf.Newf(errf.InvalidParameter, "this business origin does not support rolling server project")
+		}
+
+		if item.UpdatedInfo != nil && item.UpdatedInfo.ObsProject == enumor.ObsProjectRollServer &&
+			bkBizID != enumor.ResourcePlanRollServerBiz {
+			return errf.Newf(errf.InvalidParameter, "this business updated does not support rolling server project")
+		}
+	}
+	return nil
 }
 
 // areAllCrpDemandBelongToBiz return whether all input crp demand ids belong to input biz.

@@ -137,19 +137,24 @@ func (s *service) CreateBizResPlanTicket(cts *rest.Contexts) (interface{}, error
 	}
 
 	req := new(ptypes.CreateResPlanTicketReq)
-	if err := cts.DecodeInto(req); err != nil {
+	if err = cts.DecodeInto(req); err != nil {
 		logs.Errorf("failed to create resource plan ticket, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
 
-	if err := req.Validate(); err != nil {
+	if err = req.Validate(); err != nil {
 		logs.Errorf("failed to validate create resource plan ticket parameter, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
 	// authorize biz resource plan operation.
 	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.ResPlan, Action: meta.Create}, BizID: bkBizID}
-	if err := s.authorizer.AuthorizeWithPerm(cts.Kit, authRes); err != nil {
+	if err = s.authorizer.AuthorizeWithPerm(cts.Kit, authRes); err != nil {
+		return nil, err
+	}
+
+	// 验证预测提报参数
+	if err = s.validateResPlanTicket(req, bkBizID); err != nil {
 		return nil, err
 	}
 
@@ -166,6 +171,16 @@ func (s *service) CreateBizResPlanTicket(cts *rest.Contexts) (interface{}, error
 	}
 
 	return map[string]interface{}{"id": ticketID}, nil
+}
+
+func (s *service) validateResPlanTicket(req *ptypes.CreateResPlanTicketReq, bkBizID int64) error {
+	for _, item := range req.Demands {
+		// 只允许931业务提报滚服项目
+		if item.ObsProject == enumor.ObsProjectRollServer && bkBizID != enumor.ResourcePlanRollServerBiz {
+			return errf.Newf(errf.InvalidParameter, "this business does not support rolling server project")
+		}
+	}
+	return nil
 }
 
 // createResPlanTicket create resource plan ticket.
