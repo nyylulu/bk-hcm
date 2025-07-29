@@ -43,15 +43,16 @@ func TestCreateLayer7ListenerExecutor_convertDataToPreview(t *testing.T) {
 					"https", "8888", "MUTUAL", "[9GXQ9dV2,DQq54hR3]", "Bw0pFuKG", "用户的备注"},
 			}},
 			want: CreateLayer7ListenerDetail{
-				ClbVipDomain:  "127.0.0.1",
-				CloudClbID:    "lb-xxxxx1",
-				Protocol:      enumor.HttpsProtocol,
-				ListenerPorts: []int{8888},
-				SSLMode:       "MUTUAL",
-				CertCloudIDs:  []string{"9GXQ9dV2", "DQq54hR3"},
-				CACloudID:     "Bw0pFuKG",
-
-				UserRemark:     "用户的备注",
+				Layer7ListenerDetail: Layer7ListenerDetail{
+					ClbVipDomain: "127.0.0.1",
+					CloudClbID:   "lb-xxxxx1",
+					Protocol:     enumor.HttpsProtocol,
+					SSLMode:      "MUTUAL",
+					CACloudID:    "Bw0pFuKG",
+					UserRemark:   "用户的备注",
+				},
+				ListenerPorts:  []int{8888},
+				CertCloudIDs:   []string{"9GXQ9dV2", "DQq54hR3"},
 				Status:         "",
 				ValidateResult: []string{},
 			},
@@ -62,14 +63,16 @@ func TestCreateLayer7ListenerExecutor_convertDataToPreview(t *testing.T) {
 				{"127.0.0.1", "lb-xxxxx1", "http", "8888"},
 			}},
 			want: CreateLayer7ListenerDetail{
-				ClbVipDomain:   "127.0.0.1",
-				CloudClbID:     "lb-xxxxx1",
-				Protocol:       enumor.HttpProtocol,
+				Layer7ListenerDetail: Layer7ListenerDetail{
+					ClbVipDomain: "127.0.0.1",
+					CloudClbID:   "lb-xxxxx1",
+					Protocol:     enumor.HttpProtocol,
+					SSLMode:      "",
+					CACloudID:    "",
+					UserRemark:   "",
+				},
 				ListenerPorts:  []int{8888},
-				SSLMode:        "",
 				CertCloudIDs:   nil,
-				CACloudID:      "",
-				UserRemark:     "",
 				Status:         "",
 				ValidateResult: []string{},
 			},
@@ -79,7 +82,10 @@ func TestCreateLayer7ListenerExecutor_convertDataToPreview(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			executor := &CreateLayer7ListenerPreviewExecutor{}
-			_ = executor.convertDataToPreview(tt.args.i)
+			if err := executor.convertDataToPreview(tt.args.i); err != nil {
+				t.Errorf("convertDataToPreview() error = %v", err)
+				return
+			}
 			assert.Equal(t, tt.want, *executor.details[0])
 		})
 	}
@@ -94,51 +100,61 @@ func TestCreateLayer7ListenerDetail_validate(t *testing.T) {
 		{
 			name: "validate protocol executable",
 			args: &CreateLayer7ListenerDetail{
-				Protocol:      enumor.HttpsProtocol,
+				Layer7ListenerDetail: Layer7ListenerDetail{
+					Protocol:  enumor.HttpsProtocol,
+					SSLMode:   "MUTUAL",
+					CACloudID: "Bw0pFuKG",
+				},
 				ListenerPorts: []int{8888, 8889},
-				SSLMode:       "MUTUAL",
 				CertCloudIDs:  []string{"9GXQ9dV2", "DQq54hR3"},
-				CACloudID:     "Bw0pFuKG",
 			},
 			wantStatus: Executable,
 		},
 		{
 			name: "validate protocol not executable",
 			args: &CreateLayer7ListenerDetail{
-				Protocol:      enumor.TcpProtocol,
+				Layer7ListenerDetail: Layer7ListenerDetail{
+					Protocol:  enumor.TcpProtocol,
+					SSLMode:   "MUTUAL",
+					CACloudID: "Bw0pFuKG",
+				},
 				ListenerPorts: []int{8888, 8889},
-				SSLMode:       "MUTUAL",
 				CertCloudIDs:  []string{"9GXQ9dV2", "DQq54hR3"},
-				CACloudID:     "Bw0pFuKG",
 			},
 			wantStatus: NotExecutable,
 		},
 		{
 			name: "validate ListenerPorts has 3 port",
 			args: &CreateLayer7ListenerDetail{
-				Protocol:      enumor.HttpsProtocol,
+				Layer7ListenerDetail: Layer7ListenerDetail{
+					Protocol:  enumor.HttpsProtocol,
+					SSLMode:   "MUTUAL",
+					CACloudID: "Bw0pFuKG",
+				},
 				ListenerPorts: []int{8888, 8889, 9000},
-				SSLMode:       "MUTUAL",
 				CertCloudIDs:  []string{"9GXQ9dV2", "DQq54hR3"},
-				CACloudID:     "Bw0pFuKG",
 			},
 			wantStatus: NotExecutable,
 		},
 		{
 			name: "validate http with cert info",
 			args: &CreateLayer7ListenerDetail{
-				Protocol:      enumor.HttpProtocol,
+				Layer7ListenerDetail: Layer7ListenerDetail{
+					Protocol:  enumor.HttpProtocol,
+					SSLMode:   "MUTUAL",
+					CACloudID: "Bw0pFuKG",
+				},
 				ListenerPorts: []int{8888, 8889},
-				SSLMode:       "MUTUAL",
 				CertCloudIDs:  []string{"9GXQ9dV2", "DQq54hR3"},
-				CACloudID:     "Bw0pFuKG",
 			},
 			wantStatus: NotExecutable,
 		},
 		{
 			name: "validate http with empty cert info",
 			args: &CreateLayer7ListenerDetail{
-				Protocol:      enumor.HttpProtocol,
+				Layer7ListenerDetail: Layer7ListenerDetail{
+					Protocol: enumor.HttpProtocol,
+				},
 				ListenerPorts: []int{8888, 8889},
 			},
 			wantStatus: Executable,
@@ -146,7 +162,9 @@ func TestCreateLayer7ListenerDetail_validate(t *testing.T) {
 		{
 			name: "validate https with empty cert info",
 			args: &CreateLayer7ListenerDetail{
-				Protocol:      enumor.HttpsProtocol,
+				Layer7ListenerDetail: Layer7ListenerDetail{
+					Protocol: enumor.HttpsProtocol,
+				},
 				ListenerPorts: []int{8888, 8889},
 			},
 			wantStatus: NotExecutable,
