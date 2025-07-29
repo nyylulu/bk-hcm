@@ -437,7 +437,7 @@ const (
 	// ResourcePoolBiz 资源池业务
 	ResourcePoolBiz = 931
 	// ResourcePlanRollServerBiz 资源预测提报滚服项目的业务
-	ResourcePlanRollServerBiz = 931
+	ResourcePlanRollServerBiz = 213 // 931 // 测试环境按213进行测试验证
 )
 
 // AbolishPhase 裁撤阶段
