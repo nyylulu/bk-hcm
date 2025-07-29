@@ -562,6 +562,11 @@ func convResConsumePoolToPenaltyMap(kt *kit.Kit, pool ResPlanConsumePool, region
 	consumeMap := make(map[ptypes.DemandPenaltyBaseKey]int64)
 
 	for key, cpuCore := range pool {
+		// 预测罚金，需要过滤掉滚服项目
+		if key.ObsProject == enumor.ObsProjectRollServer {
+			continue
+		}
+
 		if _, ok := regionAreaMap[key.RegionID]; !ok {
 			logs.Errorf("failed to get region area, region id: %s, rid: %s", key.RegionID, kt.Rid)
 			return nil, fmt.Errorf("failed to get region area, region id: %s", key.RegionID)
@@ -606,11 +611,6 @@ func (c *Controller) listPenaltyBaseCore(kt *kit.Kit, listFilter *filter.Express
 		}
 
 		for _, detail := range rst.Details {
-			// 预测罚金，需要过滤掉提报滚服项目的业务
-			if detail.BkBizID == enumor.ResourcePlanRollServerBiz {
-				continue
-			}
-
 			baseKey := ptypes.DemandPenaltyBaseKey{
 				BkBizID:      detail.BkBizID,
 				AreaName:     detail.AreaName,

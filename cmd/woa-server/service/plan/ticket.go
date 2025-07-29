@@ -175,7 +175,7 @@ func (s *service) CreateBizResPlanTicket(cts *rest.Contexts) (interface{}, error
 
 func (s *service) validateResPlanTicket(req *ptypes.CreateResPlanTicketReq, bkBizID int64) error {
 	for _, item := range req.Demands {
-		// 只允许931业务提报滚服项目
+		// 只允许931业务，提报滚服项目的预测
 		if item.ObsProject == enumor.ObsProjectRollServer && bkBizID != enumor.ResourcePlanRollServerBiz {
 			return errf.Newf(errf.InvalidParameter, "this business does not support rolling server project")
 		}

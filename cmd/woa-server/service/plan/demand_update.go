@@ -83,7 +83,7 @@ func (s *service) AdjustBizResPlanDemand(cts *rest.Contexts) (rst interface{}, e
 
 func (s *service) validateAdjustResPlan(req *ptypes.AdjustRPDemandReq, bkBizID int64) error {
 	for _, item := range req.Adjusts {
-		// 只允许931业务提报滚服项目
+		// 只允许931业务，调整滚服项目的预测
 		if item.OriginalInfo != nil && item.OriginalInfo.ObsProject == enumor.ObsProjectRollServer &&
 			bkBizID != enumor.ResourcePlanRollServerBiz {
 			return errf.Newf(errf.InvalidParameter, "this business origin does not support rolling server project")
