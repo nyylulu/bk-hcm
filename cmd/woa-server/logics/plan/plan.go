@@ -392,6 +392,11 @@ func (c *Controller) checkCrpTicket(kt *kit.Kit, ticket *TicketInfo) error {
 		logs.Errorf("failed to query crp plan order, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
+
+	respJSON, _ := json.Marshal(resp)
+	logs.Errorf("DEBUG:checkCrpTicket:query crp plan order, ticketID: %s, crp_sn: %s, respJSON: %s, rid: %s",
+		ticket.ID, ticket.CrpSn, respJSON, kt.Rid)
+
 	if resp.Error.Code != 0 {
 		logs.Errorf("%s: failed to query crp plan order, code: %d, msg: %s, crp_sn: %s, rid: %s",
 			constant.ResPlanTicketWatchFailed, resp.Error.Code, resp.Error.Message, ticket.CrpSn, kt.Rid)
