@@ -788,7 +788,8 @@ func (cli *client) createHost(kt *kit.Kit, hosts []cloud.CvmBatchCreate[cvm.TClo
 }
 
 func convToUpdate(
-	hosts map[string]cvm.Cvm[cvm.TCloudZiyanHostExtension]) []cloud.CvmBatchUpdateWithExtension[cvm.TCloudZiyanHostExtension] {
+	hosts map[string]cvm.Cvm[cvm.TCloudZiyanHostExtension],
+) []cloud.CvmBatchUpdateWithExtension[cvm.TCloudZiyanHostExtension] {
 
 	res := make([]cloud.CvmBatchUpdateWithExtension[cvm.TCloudZiyanHostExtension], 0)
 	for id, host := range hosts {
