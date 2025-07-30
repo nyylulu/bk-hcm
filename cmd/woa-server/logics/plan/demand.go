@@ -69,21 +69,15 @@ func (c *Controller) ListResPlanDemandAndOverview(kt *kit.Kit, req *ptypes.ListR
 	}
 
 	// 获取demand列表
-	demandOriginList, _, err := c.listAllResPlanDemand(kt, listAllReq)
+	demandList, _, err := c.listAllResPlanDemand(kt, listAllReq)
 	if err != nil {
 		logs.Errorf("failed to list res plan demand, err: %v, req: %+v, rid: %s", err, *listAllReq, kt.Rid)
 		return nil, err
 	}
 
 	bkBizIDs := make([]int64, 0)
-	demandList := make([]rpd.ResPlanDemandTable, 0)
-	for _, demand := range demandOriginList {
-		// 预测到期提醒，需要过滤掉滚服项目
-		if demand.ObsProject == enumor.ObsProjectRollServer {
-			continue
-		}
+	for _, demand := range demandList {
 		bkBizIDs = append(bkBizIDs, demand.BkBizID)
-		demandList = append(demandList, demand)
 	}
 
 	// 获取当月预测消耗历史，聚合为 ResPlanConsumePool
