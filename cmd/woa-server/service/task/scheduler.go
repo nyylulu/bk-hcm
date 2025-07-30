@@ -30,6 +30,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
+	"hcm/pkg/thirdparty/cvmapi"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/metadata"
 	"hcm/pkg/tools/querybuilder"
@@ -566,8 +567,36 @@ func (s *service) CreateApplyOrder(cts *rest.Contexts) (any, error) {
 	return s.createApplyOrder(cts.Kit, input)
 }
 
+func (s *service) validateDeviceTypeForGreenAndRoll(kt *kit.Kit, input *types.ApplyReq) error {
+	if input.RequireType != enumor.RequireTypeGreenChannel && input.RequireType != enumor.RequireTypeRollServer {
+		return nil
+	}
+
+	deviceTypes := make([]string, 0)
+	for _, suborder := range input.Suborders {
+		deviceTypes = append(deviceTypes, suborder.Spec.DeviceType)
+	}
+	resp, err := s.configLogics.Device().ListDeviceTypeInfoFromCrp(kt, deviceTypes)
+	if err != nil {
+		logs.Errorf("list device type info from crp failed, err: %v, deviceTypes: %v, rid: %s",
+			err, deviceTypes, kt.Rid)
+		return err
+	}
+	for _, item := range resp {
+		if item.InstanceTypeClass == cvmapi.SpecialType {
+			return fmt.Errorf("device type %s is not supported for green channel or roll server apply", item.InstanceType)
+		}
+	}
+	return nil
+}
+
 // createApplyOrder creates apply order
 func (s *service) createApplyOrder(kt *kit.Kit, input *types.ApplyReq) (any, error) {
+	if err := s.validateDeviceTypeForGreenAndRoll(kt, input); err != nil {
+		logs.Errorf("failed to validate device type for green channel or roll server apply, err: %v, rid: %s", err, kt.Rid)
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
 	if err := s.verifyResPlanDemand(kt, input); err != nil {
 		logs.Errorf("failed to verify res plan demand, err: %v, rid: %s", err, kt.Rid)
 		return nil, err

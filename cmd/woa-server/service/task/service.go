@@ -15,6 +15,7 @@ package task
 import (
 	"net/http"
 
+	"hcm/cmd/woa-server/logics/config"
 	planLogics "hcm/cmd/woa-server/logics/plan"
 	taskLogics "hcm/cmd/woa-server/logics/task"
 	"hcm/cmd/woa-server/service/capability"
@@ -27,10 +28,11 @@ import (
 func InitService(c *capability.Capability) {
 	logics := taskLogics.New(c.SchedulerIf, c.RecyclerIf, c.InformerIf, c.OperationIf)
 	s := &service{
-		client:     c.Client,
-		logics:     logics,
-		planLogics: c.PlanController,
-		authorizer: c.Authorizer,
+		client:       c.Client,
+		logics:       logics,
+		configLogics: c.ConfigLogics,
+		planLogics:   c.PlanController,
+		authorizer:   c.Authorizer,
 	}
 	h := rest.NewHandler()
 	h.Path("/task")
@@ -50,10 +52,11 @@ func InitService(c *capability.Capability) {
 }
 
 type service struct {
-	client     *client.ClientSet
-	logics     taskLogics.Logics
-	planLogics planLogics.Logics
-	authorizer auth.Authorizer
+	client       *client.ClientSet
+	logics       taskLogics.Logics
+	configLogics config.Logics
+	planLogics   planLogics.Logics
+	authorizer   auth.Authorizer
 }
 
 func (s *service) initOperationService(h *rest.Handler) {
