@@ -632,6 +632,7 @@ func (svc *lbSvc) ListBizListenerByCond(cts *rest.Contexts) (any, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	if bkBizID <= 0 {
 		return nil, errf.Newf(errf.InvalidParameter, "bk_biz_id: %d is invalid", bkBizID)
 	}
@@ -663,7 +664,7 @@ func (svc *lbSvc) listListenerByCond(cts *rest.Contexts, authHandler handler.Lis
 	resList := &dataproto.ListListenerByCondResp{Details: make([]*dataproto.ListBatchListenerResult, 0)}
 	if noPermFlag {
 		logs.Errorf("list listener no perm auth, noPermFlag: %v, req: %+v, rid: %s", noPermFlag, req, cts.Kit.Rid)
-		return resList, nil
+		return nil, errf.New(errf.PermissionDenied, "permission denied for get listener by cond")
 	}
 
 	accountInfo, err := svc.client.DataService().Global.Cloud.GetResBasicInfo(
