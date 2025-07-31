@@ -36,8 +36,7 @@ import { jsonp } from '@/http';
 import i18n from '@/language/i18n';
 
 const { DropdownMenu, DropdownItem } = Dropdown;
-const { VERSION, BK_COMPONENT_API_URL, BK_HCM_DOMAIN, ENABLE_CLOUD_SELECTION, ENABLE_ACCOUNT_BILL } =
-  window.PROJECT_CONFIG;
+const { VERSION, BK_COMPONENT_API_URL, BK_DOMAIN, ENABLE_CLOUD_SELECTION, ENABLE_ACCOUNT_BILL } = window.PROJECT_CONFIG;
 
 export default defineComponent({
   name: 'Home',
@@ -143,7 +142,7 @@ export default defineComponent({
     watch(
       () => language.value,
       async (val) => {
-        Cookies.set('blueking_language', val, { domain: BK_HCM_DOMAIN });
+        Cookies.set('blueking_language', val, { domain: BK_DOMAIN });
         await saveLanguage(val);
         location.reload();
       },
