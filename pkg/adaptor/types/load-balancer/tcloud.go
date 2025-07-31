@@ -245,7 +245,8 @@ func (opt TCloudListListenersOption) Validate() error {
 
 // TCloudListener for listener Instance
 type TCloudListener struct {
-	Region string
+	Region  string
+	BKBizID int64
 	*tclb.Listener
 }
 

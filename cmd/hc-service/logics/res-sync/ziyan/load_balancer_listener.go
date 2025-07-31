@@ -258,6 +258,7 @@ func (cli *client) listener(kt *kit.Kit, params *SyncBaseParams, opt *SyncListen
 
 	for i := range cloudListeners {
 		cloudListeners[i].Region = params.Region
+		cloudListeners[i].BKBizID = opt.BizID
 	}
 	addSlice, updateMap, delCloudIDs := common.Diff[typeslb.TCloudListener, corelb.TCloudListener](
 		cloudListeners, dbListeners, isListenerChange)
@@ -572,6 +573,11 @@ func isListenerChange(cloud typeslb.TCloudListener, db corelb.TCloudListener) bo
 		if isLayer4ListenerChanged(cloud, db) {
 			return true
 		}
+	}
+
+	// 业务id发生变化
+	if cloud.BKBizID != db.BkBizID {
+		return true
 	}
 
 	return false
