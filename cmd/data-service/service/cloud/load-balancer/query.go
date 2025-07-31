@@ -369,16 +369,16 @@ func (svc *lbSvc) CountListenerByLbIDs(cts *rest.Contexts) (interface{}, error) 
 }
 
 // listLoadBalancerListCheckVip 获取负载均衡列表并检查VIP、域名是否匹配
-func (svc *lbSvc) listLoadBalancerListCheckVip(kt *kit.Kit, req *protocloud.ListListenerWithTargetsReq,
-	lblReq protocloud.ListenerQueryItem) ([]string, []string, map[string]tablelb.LoadBalancerTable, error) {
+func (svc *lbSvc) listLoadBalancerListCheckVip(kt *kit.Kit, lblReq protocloud.ListListenerQueryReq) (
+	[]string, []string, map[string]tablelb.LoadBalancerTable, error) {
 
 	lbOpt := &types.ListOption{
 		Filter: tools.ExpressionAnd(
-			tools.RuleEqual("vendor", req.Vendor),
-			tools.RuleEqual("bk_biz_id", req.BkBizID),
-			tools.RuleEqual("account_id", req.AccountID),
-			tools.RuleEqual("region", lblReq.Region),
-			tools.RuleIn("cloud_id", lblReq.CloudLbIDs),
+			tools.RuleEqual("vendor", lblReq.Vendor),
+			tools.RuleEqual("bk_biz_id", lblReq.BkBizID),
+			tools.RuleEqual("account_id", lblReq.AccountID),
+			tools.RuleEqual("region", lblReq.ListenerQueryItem.Region),
+			tools.RuleIn("cloud_id", lblReq.ListenerQueryItem.CloudLbIDs),
 		),
 		Page: core.NewDefaultBasePage(),
 	}
@@ -386,7 +386,7 @@ func (svc *lbSvc) listLoadBalancerListCheckVip(kt *kit.Kit, req *protocloud.List
 	for {
 		lbList, err := svc.dao.LoadBalancer().List(kt, lbOpt)
 		if err != nil {
-			logs.Errorf("check list load balancer failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
+			logs.Errorf("check list load balancer failed, err: %v, req: %+v, rid: %s", err, lblReq, kt.Rid)
 			return nil, nil, nil, fmt.Errorf("list load balancer failed, err: %v", err)
 		}
 
@@ -398,10 +398,11 @@ func (svc *lbSvc) listLoadBalancerListCheckVip(kt *kit.Kit, req *protocloud.List
 	}
 
 	// 检查ip地址/域名，是否在负载均衡的ip地址列表中
-	cloudClbIDs, clbIDs, lbMap, err := checkClbVipAndDomain(lbAllList, lblReq.CloudLbIDs, lblReq.ClbVipDomains)
+	cloudClbIDs, clbIDs, lbMap, err := checkClbVipAndDomain(lbAllList, lblReq.ListenerQueryItem.CloudLbIDs,
+		lblReq.ListenerQueryItem.ClbVipDomains)
 	if err != nil {
 		logs.Errorf("check list load balancer and ip domain match failed, err: %v, req: %+v, rid: %s",
-			err, cvt.PtrToVal(req), kt.Rid)
+			err, lblReq, kt.Rid)
 		return nil, nil, nil, err
 	}
 
