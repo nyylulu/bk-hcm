@@ -483,7 +483,7 @@ type ListenerQueryItem struct {
 	Domain        string              `json:"domain" validate:"omitempty"`
 	Url           string              `json:"url" validate:"omitempty"`
 	InstType      enumor.InstType     `json:"inst_type" validate:"required,min=1"`
-	RsIPs         []string            `json:"rs_ips" validate:"omitempty"`
+	RsIPs         []string            `json:"rs_ips" validate:"required,min=1"`
 	RsPorts       []int64             `json:"rs_ports" validate:"omitempty"`
 	RsWeights     []int64             `json:"rs_weights" validate:"omitempty"`
 }

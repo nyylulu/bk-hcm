@@ -599,7 +599,7 @@ func (svc *lbSvc) listListenerWithTarget(kt *kit.Kit, lblReq protocloud.ListList
 	for _, item := range targetList {
 		// 不符合的数据需要过滤掉
 		if _, ok := targetIPPortMap[fmt.Sprintf("%s_%s_%d", item.InstType, item.IP, item.Port)]; !ok &&
-			len(lblReq.ListenerQueryItem.RsPorts) > 0 {
+			len(lblReq.ListenerQueryItem.RsIPs) > 0 && len(lblReq.ListenerQueryItem.RsPorts) > 0 {
 			logs.Warnf("list load balancer target rsip[%s] port[%d] is not found, rid: %s", item.IP, item.Port, kt.Rid)
 			continue
 		}
