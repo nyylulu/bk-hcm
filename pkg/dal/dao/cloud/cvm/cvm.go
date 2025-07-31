@@ -232,6 +232,8 @@ func (dao Dao) List(kt *kit.Kit, opt *types.ListOption) (*types.ListCvmDetails, 
 		return nil, err
 	}
 
+	logs.Errorf("DEBUG:SQL:cvmDao:ListCvm, sql: %s, whereValue: %+v, rid: %s", sql, whereValue, kt.Rid)
+
 	return &types.ListCvmDetails{Details: details}, nil
 }
 
@@ -280,6 +282,8 @@ func (dao Dao) ListWithTx(kt *kit.Kit, tx *sqlx.Tx, opt *types.ListOption) (*typ
 	if err != nil {
 		return nil, err
 	}
+
+	logs.Errorf("DEBUG:SQL:cvmDao:ListCvmWithTx, sql: %s, whereValue: %+v, rid: %s", sql, whereValue, kt.Rid)
 
 	return &types.ListCvmDetails{Details: details}, nil
 }
