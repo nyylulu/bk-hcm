@@ -18,18 +18,18 @@
  */
 
 /*
-    SQLVER=9999,HCMVER=v9.9.9
+    SQLVER=0047,HCMVER=v1.8.2.0
 
     Notes:
-    1. 修改`target_group_listener_rule_rel`表，新增 cloud_listener_rule_id 索引
+    1. 修改`account`表，修改`name`字段长度
 */
 
 START TRANSACTION;
 
-alter table target_group_listener_rule_rel
-    add index idx_cloud_listener_rule_id (cloud_listener_rule_id);
+ALTER TABLE `account`
+    modify name VARCHAR(255) NOT NULL;
 
 CREATE OR REPLACE VIEW `hcm_version`(`hcm_ver`, `sql_ver`) AS
-SELECT 'v9.9.9' as `hcm_ver`, '9999' as `sql_ver`;
+SELECT 'v1.8.2.0' as `hcm_ver`, '0047' as `sql_ver`;
 
 COMMIT;
