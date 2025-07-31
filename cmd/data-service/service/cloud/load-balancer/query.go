@@ -1523,7 +1523,7 @@ func (svc *lbSvc) ListListenerByCond(cts *rest.Contexts) (any, error) {
 			ruleType = enumor.Layer7RuleType
 		}
 
-		newReq := &protocloud.ListListenerWithTargetsReq{
+		lblTargetReq := &protocloud.ListListenerWithTargetsReq{
 			Vendor:    req.Vendor,
 			BkBizID:   req.BkBizID,
 			AccountID: req.AccountID,
@@ -1541,9 +1541,9 @@ func (svc *lbSvc) ListListenerByCond(cts *rest.Contexts) (any, error) {
 		var lblCondList []*protocloud.ListBatchListenerResult
 		// 如果传入了RSIP、RSPort，需要查询监听器对应的目标组、目标组里的RS是否匹配
 		if len(item.RsIPs) > 0 || len(item.RsPorts) > 0 {
-			lblCondList, err = svc.queryListenerWithTargets(cts.Kit, newReq, lblQueryReq)
+			lblCondList, err = svc.queryListenerWithTargets(cts.Kit, lblTargetReq, lblQueryReq)
 		} else {
-			lblCondList, err = svc.queryListenerByCond(cts.Kit, newReq, lblQueryReq)
+			lblCondList, err = svc.queryListenerNoTargets(cts.Kit, lblTargetReq, lblQueryReq)
 		}
 		if err != nil {
 			return nil, err
@@ -1553,30 +1553,30 @@ func (svc *lbSvc) ListListenerByCond(cts *rest.Contexts) (any, error) {
 	return listenerList, nil
 }
 
-func (svc *lbSvc) queryListenerByCond(kt *kit.Kit, req *protocloud.ListListenerWithTargetsReq,
+func (svc *lbSvc) queryListenerNoTargets(kt *kit.Kit, lblTargetReq *protocloud.ListListenerWithTargetsReq,
 	lblReq protocloud.ListenerQueryItem) ([]*protocloud.ListBatchListenerResult, error) {
 
 	// 查询符合条件的负载均衡列表
-	cloudClbIDs, _, lbMap, err := svc.listLoadBalancerListCheckVip(kt, req, lblReq)
+	cloudClbIDs, _, lbMap, err := svc.listLoadBalancerListCheckVip(kt, lblTargetReq, lblReq)
 	if err != nil {
 		return nil, err
 	}
 
 	// 未查询到符合条件的负载均衡列表
 	if len(cloudClbIDs) == 0 {
-		logs.Errorf("check list load balancer by cond empty, req: %+v, rid: %s", cvt.PtrToVal(req), kt.Rid)
+		logs.Errorf("check list load balancer by cond empty, req: %+v, rid: %s", cvt.PtrToVal(lblTargetReq), kt.Rid)
 		return nil, nil
 	}
 
 	// 查询符合条件的监听器列表
-	_, _, lblList, err := svc.listBizListenerByLbIDs(kt, req, lblReq, cloudClbIDs)
+	_, cloudLblIDs, lblList, err := svc.listBizListenerByLbIDs(kt, lblTargetReq, lblReq, cloudClbIDs)
 	if err != nil {
 		return nil, err
 	}
 
 	// 未查询到符合的监听器列表
-	if len(lblList) == 0 {
-		logs.Errorf("list biz listener by cond empty, req: %+v, rid: %s", cvt.PtrToVal(req), kt.Rid)
+	if len(cloudLblIDs) == 0 {
+		logs.Errorf("list biz listener with targets empty, req: %+v, rid: %s", cvt.PtrToVal(lblTargetReq), kt.Rid)
 		return nil, nil
 	}
 
