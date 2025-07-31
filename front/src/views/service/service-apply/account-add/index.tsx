@@ -26,7 +26,7 @@ export default defineComponent({
       name: '', // 名称
       vendor: VendorEnum.TCLOUD, // 云厂商
       managers: [], // 责任人
-      bk_biz_ids: [], // 使用业务
+      usage_biz_ids: [], // 使用业务
       memo: '', // 备注
       mainAccount: '', // 主账号
       subAccount: '', // 子账号
@@ -63,9 +63,9 @@ export default defineComponent({
       'accountId',
       'applicationId',
       'applicationName',
-      'bk_biz_ids',
+      'usage_biz_ids',
     ];
-    const requiredData: string[] = ['secretId', 'secretKey', 'bk_biz_ids'];
+    const requiredData: string[] = ['secretId', 'secretKey', 'usage_biz_ids'];
     const cloudType = reactive(CLOUD_TYPE);
     const submitLoading = ref(false);
     const isChangeVendor = ref(false);
@@ -123,7 +123,7 @@ export default defineComponent({
           managers: projectModel.managers,
           memo: projectModel.memo,
           site: projectModel.site,
-          bk_biz_ids: Array.isArray(projectModel.bk_biz_ids) ? [-1] : [projectModel.bk_biz_ids],
+          usage_biz_ids: [projectModel.usage_biz_ids],
           extension: {},
         };
         switch (projectModel.vendor) {
@@ -771,7 +771,7 @@ export default defineComponent({
         label: t('使用业务'),
         noBorBottom: true,
         required: true,
-        property: 'bk_biz_ids',
+        property: 'usage_biz_ids',
         component: () => (
           <Select
             filterable
@@ -779,7 +779,7 @@ export default defineComponent({
             multipleMode='tag'
             placeholder={t('请选择使用业务')}
             class='w450'
-            v-model={projectModel.bk_biz_ids}>
+            v-model={projectModel.usage_biz_ids}>
             {businessList.list.map((item) => (
               <Option key={item.id} value={item.id} label={item.name}>
                 {item.name}

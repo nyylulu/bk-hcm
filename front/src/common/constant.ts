@@ -200,16 +200,32 @@ export const FILTER_DATA = [
   {
     name: '名称',
     id: 'name',
+    meta: {
+      search: {
+        filterRules: () => ({}),
+      },
+    },
   },
   {
     name: '云厂商',
     id: 'vendor',
     children: VENDORS,
+    async: false,
+    meta: {
+      search: {
+        filterRules: () => ({}),
+      },
+    },
   },
   {
     name: '云账号ID',
     id: 'account_id',
     children: [],
+    meta: {
+      search: {
+        filterRules: () => ({}),
+      },
+    },
   },
   // {
   //   name: '状态',
@@ -529,6 +545,7 @@ export const RESOURCE_TYPES_MAP = {
   cert: '证书',
   load_balancer: '负载均衡',
   security_group_usage_biz_rel: '安全组使用业务',
+  cvm_cc_info: '主机资产数据',
 };
 
 export const RESOURCES_SYNC_STATUS_MAP = {

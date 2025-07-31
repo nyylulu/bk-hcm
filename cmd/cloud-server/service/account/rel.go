@@ -20,21 +20,19 @@
 package account
 
 import (
-	"hcm/pkg/api/core"
 	protocloud "hcm/pkg/api/data-service/cloud"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
-	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
 	"hcm/pkg/iam/meta"
-	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 	"hcm/pkg/tools/hooks/handler"
 )
 
-// ListByBkBizID ...
-func (a *accountSvc) ListByBkBizID(cts *rest.Contexts) (interface{}, error) {
-	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+// ListByUsageBizID ...
+func (a *accountSvc) ListByUsageBizID(cts *rest.Contexts) (interface{}, error) {
+	usageBizID, err := cts.PathParameter("bk_biz_id").Int64()
 	if err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
@@ -46,46 +44,37 @@ func (a *accountSvc) ListByBkBizID(cts *rest.Contexts) (interface{}, error) {
 		Action: meta.Access,
 		BasicInfo: &types.CloudResourceBasicInfo{
 			ResType: enumor.AccountCloudResType,
-			BkBizID: bkBizID,
+			BkBizID: usageBizID,
 		}}
 	err = handler.BizOperateAuth(cts, opt)
 	if err != nil {
 		return nil, err
 	}
 
+	usageBizIDs := []int64{usageBizID}
+	// 关联了所有使用业务的账号也应该被查出来
+	if usageBizID != constant.AttachedAllBiz {
+		usageBizIDs = append(usageBizIDs, constant.AttachedAllBiz)
+	}
 	listReq := &protocloud.AccountBizRelWithAccountListReq{
-		BkBizIDs:    []int64{bkBizID},
+		UsageBizIDs: usageBizIDs,
 		AccountType: accountType,
 	}
+
 	accounts, err := a.client.DataService().Global.Account.ListAccountBizRelWithAccount(cts.Kit, listReq)
 	if err != nil {
-		logs.Errorf("fail to query biz account, err: %v, bizID: %s, rid:%s", err, bkBizID, cts.Kit.Rid)
 		return nil, err
 	}
+	res := make([]*protocloud.AccountBizRelWithAccount, 0)
 
-	// 查询自研云账号
-	ziyanResp, err := a.client.DataService().Global.Account.List(cts.Kit.Ctx, cts.Kit.Header(),
-		&protocloud.AccountListReq{
-			Filter: tools.ExpressionAnd(
-				tools.RuleEqual("vendor", enumor.TCloudZiyan),
-				tools.RuleEqual("type", enumor.ResourceAccount),
-			),
-			Page: core.NewDefaultBasePage(),
-		})
-	if err != nil {
-		logs.Errorf("fail to query ziyan account, err: %v, rid:%s", err, cts.Kit.Rid)
-		return nil, err
+	for _, one := range accounts {
+		// 仅能查询业务下可用于申请资源的帐号
+		if one.Vendor == enumor.Other {
+			continue
+		}
+		// 兼容旧接口的返回值
+		one.BkBizIDs = one.UsageBizIDs
+		res = append(res, one)
 	}
-
-	combinedAccounts := make([]*protocloud.AccountBizRelWithAccount, 0, len(ziyanResp.Details)+len(accounts))
-	for _, ziyanAccount := range ziyanResp.Details {
-		combinedAccounts = append(combinedAccounts, &protocloud.AccountBizRelWithAccount{
-			BaseAccount:  *ziyanAccount,
-			BkBizID:      -1,
-			RelCreator:   "",
-			RelCreatedAt: "",
-		})
-	}
-	combinedAccounts = append(combinedAccounts, accounts...)
-	return combinedAccounts, err
+	return res, nil
 }

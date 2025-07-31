@@ -20,15 +20,15 @@
 package account
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
 	"hcm/cmd/cloud-server/logics/account"
-	"hcm/pkg/api/core"
+	"hcm/pkg/api/data-service/cloud"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
-	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/rest"
 )
@@ -78,7 +78,7 @@ func (a *accountSvc) SyncCloudResourceByCond(cts *rest.Contexts) (any, error) {
 		return nil, errf.Newf(errf.InvalidParameter, "account not found by vendor: %s", vendor)
 	}
 
-	if err := vendor.Validate(); err != nil {
+	if err = vendor.Validate(); err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
@@ -122,30 +122,23 @@ func (a *accountSvc) SyncBizCloudResourceByCond(cts *rest.Contexts) (any, error)
 	}
 
 	// 查询该账号对应的Vendor
-	baseInfo, err := a.client.DataService().Global.Cloud.GetResBasicInfo(cts.Kit, enumor.AccountCloudResType, accountID)
+	bizRelReq := &cloud.AccountBizRelWithAccountListReq{UsageBizIDs: []int64{bkBizId}}
+	accountBizList, err := a.client.DataService().Global.Account.ListAccountBizRelWithAccount(cts.Kit, bizRelReq)
 	if err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
-	if baseInfo.Vendor != vendor {
-		return nil, errf.Newf(errf.InvalidParameter, "account not found by vendor: %s", vendor)
-	}
 
-	if vendor != enumor.Ziyan {
-		// 查询业务关系
-		bizReq := &core.ListReq{
-			Filter: tools.ExpressionAnd(
-				tools.RuleEqual("account_id", accountID),
-				tools.RuleEqual("bk_biz_id", bkBizId),
-			),
-			Page: core.NewCountPage(),
+	found := false
+	for i := range accountBizList {
+		accountWithBiz := accountBizList[i]
+		if accountWithBiz.ID != accountID || accountWithBiz.Vendor != vendor {
+			continue
 		}
-		rel, err := a.client.DataService().Global.Account.ListAccountBizRel(cts.Kit.Ctx, cts.Kit.Header(), bizReq)
-		if err != nil {
-			return nil, err
-		}
-		if rel.Count == 0 {
-			return nil, errf.New(errf.InvalidParameter, "account not found by biz")
-		}
+		found = true
+		break
+	}
+	if !found {
+		return nil, errors.New("account not found by biz or vendor")
 	}
 
 	switch vendor {

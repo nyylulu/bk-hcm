@@ -103,6 +103,7 @@ database:
     maxIdleTimeoutMin:
     maxOpenConn:
     maxIdleConn:
+    timeZone:
     # defines tls related options.
     tls:
       # server should be accessed without verifying the TLS certificate.
