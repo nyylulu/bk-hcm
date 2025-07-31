@@ -37,114 +37,71 @@ func AdaptAuthOptions(a *meta.ResourceAttribute) (client.ActionID, []client.Reso
 		return genSkipResource(a)
 	}
 
-	switch a.Basic.Type {
-	case meta.Biz:
-		return genBizResource(a)
-	case meta.Account:
-		return genAccountResource(a)
-	case meta.SubAccount:
-		return genSubAccountResource(a)
-	case meta.Vpc:
-		return genVpcResource(a)
-	case meta.Subnet:
-		return genSubnetResource(a)
-	case meta.Disk:
-		return genDiskResource(a)
-	case meta.SecurityGroup:
-		return genSecurityGroupResource(a)
-	case meta.SecurityGroupRule:
-		return genSecurityGroupRuleResource(a)
-	case meta.GcpFirewallRule:
-		return genGcpFirewallRuleResource(a)
-	case meta.RouteTable:
-		return genRouteTableResource(a)
-	case meta.Route:
-		return genRouteResource(a)
-	case meta.RecycleBin:
-		return genRecycleBinResource(a)
-	case meta.Audit:
-		return genAuditResource(a)
-	case meta.ResPlan:
-		return genResPlanResource(a)
-	case meta.Cvm:
-		return genCvmResource(a)
-	case meta.NetworkInterface:
-		return genNetworkInterfaceResource(a)
-	case meta.Eip:
-		return genEipResource(a)
-	case meta.CloudResource:
-		return genCloudResResource(a)
-	case meta.Quota:
-		return genProxyResourceFind(a)
-	case meta.InstanceType:
-		return genProxyResourceFind(a)
-	case meta.CostManage:
-		return genCostManageResource(a)
-	case meta.BizCollection:
-		return genBizCollectionResource(a)
-	case meta.CloudSelectionScheme:
-		return genCloudSelectionSchemeResource(a)
-	case meta.CloudSelectionIdc:
-		return sys.CloudSelectionRecommend, make([]client.Resource, 0), nil
-	case meta.CloudSelectionBizType:
-		return sys.CloudSelectionRecommend, make([]client.Resource, 0), nil
-	case meta.CloudSelectionDataSource:
-		return sys.CloudSelectionRecommend, make([]client.Resource, 0), nil
-	case meta.ArgumentTemplate:
-		return genArgumentTemplateResource(a)
-	case meta.Cert:
-		return genCertResource(a)
-	case meta.LoadBalancer:
-		return genLoadBalancerResource(a)
-	case meta.Listener:
-		return genListenerResource(a)
-	case meta.TargetGroup:
-		return genTargetGroupResource(a)
-	case meta.UrlRuleAuditResType:
-		return genUrlRuleResource(a)
-	case meta.MainAccount:
-		return genMainAccountRuleResource(a)
-	case meta.RootAccount:
-		return genRootAccountRuleResource(a)
-	case meta.ServiceResDissolve: // 服务请求-服务-机房裁撤-菜单粒度
-		return sys.ServiceResDissolve, make([]client.Resource, 0), nil
-	case meta.ZiyanCvmType: // CVM机型-菜单粒度
-		return sys.ZiyanCvmType, make([]client.Resource, 0), nil
-	case meta.ZiyanCvmSubnet: // CVM子网-菜单粒度
-		return sys.ZiyanCvmSubnet, make([]client.Resource, 0), nil
-	case meta.ZiyanResShelves: // 资源上下架-菜单粒度
-		return sys.ZiyanResShelves, make([]client.Resource, 0), nil
-	case meta.ZiyanCvmCreate: // CVM生产-菜单粒度
-		return sys.ZiyanCvmCreate, make([]client.Resource, 0), nil
-	case meta.ZiyanResDissolveManage: // 机房裁撤管理-菜单粒度
-		return sys.ZiyanResDissolveManage, make([]client.Resource, 0), nil
-	case meta.ZiyanResInventory: // 主机库存-菜单粒度
-		return sys.ZiyanResInventory, make([]client.Resource, 0), nil
-	case meta.ZiYanResource: // 自研云资源的操作-业务粒度
-		return genZiYanResource(a)
-	case meta.ZiYanResPlan:
-		return genZiYanResPlanResource(a)
-	case meta.AccountBill:
-		return genAccountBillResource(a)
-	case meta.Application:
-		return genApplicationResources(a)
-	case meta.AccountBillThirdParty:
-		return genAccountBillThirdPartyResource(a)
-	case meta.Image:
-		return genImageResource(a)
-	case meta.AwsSavingsPlansCost:
-		return genAwsSavingsPlansCostResource(a)
-	case meta.RollingServerManage: // 平台管理-滚服管理
-		return sys.RollingServerManage, make([]client.Resource, 0), nil
-	case meta.GreenChannel: // 平台管理-小额绿通
-		return sys.GreenChannel, make([]client.Resource, 0), nil
-	case meta.TaskManagement:
-		return genTaskManagementResource(a)
-	case meta.CosBucket:
-		return genCosBucket(a)
-	default:
+	genFunc, ok := genResourceFuncMap[a.Basic.Type]
+	if !ok {
 		return "", nil, errf.Newf(errf.InvalidParameter, "unsupported hcm auth type: %s", a.Basic.Type)
 	}
+	return genFunc(a)
+}
+
+type genResourceFunc func(*meta.ResourceAttribute) (client.ActionID, []client.Resource, error)
+
+var genResourceFuncMap = map[meta.ResourceType]genResourceFunc{
+	meta.Biz:                      genBizResource,
+	meta.Account:                  genAccountResource,
+	meta.SubAccount:               genSubAccountResource,
+	meta.Vpc:                      genVpcResource,
+	meta.Subnet:                   genSubnetResource,
+	meta.Disk:                     genDiskResource,
+	meta.SecurityGroup:            genSecurityGroupResource,
+	meta.SecurityGroupRule:        genSecurityGroupRuleResource,
+	meta.GcpFirewallRule:          genGcpFirewallRuleResource,
+	meta.RouteTable:               genRouteTableResource,
+	meta.Route:                    genRouteResource,
+	meta.RecycleBin:               genRecycleBinResource,
+	meta.Audit:                    genAuditResource,
+	meta.Cvm:                      genCvmResource,
+	meta.NetworkInterface:         genNetworkInterfaceResource,
+	meta.Eip:                      genEipResource,
+	meta.CloudResource:            genCloudResResource,
+	meta.Quota:                    genProxyResourceFind,
+	meta.InstanceType:             genProxyResourceFind,
+	meta.CostManage:               genCostManageResource,
+	meta.BizCollection:            genBizCollectionResource,
+	meta.CloudSelectionScheme:     genCloudSelectionSchemeResource,
+	meta.CloudSelectionIdc:        genCloudSelectionResource,
+	meta.CloudSelectionBizType:    genCloudSelectionResource,
+	meta.CloudSelectionDataSource: genCloudSelectionResource,
+	meta.ArgumentTemplate:         genArgumentTemplateResource,
+	meta.Cert:                     genCertResource,
+	meta.LoadBalancer:             genLoadBalancerResource,
+	meta.Listener:                 genListenerResource,
+	meta.TargetGroup:              genTargetGroupResource,
+	meta.UrlRuleAuditResType:      genUrlRuleResource,
+	meta.MainAccount:              genMainAccountRuleResource,
+	meta.RootAccount:              genRootAccountRuleResource,
+	meta.AccountBill:              genAccountBillResource,
+	meta.Application:              genApplicationResources,
+	meta.AccountBillThirdParty:    genAccountBillThirdPartyResource,
+	meta.AwsSavingsPlansCost:      genAwsSavingsPlansCostResource,
+	meta.Image:                    genImageResource,
+	meta.TaskManagement:           genTaskManagementResource,
+	meta.CosBucket:                genCosBucket,
+	meta.ResPlan:                  genResPlanResource,
+	// 自研云资源的操作-业务粒度
+	meta.ZiYanResource: genZiYanResource,
+	meta.ZiYanResPlan:  genZiYanResPlanResource,
+	// 服务请求-服务-机房裁撤-菜单粒度
+	meta.ServiceResDissolve: genServiceResDissolveResource,
+	// CVM机型-菜单粒度
+	meta.ZiyanCvmType:           genZiyanCvmTypeResource,
+	meta.ZiyanCvmSubnet:         genZiyanCvmSubnetResource,
+	meta.ZiyanResShelves:        genZiyanResShelvesResource,
+	meta.ZiyanCvmCreate:         genZiyanCvmCreateResource,
+	meta.ZiyanResDissolveManage: genZiyanResDissolveManageResource,
+	meta.ZiyanResInventory:      genZiyanResInventoryResource,
+	meta.RollingServerManage:    genRollingServerManageResource,
+	meta.GreenChannel:           genGreenChannelResource,
 }
 
 func genApplicationResources(a *meta.ResourceAttribute) (client.ActionID, []client.Resource, error) {

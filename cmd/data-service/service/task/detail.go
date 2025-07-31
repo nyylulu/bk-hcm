@@ -330,7 +330,7 @@ func (svc *service) BatchUpdateTaskDetail(cts *rest.Contexts) (interface{}, erro
 		}
 		flt := tools.ContainersExpression("id", req.IDs)
 		if err := svc.dao.TaskDetail().UpdateWithTx(cts.Kit, txn, flt, detail); err != nil {
-			logs.Errorf("update task detail failed, err: %v, rid: %s", err, cts.Kit.Rid)
+			logs.Errorf("update task detail failed, err: %v, req: %v, rid: %s", err, req, cts.Kit.Rid)
 			return nil, fmt.Errorf("update task detail failed, err: %v", err)
 		}
 

@@ -853,3 +853,43 @@ func genCosBucket(a *meta.ResourceAttribute) (client.ActionID, []client.Resource
 		return "", nil, errf.Newf(errf.InvalidParameter, "unsupported hcm action: %s", a.Basic.Action)
 	}
 }
+
+func genCloudSelectionResource(*meta.ResourceAttribute) (client.ActionID, []client.Resource, error) {
+	return sys.CloudSelectionRecommend, make([]client.Resource, 0), nil
+}
+
+func genServiceResDissolveResource(*meta.ResourceAttribute) (client.ActionID, []client.Resource, error) {
+	return sys.ServiceResDissolve, make([]client.Resource, 0), nil
+}
+
+func genZiyanCvmTypeResource(*meta.ResourceAttribute) (client.ActionID, []client.Resource, error) {
+	return sys.ZiyanCvmType, make([]client.Resource, 0), nil
+}
+
+func genZiyanCvmSubnetResource(*meta.ResourceAttribute) (client.ActionID, []client.Resource, error) {
+	return sys.ZiyanCvmSubnet, make([]client.Resource, 0), nil
+}
+
+func genZiyanResShelvesResource(*meta.ResourceAttribute) (client.ActionID, []client.Resource, error) {
+	return sys.ZiyanResShelves, make([]client.Resource, 0), nil
+}
+
+func genZiyanCvmCreateResource(*meta.ResourceAttribute) (client.ActionID, []client.Resource, error) {
+	return sys.ZiyanCvmCreate, make([]client.Resource, 0), nil
+}
+
+func genZiyanResDissolveManageResource(*meta.ResourceAttribute) (client.ActionID, []client.Resource, error) {
+	return sys.ZiyanResDissolveManage, make([]client.Resource, 0), nil
+}
+
+func genZiyanResInventoryResource(*meta.ResourceAttribute) (client.ActionID, []client.Resource, error) {
+	return sys.ZiyanResInventory, make([]client.Resource, 0), nil
+}
+
+func genRollingServerManageResource(*meta.ResourceAttribute) (client.ActionID, []client.Resource, error) {
+	return sys.RollingServerManage, make([]client.Resource, 0), nil
+}
+
+func genGreenChannelResource(*meta.ResourceAttribute) (client.ActionID, []client.Resource, error) {
+	return sys.GreenChannel, make([]client.Resource, 0), nil
+}

@@ -788,43 +788,46 @@ func (cli *client) createHost(kt *kit.Kit, hosts []cloud.CvmBatchCreate[cvm.TClo
 }
 
 func convToUpdate(
-	hosts map[string]cvm.Cvm[cvm.TCloudZiyanHostExtension]) []cloud.CvmBatchUpdate[cvm.TCloudZiyanHostExtension] {
+	hosts map[string]cvm.Cvm[cvm.TCloudZiyanHostExtension],
+) []cloud.CvmBatchUpdateWithExtension[cvm.TCloudZiyanHostExtension] {
 
-	res := make([]cloud.CvmBatchUpdate[cvm.TCloudZiyanHostExtension], 0)
+	res := make([]cloud.CvmBatchUpdateWithExtension[cvm.TCloudZiyanHostExtension], 0)
 	for id, host := range hosts {
-		res = append(res, cloud.CvmBatchUpdate[cvm.TCloudZiyanHostExtension]{
-			ID:                   id,
-			Name:                 host.Name,
-			BkBizID:              host.BkBizID,
-			BkHostID:             host.BkHostID,
-			BkCloudID:            &host.BkCloudID,
-			Region:               host.Region,
-			Zone:                 host.Zone,
-			CloudVpcIDs:          host.CloudVpcIDs,
-			VpcIDs:               host.VpcIDs,
-			CloudSubnetIDs:       host.CloudSubnetIDs,
-			SubnetIDs:            host.SubnetIDs,
-			CloudImageID:         host.CloudImageID,
-			ImageID:              host.ImageID,
-			OsName:               host.OsName,
-			Memo:                 host.Memo,
-			Status:               host.Status,
-			PrivateIPv4Addresses: host.PrivateIPv4Addresses,
-			PrivateIPv6Addresses: host.PrivateIPv6Addresses,
-			PublicIPv4Addresses:  host.PublicIPv4Addresses,
-			PublicIPv6Addresses:  host.PublicIPv6Addresses,
-			MachineType:          host.MachineType,
-			CloudCreatedTime:     host.CloudCreatedTime,
-			CloudLaunchedTime:    host.CloudLaunchedTime,
-			CloudExpiredTime:     host.CloudExpiredTime,
-			Extension:            host.Extension,
+		res = append(res, cloud.CvmBatchUpdateWithExtension[cvm.TCloudZiyanHostExtension]{
+			CvmBatchUpdate: cloud.CvmBatchUpdate{
+				ID:                   id,
+				Name:                 host.Name,
+				BkBizID:              host.BkBizID,
+				BkHostID:             host.BkHostID,
+				BkCloudID:            &host.BkCloudID,
+				Region:               host.Region,
+				Zone:                 host.Zone,
+				CloudVpcIDs:          host.CloudVpcIDs,
+				VpcIDs:               host.VpcIDs,
+				CloudSubnetIDs:       host.CloudSubnetIDs,
+				SubnetIDs:            host.SubnetIDs,
+				CloudImageID:         host.CloudImageID,
+				ImageID:              host.ImageID,
+				OsName:               host.OsName,
+				Memo:                 host.Memo,
+				Status:               host.Status,
+				PrivateIPv4Addresses: host.PrivateIPv4Addresses,
+				PrivateIPv6Addresses: host.PrivateIPv6Addresses,
+				PublicIPv4Addresses:  host.PublicIPv4Addresses,
+				PublicIPv6Addresses:  host.PublicIPv6Addresses,
+				MachineType:          host.MachineType,
+				CloudCreatedTime:     host.CloudCreatedTime,
+				CloudLaunchedTime:    host.CloudLaunchedTime,
+				CloudExpiredTime:     host.CloudExpiredTime,
+			},
+			Extension: host.Extension,
 		})
 	}
 
 	return res
 }
 
-func (cli *client) updateHost(kt *kit.Kit, hosts []cloud.CvmBatchUpdate[cvm.TCloudZiyanHostExtension]) error {
+func (cli *client) updateHost(kt *kit.Kit, hosts []cloud.CvmBatchUpdateWithExtension[cvm.TCloudZiyanHostExtension]) error {
 	if len(hosts) == 0 {
 		return nil
 	}

@@ -197,7 +197,7 @@ func (cli *client) validateSGAssociationStatistic(kt *kit.Kit, sg *cloudcore.Bas
 		Region:   sg.Region,
 		CloudIDs: []string{sg.CloudID},
 	}
-	statistics, err := cli.cloudCli.DescribeSecurityGroupAssociationStatistics(kt, opt)
+	statistics, err := cli.cloudCli.DescribeSGAssociationStatistics(kt, opt)
 	if err != nil {
 		logs.Errorf("describe security group association statistics failed, err: %v, rid: %s", err, kt.Rid)
 		return false, err

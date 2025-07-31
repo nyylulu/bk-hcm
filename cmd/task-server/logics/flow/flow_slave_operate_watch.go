@@ -143,7 +143,7 @@ func (act FlowSlaveOperateWatchAction) processResFlow(kt run.ExecuteKit, opt *Fl
 			resStatus = enumor.CancelResFlowStatus
 		}
 
-		if err := act.updateTargetGroupListenerRuleRelBindStatus(kt.Kit(), opt, flowInfo.State); err != nil {
+		if err := act.updateTGListenerRuleRelBindStatus(kt.Kit(), opt, flowInfo.State); err != nil {
 			return false, err
 		}
 
@@ -226,8 +226,8 @@ func (act FlowSlaveOperateWatchAction) updateFlowStateByCAS(kt *kit.Kit, flowID 
 	return nil
 }
 
-// updateTargetGroupListenerRuleRelBindStatus 更新目标组与监听器的绑定状态
-func (act FlowSlaveOperateWatchAction) updateTargetGroupListenerRuleRelBindStatus(kt *kit.Kit,
+// updateTGListenerRuleRelBindStatus 更新目标组与监听器的绑定状态
+func (act FlowSlaveOperateWatchAction) updateTGListenerRuleRelBindStatus(kt *kit.Kit,
 	opt *FlowSlaveOperateWatchOption, flowState enumor.FlowState) error {
 
 	if opt == nil || opt.TaskType != enumor.ApplyTargetGroupType || opt.SubResType != enumor.TargetGroupCloudResType {

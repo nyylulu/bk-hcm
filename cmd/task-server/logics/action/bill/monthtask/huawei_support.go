@@ -39,7 +39,7 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-// HuaweiSupportMonthTask
+// HuaweiSupportMonthTask ...
 // 1. 华为支持费拉取本地根账号下所有账单，包括前面的其他month task 生成的账单
 // 2. 分摊到子账号下
 type HuaweiSupportMonthTask struct {
