@@ -235,6 +235,8 @@ func (dao LoadBalancerDao) List(kt *kit.Kit, opt *types.ListOption) (*typeslb.Li
 		return nil, err
 	}
 
+	logs.Errorf("DEBUG:SQL:LoadBalancerDao:List, sql: %s, whereValue: %+v, rid: %s", sql, whereValue, kt.Rid)
+
 	return &typeslb.ListLoadBalancerDetails{Details: details}, nil
 }
 

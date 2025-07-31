@@ -240,6 +240,8 @@ func (dao LbTCloudZiyanUrlRuleDao) List(kt *kit.Kit, opt *types.ListOption) (*ty
 		return nil, err
 	}
 
+	logs.Errorf("DEBUG:SQL:LbTCloudZiyanUrlRuleDao:List, sql: %s, whereValue: %+v, rid: %s", sql, whereValue, kt.Rid)
+
 	return &types.ListResult[*tablelb.TCloudZiyanLbUrlRuleTable]{Details: details}, nil
 }
 

@@ -202,6 +202,8 @@ func (dao TargetDao) List(kt *kit.Kit, opt *types.ListOption) (*typeslb.ListLoad
 		return nil, err
 	}
 
+	logs.Errorf("DEBUG:SQL:TargetDao:List, sql: %s, whereValue: %+v, rid: %s", sql, whereValue, kt.Rid)
+
 	return &typeslb.ListLoadBalancerTargetDetails{Details: details}, nil
 }
 

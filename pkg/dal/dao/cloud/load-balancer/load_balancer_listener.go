@@ -232,6 +232,8 @@ func (dao ListenerDao) List(kt *kit.Kit, opt *types.ListOption) (*typeslb.ListLo
 		return nil, err
 	}
 
+	logs.Errorf("DEBUG:SQL:ListenerDao:List, sql: %s, whereValue: %+v, rid: %s", sql, whereValue, kt.Rid)
+
 	return &typeslb.ListLoadBalancerListenerDetails{Details: details}, nil
 }
 

@@ -210,6 +210,9 @@ func (dao TargetGroupListenerRuleRelDao) List(kt *kit.Kit, opt *types.ListOption
 		return nil, err
 	}
 
+	logs.Errorf("DEBUG:SQL:TargetGroupListenerRuleRelDao:List, sql: %s, whereValue: %+v, rid: %s",
+		sql, whereValue, kt.Rid)
+
 	return &typeslb.ListTargetGroupListenerRuleRelDetails{Details: details}, nil
 }
 

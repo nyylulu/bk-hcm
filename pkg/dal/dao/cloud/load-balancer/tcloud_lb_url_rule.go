@@ -241,6 +241,8 @@ func (dao LbTCloudUrlRuleDao) List(kt *kit.Kit, opt *types.ListOption) (*typeslb
 		return nil, err
 	}
 
+	logs.Errorf("DEBUG:SQL:LbTCloudUrlRuleDao:List, sql: %s, whereValue: %+v, rid: %s", sql, whereValue, kt.Rid)
+
 	return &typeslb.ListLbUrlRuleDetails{Details: details}, nil
 }
 

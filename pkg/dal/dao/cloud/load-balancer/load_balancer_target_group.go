@@ -293,6 +293,8 @@ func (dao TargetGroupDao) List(kt *kit.Kit, opt *types.ListOption) (*typeslb.Lis
 		return nil, err
 	}
 
+	logs.Errorf("DEBUG:SQL:TargetGroupDao:List, sql: %s, whereValue: %+v, rid: %s", sql, whereValue, kt.Rid)
+
 	return &typeslb.ListLbTargetGroupDetails{Details: details}, nil
 }
 
