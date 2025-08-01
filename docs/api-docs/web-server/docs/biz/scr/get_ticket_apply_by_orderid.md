@@ -144,7 +144,7 @@ POST /api/v1/woa/bizs/{bk_biz_id}/task/get/apply/ticket
 | cpu_provider | string	           | CPU类型             |
 | kernel       | string            | 内核                |
 | system_disk  | DiskObject        | 系统盘，磁盘大小：50G-1000G且为50的倍数（IT类型默认本地盘、50G；其他类型默认高性能云盘、100G） |
-| data_disk    | array DiskObject  | 数据盘，支持多块硬盘，磁盘大小：20G-3200G且为10的倍数，数据盘数量总和不能超过20块 |
+| data_disk    | array DiskObject  | 数据盘，支持多块硬盘，磁盘大小：20G-32000G且为10的倍数，数据盘数量总和不能超过20块 |
 
 #### data.suborders.spec.DiskObject
 | 参数名称   | 参数类型  | 必选 | 描述                                                      |

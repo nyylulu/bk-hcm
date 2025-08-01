@@ -2432,6 +2432,8 @@ func (s *scheduler) createModifyRecord(kt *kit.Kit, order *types.ApplyOrder, par
 				NetworkType: order.Spec.NetworkType,
 				Vpc:         order.Spec.Vpc,
 				Subnet:      order.Spec.Subnet,
+				SystemDisk:  order.Spec.SystemDisk,
+				DataDisk:    order.Spec.DataDisk,
 			},
 			CurData: &table.ModifyData{
 				TotalNum:    param.TotalNum,
@@ -2445,6 +2447,8 @@ func (s *scheduler) createModifyRecord(kt *kit.Kit, order *types.ApplyOrder, par
 				NetworkType: param.Spec.NetworkType,
 				Vpc:         param.Spec.Vpc,
 				Subnet:      param.Spec.Subnet,
+				SystemDisk:  order.Spec.SystemDisk,
+				DataDisk:    order.Spec.DataDisk,
 			},
 		},
 		CreateAt: time.Now(),

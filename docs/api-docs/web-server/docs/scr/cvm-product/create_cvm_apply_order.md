@@ -35,7 +35,7 @@ POST /api/v1/woa/cvm/create/apply/order
 | charge_months       | int              | 否  | 计费时长，单位：月(计费模式为包年包月时，该字段必传)               |
 | inherit_instance_id | string           | 否  | 被继承云主机实例ID（同一批次只支持一台），如果是滚服项目，该字段必传  |
 | system_disk         | DiskObject       | 是  | 系统盘，磁盘大小：50G-1000G且为50的倍数（IT类型默认本地盘、50G；其他类型默认高性能云盘、100G） |
-| data_disk           | DiskObject array | 是  | 数据盘，支持多块硬盘，磁盘大小：20G-3200G且为10的倍数，数据盘数量总和不能超过20块 |
+| data_disk           | DiskObject array | 是  | 数据盘，支持多块硬盘，磁盘大小：20G-32000G且为10的倍数，数据盘数量总和不能超过20块 |
 
 #### spec for DiskObject
 | 参数名称   | 参数类型  | 必选 | 描述                                                      |

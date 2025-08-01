@@ -45,7 +45,7 @@ POST /api/v1/woa/bizs/{bk_biz_id}/task/update/apply/ticket
 | charge_type   | string            | 否   | 计费模式 (PREPAID:包年包月，POSTPAID_BY_HOUR:按量计费)，默认:包年包月 |
 | charge_months | int               | 否   | 计费时长，单位：月(计费模式为包年包月时，该字段必传) |
 | system_disk   | DiskObject        | 是   | 系统盘，磁盘大小：50G-1000G且为50的倍数（IT类型默认本地盘、50G；其他类型默认高性能云盘、100G） |
-| data_disk     | array DiskObject  | 否   | 数据盘，支持多块硬盘，磁盘大小：20G-3200G且为10的倍数，数据盘数量总和不能超过20块 |
+| data_disk     | array DiskObject  | 否   | 数据盘，支持多块硬盘，磁盘大小：20G-32000G且为10的倍数，数据盘数量总和不能超过20块 |
 
 #### spec for IDCPM
 | 参数名称      | 参数类型 | 必选 | 描述        |
