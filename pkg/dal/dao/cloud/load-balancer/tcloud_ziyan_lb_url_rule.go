@@ -42,13 +42,15 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-// LbTCloudUrlRuleInterface only used for lb tcloud url rule.
+// LbTCloudZiyanUrlRuleInterface only used for lb tcloud url rule.
 type LbTCloudZiyanUrlRuleInterface interface {
 	BatchCreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []*tablelb.TCloudZiyanLbUrlRuleTable) ([]string, error)
 	Update(kt *kit.Kit, expr *filter.Expression, model *tablelb.TCloudZiyanLbUrlRuleTable) error
 	UpdateByIDWithTx(kt *kit.Kit, tx *sqlx.Tx, id string, model *tablelb.TCloudZiyanLbUrlRuleTable) error
 	List(kt *kit.Kit, opt *types.ListOption) (*types.ListResult[*tablelb.TCloudZiyanLbUrlRuleTable], error)
 	DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression) error
+	ListJoinListener(kt *kit.Kit, opt *types.ListOption) (
+		*types.ListResult[*tablelb.TCloudZiyanLbUrlRuleWithListener], error)
 }
 
 var _ LbTCloudZiyanUrlRuleInterface = (*LbTCloudZiyanUrlRuleDao)(nil)
@@ -263,4 +265,57 @@ func (dao LbTCloudZiyanUrlRuleDao) DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *
 	}
 
 	return nil
+}
+
+// ListJoinListener lb url rule.
+func (dao LbTCloudZiyanUrlRuleDao) ListJoinListener(kt *kit.Kit, opt *types.ListOption) (
+	*types.ListResult[*tablelb.TCloudZiyanLbUrlRuleWithListener], error) {
+
+	if opt == nil {
+		return nil, errf.New(errf.InvalidParameter, "list options is nil")
+	}
+
+	if err := opt.Validate(filter.NewExprOption(filter.RuleFields(tablelb.TCloudLbUrlRuleColumns.ColumnTypes())),
+		core.NewDefaultPageOption()); err != nil {
+		return nil, err
+	}
+
+	whereExpr, whereValue, err := opt.Filter.SQLWhereExpr(tools.DefaultSqlWhereOption)
+	if err != nil {
+		return nil, err
+	}
+
+	if opt.Page.Count {
+		// this is a count request, then do count operation only.
+		sql := fmt.Sprintf(`SELECT count(*)	FROM %s AS rule LEFT JOIN
+		 (select id as listener_id,name as lbl_name, protocol, port from load_balancer_listener) AS t 
+		ON rule.id = t.listener_id %s`,
+			table.TCloudZiyanLbUrlRuleTable, whereExpr)
+
+		count, err := dao.Orm.Do().Count(kt.Ctx, sql, whereValue)
+		if err != nil {
+			logs.Errorf("count load balancer url rule failed, err: %v, filter: %s, rid: %s", err, opt.Filter, kt.Rid)
+			return nil, err
+		}
+
+		return &types.ListResult[*tablelb.TCloudZiyanLbUrlRuleWithListener]{Count: count}, nil
+	}
+
+	pageExpr, err := types.PageSQLExpr(opt.Page, types.DefaultPageSQLOption)
+	if err != nil {
+		return nil, err
+	}
+
+	sql := fmt.Sprintf(`SELECT %s, lbl_name, protocol, port FROM %s AS rule LEFT JOIN
+		 (select id as listener_id,name as lbl_name, protocol, port from load_balancer_listener) AS t 
+		ON rule.lbl_id = t.listener_id %s %s`,
+		tablelb.TCloudLbUrlRuleColumns.FieldsNamedExpr(opt.Fields),
+		table.TCloudZiyanLbUrlRuleTable, whereExpr, pageExpr)
+
+	details := make([]*tablelb.TCloudZiyanLbUrlRuleWithListener, 0)
+	if err = dao.Orm.Do().Select(kt.Ctx, &details, sql, whereValue); err != nil {
+		return nil, err
+	}
+
+	return &types.ListResult[*tablelb.TCloudZiyanLbUrlRuleWithListener]{Details: details}, nil
 }

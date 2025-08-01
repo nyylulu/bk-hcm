@@ -55,7 +55,7 @@ func (svc *lbSvc) ListTCloudZiyanUrlRule(cts *rest.Contexts) (any, error) {
 		Filter: req.Filter,
 		Page:   req.Page,
 	}
-	result, err := svc.dao.LoadBalancerTCloudZiyanUrlRule().List(cts.Kit, opt)
+	result, err := svc.dao.LoadBalancerTCloudZiyanUrlRule().ListJoinListener(cts.Kit, opt)
 	if err != nil {
 		logs.Errorf("list tcloud-ziyan lb url rule failed, req: %+v, err: %v, rid: %s", req, err, cts.Kit.Rid)
 		return nil, fmt.Errorf("list tcloud-ziyan lb url rule failed, err: %v", err)
@@ -77,7 +77,7 @@ func (svc *lbSvc) ListTCloudZiyanUrlRule(cts *rest.Contexts) (any, error) {
 	return &protocloud.TCloudURLRuleListResult{Details: details}, nil
 }
 
-func convZiyanTableToBaseTCloudLbURLRule(kt *kit.Kit, one *tablelb.TCloudZiyanLbUrlRuleTable) (
+func convZiyanTableToBaseTCloudLbURLRule(kt *kit.Kit, one *tablelb.TCloudZiyanLbUrlRuleWithListener) (
 	*corelb.TCloudLbUrlRule, error) {
 
 	var healthCheck *corelb.TCloudHealthCheckInfo
@@ -114,6 +114,9 @@ func convZiyanTableToBaseTCloudLbURLRule(kt *kit.Kit, one *tablelb.TCloudZiyanLb
 		HealthCheck:        healthCheck,
 		Certificate:        certInfo,
 		Memo:               one.Memo,
+		LblName:            one.LblName,
+		Protocol:           enumor.ProtocolType(one.Protocol),
+		Port:               int64(one.Port),
 		Revision: &core.Revision{
 			Creator:   one.Creator,
 			Reviser:   one.Reviser,

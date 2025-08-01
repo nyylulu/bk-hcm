@@ -135,3 +135,11 @@ func (tlbur TCloudZiyanLbUrlRuleTable) UpdateValidate() error {
 
 	return nil
 }
+
+// TCloudZiyanLbUrlRuleWithListener define tcloud_ziyan_lb_url_rule with listener.
+type TCloudZiyanLbUrlRuleWithListener struct {
+	TCloudZiyanLbUrlRuleTable `json:",inline"`
+	LblName                   string `db:"lbl_name" json:"lbl_name"`
+	Protocol                  string `db:"protocol" json:"protocol"`
+	Port                      int    `db:"port" json:"port"`
+}
