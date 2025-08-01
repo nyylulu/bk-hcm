@@ -67,13 +67,15 @@ func (s *CvmCreateReq) Validate() error {
 
 // OrderSpec cvm apply order specification
 type OrderSpec struct {
-	Region      string `json:"region" bson:"region"`
-	Zone        string `json:"zone" bson:"zone"`
-	DeviceType  string `json:"device_type" bson:"device_type"`
-	ImageId     string `json:"image_id" bson:"image_id"`
-	NetworkType string `json:"network_type" bson:"network_type"`
-	Vpc         string `json:"vpc" bson:"vpc"`
-	Subnet      string `json:"subnet" bson:"subnet"`
+	Region      string          `json:"region" bson:"region"`
+	Zone        string          `json:"zone" bson:"zone"`
+	DeviceType  string          `json:"device_type" bson:"device_type"`
+	ImageId     string          `json:"image_id" bson:"image_id"`
+	DiskSize    int64           `json:"disk_size" bson:"disk_size"`
+	DiskType    enumor.DiskType `json:"disk_type" bson:"disk_type"`
+	NetworkType string          `json:"network_type" bson:"network_type"`
+	Vpc         string          `json:"vpc" bson:"vpc"`
+	Subnet      string          `json:"subnet" bson:"subnet"`
 	// 计费模式(计费模式：PREPAID包年包月，POSTPAID_BY_HOUR按量计费，默认为：PREPAID)
 	ChargeType cvmapi.ChargeType `json:"charge_type" bson:"charge_type"`
 	// 计费时长，单位：月
