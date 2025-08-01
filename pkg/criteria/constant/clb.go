@@ -87,4 +87,6 @@ const (
 	CLBExcelHeaderVendor = "vendor(云厂商)"
 	// CLBExcelHeaderTCloud excel表头腾讯云字段值
 	CLBExcelHeaderTCloud = "tencent_cloud_public(腾讯云-公有云)"
+	// CLBExcelHeaderTCloudZiyan excel表头自研云字段值
+	CLBExcelHeaderTCloudZiyan = "tencent_cloud_private(腾讯云-自研云)"
 )

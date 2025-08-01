@@ -192,6 +192,8 @@ func getFirstRow(vendor enumor.Vendor) ([]string, error) {
 	switch vendor {
 	case enumor.TCloud:
 		rowData = append(rowData, constant.CLBExcelHeaderTCloud)
+	case enumor.TCloudZiyan:
+		rowData = append(rowData, constant.CLBExcelHeaderTCloudZiyan)
 	default:
 		return nil, fmt.Errorf("unsupported vendor: %v", vendor)
 	}

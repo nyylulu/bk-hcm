@@ -338,6 +338,8 @@ func (l *listenerExporter) Export(kt *kit.Kit) (string, error) {
 	switch l.vendor {
 	case enumor.TCloud:
 		err = l.exportTCloud(kt, zipOperator)
+	case enumor.TCloudZiyan:
+		err = l.exportTCloud(kt, zipOperator)
 	default:
 		return "", errf.Newf(errf.InvalidParameter, "unsupported vendor: %s", l.vendor)
 	}
