@@ -228,8 +228,9 @@ func (c *Controller) ListCvmInstanceTypeFromCrp(kt *kit.Kit, deviceTypes []strin
 			DeviceFamily: item.InstanceGroup,
 			CoreType:     string(enumor.GetCoreTypeByCRPCoreTypeID(item.CoreType)),
 			// CPU和内存都是整数值，可直接转换
-			CpuCore: int64(item.CPUAmount),
-			Memory:  int64(item.RamAmount),
+			CpuCore:         int64(item.CPUAmount),
+			Memory:          int64(item.RamAmount),
+			DeviceTypeClass: item.InstanceTypeClass,
 		}
 	}
 

@@ -329,6 +329,7 @@ func (d *device) CreateManyDevice(kt *kit.Kit, input *types.CreateManyDevicePara
 	}
 
 	for _, zoneItem := range zones {
+
 		param := &types.DeviceInfo{
 			Region:     zoneItem.Region,
 			Zone:       zoneItem.Zone,
@@ -342,10 +343,11 @@ func (d *device) CreateManyDevice(kt *kit.Kit, input *types.CreateManyDevicePara
 				"device_group": input.DeviceGroup,
 				"device_size":  input.DeviceSize,
 			},
-			EnableCapacity: true,
-			EnableApply:    true,
-			Score:          0,
-			Comment:        "",
+			EnableCapacity:  true,
+			EnableApply:     true,
+			Score:           0,
+			Comment:         "",
+			DeviceTypeClass: input.DeviceTypeClass,
 		}
 
 		for _, requireType := range input.RequireType {

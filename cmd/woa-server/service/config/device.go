@@ -174,6 +174,7 @@ func (s *service) CreateManyDevice(cts *rest.Contexts) (interface{}, error) {
 	// 当机型存在于crp时，那么创建时以crp的实例族为准
 	if exists {
 		input.DeviceGroup = crpDeviceInfo.DeviceFamily
+		input.DeviceTypeClass = crpDeviceInfo.DeviceTypeClass
 	}
 	if err = s.logics.Device().CreateManyDevice(cts.Kit, input); err != nil {
 		logs.Errorf("failed to create device in batch, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
