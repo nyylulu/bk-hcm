@@ -67,21 +67,21 @@ func (s *CvmCreateReq) Validate() error {
 
 // OrderSpec cvm apply order specification
 type OrderSpec struct {
-	Region      string          `json:"region" bson:"region"`
-	Zone        string          `json:"zone" bson:"zone"`
-	DeviceType  string          `json:"device_type" bson:"device_type"`
-	ImageId     string          `json:"image_id" bson:"image_id"`
-	DiskSize    int64           `json:"disk_size" bson:"disk_size"`
-	DiskType    enumor.DiskType `json:"disk_type" bson:"disk_type"`
-	NetworkType string          `json:"network_type" bson:"network_type"`
-	Vpc         string          `json:"vpc" bson:"vpc"`
-	Subnet      string          `json:"subnet" bson:"subnet"`
+	Region      string `json:"region" bson:"region"`
+	Zone        string `json:"zone" bson:"zone"`
+	DeviceType  string `json:"device_type" bson:"device_type"`
+	ImageId     string `json:"image_id" bson:"image_id"`
+	NetworkType string `json:"network_type" bson:"network_type"`
+	Vpc         string `json:"vpc" bson:"vpc"`
+	Subnet      string `json:"subnet" bson:"subnet"`
 	// 计费模式(计费模式：PREPAID包年包月，POSTPAID_BY_HOUR按量计费，默认为：PREPAID)
 	ChargeType cvmapi.ChargeType `json:"charge_type" bson:"charge_type"`
 	// 计费时长，单位：月
 	ChargeMonths uint `json:"charge_months" bson:"charge_months"`
 	// 被继承云主机实例ID
-	InheritInstanceId string `json:"inherit_instance_id" bson:"inherit_instance_id"`
+	InheritInstanceId string            `json:"inherit_instance_id" bson:"inherit_instance_id"`
+	SystemDisk        enumor.DiskSpec   `json:"system_disk" bson:"system_disk"`
+	DataDisk          []enumor.DiskSpec `json:"data_disk" bson:"data_disk"`
 }
 
 // Validate whether OrderSpec is valid
@@ -96,22 +96,6 @@ func (s *OrderSpec) Validate() error {
 		return fmt.Errorf("subnet cannot be empty while vpc is set")
 	}
 
-	if s.DiskSize < 0 {
-		return fmt.Errorf("disk_size invalid value < 0")
-	}
-
-	diskLimit := int64(16000)
-	if s.DiskSize > diskLimit {
-		return fmt.Errorf("disk_size exceed limit %d", diskLimit)
-	}
-
-	// 规格为 10 的倍数
-	diskUnit := int64(10)
-	modDisk := s.DiskSize % diskUnit
-	if modDisk != 0 {
-		return fmt.Errorf("disk_size must be in multiples of %d", diskUnit)
-	}
-
 	// 计费模式校验-该接口没有对外提供，可以为必传参数
 	if err := s.ChargeType.Validate(); err != nil {
 		return err
@@ -120,6 +104,40 @@ func (s *OrderSpec) Validate() error {
 	// 包年包月时，计费时长必传
 	if s.ChargeType == cvmapi.ChargeTypePrePaid && s.ChargeMonths < 1 {
 		return fmt.Errorf("charge_months invalid value < 1")
+	}
+
+	// 系统盘类型校验
+	if err := s.SystemDisk.Validate(); err != nil {
+		return err
+	}
+	if s.SystemDisk.DiskSize < 50 || s.SystemDisk.DiskSize > 1000 {
+		return fmt.Errorf("system_disk_size invalid value, must be in range [50, 1000]")
+	}
+	// 系统盘大小必须是50的倍数
+	if s.SystemDisk.DiskSize%50 != 0 {
+		return fmt.Errorf("system_disk_size must be a multiple of 50")
+	}
+
+	// 数据盘类型校验
+	if len(s.DataDisk) > 0 {
+		dataDiskTotalNum := 0
+		for _, dd := range s.DataDisk {
+			if err := dd.Validate(); err != nil {
+				return err
+			}
+			if dd.DiskSize < 10 || dd.DiskSize > 32000 {
+				return fmt.Errorf("data_disk_size invalid value, must be in range [10, 32000]")
+			}
+			// 数据盘大小必须是10的倍数
+			if dd.DiskSize%10 != 0 {
+				return fmt.Errorf("data_disk_size must be a multiple of 10")
+			}
+			dataDiskTotalNum += dd.DiskNum
+		}
+		// 数据盘总数量不能超过20块
+		if dataDiskTotalNum < 0 || dataDiskTotalNum > 20 {
+			return fmt.Errorf("data_disk_total_num invalid value, must be in range [0, 20]")
+		}
 	}
 
 	return nil

@@ -45,6 +45,8 @@ type CVM struct {
 	BkProductName     string            `json:"bk_product_name"`
 	VirtualDeptID     int64             `json:"virtual_dept_id"`
 	VirtualDeptName   string            `json:"virtual_dept_name"`
+	SystemDisk        enumor.DiskSpec   `json:"system_disk"`
+	DataDisk          []enumor.DiskSpec `json:"data_disk"`
 }
 
 // DeliveredCVMKey delivered cvm key

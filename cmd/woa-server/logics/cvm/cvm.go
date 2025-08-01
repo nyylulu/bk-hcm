@@ -17,7 +17,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -52,8 +51,6 @@ type CVM struct {
 	ImageId           string            `json:"image_id"`
 	ImageName         string            `json:"image_name"`
 	InstanceType      string            `json:"instanceType"`
-	DiskType          enumor.DiskType   `json:"disk_type"`
-	DiskSize          int64             `json:"disk_size"`
 	SecurityGroupId   string            `json:"securityGroupId"`
 	SecurityGroupName string            `json:"securityGroupName"`
 	SecurityGroupDesc string            `json:"securityGroupDesc"`
@@ -62,6 +59,8 @@ type CVM struct {
 	InheritInstanceId string            `json:"inherit_instance_id"`
 	BkProductID       int64             `json:"bk_product_id"`
 	BkProductName     string            `json:"bk_product_name"`
+	SystemDisk        enumor.DiskSpec   `json:"system_disk"`
+	DataDisk          []enumor.DiskSpec `json:"data_disk"`
 }
 
 // ExecuteApplyOrder CVM生产-创建单据
@@ -233,12 +232,14 @@ func (l *logics) createCVM(cvm *CVM) (string, error) {
 				ImageId:   cvm.ImageId,
 				ImageName: cvm.ImageName,
 			},
-			InstanceType: cvm.InstanceType,
-			DataDisk:     make([]*cvmapi.DataDisk, 0),
-			VpcId:        cvm.VPCId,
-			SubnetId:     cvm.SubnetId,
-			ApplyNum:     int(cvm.ApplyNumber),
-			PassWord:     l.cliConf.CvmOpt.CvmLaunchPassword,
+			InstanceType:   cvm.InstanceType,
+			SystemDiskType: cvm.SystemDisk.DiskType,
+			SystemDiskSize: cvm.SystemDisk.DiskSize,
+			DataDisk:       make([]*cvmapi.DataDisk, 0),
+			VpcId:          cvm.VPCId,
+			SubnetId:       cvm.SubnetId,
+			ApplyNum:       int(cvm.ApplyNumber),
+			PassWord:       l.cliConf.CvmOpt.CvmLaunchPassword,
 			Security: &cvmapi.Security{
 				SecurityGroupId:   cvm.SecurityGroupId,
 				SecurityGroupName: cvm.SecurityGroupName,
@@ -258,21 +259,14 @@ func (l *logics) createCVM(cvm *CVM) (string, error) {
 		createReq.Params.ChargeMonths = cvm.ChargeMonths
 	}
 
-	// set system disk parameters
-	itDev := regexp.MustCompile(`^IT3\.|^IT2\.|^I3\.|^IT5\.|^IT5c\.`).FindStringSubmatch(cvm.InstanceType)
-	if len(itDev) > 0 {
-		createReq.Params.SystemDiskType = cvmapi.CvmLaunchSystemDiskTypeBasic
-		createReq.Params.SystemDiskSize = cvmapi.CvmLaunchSystemDiskSizeBasic
-	} else {
-		createReq.Params.SystemDiskType = cvmapi.CvmLaunchSystemDiskTypePremium
-		createReq.Params.SystemDiskSize = cvmapi.CvmLaunchSystemDiskSizePremium
-	}
-
-	if cvm.DiskSize > 0 {
-		createReq.Params.DataDisk = append(createReq.Params.DataDisk, &cvmapi.DataDisk{
-			DataDiskType: cvm.DiskType,
-			DataDiskSize: int(cvm.DiskSize),
-		})
+	// 数据盘可以指定多块硬盘
+	for _, dd := range cvm.DataDisk {
+		for i := 0; i < dd.DiskNum; i++ {
+			createReq.Params.DataDisk = append(createReq.Params.DataDisk, &cvmapi.DataDisk{
+				DataDiskType: dd.DiskType,
+				DataDiskSize: dd.DiskSize,
+			})
+		}
 	}
 
 	// set obs project type
@@ -508,8 +502,8 @@ func (l *logics) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder) (*CVM, error)
 		Area:              order.Spec.Region,
 		Zone:              order.Spec.Zone,
 		InstanceType:      order.Spec.DeviceType,
-		DiskType:          order.Spec.DiskType,
-		DiskSize:          order.Spec.DiskSize,
+		SystemDisk:        order.Spec.SystemDisk,
+		DataDisk:          order.Spec.DataDisk,
 		ChargeType:        order.Spec.ChargeType, // 计费模式
 		InheritInstanceId: order.Spec.InheritInstanceId,
 	}
@@ -519,10 +513,6 @@ func (l *logics) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder) (*CVM, error)
 		req.ChargeMonths = order.Spec.ChargeMonths
 	}
 
-	// set disk type default value
-	if len(req.DiskType) == 0 {
-		req.DiskType = cvmapi.CvmLaunchSystemDiskTypePremium
-	}
 	// vpc and subnet
 	if order.Spec.Vpc != "" {
 		req.VPCId = order.Spec.Vpc

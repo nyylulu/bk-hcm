@@ -1,6 +1,6 @@
 ### 描述
 
-- 该接口提供版本：v1.6.1+。
+- 该接口提供版本：v1.8.3+。
 - 该接口所需权限：平台管理-自研云资源-主机申领。
 - 该接口功能描述：创建资源申请单据。
 
@@ -34,23 +34,25 @@ POST /api/v1/woa/task/create/apply
 
 #### spec for QCLOUDCVM
 
-| 参数名称                | 参数类型    | 必选 | 描述                                                  |
-|---------------------|---------|----|-----------------------------------------------------|
-| region              | string	 | 是  | 地域                                                  |
-| zone                | string	 | 是  | 可用区                                                 |
-| resource_mode	      | int     | 是  | 1: 按机型族申领, 0: 按机型申领                                 |
-| device_group        | string  | 否  | 机型族。当resource_mode为1时必填                             |
-| model_type          | string  | 否  | 配置类型。当resource_mode为1时必填                            |
-| device_type         | string	 | 是  | 机型。当resource_mode为0时必填                              |
-| image_id            | string  | 是  | 镜像ID                                                |
-| disk_size           | int     | 是  | 数据盘磁盘大小，单位G                                         |
-| disk_type	          | string	 | 是  | 数据盘磁盘类型。"CLOUD_SSD": SSD云硬盘, "CLOUD_PREMIUM": 高性能云盘 |
-| network_type        | string	 | 是  | 网络类型。"ONETHOUSAND": 千兆, "TENTHOUSAND": 万兆           |
-| vpc	                | string  | 否  | 私有网络，默认为空                                           |
-| subnet              | string  | 否  | 私有子网，默认为空                                           |
-| charge_type         | string  | 否  | 计费模式 (PREPAID:包年包月，POSTPAID_BY_HOUR:按量计费)，默认:包年包月   |
-| charge_months       | int     | 否  | 计费时长，单位：月(计费模式为包年包月时，该字段必传)                         |
-| inherit_instance_id | string  | 否  | 被继承云主机实例ID（同一批次只支持一台），如果是滚服项目，该字段必传                 |
+| 参数名称              | 参数类型          | 必选 | 描述                                                      |
+|---------------------|------------------|-----|-----------------------------------------------------------|
+| region              | string	         | 是  | 地域                                                       |
+| zone                | string	         | 是  | 可用区                                                     |
+| resource_mode	      | int              | 是  | 1: 按机型族申领, 0: 按机型申领                                |
+| device_group        | string           | 否  | 机型族。当resource_mode为1时必填                             |
+| model_type          | string           | 否  | 配置类型。当resource_mode为1时必填                            |
+| device_type         | string	         | 是  | 机型。当resource_mode为0时必填                               |
+| image_id            | string           | 是  | 镜像ID                                                     |
+| disk_size           | int              | 否  | 数据盘磁盘大小，单位G                                         |
+| disk_type	          | string	         | 否  | 数据盘磁盘类型。"CLOUD_SSD": SSD云硬盘, "CLOUD_PREMIUM": 高性能云盘 |
+| network_type        | string	         | 是  | 网络类型。"ONETHOUSAND": 千兆, "TENTHOUSAND": 万兆           |
+| vpc	              | string           | 否  | 私有网络，默认为空                                           |
+| subnet              | string           | 否  | 私有子网，默认为空                                           |
+| charge_type         | string           | 否  | 计费模式 (PREPAID:包年包月，POSTPAID_BY_HOUR:按量计费)，默认:包年包月 |
+| charge_months       | int              | 否  | 计费时长，单位：月(计费模式为包年包月时，该字段必传)                    |
+| inherit_instance_id | string           | 否  | 被继承云主机实例ID（同一批次只支持一台），如果是滚服项目，该字段必传       |
+| system_disk         | DiskObject       | 是  | 系统盘，磁盘大小：50G-1000G且为50的倍数（IT类型默认本地盘、50G；其他类型默认高性能云盘、100G） |
+| data_disk           | DiskObject array | 否  | 数据盘，支持多块硬盘，磁盘大小：20G-3200G且为10的倍数，数据盘数量总和不能超过20块 |
 
 #### spec for IDCPM
 
@@ -90,6 +92,13 @@ POST /api/v1/woa/task/create/apply
 | mount_path   | string  | 是  | 数据盘挂载点                                    |
 | network_type | string  | 是  | 网络类型。"ONETHOUSAND": 千兆, "TENTHOUSAND": 万兆 |
 
+#### spec for DiskObject
+| 参数名称   | 参数类型  | 必选 | 描述                                                      |
+|-----------|---------|------|----------------------------------------------------------|
+| disk_type | string  | 是   | 磁盘类型，"CLOUD_SSD": SSD云硬盘, "CLOUD_PREMIUM": 高性能云盘 |
+| disk_size | int     | 是   | 磁盘大小，单位G                                             |
+| disk_num  | int     | 是   | 磁盘数量，所有磁盘数量之和不能超过20块                          |
+
 ### 调用示例
 
 #### 获取详细信息请求参数示例
@@ -124,7 +133,17 @@ POST /api/v1/woa/task/create/apply
         "subnet": "",
         "charge_type": "PREPAID",
         "charge_months": 1,
-        "inherit_instance_id": "ins-111"
+        "inherit_instance_id": "ins-111",
+        "system_disk": {
+        "disk_type": "CLOUD_PREMIUM",
+        "disk_size": 100,
+        "disk_num": 1,
+        },
+        "data_disk": [{
+        "disk_type": "CLOUD_PREMIUM",
+        "disk_size": 100,
+        "disk_num": 1,
+        }]
       }
     }
   ]
