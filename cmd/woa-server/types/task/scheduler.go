@@ -72,6 +72,8 @@ type UpgradeCVMSpec struct {
 	PrivateIPv4Addresses []string `json:"private_ipv4_addresses" bson:"private_ipv4_addresses"`
 	PrivateIPv6Addresses []string `json:"private_ipv6_addresses" bson:"private_ipv6_addresses"`
 	BkAssetID            string   `json:"bk_asset_id" bson:"bk_asset_id"`
+	Operator             string   `json:"operator" bson:"operator"`               // 主负责人
+	BkBakOperator        string   `json:"bk_bak_operator" bson:"bk_bak_operator"` // 备份负责人
 	DeviceType           string   `json:"device_type" bson:"device_type"`
 	RegionID             string   `json:"region_id" bson:"region_id"`
 	ZoneID               string   `json:"zone_id" bson:"zone_id"`

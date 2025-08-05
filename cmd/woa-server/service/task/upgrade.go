@@ -21,6 +21,7 @@ package task
 
 import (
 	"fmt"
+	"strings"
 
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
@@ -143,6 +144,12 @@ func (s *service) getInstanceDetails(kt *kit.Kit, bkBizID int64, user string, up
 		if cvmDetail.BkBizID != bkBizID {
 			logs.Errorf("instance %s is not belong to biz %d, rid: %s", item.InstanceID, bkBizID, kt.Rid)
 			return nil, fmt.Errorf("instance %s is not belong to biz %d", item.InstanceID, bkBizID)
+		}
+		// 校验主备负责人
+		if !strings.Contains(cvmDetail.Extension.Operator, user) &&
+			!strings.Contains(cvmDetail.Extension.BkBakOperator, user) {
+			logs.Errorf("user %s is not the operator of instance %s, rid: %s", user, item.InstanceID, kt.Rid)
+			return nil, fmt.Errorf("user %s is not the operator of instance %s", user, item.InstanceID)
 		}
 		rst = append(rst, &types.UpgradeCVMSpec{
 			InstanceID:           cvmDetail.CloudID,
