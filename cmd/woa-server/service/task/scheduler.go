@@ -21,6 +21,7 @@ import (
 	"strconv"
 
 	"hcm/cmd/woa-server/model/task"
+	"hcm/cmd/woa-server/types/config"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
 	"hcm/pkg/criteria/enumor"
@@ -576,15 +577,29 @@ func (s *service) validateDeviceTypeForGreenAndRoll(kt *kit.Kit, input *types.Ap
 	for _, suborder := range input.Suborders {
 		deviceTypes = append(deviceTypes, suborder.Spec.DeviceType)
 	}
-	resp, err := s.configLogics.Device().ListDeviceTypeInfoFromCrp(kt, deviceTypes)
+
+	deviceReq := &config.GetDeviceParam{
+		Filter: &querybuilder.QueryFilter{
+			Rule: querybuilder.CombinedRule{
+				Condition: querybuilder.ConditionAnd,
+				Rules: []querybuilder.Rule{
+					querybuilder.AtomRule{
+						Field:    "device_type",
+						Operator: querybuilder.OperatorIn,
+						Value:    deviceTypes,
+					}},
+			},
+		},
+		Page: metadata.BasePage{Limit: pkg.BKNoLimit, Start: 0},
+	}
+	resp, err := s.configLogics.Device().GetDevice(kt, deviceReq)
 	if err != nil {
-		logs.Errorf("list device type info from crp failed, err: %v, deviceTypes: %v, rid: %s",
-			err, deviceTypes, kt.Rid)
+		logs.Errorf("failed to get device type info, err: %v, deviceTypes: %v, rid: %s", err, deviceTypes, kt.Rid)
 		return err
 	}
-	for _, item := range resp {
-		if item.InstanceTypeClass == cvmapi.SpecialType {
-			return fmt.Errorf("device type %s is not supported for green channel or roll server apply", item.InstanceType)
+	for _, item := range resp.Info {
+		if item.DeviceTypeClass == cvmapi.SpecialType {
+			return fmt.Errorf("device type %s is not supported for green channel or roll server apply", item.DeviceType)
 		}
 	}
 	return nil
