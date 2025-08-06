@@ -69,7 +69,7 @@ func (opt *MainAccountSummaryActionOption) Validate() error {
 type MainAccountSummaryAction struct{}
 
 // ParameterNew return request params.
-func (act *MainAccountSummaryAction) ParameterNew() interface{} {
+func (act MainAccountSummaryAction) ParameterNew() interface{} {
 	return new(MainAccountSummaryActionOption)
 }
 
