@@ -282,16 +282,25 @@ func (d *device) CreateDevice(kt *kit.Kit, input *types.DeviceInfo) (mapstr.MapS
 		"device_type":  input.DeviceType,
 	}
 
-	cnt, err := config.Operation().CvmDevice().CountDevice(kt.Ctx, filter)
+	page := metadata.BasePage{Limit: pkg.BKNoLimit, Start: 0}
+	resp, err := config.Operation().CvmDevice().FindManyDevice(kt.Ctx, page, filter)
 	if err != nil {
 		logs.Errorf("failed to count device, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
+	if len(resp) > 1 {
+		logs.Errorf("the device info exist more than one, device info: %+v, rid: %s", resp, kt.Rid)
+		return nil, errf.NewFromErr(errf.DeviceTypeExistLocally, errors.New("the device info exist more than one"))
+	}
+	if len(resp) == 1 {
+		delFilter := &mapstr.MapStr{
+			"id": resp[0].BkInstId,
+		}
 
-	if cnt != 0 {
-		logs.Errorf("device exist locally, need not create again, rid: %s", kt.Rid)
-		return nil, errf.NewFromErr(errf.DeviceTypeExistLocally,
-			errors.New("device exist locally, need not create again"))
+		if err = config.Operation().CvmDevice().DeleteDevice(kt.Ctx, delFilter); err != nil {
+			logs.Errorf("failed to delete device, err: %v, filter: %v, rid: %s", err, delFilter, kt.Rid)
+			return nil, err
+		}
 	}
 
 	// create instance
