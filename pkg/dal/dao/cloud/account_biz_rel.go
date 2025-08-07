@@ -144,9 +144,9 @@ func (a AccountBizRelDao) ListJoinAccount(kt *kit.Kit, bkBizIDs []int64) (
 
 	sql := fmt.Sprintf(`SELECT %s, %s FROM %s AS rel LEFT JOIN %s AS account ON rel.account_id = account.id 
 	WHERE rel.bk_biz_id in (:bk_biz_ids)`,
-	cloud.AccountColumns.FieldsNamedExprWithout(types.DefaultRelJoinWithoutField),
-	tools.BaseRelJoinSqlBuild("rel", "account", "id", "bk_biz_id"),
-	table.AccountBizRelTable, table.AccountTable,
+		cloud.AccountColumns.FieldsNamedExprWithout(types.DefaultRelJoinWithoutField),
+		tools.BaseRelJoinSqlBuild("rel", "account", "id", "bk_biz_id"),
+		table.AccountBizRelTable, table.AccountTable,
 	)
 
 	details := make([]*types.AccountWithBizID, 0)
@@ -154,6 +154,7 @@ func (a AccountBizRelDao) ListJoinAccount(kt *kit.Kit, bkBizIDs []int64) (
 		logs.ErrorJson("select account biz rel join account failed, err: %v, sql: (%s), rid: %s", err, sql, kt.Rid)
 		return nil, err
 	}
+	logs.Infof("DEBUG:AccountBizRelDao:ListJoinAccount, sql: %s, bkBizIDs: %v, rid: %s", sql, bkBizIDs, kt.Rid)
 
 	return &types.ListAccountBizRelJoinAccountDetails{Details: details}, nil
 }
