@@ -154,7 +154,7 @@ func (a AccountBizRelDao) ListJoinAccount(kt *kit.Kit, bkBizIDs []int64) (
 		logs.ErrorJson("select account biz rel join account failed, err: %v, sql: (%s), rid: %s", err, sql, kt.Rid)
 		return nil, err
 	}
-	logs.Infof("DEBUG:AccountBizRelDao:ListJoinAccount, sql: %s, bkBizIDs: %v, rid: %s", sql, bkBizIDs, kt.Rid)
+	logs.Errorf("DEBUG:AccountBizRelDao:ListJoinAccount, sql: %s, bkBizIDs: %v, rid: %s", sql, bkBizIDs, kt.Rid)
 
 	return &types.ListAccountBizRelJoinAccountDetails{Details: details}, nil
 }
