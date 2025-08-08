@@ -291,16 +291,10 @@ func (d *device) CreateDevice(kt *kit.Kit, input *types.DeviceInfo) (mapstr.MapS
 	}
 	// 删除db中重复的数据，并在后面重新创建
 	if len(resp) > 1 {
-		logs.Warnf("the device info exist more than one, device info: %+v, rid: %s", resp, kt.Rid)
-		for _, item := range resp {
-			delFilter := &mapstr.MapStr{
-				"id": item.BkInstId,
-			}
-
-			if err = config.Operation().CvmDevice().DeleteDevice(kt.Ctx, delFilter); err != nil {
-				logs.Errorf("failed to delete device, err: %v, filter: %v, rid: %s", err, delFilter, kt.Rid)
-				return nil, err
-			}
+		logs.Warnf("the device info exist more than one, device info: %+v, rid: %s", cvt.PtrToSlice(resp), kt.Rid)
+		if err = config.Operation().CvmDevice().DeleteDevice(kt.Ctx, cvt.ValToPtr(mapstr.MapStr(filter))); err != nil {
+			logs.Errorf("failed to delete device, err: %v, filter: %v, rid: %s", err, filter, kt.Rid)
+			return nil, err
 		}
 	}
 
@@ -370,7 +364,7 @@ func (d *device) CreateManyDevice(kt *kit.Kit, input *types.CreateManyDevicePara
 				logs.Errorf("failed to create device, err: %v, param: %+v, rid: %s", err, cvt.PtrToVal(param), kt.Rid)
 				return err
 			}
-			logs.Infof("create device cost: %s, param: %+v, rid: %s", time.Since(createDeviceStartTime))
+			logs.Infof("create device cost: %s, param: %+v, rid: %s", time.Since(createDeviceStartTime), kt.Rid)
 		}
 	}
 
