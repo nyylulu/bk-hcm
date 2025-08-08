@@ -347,7 +347,6 @@ func (svc *lbSvc) listTargetsHealthByTGID(cts *rest.Contexts, validHandler handl
 		lbReq := &core.ListReq{
 			Filter: tools.ExpressionAnd(
 				tools.RuleIn("cloud_id", newCloudLbIDs),
-				tools.RuleEqual("region", tgInfo.Region),
 				tools.RuleEqual("vendor", tgInfo.Vendor),
 				tools.RuleEqual("account_id", tgInfo.AccountID),
 			),
