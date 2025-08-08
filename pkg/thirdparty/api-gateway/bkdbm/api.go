@@ -30,12 +30,19 @@ import (
 )
 
 // QueryMachinePool query machine pool.
-// @doc https://bkapigw.woa.com/docs/apigw-api/bkdbm/query_machine_pool/doc?stage=prod
+// @doc https://bkapigw.woa.com/docs/api-docs/gateway/bkdbm?apiName=query_machine_pool
 func (c *dbm) QueryMachinePool(kt *kit.Kit, req *ListMachinePool) (*ListMachinePoolResp, error) {
+	var hostIDStrs []string
+	for _, hostID := range req.HostIDs {
+		hostIDStrs = append(hostIDStrs, strconv.FormatInt(hostID, 10))
+	}
+	hostIDJoinStr := strings.Join(hostIDStrs, ",")
+
 	params := map[string]string{
-		"ips":    strings.Join(req.IPs, ","),
-		"offset": strconv.FormatInt(req.Offset, 10),
-		"limit":  strconv.FormatInt(req.Limit, 10),
+		"bk_host_ids": hostIDJoinStr,
+		"ips":         strings.Join(req.IPs, ","),
+		"offset":      strconv.FormatInt(req.Offset, 10),
+		"limit":       strconv.FormatInt(req.Limit, 10),
 	}
 	return apigateway.ApiGatewayCallWithoutReq[ListMachinePoolResp](c.client, c.config, rest.GET,
 		kt, params, "/db_dirty/query_machine_pool")

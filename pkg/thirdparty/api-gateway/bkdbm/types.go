@@ -22,9 +22,10 @@ package bkdbm
 
 // ListMachinePool list machine pool.
 type ListMachinePool struct {
-	IPs    []string `json:"ips"`
-	Offset int64    `json:"offset,required"`
-	Limit  int64    `json:"limit,required"`
+	IPs     []string `json:"ips"`
+	HostIDs []int64  `json:"bk_host_ids"`
+	Offset  int64    `json:"offset,required"`
+	Limit   int64    `json:"limit,required"`
 }
 
 // ListMachinePoolResp the response of the list machine pool.

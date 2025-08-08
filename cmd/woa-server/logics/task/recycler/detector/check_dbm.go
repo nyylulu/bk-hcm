@@ -92,9 +92,9 @@ func (t *CheckDBMWorkGroup) queryWorker(kt *kit.Kit, idx int) {
 }
 
 func (t *CheckDBMWorkGroup) check(kt *kit.Kit, steps []*StepMeta) {
-	ips := slice.Map(steps, func(step *StepMeta) string { return step.Step.IP })
+	hostIDs := slice.Map(steps, func(step *StepMeta) int64 { return step.Step.HostID })
 
-	req := &bkdbm.ListMachinePool{IPs: ips, Offset: 0, Limit: int64(len(steps))}
+	req := &bkdbm.ListMachinePool{HostIDs: hostIDs, Offset: 0, Limit: int64(len(steps))}
 	resp, err := t.dbmCLi.QueryMachinePool(kt, req)
 	if err != nil {
 		t.HandleResult(kt, steps, err, fmt.Sprintf("check DBM failed, err: %s", err), true)
