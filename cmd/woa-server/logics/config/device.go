@@ -14,6 +14,7 @@ package config
 
 import (
 	"errors"
+	"time"
 
 	"hcm/cmd/woa-server/model/config"
 	types "hcm/cmd/woa-server/types/config"
@@ -331,11 +332,13 @@ func (d *device) CreateManyDevice(kt *kit.Kit, input *types.CreateManyDevicePara
 		},
 	}
 
+	getZoneStartTime := time.Now()
 	zones, err := config.Operation().Zone().FindManyZone(kt.Ctx, filter)
 	if err != nil {
 		logs.Errorf("failed to get zones, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
+	logs.Infof("get zones cost: %s, rid: %s", time.Since(getZoneStartTime), kt.Rid)
 
 	for _, zoneItem := range zones {
 
@@ -361,11 +364,13 @@ func (d *device) CreateManyDevice(kt *kit.Kit, input *types.CreateManyDevicePara
 
 		for _, requireType := range input.RequireType {
 			param.RequireType = requireType
+			createDeviceStartTime := time.Now()
 
 			if _, err = d.CreateDevice(kt, param); err != nil {
 				logs.Errorf("failed to create device, err: %v, param: %+v, rid: %s", err, cvt.PtrToVal(param), kt.Rid)
 				return err
 			}
+			logs.Infof("create device cost: %s, param: %+v, rid: %s", time.Since(createDeviceStartTime))
 		}
 	}
 

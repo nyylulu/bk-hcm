@@ -16,6 +16,7 @@ package config
 import (
 	"errors"
 	"strconv"
+	"time"
 
 	types "hcm/cmd/woa-server/types/config"
 	"hcm/pkg"
@@ -158,12 +159,15 @@ func (s *service) CreateManyDevice(cts *rest.Contexts) (interface{}, error) {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
+	startTime := time.Now()
+	defer logs.Infof("total cost to create device in batch: %s, rid: %s", time.Since(startTime), cts.Kit.Rid)
 	crpDeviceTypeMap, err := s.planLogics.ListCvmInstanceTypeFromCrp(cts.Kit, []string{input.DeviceType})
 	if err != nil {
 		logs.Errorf("failed to get device type from CRP, err: %v, deviceType: %s, rid: %s", err, input.DeviceType,
 			cts.Kit.Rid)
 		return nil, err
 	}
+	logs.Infof("get device type from CRP, cost: %s, deviceType: %s, rid: %s", time.Since(startTime), input.DeviceType)
 
 	crpDeviceInfo, exists := crpDeviceTypeMap[input.DeviceType]
 	if !exists && !input.ForceCreate {
@@ -176,16 +180,21 @@ func (s *service) CreateManyDevice(cts *rest.Contexts) (interface{}, error) {
 		input.DeviceGroup = crpDeviceInfo.DeviceFamily
 		input.DeviceTypeClass = crpDeviceInfo.DeviceTypeClass
 	}
+	createStartTime := time.Now()
 	if err = s.logics.Device().CreateManyDevice(cts.Kit, input); err != nil {
 		logs.Errorf("failed to create device in batch, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
 		return nil, err
 	}
+	logs.Infof("create device in batch, cost: %s, input: %+v, rid: %s", time.Since(createStartTime), input, cts.Kit.Rid)
 
 	// 在CRP device_type中同步该机型
+	syncStartTime := time.Now()
 	if err = s.planLogics.SyncDeviceTypesFromCRP(cts.Kit, []string{input.DeviceType}); err != nil {
 		logs.Errorf("failed to sync res plan device type, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
 		return nil, err
 	}
+	logs.Infof("sync res plan device type from CRP, cost: %s, rid: %s", time.Since(syncStartTime),
+		cts.Kit.Rid)
 
 	return nil, nil
 }
