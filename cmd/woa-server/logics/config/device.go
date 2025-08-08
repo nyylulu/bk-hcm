@@ -334,11 +334,10 @@ func (d *device) CreateManyDevice(kt *kit.Kit, input *types.CreateManyDevicePara
 	}
 	logs.Infof("get zones cost: %s, rid: %s", time.Since(getZoneStartTime), kt.Rid)
 
-	for _, zoneItem := range zones {
-
+	for _, requireType := range input.RequireType {
 		param := &types.DeviceInfo{
-			Region:     zoneItem.Region,
-			Zone:       zoneItem.Zone,
+			//Region:     zoneItem.Region,
+			//Zone:       zoneItem.Zone,
 			DeviceType: input.DeviceType,
 			Cpu:        input.Cpu,
 			Mem:        input.Mem,
@@ -354,17 +353,90 @@ func (d *device) CreateManyDevice(kt *kit.Kit, input *types.CreateManyDevicePara
 			Score:           0,
 			Comment:         "",
 			DeviceTypeClass: input.DeviceTypeClass,
+			RequireType:     requireType,
 		}
 
-		for _, requireType := range input.RequireType {
-			param.RequireType = requireType
-			createDeviceStartTime := time.Now()
+		createDeviceStartTime := time.Now()
 
-			if _, err = d.CreateDevice(kt, param); err != nil {
-				logs.Errorf("failed to create device, err: %v, param: %+v, rid: %s", err, cvt.PtrToVal(param), kt.Rid)
-				return err
-			}
-			logs.Infof("create device cost: %s, param: %+v, rid: %s", time.Since(createDeviceStartTime), kt.Rid)
+		if err = d.batchCreateDeviceForZones(kt, param, zones); err != nil {
+			logs.Errorf("failed to create device, err: %v, param: %+v, rid: %s", err, cvt.PtrToVal(param), kt.Rid)
+			return err
+		}
+		logs.Infof("create device cost: %s, param: %+v, rid: %s", time.Since(createDeviceStartTime), kt.Rid)
+	}
+	//for _, zoneItem := range zones {
+	//
+	//	param := &types.DeviceInfo{
+	//		Region:     zoneItem.Region,
+	//		Zone:       zoneItem.Zone,
+	//		DeviceType: input.DeviceType,
+	//		Cpu:        input.Cpu,
+	//		Mem:        input.Mem,
+	//		// set disk 100 as default
+	//		Disk:   100,
+	//		Remark: input.Remark,
+	//		Label: mapstr.MapStr{
+	//			"device_group": input.DeviceGroup,
+	//			"device_size":  input.DeviceSize,
+	//		},
+	//		EnableCapacity:  true,
+	//		EnableApply:     true,
+	//		Score:           0,
+	//		Comment:         "",
+	//		DeviceTypeClass: input.DeviceTypeClass,
+	//	}
+	//
+	//
+	//}
+
+	return nil
+}
+
+// batchCreateDeviceForZones batch creates device config for zone
+func (d *device) batchCreateDeviceForZones(kt *kit.Kit, input *types.DeviceInfo, zones []*types.Zone) error {
+
+	// uniqueness check
+	zoneCondition := make(map[string]interface{})
+	for _, item := range zones {
+		zoneCondition["zone"] = item.Zone
+		zoneCondition["region"] = item.Region
+	}
+	filter := map[string]interface{}{
+		"require_type": input.RequireType,
+		"device_type":  input.DeviceType,
+		pkg.BKDBOR:     zoneCondition,
+	}
+
+	page := metadata.BasePage{Limit: pkg.BKNoLimit, Start: 0}
+	resp, err := config.Operation().CvmDevice().FindManyDevice(kt.Ctx, page, filter)
+	if err != nil {
+		logs.Errorf("failed to count device, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+	// 删除db中重复的数据，并在后面重新创建
+	if len(resp) > 1 {
+		logs.Warnf("the device info exist more than one, device info: %+v, rid: %s", cvt.PtrToSlice(resp), kt.Rid)
+		if err = config.Operation().CvmDevice().DeleteDevice(kt.Ctx, cvt.ValToPtr(mapstr.MapStr(filter))); err != nil {
+			logs.Errorf("failed to delete device, err: %v, filter: %v, rid: %s", err, filter, kt.Rid)
+			return err
+		}
+	}
+
+	// create instance
+	for _, item := range zones {
+		id, err := config.Operation().CvmDevice().NextSequence(kt.Ctx)
+		if err != nil {
+			logs.Errorf("failed to create device, err: %v, rid: %s", err, kt.Rid)
+			return err
+		}
+		instId := int64(id)
+
+		input.Zone = item.Zone
+		input.Region = item.Region
+		input.BkInstId = instId
+		if err := config.Operation().CvmDevice().CreateDevice(kt.Ctx, input); err != nil {
+			logs.Errorf("failed to create device, err: %v, rid: %s", err, kt.Rid)
+			return err
 		}
 	}
 
