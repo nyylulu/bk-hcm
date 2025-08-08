@@ -288,18 +288,18 @@ func (d *device) CreateDevice(kt *kit.Kit, input *types.DeviceInfo) (mapstr.MapS
 		logs.Errorf("failed to count device, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
+	// 删除db中重复的数据，并在后面重新创建
 	if len(resp) > 1 {
-		logs.Errorf("the device info exist more than one, device info: %+v, rid: %s", resp, kt.Rid)
-		return nil, errf.NewFromErr(errf.DeviceTypeExistLocally, errors.New("the device info exist more than one"))
-	}
-	if len(resp) == 1 {
-		delFilter := &mapstr.MapStr{
-			"id": resp[0].BkInstId,
-		}
+		logs.Warnf("the device info exist more than one, device info: %+v, rid: %s", resp, kt.Rid)
+		for _, item := range resp {
+			delFilter := &mapstr.MapStr{
+				"id": item.BkInstId,
+			}
 
-		if err = config.Operation().CvmDevice().DeleteDevice(kt.Ctx, delFilter); err != nil {
-			logs.Errorf("failed to delete device, err: %v, filter: %v, rid: %s", err, delFilter, kt.Rid)
-			return nil, err
+			if err = config.Operation().CvmDevice().DeleteDevice(kt.Ctx, delFilter); err != nil {
+				logs.Errorf("failed to delete device, err: %v, filter: %v, rid: %s", err, delFilter, kt.Rid)
+				return nil, err
+			}
 		}
 	}
 
