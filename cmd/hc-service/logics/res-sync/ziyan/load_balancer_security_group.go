@@ -25,10 +25,10 @@ import (
 	"hcm/cmd/hc-service/logics/res-sync/common"
 	typeslb "hcm/pkg/adaptor/types/load-balancer"
 	"hcm/pkg/api/core"
-	"hcm/pkg/api/core/cloud"
 	corelb "hcm/pkg/api/core/cloud/load-balancer"
 	dataservice "hcm/pkg/api/data-service"
 	protocloud "hcm/pkg/api/data-service/cloud"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/kit"
@@ -183,20 +183,66 @@ func (cli *client) getCloudLbSgBinding(kt *kit.Kit, params *SyncBaseParams, opt 
 	if len(allSgCloudIDs) == 0 {
 		return make(map[string]string), make(map[string][]string), nil
 	}
-	// 2. 获取本地id 映射
-	sgReq := &protocloud.SecurityGroupListReq{
-		Field:  []string{"id", "cloud_id"},
-		Filter: tools.ExpressionAnd(tools.RuleIn("cloud_id", allSgCloudIDs)),
-		Page:   core.NewDefaultBasePage(),
-	}
-	sgResp, err := cli.dbCli.Global.SecurityGroup.ListSecurityGroup(kt.Ctx, kt.Header(), sgReq)
+
+	// 2.获取本地id 映射
+	allSgCloudIDs = slice.Unique(allSgCloudIDs)
+	cloudSgMap, err := cli.getSGCloudIDToLocalIDMap(kt, allSgCloudIDs)
 	if err != nil {
-		logs.Errorf("fail to get sg list, err: %v, rid: %s", err, kt.Rid)
 		return nil, nil, err
 	}
-	// cloudID->localID
-	cloudSgMap := cvt.SliceToMap(sgResp.Details, func(sg cloud.BaseSecurityGroup) (string, string) {
-		return sg.CloudID, sg.ID
-	})
+
+	// 3. 找到未同步的安全组，并主动同步一次
+	notFoundSgCloudIDs := make([]string, 0)
+	for _, id := range allSgCloudIDs {
+		if _, ok := cloudSgMap[id]; !ok {
+			notFoundSgCloudIDs = append(notFoundSgCloudIDs, id)
+		}
+	}
+	for _, parts := range slice.Split(notFoundSgCloudIDs, constant.CloudResourceSyncMaxLimit) {
+		syncParam := &SyncBaseParams{
+			AccountID: params.AccountID,
+			Region:    params.Region,
+			CloudIDs:  parts,
+		}
+		_, err = cli.SecurityGroup(kt, syncParam, new(SyncSGOption))
+		if err != nil {
+			logs.Errorf("fail to sync security group for lb sg rel, err: %v, params: %+v, rid: %s", err, params, kt.Rid)
+			return nil, nil, err
+		}
+	}
+
+	//4. 再次获取本地id 映射
+	tmpSgMap, err := cli.getSGCloudIDToLocalIDMap(kt, notFoundSgCloudIDs)
+	if err != nil {
+		return nil, nil, err
+	}
+	for key, value := range tmpSgMap {
+		cloudSgMap[key] = value
+	}
 	return cloudSgMap, lbSgCloudMap, nil
+}
+
+func (cli *client) getSGCloudIDToLocalIDMap(kt *kit.Kit, allSgCloudIDs []string) (map[string]string, error) {
+	// cloudID->localID
+	cloudSgMap := make(map[string]string, len(allSgCloudIDs))
+	for _, idxBatch := range slice.Split(allSgCloudIDs, constant.BatchOperationMaxLimit) {
+		sgReq := &protocloud.SecurityGroupListReq{
+			Field:  []string{"id", "cloud_id"},
+			Filter: tools.ExpressionAnd(tools.RuleIn("cloud_id", idxBatch)),
+			Page:   core.NewDefaultBasePage(),
+		}
+		sgResp, err := cli.dbCli.Global.SecurityGroup.ListSecurityGroup(kt.Ctx, kt.Header(), sgReq)
+		if err != nil {
+			logs.Errorf("fail to get sg list, err: %v, sg ids: %v rid: %s", err, idxBatch, kt.Rid)
+			return nil, err
+		}
+
+		for i := range sgResp.Details {
+			sgCloudID := sgResp.Details[i].CloudID
+			sgLocalID := sgResp.Details[i].ID
+			cloudSgMap[sgCloudID] = sgLocalID
+		}
+	}
+
+	return cloudSgMap, nil
 }
