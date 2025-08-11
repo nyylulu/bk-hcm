@@ -267,7 +267,7 @@ func (s *service) GetBizApplyAuditCrp(cts *rest.Contexts) (any, error) {
 		return nil, errf.NewFromErr(errf.InvalidParameter, errors.New("apply order not found"))
 	}
 
-	return s.getApplyAuditCrp(cts.Kit, req)
+	return s.getApplyAuditCrp(cts.Kit, req, applyOrders[0].ResourceType)
 }
 
 // GetApplyAuditItsm get apply audit
@@ -342,7 +342,7 @@ func (s *service) GetApplyAuditCrp(cts *rest.Contexts) (interface{}, error) {
 		return nil, err
 	}
 
-	return s.getApplyAuditCrp(cts.Kit, req)
+	return s.getApplyAuditCrp(cts.Kit, req, applyOrders[0].ResourceType)
 }
 
 // getApplyAuditItsm get apply ticket audit info
@@ -357,8 +357,10 @@ func (s *service) getApplyAuditItsm(kt *kit.Kit, req *types.GetApplyAuditItsmReq
 }
 
 // getApplyAuditCrp get apply ticket audit info
-func (s *service) getApplyAuditCrp(kt *kit.Kit, req *types.GetApplyAuditCrpReq) (any, error) {
-	rst, err := s.logics.Scheduler().GetApplyAuditCrp(kt, req)
+func (s *service) getApplyAuditCrp(kt *kit.Kit, req *types.GetApplyAuditCrpReq, resType types.ResourceType) (any,
+	error) {
+
+	rst, err := s.logics.Scheduler().GetApplyAuditCrp(kt, req, resType)
 	if err != nil {
 		logs.Errorf("failed to get apply ticket crp audit info, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
