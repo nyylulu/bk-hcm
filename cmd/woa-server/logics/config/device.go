@@ -396,10 +396,13 @@ func (d *device) CreateManyDevice(kt *kit.Kit, input *types.CreateManyDevicePara
 func (d *device) batchCreateDeviceForZones(kt *kit.Kit, input *types.DeviceInfo, zones []*types.Zone) error {
 
 	// uniqueness check
-	zoneCondition := make(map[string]interface{})
+	zoneCondition := make([]map[string]interface{}, 0, len(zones))
 	for _, item := range zones {
-		zoneCondition["zone"] = item.Zone
-		zoneCondition["region"] = item.Region
+		m := map[string]interface{}{
+			"zone":   item.Zone,
+			"region": item.Region,
+		}
+		zoneCondition = append(zoneCondition, m)
 	}
 	filter := map[string]interface{}{
 		"require_type": input.RequireType,
