@@ -3,6 +3,6 @@ import { defineComponent } from 'vue';
 
 export default defineComponent({
   setup() {
-    return () => <Mod isBiz={false} />;
+    return () => <Mod />;
   },
 });

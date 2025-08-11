@@ -76,7 +76,8 @@ export default defineComponent({
           v-model:isShow={isShowAdd.value}
           v-model={planTicket.value}
           initDemand={initDemand.value}
-          initAddParams={initAddParams.value}></Add>
+          initAddParams={initAddParams.value}
+          currentGlobalBusinessId={planTicket.value.bk_biz_id}></Add>
       </>
     );
   },

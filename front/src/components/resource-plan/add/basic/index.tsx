@@ -13,6 +13,7 @@ import { AdjustType, IExceptTimeRange } from '@/typings/plan';
 import { isDateInRange } from '@/utils/plan';
 import useFormModel from '@/hooks/useFormModel';
 import { isEqual } from 'lodash';
+import ObsProjectSelector from '@/views/business/resource-plan/children/obs-project-selector.vue';
 
 dayjs.extend(isBetween);
 dayjs.extend(isoWeek);
@@ -24,6 +25,7 @@ export default defineComponent({
     type: String as PropType<AdjustType>,
     submitTooltips: Object as PropType<string | { content: string; disabled: boolean }>,
     originPlanTicketDemand: Object as PropType<IPlanTicketDemand>,
+    is931Business: Boolean,
   },
 
   emits: [
@@ -48,12 +50,10 @@ export default defineComponent({
       end: timeRange.date_range_in_week?.end || '',
     }));
 
-    const projectTypes = ref<string[]>([]);
     const regions = ref<IRegion[]>([]);
     const zones = ref<IZone[]>([]);
     const sources = ref<string[]>([]);
     const formRef = ref();
-    const isLoadingProjectType = ref(false);
     const isLoadingRegion = ref(false);
     const isLoadingZone = ref(false);
     const isLoadingSource = ref(false);
@@ -115,18 +115,6 @@ export default defineComponent({
           handleUpdatePlanTicketDemand('region_name', region?.region_name || '');
         });
       });
-    };
-
-    const getProjectTypes = () => {
-      isLoadingProjectType.value = true;
-      resourcePlanStore
-        .getObsProjects()
-        .then((data: { data: { details: string[] } }) => {
-          projectTypes.value = data?.data?.details || [];
-        })
-        .finally(() => {
-          isLoadingProjectType.value = false;
-        });
     };
 
     const getRegions = () => {
@@ -250,7 +238,6 @@ export default defineComponent({
     );
 
     onBeforeMount(() => {
-      getProjectTypes();
       getZones();
       getRegions();
       getSources();
@@ -274,16 +261,12 @@ export default defineComponent({
             </bk-radio-group>
           </bk-form-item>
           <bk-form-item label={t('项目类型')} property='obs_project' required>
-            <bk-select
-              disabled={props.type === AdjustType.time}
-              clearable
-              loading={isLoadingProjectType.value}
+            <ObsProjectSelector
               modelValue={props.planTicketDemand.obs_project}
-              onChange={(val: string) => handleUpdatePlanTicketDemand('obs_project', val)}>
-              {projectTypes.value.map((projectType) => (
-                <bk-option id={projectType} name={projectType}></bk-option>
-              ))}
-            </bk-select>
+              disabled={props.type === AdjustType.time}
+              showRollingServerProject={props.is931Business}
+              onChange={(val: string | string[]) => handleUpdatePlanTicketDemand('obs_project', val as string)}
+            />
           </bk-form-item>
           <bk-form-item label={t('城市')} property='region_id' required>
             <bk-select
