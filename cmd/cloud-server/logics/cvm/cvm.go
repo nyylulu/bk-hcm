@@ -52,8 +52,8 @@ type Interface interface {
 	GetHostTopoInfo(kt *kit.Kit, hostIds []int64) ([]cmdb.HostTopoRelation, error)
 	GetModuleInfo(kit *kit.Kit, bkBizID int64, moduleIds []int64) ([]*cmdb.ModuleInfo, error)
 	CvmResetSystem(kt *kit.Kit, params *TaskManageBaseReq) (string, error)
-	CvmPowerOperation(kt *kit.Kit, bkBizID int64, uniqueID string, taskOperation enumor.TaskOperation,
-		cvmList []corecvm.BaseCvm) (string, error)
+	CvmPowerOperation(kt *kit.Kit, bkBizID int64, uniqueID string, source enumor.TaskManagementSource,
+		taskOperation enumor.TaskOperation, cvmList []corecvm.BaseCvm) (string, error)
 }
 
 type cvm struct {

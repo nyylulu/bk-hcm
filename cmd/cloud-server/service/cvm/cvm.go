@@ -53,8 +53,8 @@ func InitCvmService(c *capability.Capability) {
 		eipLgc:     c.Logics.Eip,
 		cmdbCli:    c.CmdbCli,
 
-		moaLogic:   c.Logics.Moa,
-		sgLogic:    c.Logics.SecurityGroup,
+		moaLogic: c.Logics.Moa,
+		sgLogic:  c.Logics.SecurityGroup,
 	}
 
 	h := rest.NewHandler()
@@ -102,6 +102,8 @@ func InitCvmService(c *capability.Capability) {
 	h.Add("BatchAsyncStopBizCvm", http.MethodPost, "/bizs/{bk_biz_id}/cvms/batch/stop_async", svc.BatchAsyncStopBizCvm)
 	h.Add("BatchAsyncRebootBizCvm", http.MethodPost, "/bizs/{bk_biz_id}/cvms/batch/reboot_async",
 		svc.BatchAsyncRebootBizCvm)
+	h.Add("BatchSopsAsyncRebootBizCvm", http.MethodPost, "/bizs/{bk_biz_id}/cvms/sops/batch/reboot_async",
+		svc.BatchSopsAsyncRebootBizCvm)
 
 	// 业务下回收接口
 	h.Add("RecycleBizCvm", http.MethodPost, "/bizs/{bk_biz_id}/cvms/recycle", svc.RecycleBizCvm)
@@ -129,8 +131,8 @@ type cvmSvc struct {
 	eipLgc     eip.Interface
 	cmdbCli    cmdb.Client
 
-	moaLogic   moalogic.Interface
-	sgLogic    securitygroup.Interface
+	moaLogic moalogic.Interface
+	sgLogic  securitygroup.Interface
 }
 
 // batchListCvmByIDs 批量获取CVM列表
