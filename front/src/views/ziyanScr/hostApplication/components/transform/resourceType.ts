@@ -1,24 +1,5 @@
-import { IDCDVM, IDCPM, QCLOUDCVM, QCLOUDDVM } from '@/constants/scr.ts';
+import { SCR_RESOURCE_TYPE_NAME } from '@/constants';
 
-const resourceTypes = [
-  {
-    value: IDCDVM,
-    label: 'IDC_DockerVM',
-  },
-  {
-    value: IDCPM,
-    label: 'IDC_物理机',
-  },
-  {
-    value: QCLOUDCVM,
-    label: '腾讯云_CVM',
-  },
-  {
-    value: QCLOUDDVM,
-    label: '腾讯云_DockerVM',
-  },
-];
-
-export const getResourceTypeName = (value) => {
-  return resourceTypes.find((item) => item.value === value)?.label || value;
+export const getResourceTypeName = (value: string) => {
+  return SCR_RESOURCE_TYPE_NAME[value as keyof typeof SCR_RESOURCE_TYPE_NAME] || value;
 };

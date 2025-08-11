@@ -24,6 +24,8 @@ import ModifyRecord from './modify-record';
 import ItsmTicketAudit, { type IItsmTicketAudit } from './itsm-ticket-audit.vue';
 import type { IQueryResData } from '@/typings';
 import ApprovalStatus from './approval-status.vue';
+import { ScrResourceType } from '@/constants';
+import UpgradeCvmTable from './upgrade-cvm-table.vue';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 
@@ -47,6 +49,8 @@ export default defineComponent({
       }
       return { name: MENU_SERVICE_HOST_APPLICATION };
     });
+
+    const isUpgradeCvm = computed(() => route.query.resource_type === ScrResourceType.UPGRADECVM);
 
     const ips = ref<{ [key: string]: any }>({});
     const detail: Ref<{
@@ -180,7 +184,7 @@ export default defineComponent({
         {
           order_id: [+orderId],
           bk_biz_id: [detail.value.bk_biz_id],
-          page: { start: 0, limit: 50 },
+          page: { start: 0, limit: 500 },
         },
       );
       detail.value.info = data.info;
@@ -255,11 +259,14 @@ export default defineComponent({
     };
 
     // 撤单
-    const hasCancelBtn = computed(
-      () =>
+    const hasCancelBtn = computed(() => {
+      // TODO: UPGRADECVM 一期没有 ITSM 审批，暂不支持撤单
+      if (isUpgradeCvm.value) return false;
+      return (
         route.query?.creator === userStore.username &&
-        ['管理员审批', 'leader审批'].includes(itsmTicketAuditOptions.data?.current_steps[0]?.name),
-    );
+        ['管理员审批', 'leader审批'].includes(itsmTicketAuditOptions.data?.current_steps[0]?.name)
+      );
+    });
     const isCancelItsmTicketLoading = ref(false);
     const cancelItsmTicket = async () => {
       const { order_id } = itsmTicketAuditOptions.data;
@@ -286,9 +293,11 @@ export default defineComponent({
         router.replace(backRoute.value);
         return;
       }
-      getItsmTicketAudit();
       await getOrderDetail(route.params.id as string);
-      await getDemandDetail();
+      if (!isUpgradeCvm.value) {
+        getDemandDetail();
+        getItsmTicketAudit();
+      }
     });
 
     onUnmounted(() => {
@@ -317,15 +326,19 @@ export default defineComponent({
           }}
         </DetailHeader>
         <div class={'detail-wrapper'}>
-          <ApprovalStatus class='mb24' ticketAuditDetail={itsmTicketAuditOptions.data} />
+          {!isUpgradeCvm.value && (
+            <>
+              <ApprovalStatus class='mb24' ticketAuditDetail={itsmTicketAuditOptions.data} />
 
-          <Panel title='审批信息'>
-            <ItsmTicketAudit
-              data={itsmTicketAuditOptions.data}
-              isLoading={itsmTicketAuditOptions.isLoading}
-              refreshApi={getItsmTicketAudit}
-            />
-          </Panel>
+              <Panel title='审批信息'>
+                <ItsmTicketAudit
+                  data={itsmTicketAuditOptions.data}
+                  isLoading={itsmTicketAuditOptions.isLoading}
+                  refreshApi={getItsmTicketAudit}
+                />
+              </Panel>
+            </>
+          )}
 
           <Panel title='基本信息' class='mt24'>
             <DetailInfo
@@ -360,47 +373,53 @@ export default defineComponent({
           </Panel>
 
           <Panel title='需求子单' class='mt24'>
-            <Button
-              class={'mr8'}
-              v-clipboard:copy={clipHostIp.value.join('\n')}
-              v-clipboard:success={batchMessage}
-              disabled={selections.value.length === 0}>
-              批量复制IP
-            </Button>
-            {cloudMachineList.value.length > 0 && (
+            {isUpgradeCvm.value ? (
+              <UpgradeCvmTable suborders={suborders.value} />
+            ) : (
               <>
-                <p class={'mt16 mb8'}>云主机</p>
-                <Table
-                  showOverflowTooltip
-                  data={cloudMachineList.value}
-                  columns={hostColumns}
-                  {...{
-                    onSelect: (selections: any) => {
-                      handleSelectionChange(selections, () => true, false);
-                    },
-                    onSelectAll: (selections: any) => {
-                      handleSelectionChange(selections, () => true, true);
-                    },
-                  }}
-                />
-              </>
-            )}
-            {physicMachineList.value.length > 0 && (
-              <>
-                <p class={'mt16 mb8'}>物理机</p>
-                <Table
-                  showOverflowTooltip
-                  {...{
-                    onSelect: (selections: any) => {
-                      handleSelectionChange(selections, () => true, false);
-                    },
-                    onSelectAll: (selections: any) => {
-                      handleSelectionChange(selections, () => true, true);
-                    },
-                  }}
-                  data={physicMachineList.value}
-                  columns={machineColumns}
-                />
+                <Button
+                  class={'mr8'}
+                  v-clipboard:copy={clipHostIp.value.join('\n')}
+                  v-clipboard:success={batchMessage}
+                  disabled={selections.value.length === 0}>
+                  批量复制IP
+                </Button>
+                {cloudMachineList.value.length > 0 && (
+                  <>
+                    <p class={'mt16 mb8'}>云主机</p>
+                    <Table
+                      showOverflowTooltip
+                      data={cloudMachineList.value}
+                      columns={hostColumns}
+                      {...{
+                        onSelect: (selections: any) => {
+                          handleSelectionChange(selections, () => true, false);
+                        },
+                        onSelectAll: (selections: any) => {
+                          handleSelectionChange(selections, () => true, true);
+                        },
+                      }}
+                    />
+                  </>
+                )}
+                {physicMachineList.value.length > 0 && (
+                  <>
+                    <p class={'mt16 mb8'}>物理机</p>
+                    <Table
+                      showOverflowTooltip
+                      {...{
+                        onSelect: (selections: any) => {
+                          handleSelectionChange(selections, () => true, false);
+                        },
+                        onSelectAll: (selections: any) => {
+                          handleSelectionChange(selections, () => true, true);
+                        },
+                      }}
+                      data={physicMachineList.value}
+                      columns={machineColumns}
+                    />
+                  </>
+                )}
               </>
             )}
           </Panel>

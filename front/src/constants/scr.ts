@@ -17,25 +17,21 @@ export const SCR_RECALL_DETAIL_STATUS_MAP = {
   TERMINATE: '终止',
 };
 
-/**
- * @const {String} IDCDVM IDC 富容器
- */
-export const IDCDVM = 'IDCDVM';
-
-/**
- * @const {String} IDCPM IDC 物理机
- */
-export const IDCPM = 'IDCPM';
-
-/**
- * @const {String} QCLOUDCVM 腾讯云云虚拟机
- */
-export const QCLOUDCVM = 'QCLOUDCVM';
-
-/**
- * @const {String} QCLOUDDVM 腾讯云富容器
- */
-export const QCLOUDDVM = 'QCLOUDDVM';
+// 单据管理-资源类型
+export enum ScrResourceType {
+  IDCDVM = 'IDCDVM', // IDC 富容器
+  IDCPM = 'IDCPM', // IDC 物理机
+  QCLOUDCVM = 'QCLOUDCVM', // 腾讯云云虚拟机
+  QCLOUDDVM = 'QCLOUDDVM', // 腾讯云富容器
+  UPGRADECVM = 'UPGRADECVM',
+}
+export const SCR_RESOURCE_TYPE_NAME = {
+  [ScrResourceType.IDCDVM]: 'IDC_DockerVM',
+  [ScrResourceType.IDCPM]: 'IDC_物理机',
+  [ScrResourceType.QCLOUDCVM]: '腾讯云_CVM',
+  [ScrResourceType.QCLOUDDVM]: '腾讯云_DockerVM',
+  [ScrResourceType.UPGRADECVM]: '机型配置调整',
+};
 
 /**
  * @const {String} TENTHOUSAND 万兆

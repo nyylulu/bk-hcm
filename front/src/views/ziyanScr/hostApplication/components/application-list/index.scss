@@ -1,17 +1,22 @@
-.sub-order-num,.username {
+.sub-order-num,
+.username {
   color: #409eff;
   cursor: pointer;
 }
+
 .order-width {
   width: 180px;
 }
+
 .recycle-operation {
   display: flex;
   align-items: center;
-  .bk-button+.bk-button {
-      margin-left: 10px;
+
+  .bk-button + .bk-button {
+    margin-left: 10px;
   }
 }
+
 .displayflex {
   display: flex;
   align-items: center;
@@ -22,7 +27,32 @@
 .pop-btn {
   margin-top: 10px;
 }
-.filter-tap-null{
+
+.filter-tap-null {
   height: 20px;
 }
-@import url(../../../css/form.scss);
+
+// 解决服务下单据管理样式丢失的问题
+.scr-application-list {
+  .c-info {
+    color: #909399 !important;
+  }
+
+  .c-success {
+    color: #67c23a !important;
+  }
+
+  .c-danger {
+    color: #f56c6c !important;
+  }
+
+  .c-warning {
+    color: #e6a23c !important;
+  }
+
+  .c-disabled {
+    color: #c8c9cc;
+  }
+}
+
+@import '../../../css/form';

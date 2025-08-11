@@ -34,6 +34,7 @@ import HocSearch from '@/model/hoc-search.vue';
 import { HostApplySearchNonBusiness } from '@/model/order/host-apply-search';
 import { serviceShareBizSelectedKey } from '@/constants/storage-symbols';
 import { VendorEnum } from '@/common/constant';
+import { SCR_RESOURCE_TYPE_NAME, ScrResourceType } from '@/constants';
 
 export default defineComponent({
   setup() {
@@ -142,9 +143,13 @@ export default defineComponent({
             field: 'stage',
             width: 200,
             render: ({ data }: any) => {
-              const { stage, createAt } = data;
-              const diffHours = moment(new Date()).diff(moment(createAt), 'hours');
+              const { create_at, stage, resource_type } = data;
+              const diffHours = moment(new Date()).diff(moment(create_at), 'hours');
               const isAbnormal = diffHours >= 2 && stage === 'RUNNING';
+              const resourceTypeName = SCR_RESOURCE_TYPE_NAME[resource_type as keyof typeof ScrResourceType];
+
+              const isIdcpm = resource_type === ScrResourceType.IDCPM;
+              const isUpgradeCvm = ScrResourceType.UPGRADECVM === resource_type;
 
               const stageClass = (stage: string) => {
                 if (stage === 'UNCOMMIT') return 'c-text-3';
@@ -158,17 +163,16 @@ export default defineComponent({
 
               const abnormalStatus = () => {
                 if (stage === 'SUSPEND') {
+                  if (isUpgradeCvm) return '备货状态异常';
                   return (
                     <div
                       class={'flex-row align-item-center'}
                       v-bk-tooltips={{
                         content: (
-                          <span>
+                          <>
                             建议
-                            <Button size='small' text theme={'primary'} class={'ml8'}>
-                              修改需求重试
-                            </Button>
-                          </span>
+                            <span class='text-primary ml4'>修改需求重试</span>
+                          </>
                         ),
                       }}>
                       备货状态异常 <HelpDocumentFill fill='#ffbb00' width={12} height={12} class={'ml4'} />
@@ -179,18 +183,21 @@ export default defineComponent({
               };
 
               const modifyButton = () => {
+                const isDisabled = isIdcpm || isUpgradeCvm;
+                const tooltipsOption = {
+                  disabled: isDisabled ? (isIdcpm ? !isIdcpm : !isUpgradeCvm) : true,
+                  content: `${resourceTypeName}不支持修改,请联系ICR(IEG资源服务助手)`,
+                };
+
                 return (
                   <Button
                     class='mr8'
-                    size='small'
-                    onClick={() => modify(data)}
-                    disabled={data.resource_type === 'IDCPM'}
-                    v-bk-tooltips={{
-                      content: 'IDC物理机不支持修改,请联系ICR(IEG资源服务助手)',
-                      disabled: data.resource_type !== 'IDCPM',
-                    }}
+                    theme='primary'
                     text
-                    theme={'primary'}>
+                    size='small'
+                    disabled={isDisabled}
+                    v-bk-tooltips={tooltipsOption}
+                    onClick={() => modify(data)}>
                     修改需求重试
                   </Button>
                 );
@@ -199,9 +206,9 @@ export default defineComponent({
               const progressButton = () => {
                 return (
                   <Button
-                    size='small'
+                    theme='primary'
                     text
-                    theme={'primary'}
+                    size='small'
                     onClick={async () => {
                       stageDetailSlideState.show = true;
                       stageDetailSlideState.suborderId = data.suborder_id;
@@ -237,26 +244,30 @@ export default defineComponent({
             label: '需求摘要',
             width: 250,
             render: ({ data }: any) => {
+              const isUpgradeCvm = ScrResourceType.UPGRADECVM === data.resource_type;
               return (
                 <div>
                   <div style={'height: 30px!important;line-height: 30px;'}>
                     资源类型：{getResourceTypeName(data?.resource_type)}
                   </div>
-                  <div style={'height: 20px!important;line-height: 20px;'}>机型：{data.spec?.device_type || '--'}</div>
-                  <div style={'height: 30px!important;line-height: 30px;'}>
-                    园区：{getZoneCn(data.spec?.zone)}
-                    {data.spec?.zone === 'cvm_separate_campus' && (
-                      <>
-                        (
-                        <display-value
-                          value={data.spec.region}
-                          property={{ type: 'region' }}
-                          vendor={VendorEnum.ZIYAN}
-                        />
-                        )
-                      </>
-                    )}
-                  </div>
+                  {/* 机型配置调整不展示机型、园区 */}
+                  {!isUpgradeCvm && (
+                    <>
+                      <div style={'height: 20px!important;line-height: 20px;'}>
+                        机型：{data.spec?.device_type || '--'}
+                      </div>
+                      <div style={'height: 30px!important;line-height: 30px;'}>
+                        园区：{getZoneCn(data.spec?.zone)}
+                        {data.spec?.zone === 'cvm_separate_campus' && (
+                          <display-value
+                            value={data.spec.region}
+                            property={{ type: 'region' }}
+                            vendor={VendorEnum.ZIYAN}
+                          />
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
               );
             },
@@ -355,11 +366,12 @@ export default defineComponent({
             fixed: 'right',
             width: 200,
             render: ({ data }: any) => {
+              const isUpgradeCvm = ScrResourceType.UPGRADECVM === data.resource_type;
               return (
                 <div>
                   <Button
                     // 滚服项目暂不支持再次申请
-                    disabled={data.status === 'UNCOMMIT' || data.require_type === 6}
+                    disabled={data.status === 'UNCOMMIT' || data.require_type === 6 || isUpgradeCvm}
                     size='small'
                     onClick={() => reapply(data)}
                     text
@@ -372,13 +384,11 @@ export default defineComponent({
                     text
                     theme={'primary'}
                     class='mr8'
-                    disabled={opBtnDisabled.value(data)}
+                    disabled={opBtnDisabled.value(data) || isUpgradeCvm}
                     onClick={async () => {
                       await scrStore.retryOrder({ suborder_id: [data.suborder_id] });
-                      Message({
-                        theme: 'success',
-                        message: '重试成功',
-                      });
+                      Message({ theme: 'success', message: '重试成功' });
+                      getListData();
                     }}>
                     重试
                   </Button>
@@ -390,10 +400,8 @@ export default defineComponent({
                     disabled={opBtnDisabled.value(data)}
                     onClick={async () => {
                       await scrStore.stopOrder({ suborder_id: [data.suborder_id] });
-                      Message({
-                        theme: 'success',
-                        message: '终止成功',
-                      });
+                      Message({ theme: 'success', message: '终止成功' });
+                      getListData();
                     }}>
                     终止
                   </Button>
@@ -514,18 +522,14 @@ export default defineComponent({
     );
 
     const getOrderRoute = (row: any) => {
+      const { order_id, bk_biz_id, bk_username, resource_type, stage } = row;
       let routeParams: any = {
         name: 'host-application-detail',
-        params: {
-          id: row.order_id,
-        },
-        query: { creator: row.bk_username, bkBizId: row.bk_biz_id },
+        params: { id: order_id },
+        query: { creator: bk_username, bkBizId: bk_biz_id, resource_type },
       };
-      if (row.stage === 'UNCOMMIT') {
-        routeParams = {
-          path: '/service/hostApplication/apply',
-          query: { order_id: row.order_id, unsubmitted: 1 },
-        };
+      if (stage === 'UNCOMMIT') {
+        routeParams = { path: '/service/hostApplication/apply', query: { order_id, unsubmitted: 1 } };
       }
       routerAction.redirect(routeParams, { history: true });
     };
@@ -586,7 +590,7 @@ export default defineComponent({
       throttleDeliveredHostField();
     });
     return () => (
-      <div class={'apply-list-container'}>
+      <div class={'apply-list-container scr-application-list'}>
         <div class={'filter-container'} style={{ margin: '0 24px 20px 24px' }}>
           <GridContainer layout='vertical' column={4} content-min-width={300} gap={[16, 60]}>
             {searchFields

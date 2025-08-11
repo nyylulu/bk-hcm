@@ -342,6 +342,7 @@ export default defineComponent({
                 clearable
                 disabled={deviceConfigDisabled.value}
                 filterable
+                allowEmptyValues={[false]}
                 onChange={handleDeviceConfigChange}>
                 {options.value.enableApplys.map((item) => (
                   <bk-option key={item.value} value={item.value} label={item.label}></bk-option>
@@ -385,7 +386,7 @@ export default defineComponent({
               </bk-select>
             </bk-form-item>
             <bk-form-item label='可申请'>
-              <bk-select v-model={batchEditForm.value.enableApply} style='width: 250px'>
+              <bk-select v-model={batchEditForm.value.enableApply} style='width: 250px' allowEmptyValues={[false, 0]}>
                 {whetherlist.value.map(({ label, value }) => {
                   return <bk-option key={value} label={label} value={value}></bk-option>;
                 })}
