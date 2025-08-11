@@ -883,6 +883,17 @@ export default defineComponent({
               <p>责任人：该账号的负责人，请填写2个以上的负责人，最多支持5个负责人。</p>
             </div>
           </div>
+          <div class='desc-item'>
+            <div class='title mb10 mt10'>参考文档</div>
+            <div class='desc'>
+              <p>
+                录入指引，请参考
+                <a href='https://iwiki.woa.com/p/4008207450' target='_blank'>
+                  <span> https://iwiki.woa.com/p/4008207450</span>
+                </a>
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     );
