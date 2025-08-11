@@ -441,16 +441,15 @@ func (d *device) batchCreateDeviceForZones(kt *kit.Kit, input *types.DeviceInfo,
 	// create instance
 	genIDStartTime := time.Now()
 	devices := make([]types.DeviceInfo, 0, len(zones))
-	for _, item := range zones {
-		id, err := config.Operation().CvmDevice().NextSequence(kt.Ctx)
-		if err != nil {
-			logs.Errorf("failed to create device, err: %v, rid: %s", err, kt.Rid)
-			return err
-		}
-
+	ids, err := config.Operation().CvmDevice().NextSequences(kt.Ctx, len(zones))
+	if err != nil {
+		logs.Errorf("failed to create device, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+	for i, item := range zones {
 		input.Zone = item.Zone
 		input.Region = item.Region
-		input.BkInstId = int64(id)
+		input.BkInstId = int64(ids[i])
 		devices = append(devices, *input)
 	}
 	logs.Infof("generate ids for device cost: %s, count: %d, rid: %s", time.Since(genIDStartTime), len(devices), kt.Rid)
