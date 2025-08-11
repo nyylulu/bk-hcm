@@ -63,8 +63,8 @@ func (c *Controller) applyResPlanDemandChange(kt *kit.Kit, ticket *TicketInfo) e
 		return err
 	}
 
-	logs.Infof("aggregate demand change info: %+v, rid: %s", cvt.PtrToSlice(maps.Values(changeDemandsMap)),
-		kt.Rid)
+	logs.Infof("aggregate demand change info start, ticketID: %s, crpSn: %s, changeDemandsMap: %+v, rid: %s",
+		ticket.ID, ticket.CrpSn, cvt.PtrToSlice(maps.Values(changeDemandsMap)), kt.Rid)
 
 	// changeDemand可能会在扣减时模糊匹配到同一个需求，因此需要在扣减操作生效前记录扣减量，最后统一执行
 	upsertReq, updatedIDs, createLogReq, updateLogReq, err := c.prepareResPlanDemandChangeReq(kt, ticket,
@@ -103,6 +103,9 @@ func (c *Controller) applyResPlanDemandChange(kt *kit.Kit, ticket *TicketInfo) e
 		logs.Warnf("failed to create res plan demand changelog, err: %v, updated demands: %v, rid: %s", err,
 			updatedIDs, kt.Rid)
 	}
+
+	logs.Infof("aggregate demand change info end, ticketID: %s, crpSn: %s, createdIDs: %v, updatedIDs: %v, rid: %s",
+		ticket.ID, ticket.CrpSn, createdIDs, updatedIDs, kt.Rid)
 
 	return nil
 }

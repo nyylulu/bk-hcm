@@ -52,7 +52,7 @@ func GetObsProjectMembers() []ObsProject {
 
 // GetObsProjectMembersForResPlan get ObsProject's members for resource plan.
 func GetObsProjectMembersForResPlan() []ObsProject {
-	obsProjects := []ObsProject{ObsProjectNormal, ObsProjectReuse, ObsProjectMigrate}
+	obsProjects := []ObsProject{ObsProjectNormal, ObsProjectReuse, ObsProjectMigrate, ObsProjectRollServer}
 	obsProjects = append(obsProjects, getSpringObsProjectForResPlan()...)
 	obsProjects = append(obsProjects, getDissolveObsProjectForResPlan()...)
 
@@ -384,6 +384,8 @@ const ItsmServiceNameApply = "资源申领流程"
 const (
 	// ResourcePoolBiz 资源池业务
 	ResourcePoolBiz = 931
+	// ResourcePlanRollServerBiz 资源预测提报滚服项目的业务
+	ResourcePlanRollServerBiz = 931
 )
 
 // AbolishPhase 裁撤阶段

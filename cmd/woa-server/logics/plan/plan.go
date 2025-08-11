@@ -374,7 +374,7 @@ func (c *Controller) runWorker() error {
 }
 
 func (c *Controller) checkCrpTicket(kt *kit.Kit, ticket *TicketInfo) error {
-	logs.Infof("ready to check crp flow, sn: %s, id: %s", ticket.CrpSn, ticket.ID)
+	logs.Infof("ready to check crp flow, sn: %s, id: %s, rid: %s", ticket.CrpSn, ticket.ID, kt.Rid)
 
 	req := &cvmapi.QueryPlanOrderReq{
 		ReqMeta: cvmapi.ReqMeta{
