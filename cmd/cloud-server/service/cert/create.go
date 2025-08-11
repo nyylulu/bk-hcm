@@ -25,7 +25,6 @@ import (
 
 	"hcm/cmd/cloud-server/logics/ziyan"
 	cloudserver "hcm/pkg/api/cloud-server"
-	cscert "hcm/pkg/api/cloud-server/cert"
 	hccert "hcm/pkg/api/hc-service/cert"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
@@ -133,20 +132,11 @@ func (svc *certSvc) createTCloudCert(kt *kit.Kit, body json.RawMessage, bkBizID 
 }
 
 func (svc *certSvc) createTCloudZiyanCert(kt *kit.Kit, body json.RawMessage, bkBizID int64) (interface{}, error) {
-	req := new(cscert.ZiyanCreateCertReq)
+	req := new(hccert.TCloudCreateReq)
 	if err := json.Unmarshal(body, req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
 
-	if err := req.Validate(); err != nil {
-		return nil, errf.NewFromErr(errf.InvalidParameter, err)
-	}
-
-	tags, err := ziyan.GenTagsForBizsWithManager(kt, svc.cmdbCli, bkBizID, req.Manager, req.BakManager)
-	if err != nil {
-		logs.Errorf("create tcloud ziyan cert gen tags failed, err: %v, rid: %s", err, kt.Rid)
-		return nil, err
-	}
 	publicKey, err := base64.URLEncoding.DecodeString(req.PublicKey)
 	if err != nil {
 		logs.Errorf("create tcloud cert decode publickey failed, pk: %s, err: %v, rid: %s", req.PublicKey, err, kt.Rid)
@@ -158,26 +148,23 @@ func (svc *certSvc) createTCloudZiyanCert(kt *kit.Kit, body json.RawMessage, bkB
 		logs.Errorf("create tcloud ziyan cert decode privatekey failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
-
-	createReq := &hccert.TCloudCreateReq{
-		BkBizID:    bkBizID,
-		AccountID:  req.AccountId,
-		Vendor:     req.Vendor,
-		Name:       req.Name,
-		Memo:       req.Memo,
-		CertType:   enumor.CertType(req.CertType),
-		PublicKey:  string(publicKey),
-		PrivateKey: string(privateKey),
-		Tags:       tags,
+	tags, err := ziyan.GenTagsForBizsWithManager(kt, svc.cmdbCli, bkBizID, kt.User, kt.User)
+	if err != nil {
+		logs.Errorf("create tcloud ziyan cert gen tags failed, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
 	}
-	if err = createReq.Validate(); err != nil {
+	req.PublicKey = string(publicKey)
+	req.PrivateKey = string(privateKey)
+	req.BkBizID = bkBizID
+	req.Tags = tags
+
+	if err = req.Validate(); err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	result, err := svc.client.HCService().TCloudZiyan.Cert.CreateCert(kt, createReq)
+	result, err := svc.client.HCService().TCloudZiyan.Cert.CreateCert(kt, req)
 	if err != nil {
-		logs.Errorf("create tcloud cert failed, req: %+v, result: %+v, err: %v, rid: %s",
-			createReq, result, err, kt.Rid)
+		logs.Errorf("create tcloud cert failed, req: %+v, result: %+v, err: %v, rid: %s", req, result, err, kt.Rid)
 		return result, err
 	}
 
