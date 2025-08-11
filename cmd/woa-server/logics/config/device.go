@@ -435,21 +435,23 @@ func (d *device) batchCreateDeviceForZones(kt *kit.Kit, input *types.DeviceInfo,
 	}
 
 	// create instance
+	devices := make([]types.DeviceInfo, 0, len(zones))
 	for _, item := range zones {
 		id, err := config.Operation().CvmDevice().NextSequence(kt.Ctx)
 		if err != nil {
 			logs.Errorf("failed to create device, err: %v, rid: %s", err, kt.Rid)
 			return err
 		}
-		instId := int64(id)
 
 		input.Zone = item.Zone
 		input.Region = item.Region
-		input.BkInstId = instId
-		if err := config.Operation().CvmDevice().CreateDevice(kt.Ctx, input); err != nil {
-			logs.Errorf("failed to create device, err: %v, rid: %s", err, kt.Rid)
-			return err
-		}
+		input.BkInstId = int64(id)
+		devices = append(devices, *input)
+	}
+
+	if err := config.Operation().CvmDevice().BatchCreateDevices(kt.Ctx, cvt.SliceToPtr(devices)); err != nil {
+		logs.Errorf("failed to create device, err: %v, rid: %s", err, kt.Rid)
+		return err
 	}
 
 	return nil

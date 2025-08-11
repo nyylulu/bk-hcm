@@ -269,6 +269,8 @@ type CvmDevice interface {
 	NextSequence(ctx context.Context) (uint64, error)
 	// CreateDevice creates device config in db
 	CreateDevice(ctx context.Context, inst *types.DeviceInfo) error
+	// BatchCreateDevices creates multiple device configs in db
+	BatchCreateDevices(ctx context.Context, insts []*types.DeviceInfo) error
 	// GetDevice gets device config by filter from db
 	GetDevice(ctx context.Context, filter *mapstr.MapStr) (*types.DeviceInfo, error)
 	// CountDevice gets resource device count by filter from db
