@@ -416,7 +416,16 @@ func (d *device) batchCreateDeviceForZones(kt *kit.Kit, input *types.DeviceInfo,
 	// 删除db中重复的数据，并在后面重新创建
 	if len(resp) > 1 {
 		logs.Warnf("the device info exist more than one, device info: %+v, rid: %s", cvt.PtrToSlice(resp), kt.Rid)
-		if err = config.Operation().CvmDevice().DeleteDevice(kt.Ctx, cvt.ValToPtr(mapstr.MapStr(filter))); err != nil {
+		ids := make([]int64, 0, len(resp))
+		for _, item := range resp {
+			ids = append(ids, item.BkInstId)
+		}
+		delFilter := &mapstr.MapStr{
+			"id": &mapstr.MapStr{
+				pkg.BKDBIN: ids,
+			},
+		}
+		if err = config.Operation().CvmDevice().DeleteDevice(kt.Ctx, delFilter); err != nil {
 			logs.Errorf("failed to delete device, err: %v, filter: %v, rid: %s", err, filter, kt.Rid)
 			return err
 		}
