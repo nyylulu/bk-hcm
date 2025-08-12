@@ -1,12 +1,6 @@
 import http from '@/http';
 import { getEntirePath } from '@/utils';
-import type {
-  cvmProduceQueryReq,
-  cvmDeviceListReq,
-  maxResourceCapacity,
-  deviceConfigDetail,
-  createCvmOrder,
-} from '@/typings/cvm-pro';
+import type { cvmProduceQueryReq, maxResourceCapacity, createCvmOrder } from '@/typings/cvm-pro';
 
 export const getCvmProduceOrderStatusOpts = () => {
   return http.get(getEntirePath('cvm/find/config/apply/status'));
@@ -20,15 +14,6 @@ export const getCvmProduceOrderStatusOpts = () => {
 // 注意： 不报错
 export const getCvmProduceOrderList = (params: cvmProduceQueryReq) => {
   return http.post(getEntirePath('cvm/findmany/apply/order'), params);
-};
-
-/**
- * 获取设备列表
- * @param {cvmDeviceListReq} params 参数
- * @returns {Promise}
- */
-export const getDevices = (params: cvmDeviceListReq) => {
-  return http.post(getEntirePath('config/findmany/config/cvm/device/detail'), params);
 };
 
 /**
@@ -63,14 +48,6 @@ export const getSubnets = ({ region, zone, vpc }) => {
     vpc,
   });
 };
-
-/**
- * 机型配置详细信息
- * @param {deviceConfigDetail} params 参数
- * @returns {Promise}
- */
-export const getDeviceTypesDetails = (params: deviceConfigDetail) =>
-  http.post(getEntirePath('config/findmany/config/cvm/devicetype/detail'), params);
 
 /**
  * 创建CVM生产单据
