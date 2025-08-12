@@ -2,19 +2,20 @@
 
 - 该接口提供版本：v1.8.6+。
 - 该接口所需权限：业务访问。
-- 该接口功能描述：查询腾讯云机型配置信息。
+- 该接口功能描述：查询业务下的腾讯云机型配置信息。
 
 ### URL
 
-POST /api/v1/cloud/bizs/{bk_biz_id}/vendors/tcloud/instances/config/query_from_cloud
+POST /api/v1/cloud/bizs/{bk_biz_id}/vendors/{vendor}/instances/config/query_from_cloud
 
 ### 请求参数
-| 参数名称    | 参数类型       | 必选 | 描述                                 |
-|------------|--------------|-----|--------------------------------------|
-| bk_biz_id  | int64        | 是  | 业务ID                                |
-| account_id | string       | 是  | 账号ID                                |
-| region     | string       | 是  | 地域ID（唯一标识）                      |
-| filters    | FilterExp    | 否  | 查询条件                               |
+| 参数名称    | 参数类型       | 必选 | 描述                                      |
+|------------|--------------|-----|-------------------------------------------|
+| bk_biz_id  | int64        | 是  | 业务ID                                     |
+| vendor     | string       | 是  | 云厂商（枚举值：tcloud，当前版本暂只支持tcloud）|
+| account_id | string       | 是  | 账号ID                                     |
+| region     | string       | 是  | 地域ID（唯一标识）                           |
+| filters    | FilterExp    | 否  | 查询条件                                    |
 
 #### FilterExp
 

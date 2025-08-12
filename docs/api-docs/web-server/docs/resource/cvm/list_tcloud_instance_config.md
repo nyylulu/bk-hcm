@@ -6,15 +6,16 @@
 
 ### URL
 
-POST /api/v1/cloud/vendors/tcloud/instances/config/query_from_cloud
+POST /api/v1/cloud/vendors/{vendor}/instances/config/query_from_cloud
 
 ### 请求参数
-| 参数名称    | 参数类型       | 必选 | 描述                                 |
-|------------|--------------|-----|--------------------------------------|
-| bk_biz_id  | int64        | 是  | 业务ID                                |
-| account_id | string       | 是  | 账号ID                                |
-| region     | string       | 是  | 地域ID（唯一标识）                      |
-| filters    | FilterExp    | 否  | 查询条件                               |
+| 参数名称    | 参数类型       | 必选 | 描述                                      |
+|------------|--------------|-----|-------------------------------------------|
+| bk_biz_id  | int64        | 是  | 业务ID                                     |
+| vendor     | string       | 是  | 云厂商（枚举值：tcloud，当前版本暂只支持tcloud）|
+| account_id | string       | 是  | 账号ID                                     |
+| region     | string       | 是  | 地域ID（唯一标识）                           |
+| filters    | FilterExp    | 否  | 查询条件                                    |
 
 #### FilterExp
 
