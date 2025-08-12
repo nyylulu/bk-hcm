@@ -266,10 +266,10 @@ func (l *Layer7ListenerBindRSPreviewExecutor) validateTarget(kt *kit.Kit,
 func (l *Layer7ListenerBindRSPreviewExecutor) validateRS(kt *kit.Kit, curDetail *Layer7ListenerBindRSDetail,
 	lb corelb.LoadBalancerRaw) error {
 
-	if curDetail.InstType == enumor.EniInstType {
-		// ENI 不做校验
-		return nil
-	}
+	//if curDetail.InstType == enumor.EniInstType {
+	//	// ENI 不做校验
+	//	return nil
+	//}
 
 	isCrossRegionV1, isCrossRegionV2, _, lbTargetRegion, err := parseSnapInfoTCloudLBExtension(kt,
 		lb.Extension)
