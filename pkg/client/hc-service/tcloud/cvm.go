@@ -258,11 +258,3 @@ func (cli *CvmClient) ListInstanceConfig(kt *kit.Kit, req *protocvm.TCloudInstan
 	return common.Request[protocvm.TCloudInstanceConfigListOption, typecvm.TCloudInstanceConfigListResult](
 		cli.client, "POST", kt, req, "/instances/config/list")
 }
-
-// ListInstanceConfig list instance config.
-func (cli *CvmClient) ListInstanceConfig(kt *kit.Kit, req *protocvm.TCloudInstanceConfigListOption) (
-	*typecvm.TCloudInstanceConfigListResult, error) {
-
-	return common.Request[protocvm.TCloudInstanceConfigListOption, typecvm.TCloudInstanceConfigListResult](
-		cli.client, "POST", kt, req, "/instances/config/list")
-}
