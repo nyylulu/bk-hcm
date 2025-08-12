@@ -298,71 +298,60 @@ func (svc *lbSvc) listTargetsHealthByTGID(cts *rest.Contexts, validHandler handl
 	if err != nil {
 		return nil, err
 	}
-	// 声明健康检查处理函数变量
-	var healthFunc func(*kit.Kit, *hcproto.TCloudTargetHealthReq) (*hcproto.TCloudTargetHealthResp, error)
-
-	// 完善switch case逻辑，为不同厂商指定处理函数
+	// 按厂商分支处理，将公共逻辑嵌入腾讯云分支
 	switch basicInfo.Vendor {
-	case enumor.TCloud:
-		healthFunc = svc.client.HCService().TCloud.Clb.ListTargetHealth
-	case enumor.TCloudZiyan:
-		healthFunc = svc.client.HCService().TCloudZiyan.Clb.ListTargetHealth
+	case enumor.TCloud, enumor.TCloudZiyan:
+		// 腾讯云专属公共逻辑
+		tgInfo, newCloudLbIDs, err := svc.checkBindGetTargetGroupInfo(cts.Kit, tgID, req.CloudLbIDs)
+		if err != nil {
+			return nil, err
+		}
+
+		lbReq := &core.ListReq{
+			Filter: tools.ExpressionAnd(
+				tools.RuleIn("cloud_id", newCloudLbIDs),
+				tools.RuleEqual("vendor", basicInfo.Vendor),
+				tools.RuleEqual("account_id", tgInfo.AccountID),
+			),
+			Page: core.NewDefaultBasePage(),
+		}
+
+		lbResp, err := svc.client.DataService().Global.LoadBalancer.ListLoadBalancer(cts.Kit, lbReq)
+		if err != nil {
+			logs.Errorf("fail to find load balancer(%v) for target group health, err: %v, rid: %s",
+				newCloudLbIDs, err, cts.Kit.Rid)
+			return nil, err
+		}
+
+		if len(lbResp.Details) != len(newCloudLbIDs) {
+			return nil, errors.New("some of given load balancer can not be found")
+		}
+
+		req.Region = ""
+		req.AccountID = tgInfo.AccountID
+		req.CloudLbIDs = newCloudLbIDs
+		for _, detail := range lbResp.Details {
+			if req.Region == "" {
+				req.Region = detail.Region
+				continue
+			}
+			if req.Region != detail.Region {
+				return nil, fmt.Errorf("load balancers have different regions: %s,%s", req.Region, detail.Region)
+			}
+		}
+
+		// 调用对应厂商的具体实现
+		var healthFunc func(*kit.Kit, *hcproto.TCloudTargetHealthReq) (*hcproto.TCloudTargetHealthResp, error)
+		if basicInfo.Vendor == enumor.TCloud {
+			healthFunc = svc.client.HCService().TCloud.Clb.ListTargetHealth
+		} else {
+			healthFunc = svc.client.HCService().TCloudZiyan.Clb.ListTargetHealth
+		}
+		return healthFunc(cts.Kit, req)
+
 	default:
 		return nil, errf.Newf(errf.Unknown, "id: %s vendor: %s not support", tgID, basicInfo.Vendor)
 	}
-
-	// 调用公共逻辑函数，传入处理函数
-	return svc.getTargetHealth(cts.Kit, tgID, req, healthFunc)
-}
-
-// getTargetHealth 统一目标组关联的负载均衡器后端服务器的健康状态信息
-func (svc *lbSvc) getTargetHealth(kit *kit.Kit, tgID string, req *hcproto.TCloudTargetHealthReq,
-	healthFunc func(*kit.Kit, *hcproto.TCloudTargetHealthReq) (*hcproto.TCloudTargetHealthResp, error)) (*hcproto.TCloudTargetHealthResp, error) {
-
-	// 公共逻辑：检查绑定并获取目标组信息
-	tgInfo, newCloudLbIDs, err := svc.checkBindGetTargetGroupInfo(kit, tgID, req.CloudLbIDs)
-	if err != nil {
-		return nil, err
-	}
-
-	// 公共逻辑：查询对应负载均衡信息
-	lbReq := &core.ListReq{
-		Filter: tools.ExpressionAnd(
-			tools.RuleIn("cloud_id", newCloudLbIDs),
-			tools.RuleEqual("vendor", tgInfo.Vendor),
-			tools.RuleEqual("account_id", tgInfo.AccountID),
-		),
-		Page: core.NewDefaultBasePage(),
-	}
-
-	lbResp, err := svc.client.DataService().Global.LoadBalancer.ListLoadBalancer(kit, lbReq)
-	if err != nil {
-		logs.Errorf("fail to find load balancer(%v) for target group health, err: %v, rid: %s",
-			newCloudLbIDs, err, kit.Rid)
-		return nil, err
-	}
-
-	// 公共逻辑：验证负载均衡数量
-	if len(lbResp.Details) != len(newCloudLbIDs) {
-		return nil, errors.New("some of given load balancer can not be found")
-	}
-
-	// 公共逻辑：设置请求参数并验证区域
-	req.Region = ""
-	req.AccountID = tgInfo.AccountID
-	req.CloudLbIDs = newCloudLbIDs
-	for _, detail := range lbResp.Details {
-		if req.Region == "" {
-			req.Region = detail.Region
-			continue
-		}
-		if req.Region != detail.Region {
-			return nil, fmt.Errorf("load balancers have different regions: %s,%s", req.Region, detail.Region)
-		}
-	}
-
-	// 调用差异化处理函数
-	return healthFunc(kit, req)
 }
 
 // checkBindGetTargetGroupInfo 检查目标组是否存在、是否已绑定其他监听器，给定云id可能重复，
