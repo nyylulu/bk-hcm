@@ -401,7 +401,9 @@ func (svc *cvmSvc) ListInstanceConfig(cts *rest.Contexts) (interface{}, error) {
 
 	switch vendor {
 	case enumor.TCloud:
-		return svc.ListTCloudInstanceConfig(cts, vendor)
+		return svc.ListTCloudInstanceConfig(cts)
+	case enumor.TCloudZiyan:
+		return svc.ListTCloudZiyanInstanceConfig(cts)
 	default:
 		return nil, errf.NewFromErr(errf.InvalidParameter,
 			fmt.Errorf("list instance config no support vendor: %s", vendor))
@@ -409,14 +411,14 @@ func (svc *cvmSvc) ListInstanceConfig(cts *rest.Contexts) (interface{}, error) {
 }
 
 // ListTCloudInstanceConfig ...
-func (svc *cvmSvc) ListTCloudInstanceConfig(cts *rest.Contexts, vendor enumor.Vendor) (interface{}, error) {
+func (svc *cvmSvc) ListTCloudInstanceConfig(cts *rest.Contexts) (interface{}, error) {
 	req, err := svc.decodeAndValidateTCloudInstanceConfigListOpt(cts)
 	if err != nil {
 		logs.Errorf("decode and validate tcloud instance config list option failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
-	return svc.listTCloudInstanceConfig(cts, req, constant.UnassignedBiz, handler.ResOperateAuth, vendor)
+	return svc.listTCloudInstanceConfig(cts, req, constant.UnassignedBiz, handler.ResOperateAuth)
 }
 
 // ListBizInstanceConfig ...
@@ -427,8 +429,10 @@ func (svc *cvmSvc) ListBizInstanceConfig(cts *rest.Contexts) (interface{}, error
 	}
 
 	switch vendor {
-	case enumor.TCloud, enumor.TCloudZiyan:
-		return svc.ListTCloudBizInstanceConfig(cts, vendor)
+	case enumor.TCloud:
+		return svc.ListTCloudBizInstanceConfig(cts)
+	case enumor.TCloudZiyan:
+		return svc.ListTCloudZiyanBizInstanceConfig(cts)
 	default:
 		return nil, errf.NewFromErr(errf.InvalidParameter,
 			fmt.Errorf("list biz instance config no support vendor: %s", vendor))
@@ -436,7 +440,7 @@ func (svc *cvmSvc) ListBizInstanceConfig(cts *rest.Contexts) (interface{}, error
 }
 
 // ListTCloudBizInstanceConfig ...
-func (svc *cvmSvc) ListTCloudBizInstanceConfig(cts *rest.Contexts, vendor enumor.Vendor) (interface{}, error) {
+func (svc *cvmSvc) ListTCloudBizInstanceConfig(cts *rest.Contexts) (interface{}, error) {
 	bizID, err := cts.PathParameter("bk_biz_id").Int64()
 	if err != nil {
 		return nil, err
@@ -465,7 +469,7 @@ func (svc *cvmSvc) ListTCloudBizInstanceConfig(cts *rest.Contexts, vendor enumor
 		return nil, errf.New(errf.PermissionDenied, "no permission")
 	}
 
-	return svc.listTCloudInstanceConfig(cts, req, bizID, handler.BizOperateAuth, vendor)
+	return svc.listTCloudInstanceConfig(cts, req, bizID, handler.BizOperateAuth)
 }
 
 func (svc *cvmSvc) decodeAndValidateTCloudInstanceConfigListOpt(cts *rest.Contexts) (
@@ -482,7 +486,7 @@ func (svc *cvmSvc) decodeAndValidateTCloudInstanceConfigListOpt(cts *rest.Contex
 }
 
 func (svc *cvmSvc) listTCloudInstanceConfig(cts *rest.Contexts, req *protocvm.TCloudInstanceConfigListOption,
-	bizID int64, validHandler handler.ValidWithAuthHandler, vendor enumor.Vendor) (interface{}, error) {
+	bizID int64, validHandler handler.ValidWithAuthHandler) (interface{}, error) {
 
 	// validate biz and authorize
 	err := validHandler(cts, &handler.ValidWithAuthOption{Authorizer: svc.authorizer, ResType: meta.Cvm,
@@ -492,13 +496,5 @@ func (svc *cvmSvc) listTCloudInstanceConfig(cts *rest.Contexts, req *protocvm.TC
 		return nil, err
 	}
 
-	switch vendor {
-	case enumor.TCloud:
-		return svc.client.HCService().TCloud.Cvm.ListInstanceConfig(cts.Kit, req)
-	case enumor.TCloudZiyan:
-		return svc.client.HCService().TCloudZiyan.Cvm.ListInstanceConfig(cts.Kit, req)
-	default:
-		return nil, errf.NewFromErr(errf.InvalidParameter,
-			fmt.Errorf("list tcloud instance config no support vendor: %s", vendor))
-	}
+	return svc.client.HCService().TCloud.Cvm.ListInstanceConfig(cts.Kit, req)
 }
