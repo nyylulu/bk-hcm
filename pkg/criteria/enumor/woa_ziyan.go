@@ -51,10 +51,12 @@ func GetObsProjectMembers() []ObsProject {
 }
 
 // GetObsProjectMembersForResPlan get ObsProject's members for resource plan.
+// 顺序为： 常规项目、滚服项目、春节保障、机房裁撤、改造复用、轻量云徙
 func GetObsProjectMembersForResPlan() []ObsProject {
-	obsProjects := []ObsProject{ObsProjectNormal, ObsProjectReuse, ObsProjectMigrate, ObsProjectRollServer}
+	obsProjects := []ObsProject{ObsProjectNormal, ObsProjectRollServer}
 	obsProjects = append(obsProjects, getSpringObsProjectForResPlan()...)
 	obsProjects = append(obsProjects, getDissolveObsProjectForResPlan()...)
+	obsProjects = append(obsProjects, []ObsProject{ObsProjectReuse, ObsProjectMigrate}...)
 
 	return obsProjects
 }

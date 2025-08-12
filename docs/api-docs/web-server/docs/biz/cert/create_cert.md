@@ -14,13 +14,13 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/certs/create
 
 #### 接口通用参数
 
-| 参数名称        | 参数类型   | 必选 | 描述                                   |
-|-------------|--------|----|--------------------------------------|
-| bk_biz_id   | int64  | 是  | 业务ID                                 |
-| vendor      | string | 是  | 云厂商（枚举值：tcloud、aws、gcp、azure、huawei） |
-| account_id  | string | 是  | 账号ID                                 |
-| name        | string | 是  | 证书名称                                 |
-| memo        | string | 否  | 备注                                   |
+| 参数名称      | 参数类型 | 必选 | 描述                                          |
+|--------------|--------|------|----------------------------------------------|
+| bk_biz_id    | int64  | 是   | 业务ID                                        |
+| vendor       | string | 是   | 云厂商（枚举值：tcloud、aws、gcp、azure、huawei） |
+| account_id   | string | 是   | 账号ID                                        |
+| name         | string | 是   | 证书名称                                       |
+| memo         | string | 否   | 备注                                          |
 
 #### 云厂商差异参数[tcloud]
 
@@ -43,34 +43,6 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/certs/create
   "private_key": "xxxxxx"
 }
 ```
-#### 云厂商差异参数[tcloud-ziyan]
-
-| 参数名称        | 参数类型   | 必选 | 描述                          |
-|-------------|--------|----|-----------------------------|
-| cert_type   | string | 是  | 证书类型（CA:客户端证书，SVR:服务器证书）    |
-| public_key  | string | 是  | 证书内容，需要做base64编码            |
-| private_key | string | 否  | 私钥内容，需要做base64编码，CA证书可不传该参数 |
-| manager     | string | 否  | 主负责人                        |
-| bak_manager | string | 否  | 备份负责人                       | 
-
-### 自研云调用示例
-
-```json
-{
-  "vendor": "tcloud-ziyan",
-  "account_id": "00000001",
-  "name": "test-cert",
-  "memo": "test cert",
-  "cert_type": "CA",
-  "public_key": "xxxxxx",
-  "private_key": "xxxxxx",
-  "manager": "manager_name",
-  "bak_manager": "bak_manager_name"
-}
-```
-
-                            
-
 
 ### 响应示例
 

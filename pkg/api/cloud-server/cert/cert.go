@@ -53,24 +53,3 @@ func (req *AssignCertToBizReq) Validate() error {
 
 	return nil
 }
-
-// ZiyanCreateCertReq define create cert request.
-type ZiyanCreateCertReq struct {
-	Vendor     string `json:"vendor" validate:"required"`
-	AccountId  string `json:"account_id" validate:"required"`
-	Name       string `json:"name" validate:"required"`
-	Memo       string `json:"memo" validate:"omitempty"`
-	CertType   string `json:"cert_type" validate:"required"`
-	PublicKey  string `json:"public_key" validate:"required"`
-	PrivateKey string `json:"private_key" validate:"omitempty"`
-	Manager    string `json:"manager" validate:"required"`
-	BakManager string `json:"bak_manager" validate:"required"`
-}
-
-// Validate ...
-func (req *ZiyanCreateCertReq) Validate() error {
-	if err := validator.Validate.Struct(req); err != nil {
-		return err
-	}
-	return nil
-}

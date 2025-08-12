@@ -233,14 +233,16 @@ func (s *subnet) SyncSubnet(kt *kit.Kit, param *types.GetSubnetParam) error {
 			page.Start += pkg.BKMaxPageSize
 		}
 
-		txnErr := dal.RunTransaction(kit.New(), func(sc mongo.SessionContext) error {
-			kt.Ctx = sc
+		txnKt := kit.New()
+		txnKt.Rid = kt.Rid
+		txnErr := dal.RunTransaction(txnKt, func(sc mongo.SessionContext) error {
+			txnKt.Ctx = sc
 			// 清理旧的子网
 			for _, subnetInfo := range subnetList {
-				err = s.DeleteSubnet(kt, subnetInfo.BkInstId)
+				err = s.DeleteSubnet(txnKt, subnetInfo.BkInstId)
 				if err != nil {
 					logs.Errorf("failed to delete subnet, err: %v, subnetInstID: %d, param: %+v, subnetItem: %+v, "+
-						"rid: %s", err, subnetInfo.BkInstId, cvt.PtrToVal(param), cvt.PtrToVal(subnetItem), kt.Rid)
+						"rid: %s", err, subnetInfo.BkInstId, cvt.PtrToVal(param), cvt.PtrToVal(subnetItem), txnKt.Rid)
 					return err
 				}
 			}
@@ -255,15 +257,15 @@ func (s *subnet) SyncSubnet(kt *kit.Kit, param *types.GetSubnetParam) error {
 				Enable:     true,
 				Comment:    "",
 			}
-			if _, err = s.CreateSubnet(kt, subnetCfg); err != nil {
+			if _, err = s.CreateSubnet(txnKt, subnetCfg); err != nil {
 				logs.Errorf("failed to create subnet, err: %v, subnetOld: %+v, subnetCfg: %+v, rid: %s",
-					err, subnetList[0], cvt.PtrToVal(subnetCfg), kt.Rid)
+					err, subnetList[0], cvt.PtrToVal(subnetCfg), txnKt.Rid)
 				return err
 			}
 			return nil
 		})
 		if txnErr != nil {
-			logs.Errorf("failed to create subnet with transation, err: %v, rid: %s", filter, txnErr, kt.Rid)
+			logs.Errorf("failed to create subnet with transation, err: %v, rid: %s", filter, txnErr, txnKt.Rid)
 			return txnErr
 		}
 	}
