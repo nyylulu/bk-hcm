@@ -52,7 +52,8 @@ func (svc *cvmSvc) initTCloudCvmService(cap *capability.Capability) {
 		svc.ListTCloudCvmNetworkInterface)
 	h.Add("BatchAssociateTCloudSecurityGroup", http.MethodPost, "/vendors/tcloud/cvms/security_groups/batch/associate",
 		svc.BatchAssociateTCloudSecurityGroup)
-	h.Add("ListInstanceConfig", http.MethodPost, "/vendors/tcloud/instances/config/list", svc.ListInstanceConfig)
+	h.Add("ListTCloudInstanceConfig", http.MethodPost,
+		"/vendors/tcloud/instances/config/list", svc.ListTCloudInstanceConfig)
 
 	h.Load(cap.WebService)
 }
@@ -355,8 +356,8 @@ func (svc *cvmSvc) BatchDeleteTCloudCvm(cts *rest.Contexts) (interface{}, error)
 	return nil, nil
 }
 
-// ListInstanceConfig ...
-func (svc *cvmSvc) ListInstanceConfig(cts *rest.Contexts) (interface{}, error) {
+// ListTCloudInstanceConfig ...
+func (svc *cvmSvc) ListTCloudInstanceConfig(cts *rest.Contexts) (interface{}, error) {
 	req := new(protocvm.TCloudInstanceConfigListOption)
 	err := cts.DecodeInto(req)
 	if err != nil {
@@ -374,7 +375,7 @@ func (svc *cvmSvc) ListInstanceConfig(cts *rest.Contexts) (interface{}, error) {
 
 	result, err := cli.ListInstanceConfig(cts.Kit, req.TCloudInstanceConfigListOption)
 	if err != nil {
-		logs.Errorf("list instance config failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("list tcloud instance config failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
