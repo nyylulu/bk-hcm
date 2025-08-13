@@ -194,7 +194,7 @@ func (c *Controller) SyncDeviceTypesFromCRP(kt *kit.Kit, deviceTypes []string) e
 	return nil
 }
 
-// listCvmInstanceTypeFromCrp 从Crp平台获取机型 TODO 这个方法不应该被导出
+// listCvmInstanceTypeFromCrp 从Crp平台获取机型
 func (c *Controller) listCvmInstanceTypeFromCrp(kt *kit.Kit, deviceTypes []string) (map[string]wdt.WoaDeviceTypeTable,
 	error) {
 
