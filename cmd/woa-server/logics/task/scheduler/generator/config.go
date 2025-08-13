@@ -113,6 +113,23 @@ func (g *Generator) getZoneList(kt *kit.Kit, region string) ([]*cfgtype.Zone, er
 	return zoneResp.Info, nil
 }
 
+// getRegionList get region list by zone list
+func (g *Generator) getRegionList(kt *kit.Kit, zoneList []string) ([]*cfgtype.Zone, error) {
+	cond := mapstr.MapStr{}
+	// if input is empty list, return all zone info
+	if len(zoneList) > 0 {
+		cond["zone"] = mapstr.MapStr{
+			pkg.BKDBIN: zoneList,
+		}
+	}
+	zoneResp, err := g.configLogics.Zone().GetZone(kt, &cond)
+	if err != nil {
+		return nil, err
+	}
+
+	return zoneResp.Info, nil
+}
+
 // getCapacity get resource apply capacity info
 func (g *Generator) getCapacity(kt *kit.Kit, order *task.ApplyOrder, zone, vpc, subnet string) (
 	map[string]int64, error) {

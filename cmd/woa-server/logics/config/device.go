@@ -290,7 +290,8 @@ func (d *device) CreateDevice(kt *kit.Kit, input *types.DeviceInfo) (mapstr.MapS
 
 	if cnt != 0 {
 		logs.Errorf("device exist locally, need not create again, rid: %s", kt.Rid)
-		return nil, errf.NewFromErr(errf.DeviceTypeExistLocally, errors.New("device exist locally, need not create again"))
+		return nil, errf.NewFromErr(errf.DeviceTypeExistLocally,
+			errors.New("device exist locally, need not create again"))
 	}
 
 	// create instance
@@ -581,7 +582,7 @@ func (d *device) ListCvmInstanceInfoByDeviceTypes(kt *kit.Kit, deviceTypes []str
 
 	// 记录日志
 	logs.Infof("get cvm instance info from crp by device types, deviceTypes: %v, notExistDevice: %v, "+
-		"deviceTypeMap; %+v, rid: %s", deviceTypes, notExistDevice, deviceTypeMap, kt.Rid)
+		"deviceTypeMap: %+v, rid: %s", deviceTypes, notExistDevice, deviceTypeMap, kt.Rid)
 
 	return deviceTypeMap, nil
 }

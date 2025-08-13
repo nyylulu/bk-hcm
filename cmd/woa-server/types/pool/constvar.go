@@ -40,4 +40,8 @@ const (
 	ModuleIDPoolRecallFailed int64 = 5008422
 	// ModuleIDPoolMatch module id of SA云化池
 	ModuleIDPoolMatch int64 = 239149
+	// ModuleIDPoolRA module id of RA池
+	ModuleIDPoolRA int64 = 239148
+	// ModuleIDPoolSCR module id of SCR_加工池
+	ModuleIDPoolSCR int64 = 532040
 )

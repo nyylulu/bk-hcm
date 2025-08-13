@@ -47,6 +47,10 @@ type CVMClientInterface interface {
 	QueryCvmReturnOrders(ctx context.Context, header http.Header, req *OrderQueryReq) (*ReturnQueryResp, error)
 	// QueryCvmReturnDetail query cvm return order detail
 	QueryCvmReturnDetail(ctx context.Context, header http.Header, req *ReturnDetailReq) (*ReturnDetailResp, error)
+	// CreateUpgradeOrder creates cvm upgrade order
+	CreateUpgradeOrder(kt *kit.Kit, req *UpgradeReq) (*OrderCreateResp, error)
+	// QueryCvmUpgradeDetail query cvm upgrade detail
+	QueryCvmUpgradeDetail(kt *kit.Kit, req *UpgradeDetailReq) (*UpgradeDetailResp, error)
 	// GetCvmProcess check if cvm is in any process like "退回"
 	GetCvmProcess(ctx context.Context, header http.Header, req *GetCvmProcessReq) (*GetCvmProcessResp, error)
 	// GetErpProcess check if physical machine is in any process like "退回"
@@ -454,6 +458,42 @@ func (c *cvmApi) QueryCvmReturnDetail(ctx context.Context, header http.Header, r
 		SubResourcef(subPath).
 		WithParam(CvmApiKey, CvmApiKeyVal).
 		WithHeaders(header).
+		Do().
+		Into(resp)
+
+	return resp, err
+}
+
+// CreateUpgradeOrder creates cvm upgrade order
+func (c *cvmApi) CreateUpgradeOrder(kt *kit.Kit, req *UpgradeReq) (*OrderCreateResp,
+	error) {
+
+	subPath := "/upgrade/api"
+	resp := new(OrderCreateResp)
+	err := c.client.Post().
+		WithContext(kt.Ctx).
+		Body(req).
+		SubResourcef(subPath).
+		WithParam(CvmApiKey, CvmApiKeyVal).
+		WithHeaders(kt.Header()).
+		Do().
+		Into(resp)
+
+	return resp, err
+}
+
+// QueryCvmUpgradeDetail query cvm upgrade order detail
+func (c *cvmApi) QueryCvmUpgradeDetail(kt *kit.Kit, req *UpgradeDetailReq) (
+	*UpgradeDetailResp, error) {
+
+	subPath := "/upgrade/api"
+	resp := new(UpgradeDetailResp)
+	err := c.client.Post().
+		WithContext(kt.Ctx).
+		Body(req).
+		SubResourcef(subPath).
+		WithParam(CvmApiKey, CvmApiKeyVal).
+		WithHeaders(kt.Header()).
 		Do().
 		Into(resp)
 
