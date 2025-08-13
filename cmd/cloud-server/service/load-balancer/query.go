@@ -311,7 +311,7 @@ func (svc *lbSvc) listTargetsHealthByTGID(cts *rest.Contexts, validHandler handl
 	}
 }
 
-// getTCloudTargetHealth 统一目标组关联的负载均衡器健康状态信息
+// getTCloudTargetHealth 处理目标组绑定的负载均衡的健康状态查询
 func (svc *lbSvc) getTCloudTargetHealth(kit *kit.Kit, tgID string, req *hcproto.TCloudTargetHealthReq,
 	healthFunc func(*kit.Kit, *hcproto.TCloudTargetHealthReq) (*hcproto.TCloudTargetHealthResp, error)) (*hcproto.TCloudTargetHealthResp, error) {
 
