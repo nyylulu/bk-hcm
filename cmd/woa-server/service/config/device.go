@@ -15,11 +15,13 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"time"
 
 	types "hcm/cmd/woa-server/types/config"
 	"hcm/pkg"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/logs"
@@ -159,15 +161,12 @@ func (s *service) CreateManyDevice(cts *rest.Contexts) (interface{}, error) {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	startTime := time.Now()
-	defer logs.Infof("total cost to create device in batch: %s, rid: %s", time.Since(startTime), cts.Kit.Rid)
-	crpDeviceTypeMap, err := s.planLogics.ListCvmInstanceTypeFromCrp(cts.Kit, []string{input.DeviceType})
+	crpDeviceTypeMap, err := s.logics.Device().ListDeviceTypeInfoFromCrp(cts.Kit, []string{input.DeviceType})
 	if err != nil {
 		logs.Errorf("failed to get device type from CRP, err: %v, deviceType: %s, rid: %s", err, input.DeviceType,
 			cts.Kit.Rid)
 		return nil, err
 	}
-	logs.Infof("get device type from CRP, cost: %s, deviceType: %s, rid: %s", time.Since(startTime), input.DeviceType)
 
 	crpDeviceInfo, exists := crpDeviceTypeMap[input.DeviceType]
 	if !exists && !input.ForceCreate {
@@ -177,8 +176,14 @@ func (s *service) CreateManyDevice(cts *rest.Contexts) (interface{}, error) {
 
 	// 当机型存在于crp时，那么创建时以crp的实例族为准
 	if exists {
-		input.DeviceGroup = crpDeviceInfo.DeviceFamily
-		input.DeviceTypeClass = crpDeviceInfo.DeviceTypeClass
+		input.DeviceGroup = crpDeviceInfo.InstanceGroup
+		// 判断输入的 CPU核数，内存大小，大小核心 和crp的是否一致
+		if input.Cpu != int64(crpDeviceInfo.CPUAmount) || input.Mem != int64(crpDeviceInfo.RamAmount) ||
+			input.DeviceSize != enumor.GetCoreTypeByCRPCoreTypeID(crpDeviceInfo.CoreType) {
+			return nil, fmt.Errorf("input device config not match CRP device config, input: %+v, crp: %+v",
+				input, crpDeviceInfo)
+		}
+		input.DeviceTypeClass = crpDeviceInfo.InstanceTypeClass
 	}
 	createStartTime := time.Now()
 	if err = s.logics.Device().CreateManyDevice(cts.Kit, input); err != nil {
