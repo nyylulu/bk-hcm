@@ -207,9 +207,12 @@ func (svc *lbSvc) insertListenerWithRule(kt *kit.Kit, vendor enumor.Vendor,
 }
 func (svc *lbSvc) createListenerWithRule(kt *kit.Kit, txn *sqlx.Tx, item dataproto.ListenerWithRuleCreateReq) (
 	lblID string, ruleID string, err error) {
-
+	var endport *int64
+	if item.EndPort != nil && *item.EndPort > 0 {
+		endport = item.EndPort
+	}
 	ext := corelb.TCloudListenerExtension{
-		EndPort:     item.EndPort,
+		EndPort:     endport,
 		Certificate: nil,
 	}
 	extRaw, err := json.MarshalToString(ext)
