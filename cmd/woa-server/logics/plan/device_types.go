@@ -147,7 +147,7 @@ func (c *Controller) SyncDeviceTypesFromCRP(kt *kit.Kit, deviceTypes []string) e
 	}
 
 	// 2.从crp平台获取机型
-	crpDeviceTypeMap, err := c.ListCvmInstanceTypeFromCrp(kt, deviceTypes)
+	crpDeviceTypeMap, err := c.listCvmInstanceTypeFromCrp(kt, deviceTypes)
 	if err != nil {
 		logs.Errorf("failed to list cvm device type from crp, err: %v, deviceTypes: %v, rid: %s", err,
 			deviceTypes, kt.Rid)
@@ -194,8 +194,8 @@ func (c *Controller) SyncDeviceTypesFromCRP(kt *kit.Kit, deviceTypes []string) e
 	return nil
 }
 
-// ListCvmInstanceTypeFromCrp 从Crp平台获取机型
-func (c *Controller) ListCvmInstanceTypeFromCrp(kt *kit.Kit, deviceTypes []string) (map[string]wdt.WoaDeviceTypeTable,
+// listCvmInstanceTypeFromCrp 从Crp平台获取机型 TODO 这个方法不应该被导出
+func (c *Controller) listCvmInstanceTypeFromCrp(kt *kit.Kit, deviceTypes []string) (map[string]wdt.WoaDeviceTypeTable,
 	error) {
 
 	req := &cvmapi.QueryCvmInstanceTypeReq{
