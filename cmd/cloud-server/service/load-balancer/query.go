@@ -330,7 +330,6 @@ func (svc *lbSvc) getTCloudTargetHealth(kit *kit.Kit, tgID string, req *hcproto.
 	if len(lbResp.Details) != len(newCloudLbIDs) {
 		return nil, errors.New("some of given load balancer can not be found")
 	}
-
 	req.AccountID = tgInfo.AccountID
 	req.CloudLbIDs = newCloudLbIDs
 
