@@ -404,7 +404,9 @@ func (d *device) batchCreateDeviceForZones(kt *kit.Kit, input *types.DeviceInfo,
 	filter := map[string]interface{}{
 		"require_type": input.RequireType,
 		"device_type":  input.DeviceType,
-		pkg.BKDBIN:     zoneConditions,
+		"zone": &mapstr.MapStr{
+			pkg.BKDBIN: zoneConditions,
+		},
 	}
 
 	page := metadata.BasePage{Limit: pkg.BKNoLimit, Start: 0}
