@@ -694,3 +694,29 @@ paths:
           userVerifiedRequired: true
         disabledStages: []
         descriptionEn:
+  /api/v1/woa/bizs/{bk_biz_id}/task/create/upgrade/crp_order:
+    post:
+      operationId: create_crp_upgrade_order
+      description: 校验预测并创建CRP升降配单据
+      tags:
+        - SCR
+        - Apply
+      responses:
+        default:
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: true
+        matchSubpath: false
+        backend:
+          type: HTTP
+          method: post
+          path: /api/v1/woa/bizs/{bk_biz_id}/task/create/upgrade/crp_order
+          matchSubpath: false
+          timeout: 30
+          upstreams: {}
+          transformHeaders: {}
+        authConfig:
+          userVerifiedRequired: true
+        disabledStages: []
+        descriptionEn:
