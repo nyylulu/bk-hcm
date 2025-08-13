@@ -27,6 +27,7 @@ import (
 	"hcm/pkg/dal/table"
 	"hcm/pkg/dal/table/types"
 	"hcm/pkg/dal/table/utils"
+	"hcm/pkg/thirdparty/cvmapi"
 )
 
 // WoaDeviceTypeColumns defines all the woa device type status table's columns.
@@ -61,6 +62,8 @@ type WoaDeviceTypeTable struct {
 	CpuCore int64 `db:"cpu_core" json:"cpu_core"`
 	// Memory 内存大小，单位：GB
 	Memory int64 `db:"memory" json:"memory"`
+	// DeviceTypeClass 通/专用机型，SpecialType专用，CommonType通用
+	DeviceTypeClass cvmapi.InstanceTypeClass `db:"device_type_class" json:"device_type_class" validate:"lte=64"`
 	// CreatedAt 创建时间
 	CreatedAt types.Time `db:"created_at" validate:"isdefault" json:"created_at"`
 	// UpdatedAt 更新时间

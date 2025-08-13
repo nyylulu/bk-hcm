@@ -264,6 +264,8 @@ type DeviceInfo struct {
 	EnableApply    bool               `json:"enable_apply" bson:"enable_apply"`
 	Score          float64            `json:"score" bson:"score"`
 	Comment        string             `json:"comment" bson:"comment"`
+	// DeviceTypeClass 通/专用机型，SpecialType专用，CommonType通用
+	DeviceTypeClass cvmapi.InstanceTypeClass `json:"device_type_class" bson:"device_type_class"`
 }
 
 const (
@@ -355,14 +357,15 @@ type GetDeviceTypeDetailResult struct {
 
 // CreateManyDeviceParam create device config in batch request param
 type CreateManyDeviceParam struct {
-	RequireType []enumor.RequireType `json:"require_type" validate:"required,max=20,dive"`
-	Zone        []string             `json:"zone" validate:"required,max=100,dive"`
-	DeviceGroup string               `json:"device_group" validate:"required"`
-	DeviceSize  enumor.CoreType      `json:"device_size" validate:"required"`
-	DeviceType  string               `json:"device_type" validate:"required"`
-	Cpu         int64                `json:"cpu" validate:"required,min=1"`
-	Mem         int64                `json:"mem" validate:"required,min=1"`
-	Remark      string               `json:"remark"`
+	RequireType     []enumor.RequireType     `json:"require_type" validate:"required,max=20,dive"`
+	Zone            []string                 `json:"zone" validate:"required,max=100,dive"`
+	DeviceGroup     string                   `json:"device_group" validate:"required"`
+	DeviceSize      enumor.CoreType          `json:"device_size" validate:"required"`
+	DeviceType      string                   `json:"device_type" validate:"required"`
+	DeviceTypeClass cvmapi.InstanceTypeClass `json:"device_type_class" validate:"omitempty"`
+	Cpu             int64                    `json:"cpu" validate:"required,min=1"`
+	Mem             int64                    `json:"mem" validate:"required,min=1"`
+	Remark          string                   `json:"remark"`
 	// ForceCreate 当机型在CRP中不存在时是否仍然创建
 	ForceCreate bool `json:"force_create" validate:"omitempty"`
 }
