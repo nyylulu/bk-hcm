@@ -121,7 +121,7 @@ type ListListenerResult = core.ListResultT[*ListenerListInfo]
 // ListenerListInfo define list listener base.
 type ListenerListInfo struct {
 	corelb.BaseListener
-	//EndPort       *int64                        `json:"end_port"`
+	EndPort       *int64                        `json:"end_port"`
 	TargetGroupID string                        `json:"target_group_id"`
 	Scheduler     string                        `json:"scheduler"`
 	SessionType   string                        `json:"session_type"`
