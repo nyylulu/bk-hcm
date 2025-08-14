@@ -158,6 +158,8 @@ func (c *Controller) SyncDeviceTypesFromCRP(kt *kit.Kit, deviceTypes []string) e
 
 	// 3. (临时) 从CRP获取技术分类
 	crpTechnicalClassMap, err := c.listCvmTechnicalClassFromCrp(kt)
+	logs.Infof("list cvm technical class from crp, deviceTypes: %v, crpTechnicalClassMap: %v, rid: %s",
+		deviceTypes, crpTechnicalClassMap, kt.Rid)
 	if err != nil {
 		logs.Errorf("failed to list cvm technical class from crp, err: %v, rid: %s", err, kt.Rid)
 		return err
