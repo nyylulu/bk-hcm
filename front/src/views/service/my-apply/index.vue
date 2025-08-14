@@ -301,6 +301,7 @@ export default defineComponent({
 .my-apply-page {
   height: 100%;
 }
+
 .page-layout {
   height: 100%;
   display: flex;
@@ -316,6 +317,7 @@ export default defineComponent({
   flex: 0 0 280px;
   background: #fff;
   overflow: hidden;
+
   :deep(.bk-nested-loading) {
     height: 100%;
   }

@@ -36,7 +36,7 @@ interface Step {
 
 defineOptions({ name: 'resource-plan-ticket-audit' });
 const props = defineProps({
-  detail: Object as PropType<IPlanTicketAudit>,
+  detail: Object as PropType<IPlanTicketAudit>, // audit接口数据，从外部传入
   fetchData: Function as PropType<() => Promise<void>>,
   timeoutPollAction: Object as PropType<TimeoutPollAction>,
   isBusinessPage: Boolean,
@@ -157,6 +157,7 @@ const renderCrpLogs = (audit: IPlanTicketCrpAudit) => {
   // 空值兼容
   if (!audit?.crp_sn) return getStaticCrpLogs();
 
+  // 获取crp审批流信息
   const { status, logs, current_steps } = audit;
 
   // 撤销、失败、结束、拒绝，done 这五种状态，直接输出response
@@ -172,7 +173,7 @@ const renderCrpLogs = (audit: IPlanTicketCrpAudit) => {
     if (index < currentStepIdx) {
       return {
         tag: h(TimelineTag, null, [logs[index]?.name ?? name, status === 'auditing' ? link : null]),
-        content: auto && !logs[index] ? '' : getHistoryStepContent(logs[index], 'crp'),
+        content: auto || !logs[index] ? '' : getHistoryStepContent(logs[index], 'crp'),
         nodeType: ITimelineNodeType.VNode,
         type: 'success',
       };
@@ -215,6 +216,7 @@ watch(
     }
 
     const { itsm_audit, crp_audit } = detail;
+    if (!itsm_audit || !crp_audit) return Message({ theme: 'error', message: t('单据信息异常') });
     renderItsmAuditLogs.value = renderItsmLogs(itsm_audit);
 
     if (itsm_audit?.status === 'done') renderCrpAuditLogs.value = renderCrpLogs(crp_audit);
