@@ -277,7 +277,7 @@ func (c *Controller) listCvmTechnicalClassFromCrp(kt *kit.Kit) (map[string]strin
 
 	technicalClassMap := make(map[string]string)
 	for _, item := range resp.Result {
-		technicalClassMap[item.CvmInstanceType] = item.TechnicalClass
+		technicalClassMap[item.CvmInstanceModel] = item.TechnicalClass
 	}
 
 	return technicalClassMap, nil
