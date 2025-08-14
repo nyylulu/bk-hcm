@@ -35,11 +35,11 @@ func (s *service) ListDeviceType(cts *rest.Contexts) (interface{}, error) {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	// 权限校验
-	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.ZiYanResPlan, Action: meta.Find}}
-	if err := s.authorizer.AuthorizeWithPerm(cts.Kit, authRes); err != nil {
-		return nil, err
-	}
+	//// 权限校验
+	//authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.ZiYanResPlan, Action: meta.Find}}
+	//if err := s.authorizer.AuthorizeWithPerm(cts.Kit, authRes); err != nil {
+	//	return nil, err
+	//}
 
 	result, err := s.client.DataService().Global.ResourcePlan.ListWoaDeviceType(cts.Kit, req)
 	if err != nil {
