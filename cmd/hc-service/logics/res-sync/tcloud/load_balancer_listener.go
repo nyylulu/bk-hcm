@@ -392,7 +392,7 @@ func convL4Listener(lbl typeslb.TCloudListener, accountID string, region string,
 	syncOpt *SyncListenerOption) dataproto.ListenerWithRuleCreateReq {
 
 	var endport *int64
-	if cvt.PtrToVal(lbl.EndPort) > 0 {
+	if cvt.PtrToVal(lbl.EndPort) > 0 && lbl.Endport != nil {
 		endport = lbl.EndPort
 	}
 
@@ -426,7 +426,7 @@ func convL4Listener(lbl typeslb.TCloudListener, accountID string, region string,
 func convL7Listener(lbl typeslb.TCloudListener, accountID string, region string,
 	syncOpt *SyncListenerOption) dataproto.ListenersCreateReq[corelb.TCloudListenerExtension] {
 	var endport *int64
-	if cvt.PtrToVal(lbl.EndPort) > 0 {
+	if cvt.PtrToVal(lbl.EndPort) > 0 && lbl.Endport != nil {
 		endport = lbl.EndPort
 	}
 	// for layer 7 only create listeners itself
@@ -463,7 +463,7 @@ func (cli *client) updateListener(kt *kit.Kit, bizID int64, region string,
 
 	for id, lbl := range updateMap {
 		var endport *int64
-		if cvt.PtrToVal(lbl.EndPort) > 0 {
+		if cvt.PtrToVal(lbl.EndPort) > 0 && lbl.Endport != nil {
 			endport = lbl.EndPort
 		}
 		updates = append(updates, &dataproto.TCloudListenerUpdate{
