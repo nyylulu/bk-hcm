@@ -127,7 +127,7 @@ func (svc *lbSvc) getTCloudUrlRuleAndTargetGroupMap(kt *kit.Kit, lbID string,
 		lblIDs = append(lblIDs, lbl.ID)
 		lblInfoList = append(lblInfoList, &cslb.ListenerListInfo{
 			BaseListener: *lbl.BaseListener,
-			//EndPort:      lbl.Extension.EndPort,
+			EndPort:      lbl.Extension.EndPort,
 		})
 	}
 
@@ -193,7 +193,7 @@ func (svc *lbSvc) getTCloudZiyanUrlRuleAndTargetGroupMap(kt *kit.Kit, lbID strin
 		lblIDs = append(lblIDs, lbl.ID)
 		lblInfoList = append(lblInfoList, &cslb.ListenerListInfo{
 			BaseListener: *lbl.BaseListener,
-			//EndPort:      lbl.Extension.EndPort,
+			EndPort:      lbl.Extension.EndPort,
 		})
 	}
 

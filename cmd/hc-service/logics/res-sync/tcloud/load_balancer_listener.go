@@ -390,7 +390,7 @@ func (cli *client) createListener(kt *kit.Kit, accountID, region string, syncOpt
 
 func convL4Listener(lbl typeslb.TCloudListener, accountID string, region string,
 	syncOpt *SyncListenerOption) dataproto.ListenerWithRuleCreateReq {
-
+	//
 	db := dataproto.ListenerWithRuleCreateReq{
 		CloudID:       lbl.GetCloudID(),
 		Name:          cvt.PtrToVal(lbl.ListenerName),
