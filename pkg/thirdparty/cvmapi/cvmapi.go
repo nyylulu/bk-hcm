@@ -82,6 +82,9 @@ type CVMClientInterface interface {
 	// ReportPenaltyRatio report penalty ratio
 	ReportPenaltyRatio(ctx context.Context, header http.Header, req *CvmCbsPlanPenaltyRatioReportReq) (
 		*CvmCbsPlanPenaltyRatioReportResp, error)
+
+	QueryTechnicalClass(ctx context.Context, header http.Header, req *QueryTechnicalClassReq) (*QueryTechnicalClassResp,
+		error)
 }
 
 // NewCVMClientInterface creates a cvm api instance
@@ -600,6 +603,24 @@ func (c *cvmApi) RevokeCvmOrder(ctx context.Context, header http.Header, req *Re
 
 	subPath := "/apply/api/"
 	resp := new(RevokeCvmOrderResp)
+	err := c.client.Post().
+		WithContext(ctx).
+		Body(req).
+		SubResourcef(subPath).
+		WithParam(CvmApiKey, CvmApiKeyVal).
+		WithHeaders(header).
+		Do().
+		Into(resp)
+
+	return resp, err
+}
+
+// QueryTechnicalClass query technical class from crp
+func (c *cvmApi) QueryTechnicalClass(ctx context.Context, header http.Header, req *QueryTechnicalClassReq) (
+	*QueryTechnicalClassResp, error) {
+
+	subPath := "/yunti-demand/external"
+	resp := new(QueryTechnicalClassResp)
 	err := c.client.Post().
 		WithContext(ctx).
 		Body(req).
