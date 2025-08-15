@@ -391,13 +391,14 @@ func (cli *client) createListener(kt *kit.Kit, accountID, region string, syncOpt
 func convL4Listener(lbl typeslb.TCloudListener, accountID string, region string,
 	syncOpt *SyncListenerOption) dataproto.ListenerWithRuleCreateReq {
 	var endPort *int64
-	if lbl.EndPort != nil {
+	if lbl.EndPort != nil && *lbl.EndPort > 0 && *lbl.EndPort != cvt.PtrToVal(lbl.Port) {
 		endPortVal := *lbl.EndPort
 		portVal := cvt.PtrToVal(lbl.Port)
 		if endPortVal > 0 && endPortVal != portVal {
 			endPort = lbl.EndPort
 		}
 	}
+
 	db := dataproto.ListenerWithRuleCreateReq{
 		CloudID:       lbl.GetCloudID(),
 		Name:          cvt.PtrToVal(lbl.ListenerName),
@@ -418,6 +419,7 @@ func convL4Listener(lbl typeslb.TCloudListener, accountID string, region string,
 		Certificate:   convCert(lbl.Certificate),
 		EndPort:       endPort,
 	}
+
 	// for unnamed listener, use its id as default name
 	if len(db.Name) == 0 {
 		db.Name = db.CloudID
@@ -435,6 +437,7 @@ func convL7Listener(lbl typeslb.TCloudListener, accountID string, region string,
 			endPort = lbl.EndPort
 		}
 	}
+	logs.Infof("endport", endPort)
 	// for layer 7 only create listeners itself
 	db := dataproto.ListenersCreateReq[corelb.TCloudListenerExtension]{
 		CloudID:       lbl.GetCloudID(),
@@ -456,6 +459,7 @@ func convL7Listener(lbl typeslb.TCloudListener, accountID string, region string,
 	if len(db.Name) == 0 {
 		db.Name = db.CloudID
 	}
+	logs.Infof("convL7Listener+db", db)
 	return db
 }
 
