@@ -391,14 +391,9 @@ func (cli *client) createListener(kt *kit.Kit, accountID, region string, syncOpt
 func convL4Listener(lbl typeslb.TCloudListener, accountID string, region string,
 	syncOpt *SyncListenerOption) dataproto.ListenerWithRuleCreateReq {
 	var endPort *int64
-	if lbl.EndPort != nil && *lbl.EndPort > 0 && *lbl.EndPort != cvt.PtrToVal(lbl.Port) {
-		endPortVal := *lbl.EndPort
-		portVal := cvt.PtrToVal(lbl.Port)
-		if endPortVal > 0 && endPortVal != portVal {
-			endPort = lbl.EndPort
-		}
+	if cvt.PtrToVal(lbl.EndPort) > 0 {
+		endPort = lbl.EndPort
 	}
-
 	db := dataproto.ListenerWithRuleCreateReq{
 		CloudID:       lbl.GetCloudID(),
 		Name:          cvt.PtrToVal(lbl.ListenerName),
@@ -430,14 +425,9 @@ func convL4Listener(lbl typeslb.TCloudListener, accountID string, region string,
 func convL7Listener(lbl typeslb.TCloudListener, accountID string, region string,
 	syncOpt *SyncListenerOption) dataproto.ListenersCreateReq[corelb.TCloudListenerExtension] {
 	var endPort *int64
-	if lbl.EndPort != nil {
-		endPortVal := cvt.PtrToVal(lbl.EndPort)
-		portVal := cvt.PtrToVal(lbl.Port)
-		if endPortVal > 0 && endPortVal != portVal {
-			endPort = lbl.EndPort
-		}
+	if cvt.PtrToVal(lbl.EndPort) > 0 {
+		endPort = lbl.EndPort
 	}
-	logs.Infof("endport", endPort)
 	// for layer 7 only create listeners itself
 	db := dataproto.ListenersCreateReq[corelb.TCloudListenerExtension]{
 		CloudID:       lbl.GetCloudID(),
@@ -459,7 +449,6 @@ func convL7Listener(lbl typeslb.TCloudListener, accountID string, region string,
 	if len(db.Name) == 0 {
 		db.Name = db.CloudID
 	}
-	logs.Infof("convL7Listener+db", db)
 	return db
 }
 
@@ -473,12 +462,8 @@ func (cli *client) updateListener(kt *kit.Kit, bizID int64, region string,
 
 	for id, lbl := range updateMap {
 		var endPort *int64
-		if lbl.EndPort != nil {
-			endPortVal := cvt.PtrToVal(lbl.EndPort)
-			portVal := cvt.PtrToVal(lbl.Port)
-			if endPortVal > 0 && endPortVal != portVal {
-				endPort = lbl.EndPort
-			}
+		if cvt.PtrToVal(lbl.EndPort) > 0 {
+			endPort = lbl.EndPort
 		}
 		updates = append(updates, &dataproto.TCloudListenerUpdate{
 			ID:            id,
@@ -528,7 +513,9 @@ func isListenerChange(cloud typeslb.TCloudListener, db corelb.TCloudListener) bo
 	if len(cvt.PtrToVal(cloud.ListenerName)) > 0 && cvt.PtrToVal(cloud.ListenerName) != db.Name {
 		return true
 	}
-	if cvt.PtrToVal(cloud.EndPort) != cvt.PtrToVal(db.Extension.EndPort) {
+	// 可能会出现一个是nil,一个不是nil的情况
+	if (cloud.EndPort == nil) != (db.Extension.EndPort == nil) ||
+		(cloud.EndPort != nil && db.Extension.EndPort != nil && *cloud.EndPort != *db.Extension.EndPort) {
 		return true
 	}
 	// listener表新增region字段, 需要通过同步更新region字段
