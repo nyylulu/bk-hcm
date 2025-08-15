@@ -5,7 +5,12 @@ import {
   createWebHashHistory,
   RouteLocationNormalized,
 } from 'vue-router';
-import { MENU_BUSINESS, MENU_PLATFORM_MANAGEMENT, MENU_ROLLING_SERVER_MANAGEMENT } from '@/constants/menu-symbol';
+import {
+  MENU_BUSINESS,
+  MENU_BUSINESS_HOST_MANAGEMENT,
+  MENU_PLATFORM_MANAGEMENT,
+  MENU_ROLLING_SERVER_MANAGEMENT,
+} from '@/constants/menu-symbol';
 import { businessViews, platformManagementViews } from '@/views';
 import common from './module/common';
 import resource from './module/resource';
@@ -16,12 +21,10 @@ import serviceInside from './module/service-inside';
 // import business from './module/business';
 import scheme from './module/scheme';
 import bill from './module/bill';
-import i18n from '@/language/i18n';
 import { useCommonStore } from '@/store';
 import { useVerify } from '@/hooks';
 import { isArray, isRegExp, isString } from 'lodash';
 
-const { t } = i18n.global;
 const routes: RouteRecordRaw[] = [
   ...common,
   ...resource,
@@ -41,8 +44,7 @@ const routes: RouteRecordRaw[] = [
     path: '/',
     redirect: '/business/host',
     meta: {
-      activeKey: 'businessHost',
-      breadcrumb: [t('计算'), t('主机')],
+      activeKey: MENU_BUSINESS_HOST_MANAGEMENT,
     },
   },
   {

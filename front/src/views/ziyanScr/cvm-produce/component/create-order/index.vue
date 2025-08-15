@@ -25,7 +25,7 @@ import CvmDevicetypeSelector from '@/views/ziyanScr/components/devicetype-select
 import FormCvmImageSelector from '@/views/ziyanScr/components/ostype-selector/form-cvm-image-selector.vue';
 import DiskTypeSelect from '@/views/ziyanScr/hostApplication/components/DiskTypeSelect';
 import CvmMaxCapacity from '@/views/ziyanScr/components/cvm-max-capacity/index.vue';
-import DialogFooter from '@/components/common-dialog/dialog-footer.vue';
+import ModalFooter from '@/components/modal/modal-footer.vue';
 
 const model = defineModel<boolean>();
 const props = defineProps<{ cvmDeviceDetail: ICvmDeviceDetailItem }>();
@@ -377,7 +377,7 @@ watchEffect(() => {
       </panel>
     </bk-form>
     <template #footer>
-      <dialog-footer
+      <modal-footer
         :loading="isSubmitLoading"
         :disabled="isSubmitDisabled"
         @confirm="handleConfirm"
