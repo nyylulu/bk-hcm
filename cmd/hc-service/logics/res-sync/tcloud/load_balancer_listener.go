@@ -392,7 +392,7 @@ func convL4Listener(lbl typeslb.TCloudListener, accountID string, region string,
 	syncOpt *SyncListenerOption) dataproto.ListenerWithRuleCreateReq {
 	var endPort *int64
 	if lbl.EndPort != nil {
-		endPortVal := cvt.PtrToVal(lbl.EndPort)
+		endPortVal := *lbl.EndPort
 		portVal := cvt.PtrToVal(lbl.Port)
 		if endPortVal > 0 && endPortVal != portVal {
 			endPort = lbl.EndPort
