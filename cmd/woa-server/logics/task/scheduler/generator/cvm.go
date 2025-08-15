@@ -40,6 +40,8 @@ var (
 	cvmApplyNumReg = regexp.MustCompile(`计算最终当前可申领量(\d+)`)
 	// crpProductFailedMsg CRP生产失败的错误描述
 	crpProductFailedMsg = "CRP申领失败"
+	// crpCapacityLack CRP容量不足的错误描述
+	crpCapacityLack = "无法满足本次需求量"
 	// crpProductZeroNumMsg CRP生产数量为0的错误描述
 	crpProductZeroNumMsg = "list cvm instance failed, for result is null"
 )

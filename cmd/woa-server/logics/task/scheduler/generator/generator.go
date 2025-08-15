@@ -804,7 +804,17 @@ func (g *Generator) launchCvm(kt *kit.Kit, order *types.ApplyOrder, createCvmReq
 				taskId, errRecord)
 		}
 
-		return fmt.Errorf("failed to launch cvm, order id: %s, err: %v", order.SubOrderId, err)
+		// CRP库存不足时，更新失败的可用区到主机申请单（只有分Campus生产失败，才需要记录）
+		if strings.Contains(err.Error(), crpCapacityLack) && order.Spec.Zone == cvmapi.CvmSeparateCampus {
+			if orderErr := g.updateOrderFailedZones(kt, order.SubOrderId, createCvmReq.Zone); orderErr != nil {
+				// 只记录日志，不应该影响主流程
+				logs.Warnf("failed to update order failed zoneIDs, subOrderID: %s, zone: %s, orderErr: %v, err: %v, "+
+					"rid: %s", order.SubOrderId, createCvmReq.Zone, orderErr, err, kt.Rid)
+			}
+		}
+
+		return fmt.Errorf("failed to launch cvm, subOrderID: %s, zone: %s, err: %v",
+			order.SubOrderId, createCvmReq.Zone, err)
 	}
 
 	// update generate record status to Query
@@ -840,8 +850,8 @@ func (g *Generator) AddCvmDevices(kt *kit.Kit, taskId string, generateId uint64,
 		if strings.Contains(err.Error(), crpProductFailedMsg) && order.Spec.Zone == cvmapi.CvmSeparateCampus {
 			if orderErr := g.updateOrderFailedZones(kt, order.SubOrderId, zone); orderErr != nil {
 				// 只记录日志，不应该影响主流程
-				logs.Warnf("failed to update order failed zoneIDs, subOrderID: %s, orderErr: %v, err: %v, rid: %s",
-					order.SubOrderId, orderErr, err, kt.Rid)
+				logs.Warnf("failed to update order failed zoneIDs, subOrderID: %s, zone: %s, orderErr: %v, err: %v, "+
+					"rid: %s", order.SubOrderId, zone, orderErr, err, kt.Rid)
 			}
 		}
 
@@ -868,8 +878,8 @@ func (g *Generator) AddCvmDevices(kt *kit.Kit, taskId string, generateId uint64,
 		if strings.Contains(err.Error(), crpProductZeroNumMsg) && order.Spec.Zone == cvmapi.CvmSeparateCampus {
 			if orderErr := g.updateOrderFailedZones(kt, order.SubOrderId, zone); orderErr != nil {
 				// 只记录日志，不应该影响主流程
-				logs.Warnf("failed to update order failed zoneIDs, subOrderID: %s, orderErr: %v, err: %v, rid: %s",
-					order.SubOrderId, orderErr, err, kt.Rid)
+				logs.Warnf("failed to update order failed zoneIDs, subOrderID: %s, zone: %s, orderErr: %v, err: %v, "+
+					"rid: %s", order.SubOrderId, zone, orderErr, err, kt.Rid)
 			}
 		}
 
