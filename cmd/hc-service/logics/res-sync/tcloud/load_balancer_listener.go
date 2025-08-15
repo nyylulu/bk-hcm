@@ -390,10 +390,12 @@ func (cli *client) createListener(kt *kit.Kit, accountID, region string, syncOpt
 
 func convL4Listener(lbl typeslb.TCloudListener, accountID string, region string,
 	syncOpt *SyncListenerOption) dataproto.ListenerWithRuleCreateReq {
+
 	var endPort *int64
 	if cvt.PtrToVal(lbl.EndPort) > 0 {
 		endPort = lbl.EndPort
 	}
+
 	db := dataproto.ListenerWithRuleCreateReq{
 		CloudID:       lbl.GetCloudID(),
 		Name:          cvt.PtrToVal(lbl.ListenerName),
