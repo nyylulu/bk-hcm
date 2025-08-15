@@ -1,5 +1,6 @@
 import { defineComponent, ref, reactive, computed, watch } from 'vue';
 import './index.scss';
+import { Message } from 'bkui-vue';
 import AreaSelector from '../../hostApplication/components/AreaSelector';
 import ZoneSelector from '../../hostApplication/components/ZoneSelector';
 import RequirementTypeSelector from '@/components/scr/requirement-type-selector';
@@ -74,8 +75,10 @@ export default defineComponent({
         if (res.code === 0) {
           emit('submit-success');
           isShow.value = false;
-        } else {
+        } else if ([2000022, 2000023].includes(res.code)) {
           Object.assign(validateDeviceState, res);
+        } else {
+          Message({ theme: 'error', message: res.message });
         }
       } finally {
         isSubmitLoading.value = false;
