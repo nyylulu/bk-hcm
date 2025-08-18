@@ -265,6 +265,8 @@ export default defineComponent({
               modelValue={props.planTicketDemand.obs_project}
               disabled={props.type === AdjustType.time}
               showRollingServerProject={props.is931Business}
+              popoverOptions={{ boundary: 'parent' }}
+              showTips
               onChange={(val: string | string[]) => handleUpdatePlanTicketDemand('obs_project', val as string)}
             />
           </bk-form-item>
@@ -274,6 +276,7 @@ export default defineComponent({
               clearable
               loading={isLoadingRegion.value}
               modelValue={props.planTicketDemand.region_id}
+              popoverOptions={{ boundary: 'parent' }}
               onChange={(val: string) => handleChooseRegion(val)}>
               {regions.value.map((region) => (
                 <bk-option id={region.region_id} name={region.region_name}></bk-option>
@@ -286,6 +289,7 @@ export default defineComponent({
               clearable
               loading={isLoadingZone.value}
               modelValue={props.planTicketDemand.zone_id}
+              popoverOptions={{ boundary: 'parent' }}
               onChange={(val: string) => handleChooseZone(val)}>
               {zones.value.map((zone) => (
                 <bk-option id={zone.zone_id} name={zone.zone_name}></bk-option>
@@ -333,6 +337,7 @@ export default defineComponent({
                   clearable={false}
                   loading={isLoadingSource.value}
                   modelValue={props.planTicketDemand.demand_source}
+                  popoverOptions={{ boundary: 'parent' }}
                   onChange={(val: string) => handleUpdatePlanTicketDemand('demand_source', val)}>
                   {sources.value.map((source) => (
                     <bk-option id={source} name={source}></bk-option>

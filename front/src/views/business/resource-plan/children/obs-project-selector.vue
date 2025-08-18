@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { computed, ref, watchEffect } from 'vue';
 import { useResourcePlanStore } from '@/store';
+import { PopoverPropTypes } from 'bkui-vue/lib/popover';
 
 interface IProps {
   disabled?: boolean;
   clearable?: boolean;
   multiple?: boolean;
   showRollingServerProject?: boolean; // 滚服项目只有931业务可选。注意回填时要考虑是否要回填滚服项目（业务下切换业务的case）
+  showTips?: boolean;
+  popoverOptions?: Partial<PopoverPropTypes>;
 }
 
 const model = defineModel<string | string[]>();
@@ -15,6 +18,7 @@ const props = withDefaults(defineProps<IProps>(), {
   clearable: true,
   multiple: false,
   showRollingServerProject: false,
+  showTips: false,
 });
 const emit = defineEmits<{
   change: [value: string | string[]];
@@ -40,10 +44,53 @@ watchEffect(async () => {
 const handleChange = (value: string | string[]) => {
   emit('change', value);
 };
+
+const TIP_TRIGGER_VALUES = ['改造复用', '轻量云徙'];
+const isTipsShow = computed(() => {
+  if (!props.showTips) return false;
+  return props.multiple
+    ? (model.value as string[]).some((val: string) => TIP_TRIGGER_VALUES.includes(val))
+    : TIP_TRIGGER_VALUES.includes(model.value as string);
+});
 </script>
 
 <template>
-  <bk-select v-model="model" :disabled="disabled" :multiple="multiple" :clearable="clearable" @change="handleChange">
-    <bk-option v-for="item in displayList" :key="item" :id="item" :name="item" />
-  </bk-select>
+  <div class="obs-project-selector-container">
+    <bk-select
+      v-model="model"
+      :disabled="disabled"
+      :multiple="multiple"
+      :clearable="clearable"
+      :popover-options="popoverOptions"
+      @change="handleChange"
+    >
+      <bk-option v-for="item in displayList" :key="item" :id="item" :name="item" />
+    </bk-select>
+    <div v-if="isTipsShow" class="tips">
+      <i class="hcm-icon bkhcm-icon-prompt tips-icon"></i>
+      所选项目为特殊类型，如需使用该项目类型，请咨询ICR助手
+    </div>
+  </div>
 </template>
+
+<style lang="scss" scoped>
+.obs-project-selector-container {
+  position: relative;
+
+  .tips {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    margin-top: 2px;
+    width: 100%;
+    color: #ea3636;
+    font-size: 12px;
+    line-height: normal;
+
+    .tips-icon {
+      margin-right: 4px;
+      font-size: 14px;
+    }
+  }
+}
+</style>
