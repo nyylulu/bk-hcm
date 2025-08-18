@@ -366,7 +366,7 @@ func (svc *lbSvc) checkBindGetTargetGroupInfo(kt *kit.Kit, tgID string, cloudLbI
 	ruleRelReq := &core.ListReq{
 		Filter: tools.ExpressionAnd(
 			tools.RuleEqual("target_group_id", tgID),
-			//tools.RuleIn("cloud_lb_id", cloudLbIDs),
+			tools.RuleIn("cloud_lb_id", cloudLbIDs),
 		),
 		Page: core.NewDefaultBasePage(),
 	}
