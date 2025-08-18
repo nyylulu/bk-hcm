@@ -12,8 +12,8 @@ import { ConditionKeyType, SearchConditionFactory } from '../children/search/con
 import usePage from '@/hooks/use-page';
 import useSearchQs from '@/hooks/use-search-qs';
 import useTableSelection from '@/hooks/use-table-selection';
-import { ISearchCondition, ISearchSelectValue } from '@/typings';
-import { transformSimpleCondition } from '@/utils/search';
+import { ISearchSelectValue } from '@/typings';
+import { getSimpleConditionBySearchSelect, transformSimpleCondition } from '@/utils/search';
 import { ResourceTypeEnum } from '@/common/constant';
 import { IAuthSign } from '@/common/auth-service';
 import routerAction from '@/router/utils/action';
@@ -28,6 +28,7 @@ import DataList from '../children/display/data-list.vue';
 import BindingStatus from './children/binding-status.vue';
 import AddListenerSideslider from './add.vue';
 import BatchDeleteDialog from './children/batch-delete-dialog.vue';
+import ListenerBatchExportButton from '../children/export/listener-batch-button.vue';
 import SyncAccountResourceDialog from '@/components/sync-account-resource/index.vue';
 import Confirm from '@/components/confirm';
 import DetailsSideslider from './details.vue';
@@ -56,6 +57,10 @@ const actionConfig: Record<ListenerActionType, ActionItemType> = {
       addSidesliderState.isShow = true;
     },
   },
+  [ListenerActionType.BATCH_EXPORT]: {
+    value: ListenerActionType.BATCH_EXPORT,
+    render: () => h(ListenerBatchExportButton, { selections: selections.value }),
+  },
   [ListenerActionType.REMOVE]: {
     type: 'button',
     label: t('批量删除'),
@@ -79,7 +84,12 @@ const actionConfig: Record<ListenerActionType, ActionItemType> = {
   },
 };
 const listenerActionList = computed<ActionItemType[]>(() => {
-  return [{ value: ListenerActionType.ADD }, { value: ListenerActionType.REMOVE }, { value: ListenerActionType.SYNC }];
+  return [
+    { value: ListenerActionType.ADD },
+    { value: ListenerActionType.BATCH_EXPORT },
+    { value: ListenerActionType.REMOVE },
+    { value: ListenerActionType.SYNC },
+  ];
 });
 const actionList = computed<ActionItemType[]>(() => {
   return listenerActionList.value.reduce((prev, curr) => {
@@ -129,7 +139,7 @@ const displayConfig: Record<string, Partial<ModelPropertyColumn>> = {
   },
   binding_status: {
     render: ({ row, cell }) => {
-      return h(BindingStatus, { value: cell, protocol: row.protocol });
+      return h(BindingStatus, { value: cell, type: 'listener', protocol: row.protocol });
     },
   },
 };
@@ -212,8 +222,8 @@ watch(
   () => props.lbId,
   () => searchRef.value?.clear(false),
 );
-const handleSearch = (_vals: ISearchSelectValue, condition: ISearchCondition) => {
-  searchQs.set(condition);
+const handleSearch = (val: ISearchSelectValue) => {
+  searchQs.set(getSimpleConditionBySearchSelect(val));
 };
 
 const loading = ref(false);
@@ -330,6 +340,7 @@ const handleUpdateListenerSuccess = async (id: string) => {
       </div>
       <search
         class="search"
+        ref="search"
         :fields="searchFields"
         :condition="condition"
         :validate-values="validateValues"

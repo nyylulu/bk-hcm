@@ -54,8 +54,8 @@ type Layer4ListenerBindRSPreviewExecutor struct {
 }
 
 // Execute ...
-func (l *Layer4ListenerBindRSPreviewExecutor) Execute(kt *kit.Kit, rawData [][]string) (interface{}, error) {
-	err := l.convertDataToPreview(rawData)
+func (l *Layer4ListenerBindRSPreviewExecutor) Execute(kt *kit.Kit, rawData [][]string, headers []string) (interface{}, error) {
+	err := l.convertDataToPreview(rawData, headers)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,14 @@ func (l *Layer4ListenerBindRSPreviewExecutor) Execute(kt *kit.Kit, rawData [][]s
 
 const layer4listenerBindRSExcelTableLen = 8
 
-func (l *Layer4ListenerBindRSPreviewExecutor) convertDataToPreview(rawData [][]string) error {
+// layer4listenerBindRSExcelTableHeaderLen excel 表头长度
+const layer4listenerBindRSExcelTableHeaderLen = 10
+
+func (l *Layer4ListenerBindRSPreviewExecutor) convertDataToPreview(rawData [][]string, headers []string) error {
+	if len(headers) < layer4listenerBindRSExcelTableHeaderLen {
+		return fmt.Errorf("headers length less than %d, got: %d, headers: %v",
+			layer4listenerBindRSExcelTableHeaderLen, len(headers), headers)
+	}
 	for i, data := range rawData {
 		data = trimSpaceForSlice(data)
 
@@ -98,7 +105,7 @@ func (l *Layer4ListenerBindRSPreviewExecutor) convertDataToPreview(rawData [][]s
 			return err
 		}
 		detail.RsPort = rsPort
-		weight, err := strconv.Atoi(strings.TrimSpace(data[7]))
+		weight, err := strconv.ParseInt(strings.TrimSpace(data[7]), 10, 64)
 		if err != nil {
 			return err
 		}
@@ -230,6 +237,8 @@ func (l *Layer4ListenerBindRSPreviewExecutor) validateTarget(kt *kit.Kit,
 	detail *Layer4ListenerBindRSDetail, ruleCloudIDsToTGIDMap map[string]string) error {
 
 	if detail.listenerCloudID == "" || detail.cvm == nil {
+		detail.Status.SetNotExecutable()
+		detail.ValidateResult = append(detail.ValidateResult, "listener not found or rs not found")
 		return nil
 	}
 	tgID, ok := ruleCloudIDsToTGIDMap[detail.listenerCloudID]
@@ -245,7 +254,7 @@ func (l *Layer4ListenerBindRSPreviewExecutor) validateTarget(kt *kit.Kit,
 		return nil
 	}
 
-	if int(converter.PtrToVal(target.Weight)) != converter.PtrToVal(detail.Weight) {
+	if converter.PtrToVal(target.Weight) != converter.PtrToVal(detail.Weight) {
 		detail.Status.SetNotExecutable()
 		detail.ValidateResult = append(detail.ValidateResult,
 			fmt.Sprintf("RS is already bound, and the weights are inconsistent."))
@@ -261,19 +270,14 @@ func (l *Layer4ListenerBindRSPreviewExecutor) validateTarget(kt *kit.Kit,
 func (l *Layer4ListenerBindRSPreviewExecutor) validateRS(kt *kit.Kit, curDetail *Layer4ListenerBindRSDetail,
 	lb corelb.LoadBalancerRaw) error {
 
-	if curDetail.InstType == enumor.EniInstType {
-		// ENI 不做校验
-		return nil
-	}
-
-	isCrossRegionV1, isCrossRegionV2, _, lbTargetRegion, err := parseSnapInfoTCloudLBExtension(kt,
+	isCrossRegionV1, isCrossRegionV2, targetCloudVpcID, lbTargetRegion, err := parseSnapInfoTCloudLBExtension(kt,
 		lb.Extension)
 	if err != nil {
 		logs.Errorf("parse snap info for tcloud lb extension failed, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 	cvm, err := validateCvmExist(kt, l.dataServiceCli, curDetail.RsIp, lb,
-		isCrossRegionV1, isCrossRegionV2, lbTargetRegion)
+		isCrossRegionV1, isCrossRegionV2, targetCloudVpcID)
 	if err != nil {
 		curDetail.Status.SetNotExecutable()
 		curDetail.ValidateResult = append(curDetail.ValidateResult, err.Error())
@@ -319,18 +323,12 @@ func (l *Layer4ListenerBindRSPreviewExecutor) validateListener(kt *kit.Kit,
 
 // Layer4ListenerBindRSDetail ...
 type Layer4ListenerBindRSDetail struct {
-	ClbVipDomain string              `json:"clb_vip_domain"`
-	CloudClbID   string              `json:"cloud_clb_id"`
-	Protocol     enumor.ProtocolType `json:"protocol"`
-	ListenerPort []int               `json:"listener_port"`
+	Layer4RsDetail `json:",inline"`
+	ListenerPort   []int `json:"listener_port"`
+	RsPort         []int `json:"rs_port"`
 
-	InstType       enumor.InstType `json:"inst_type"`
-	RsIp           string          `json:"rs_ip"`
-	RsPort         []int           `json:"rs_port"`
-	Weight         *int            `json:"weight"`
-	UserRemark     string          `json:"user_remark"`
-	Status         ImportStatus    `json:"status"`
-	ValidateResult []string        `json:"validate_result"`
+	Status         ImportStatus `json:"status"`
+	ValidateResult []string     `json:"validate_result"`
 
 	RegionID string `json:"region_id"`
 
@@ -343,7 +341,7 @@ type Layer4ListenerBindRSDetail struct {
 	listenerCloudID string
 
 	// cvm 在 validateRS 阶段填充, 在validateTarget和submit阶段会使用,
-	// 会有cvm为空的情况, 例如RSType为ENI, 除此之外的情况都应该有cvm, 否则代表了rs not found
+	// 如果为空, 代表了rs not found
 	cvm *cvmInfo
 }
 
