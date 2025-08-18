@@ -27,11 +27,13 @@ import (
 	proto "hcm/pkg/api/cloud-server"
 	cslb "hcm/pkg/api/cloud-server/load-balancer"
 	"hcm/pkg/api/core"
+	"hcm/pkg/api/core/cloud"
 	corelb "hcm/pkg/api/core/cloud/load-balancer"
 	hcproto "hcm/pkg/api/hc-service/load-balancer"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/tools"
+	"hcm/pkg/dal/dao/types"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -89,8 +91,8 @@ func (svc *lbSvc) ListLoadBalancerWithDeleteProtect(cts *rest.Contexts) (any, er
 	return svc.listLoadBalancerWithDeleteProtect(cts, handler.ListResourceAuthRes)
 }
 
-// ListBizLoadBalancerWithDeleteProtect list biz load balancer with delete protect
-func (svc *lbSvc) ListBizLoadBalancerWithDeleteProtect(cts *rest.Contexts) (any, error) {
+// ListBizLoadBalancerWithDelProtect list biz load balancer with delete protect
+func (svc *lbSvc) ListBizLoadBalancerWithDelProtect(cts *rest.Contexts) (any, error) {
 	return svc.listLoadBalancerWithDeleteProtect(cts, handler.ListBizAuthRes)
 }
 
@@ -264,21 +266,17 @@ func (svc *lbSvc) ListBizTargetsHealthByTGID(cts *rest.Contexts) (interface{}, e
 // listTargetsHealthByTGID 目标组绑定的负载均衡下的RS端口健康信息
 func (svc *lbSvc) listTargetsHealthByTGID(cts *rest.Contexts, validHandler handler.ValidWithAuthHandler) (
 	interface{}, error) {
-
 	tgID := cts.PathParameter("target_group_id").String()
 	if len(tgID) == 0 {
 		return nil, errf.New(errf.InvalidParameter, "target_group_id is required")
 	}
-
 	req := new(hcproto.TCloudTargetHealthReq)
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, err
 	}
-
 	if err := req.Validate(); err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
-
 	basicInfo, err := svc.client.DataService().Global.Cloud.GetResBasicInfo(cts.Kit,
 		enumor.TargetGroupCloudResType, tgID)
 	if err != nil {
@@ -298,46 +296,56 @@ func (svc *lbSvc) listTargetsHealthByTGID(cts *rest.Contexts, validHandler handl
 
 	switch basicInfo.Vendor {
 	case enumor.TCloud:
-		tgInfo, newCloudLbIDs, err := svc.checkBindGetTargetGroupInfo(cts.Kit, tgID, req.CloudLbIDs)
-		if err != nil {
-			return nil, err
-		}
-		// 查询对应负载均衡信息
-		lbReq := &core.ListReq{
-			Filter: tools.ExpressionAnd(
-				tools.RuleIn("cloud_id", newCloudLbIDs),
-				tools.RuleEqual("region", tgInfo.Region),
-				tools.RuleEqual("vendor", tgInfo.Vendor),
-				tools.RuleEqual("account_id", tgInfo.AccountID),
-			),
-			Page: core.NewDefaultBasePage(),
-		}
-
-		lbResp, err := svc.client.DataService().Global.LoadBalancer.ListLoadBalancer(cts.Kit, lbReq)
-		if err != nil {
-			logs.Errorf("fail to find load balancer(%v) for target group health, err: %v, rid: %s",
-				newCloudLbIDs, err, cts.Kit.Rid)
-			return nil, err
-		}
-		if len(lbResp.Details) != len(newCloudLbIDs) {
-			return nil, errors.New("some of given load balancer can not be found")
-		}
-		req.Region = ""
-		req.AccountID = tgInfo.AccountID
-		req.CloudLbIDs = newCloudLbIDs
-		for _, detail := range lbResp.Details {
-			if req.Region == "" {
-				req.Region = detail.Region
-				continue
-			}
-			if req.Region != detail.Region {
-				return nil, fmt.Errorf("load balancers have different regions: %s,%s", req.Region, detail.Region)
-			}
-		}
-		return svc.client.HCService().TCloud.Clb.ListTargetHealth(cts.Kit, req)
+		return svc.getTCloudTargetHealth(cts.Kit, tgID, req,
+			svc.client.HCService().TCloud.Clb.ListTargetHealth)
 	default:
 		return nil, errf.Newf(errf.Unknown, "id: %s vendor: %s not support", tgID, basicInfo.Vendor)
 	}
+}
+
+// getTCloudTargetHealth 查询目标组绑定的负载均衡的健康状态
+func (svc *lbSvc) getTCloudTargetHealth(kit *kit.Kit, tgID string, req *hcproto.TCloudTargetHealthReq,
+	healthFunc func(*kit.Kit, *hcproto.TCloudTargetHealthReq) (*hcproto.TCloudTargetHealthResp, error)) (*hcproto.TCloudTargetHealthResp, error) {
+
+	tgInfo, newCloudLbIDs, err := svc.checkBindGetTargetGroupInfo(kit, tgID, req.CloudLbIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	lbReq := &core.ListReq{
+		Filter: tools.ExpressionAnd(
+			tools.RuleIn("cloud_id", newCloudLbIDs),
+			tools.RuleEqual("vendor", tgInfo.Vendor),
+			tools.RuleEqual("account_id", tgInfo.AccountID),
+		),
+		Page: core.NewDefaultBasePage(),
+	}
+
+	lbResp, err := svc.client.DataService().Global.LoadBalancer.ListLoadBalancer(kit, lbReq)
+	if err != nil {
+		logs.Errorf("fail to find load balancer(%v) for target group health, err: %v, rid: %s",
+			newCloudLbIDs, err, kit.Rid)
+		return nil, err
+	}
+
+	if len(lbResp.Details) != len(newCloudLbIDs) {
+		return nil, errors.New("some of given load balancer can not be found")
+	}
+
+	req.Region = ""
+	req.AccountID = tgInfo.AccountID
+	req.CloudLbIDs = newCloudLbIDs
+	for _, detail := range lbResp.Details {
+		if req.Region == "" {
+			req.Region = detail.Region
+			continue
+		}
+		if req.Region != detail.Region {
+			return nil, fmt.Errorf("load balancers have different regions: %s,%s", req.Region, detail.Region)
+		}
+	}
+
+	return healthFunc(kit, req)
 }
 
 // checkBindGetTargetGroupInfo 检查目标组是否存在、是否已绑定其他监听器，给定云id可能重复，
@@ -376,6 +384,7 @@ func (svc *lbSvc) checkBindGetTargetGroupInfo(kt *kit.Kit, tgID string, cloudLbI
 	newCloudLbIDs := slice.Map(ruleRelList.Details, func(one corelb.BaseTargetListenerRuleRel) string {
 		return one.CloudLbID
 	})
+	newCloudLbIDs = slice.Unique(newCloudLbIDs) // 去重，避免重复ID
 	return tgInfo, newCloudLbIDs, nil
 }
 
@@ -431,4 +440,59 @@ func (svc *lbSvc) getLoadBalancerLockStatus(cts *rest.Contexts, validHandler han
 	default:
 		return nil, errf.Newf(errf.Unknown, "id: %s vendor: %s not support", id, basicInfo.Vendor)
 	}
+}
+
+// getListenerByID get listener by id.
+func (svc *lbSvc) getListenerByID(cts *rest.Contexts, vendor enumor.Vendor, bizID int64, lblID string) (
+	*corelb.BaseListener, *types.CloudResourceBasicInfo, error) {
+
+	lblResp, err := svc.client.DataService().Global.LoadBalancer.ListListener(cts.Kit,
+		&core.ListReq{
+			Filter: tools.ExpressionAnd(
+				tools.RuleEqual("id", lblID),
+				tools.RuleEqual("vendor", vendor),
+				tools.RuleEqual("bk_biz_id", bizID)),
+			Page: core.NewDefaultBasePage(),
+		})
+	if err != nil {
+		logs.Errorf("fail to list listener(%s), err: %v, rid: %s", lblID, err, cts.Kit.Rid)
+		return nil, nil, err
+	}
+	if len(lblResp.Details) == 0 {
+		return nil, nil, errf.New(errf.RecordNotFound, "listener not found, id: "+lblID)
+	}
+	lblInfo := &lblResp.Details[0]
+	basicInfo := &types.CloudResourceBasicInfo{
+		ResType:   enumor.ListenerCloudResType,
+		ID:        lblID,
+		Vendor:    vendor,
+		AccountID: lblInfo.AccountID,
+		BkBizID:   lblInfo.BkBizID,
+	}
+
+	return lblInfo, basicInfo, nil
+}
+
+// listVpcMap 根据vpcIDs查询vpc信息
+func (svc *lbSvc) listVpcMap(kt *kit.Kit, vpcIDs []string) (map[string]cloud.BaseVpc, error) {
+	if len(vpcIDs) == 0 {
+		return nil, nil
+	}
+
+	vpcMap := make(map[string]cloud.BaseVpc, len(vpcIDs))
+	for _, parts := range slice.Split(vpcIDs, int(core.DefaultMaxPageLimit)) {
+		vpcReq := &core.ListReq{
+			Filter: tools.ContainersExpression("id", parts),
+			Page:   core.NewDefaultBasePage(),
+		}
+		list, err := svc.client.DataService().Global.Vpc.List(kt.Ctx, kt.Header(), vpcReq)
+		if err != nil {
+			logs.Errorf("[clb] list vpc failed, vpcIDs: %v, err: %v, rid: %s", vpcIDs, err, kt.Rid)
+			return nil, err
+		}
+		for _, item := range list.Details {
+			vpcMap[item.ID] = item
+		}
+	}
+	return vpcMap, nil
 }
