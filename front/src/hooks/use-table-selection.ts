@@ -8,8 +8,8 @@ type SelectionType = {
 };
 
 type UseTableSelectionParams = {
-  isRowSelectable: (args: { row: SelectionType['row'] }) => boolean;
   rowKey?: string;
+  isRowSelectable: (args: { row: SelectionType['row'] }) => boolean;
 };
 
 export default function useTableSelection({ isRowSelectable, rowKey = 'id' }: UseTableSelectionParams) {

@@ -65,4 +65,4 @@ data:
     ccHostPoolBiz: {{ .Values.ccHostPoolBiz }}
     concurrentConfig:
       {{- toYaml .Values.cloudserver.concurrentConfig | nindent 6 }}
-
+    tmpFileDir: {{ .Values.tmpFileDir }}
