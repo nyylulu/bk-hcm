@@ -343,58 +343,6 @@ var CrpOrderStatusCanRevoke = []CrpOrderStatus{
 	CrpOrderStatusDelivering,
 }
 
-// CrpUpgradeOrderStatus is crp upgrade order status.
-type CrpUpgradeOrderStatus int
-
-const (
-	// CrpUpgradeOrderDeptApprove 部门管理员审批
-	CrpUpgradeOrderDeptApprove CrpUpgradeOrderStatus = 0
-	// CrpUpgradeOrderPlanApprove 规划经理审批
-	CrpUpgradeOrderPlanApprove CrpUpgradeOrderStatus = 1
-	// CrpUpgradeOrderResourceApprove 资源经理审批
-	CrpUpgradeOrderResourceApprove CrpUpgradeOrderStatus = 2
-	// CrpUpgradeOrderWaitProcess 等待执行
-	CrpUpgradeOrderWaitProcess CrpUpgradeOrderStatus = 9
-	// CrpUpgradeOrderProcessing 执行中
-	CrpUpgradeOrderProcessing CrpUpgradeOrderStatus = 10
-	// CrpUpgradeOrderFinish 执行完成
-	CrpUpgradeOrderFinish CrpUpgradeOrderStatus = 20
-	// CrpUpgradeOrderReject 驳回
-	CrpUpgradeOrderReject CrpUpgradeOrderStatus = 127
-	// CrpUpgradeOrderFailed 订单失败
-	CrpUpgradeOrderFailed CrpUpgradeOrderStatus = 128
-)
-
-// StatusName CrpUpgradeOrderStatus.
-func (cs CrpUpgradeOrderStatus) StatusName() string {
-	switch cs {
-	case CrpUpgradeOrderProcessing:
-		return "CRP-升降配执行中"
-	case CrpUpgradeOrderFinish:
-		return "CRP-升降配完成"
-	case CrpUpgradeOrderReject:
-		return "CRP-驳回"
-	case CrpUpgradeOrderFailed:
-		return "CRP-升降配失败"
-	default:
-		return fmt.Sprintf("CRP-unsupported crp order status: %d", cs)
-	}
-}
-
-// CrpUpgradeCVMStatus is crp upgrade cvm status.
-type CrpUpgradeCVMStatus string
-
-const (
-	// CrpUpgradeCVMWaiting 待操作
-	CrpUpgradeCVMWaiting CrpUpgradeCVMStatus = "WAITING"
-	// CrpUpgradeCVMOperating 操作中
-	CrpUpgradeCVMOperating CrpUpgradeCVMStatus = "OPERATING"
-	// CrpUpgradeCVMSuccess 成功
-	CrpUpgradeCVMSuccess CrpUpgradeCVMStatus = "SUCCESS"
-	// CrpUpgradeCVMFailed 失败
-	CrpUpgradeCVMFailed CrpUpgradeCVMStatus = "FAILED"
-)
-
 // CoreType 核心类型
 type CoreType string
 

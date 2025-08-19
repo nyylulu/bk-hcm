@@ -300,7 +300,7 @@ func (r *applyRecoverer) recoverGenerateHandling(kt *kit.Kit, order *types.Apply
 	// 有生产错误记录，且不是suspend状态，更新apply order状态
 	if errorNum > 0 && !isSuspend {
 		// check all generate records and update apply order status
-		if err := r.schedulerIf.UpdateOrderStatus(order.ResourceType, order.SubOrderId); err != nil {
+		if err := r.schedulerIf.UpdateOrderStatus(order.SubOrderId); err != nil {
 			logs.Errorf("failed to update order status, err: %v, subOrderId: %s, rid: %s", err, order.SubOrderId,
 				kt.Rid)
 		}

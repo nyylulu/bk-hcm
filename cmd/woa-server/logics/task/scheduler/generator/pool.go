@@ -35,7 +35,7 @@ const (
 func (g *Generator) launchRecallHost(kt *kit.Kit, order *types.ApplyOrder, recall *types.MatchPoolSpec) (uint64,
 	error) {
 	// 1. init generate record
-	generateId, err := g.initGenerateRecord(kt.Ctx, order.ResourceType, order.SubOrderId, uint(recall.Replicas), false)
+	generateId, err := g.initGenerateRecord(order.ResourceType, order.SubOrderId, uint(recall.Replicas), false)
 	if err != nil {
 		logs.Errorf("failed to init generate record, order id: %s, err: %v", order.SubOrderId,
 			err)
@@ -84,7 +84,7 @@ func (g *Generator) launchRecallHost(kt *kit.Kit, order *types.ApplyOrder, recal
 	}
 
 	// 4. save recalled instances info
-	if err := g.createGeneratedDevices(kt, order, generateId, deviceList); err != nil {
+	if err := g.createGeneratedDevice(kt, order, generateId, deviceList); err != nil {
 		logs.Errorf("failed to update generated device, order id: %s, err: %v", order.SubOrderId, err)
 		return generateId, fmt.Errorf("failed to update generated device, order id: %s, err: %v", order.SubOrderId, err)
 	}

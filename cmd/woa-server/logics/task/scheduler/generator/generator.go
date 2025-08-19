@@ -28,7 +28,6 @@ import (
 	"hcm/cmd/woa-server/logics/task/scheduler/algorithm"
 	"hcm/cmd/woa-server/model/task"
 	cfgtypes "hcm/cmd/woa-server/types/config"
-	poolTypes "hcm/cmd/woa-server/types/pool"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
 	"hcm/pkg/cc"
@@ -188,26 +187,8 @@ func (g *Generator) generateCVMConcentrate(kt *kit.Kit, order *types.ApplyOrder,
 	existDevices []*types.DeviceInfo) error {
 
 	replicas := order.TotalNum - uint(len(existDevices))
-
-	genRecordIds := make([]uint64, 0)
-	errs := make([]error, 0)
-	switch order.ResourceType {
-	case types.ResourceTypeCvm:
-		genRecordIds, errs = g.batchLaunchCvm(kt, order, order.Spec.Zone, replicas)
-	case types.ResourceTypeUpgradeCvm:
-		genRecordId, _, err := g.batchUpgradeCvm(kt, order, replicas)
-		if err != nil {
-			errs = append(errs, err)
-		}
-		if genRecordId != 0 {
-			genRecordIds = append(genRecordIds, genRecordId)
-		}
-	default:
-		logs.Errorf("unsupported resource type: %s", order.ResourceType)
-		return fmt.Errorf("unsupported resource type: %s", order.ResourceType)
-	}
-
-	return g.checkLaunchCvmResult(kt, order.ResourceType, order.SubOrderId, genRecordIds, errs)
+	genRecordIds, errs := g.batchLaunchCvm(kt, order, order.Spec.Zone, replicas)
+	return g.checkLaunchCvmResult(kt, order.SubOrderId, genRecordIds, errs)
 }
 
 // generateCVMSeparate generates cvm devices in separate zones
@@ -340,12 +321,10 @@ func (g *Generator) generateCVMSeparate(kt *kit.Kit, order *types.ApplyOrder, ex
 
 	wg.Wait()
 
-	return g.checkLaunchCvmResult(kt, order.ResourceType, order.SubOrderId, genRecordIds, errs)
+	return g.checkLaunchCvmResult(kt, order.SubOrderId, genRecordIds, errs)
 }
 
-func (g *Generator) checkLaunchCvmResult(kt *kit.Kit, resType types.ResourceType, subOrderID string,
-	genRecordIds []uint64, errs []error) error {
-
+func (g *Generator) checkLaunchCvmResult(kt *kit.Kit, subOrderID string, genRecordIds []uint64, errs []error) error {
 	if len(genRecordIds) == 0 {
 		logs.Errorf("failed to generate cvm, for no zone has generate record, subOrderID: %s, errs: %v, rid: %s",
 			subOrderID, errs, kt.Rid)
@@ -356,7 +335,7 @@ func (g *Generator) checkLaunchCvmResult(kt *kit.Kit, resType types.ResourceType
 		logs.Errorf("failed to generate cvm, subOrderID: %s, errs: %v, rid: %s", subOrderID, errs, kt.Rid)
 
 		// check all generate records and update apply order status
-		if err := g.UpdateOrderStatus(resType, subOrderID); err != nil {
+		if err := g.UpdateOrderStatus(subOrderID); err != nil {
 			logs.Errorf("failed to update order status, subOrderId: %s, err: %v, rid: %s", subOrderID, err, kt.Rid)
 		}
 	}
@@ -365,7 +344,7 @@ func (g *Generator) checkLaunchCvmResult(kt *kit.Kit, resType types.ResourceType
 }
 
 // UpdateOrderStatus 更新订单状态
-func (g *Generator) UpdateOrderStatus(resType types.ResourceType, suborderID string) error {
+func (g *Generator) UpdateOrderStatus(suborderID string) error {
 	genRecords, err := g.getOrderGenRecords(suborderID)
 	if err != nil {
 		logs.Errorf("failed to get generate records, order id: %s, err: %v", suborderID, err)
@@ -383,13 +362,7 @@ func (g *Generator) UpdateOrderStatus(resType types.ResourceType, suborderID str
 
 	stage := types.TicketStageRunning
 	status := types.ApplyStatusMatchedSome
-	// TODO 临时，升降配order不进入matchedSome，直接失败
-	if resType == types.ResourceTypeUpgradeCvm {
-		stage = types.TicketStageSuspend
-		status = types.ApplyStatusTerminate
-	}
 	if hasGenRecordMatching {
-		stage = types.TicketStageRunning
 		status = types.ApplyStatusMatching
 	}
 
@@ -681,7 +654,6 @@ func (g *Generator) getUnreleasedDevice(orderId string) ([]*types.DeviceInfo, er
 	devices, err := model.Operation().DeviceInfo().GetDeviceInfo(context.Background(), filter)
 	if err != nil {
 		logs.Errorf("failed to get binding devices to order %s, err: %v", orderId, err)
-		return nil, err
 	}
 
 	return devices, nil
@@ -714,7 +686,7 @@ func (g *Generator) batchLaunchCvm(kt *kit.Kit, order *types.ApplyOrder, zone st
 
 	for replicas > requestNum {
 		curRequiredNum := replicas - requestNum
-		generateID, err := g.initGenerateRecord(kt.Ctx, order.ResourceType, order.SubOrderId, curRequiredNum, false)
+		generateID, err := g.initGenerateRecord(order.ResourceType, order.SubOrderId, curRequiredNum, false)
 		if err != nil {
 			logs.Errorf("failed to launch cvm when init generate record, err: %v, sub order id: %s, rid: %s", err,
 				order.SubOrderId, kt.Rid)
@@ -944,7 +916,7 @@ func (g *Generator) launchDvm(kt *kit.Kit, order *types.ApplyOrder, applyRequest
 	host *types.HostPriority, replicas uint) (uint64, error) {
 
 	// 1. init generate record
-	generateId, err := g.initGenerateRecord(kt.Ctx, order.ResourceType, order.SubOrderId, replicas, false)
+	generateId, err := g.initGenerateRecord(order.ResourceType, order.SubOrderId, replicas, false)
 	if err != nil {
 		logs.Errorf("failed to launch docker vm when init generate record, order id: %s, err: %v", order.SubOrderId,
 			err)
@@ -1039,7 +1011,7 @@ func (g *Generator) saveGenerateCvmInstancesInfo(kt *kit.Kit, taskId string, gen
 	}
 
 	// 6. save generated cvm instances info
-	if err := g.createGeneratedDevices(kt, order, generateId, deviceList); err != nil {
+	if err := g.createGeneratedDevice(kt, order, generateId, deviceList); err != nil {
 		logs.Errorf("failed to update generated device, order id: %s, err: %v", order.SubOrderId, err)
 		return fmt.Errorf("failed to update generated device, order id: %s, err: %v", order.SubOrderId, err)
 	}
@@ -1075,10 +1047,10 @@ func (g *Generator) getOrderGenRecords(suborderID string) ([]*types.GenerateReco
 }
 
 // initGenerateRecord creates generate record
-func (g *Generator) initGenerateRecord(ctx context.Context, resourceType types.ResourceType, subOrderId string,
-	total uint, isManualMatched bool) (uint64, error) {
+func (g *Generator) initGenerateRecord(resourceType types.ResourceType, subOrderId string, total uint,
+	isManualMatched bool) (uint64, error) {
 
-	id, err := model.Operation().GenerateRecord().NextSequence(ctx)
+	id, err := model.Operation().GenerateRecord().NextSequence(context.Background())
 	if err != nil {
 		logs.Errorf("failed to get generate record next sequence id, subOrderId: %s, err: %v", subOrderId, err)
 		return 0, err
@@ -1100,7 +1072,7 @@ func (g *Generator) initGenerateRecord(ctx context.Context, resourceType types.R
 		IsManualMatched: isManualMatched, // 是否手工匹配
 	}
 
-	if err = model.Operation().GenerateRecord().CreateGenerateRecord(ctx, record); err != nil {
+	if err = model.Operation().GenerateRecord().CreateGenerateRecord(context.Background(), record); err != nil {
 		logs.Errorf("failed to init generate record, subOrderId: %s, err: %v", subOrderId, err)
 		return 0, err
 	}
@@ -1136,8 +1108,6 @@ func (g *Generator) UpdateGenerateRecord(ctx context.Context, resourceType types
 			link = cvmapi.CvmOrderLinkPrefix + vmTaskId
 		case types.ResourceTypeQcloudDvm, types.ResourceTypeIdcDvm:
 			link = fmt.Sprintf(dvmapi.DvmOrderLinkFormat, vmTaskId)
-		case types.ResourceTypeUpgradeCvm:
-			link = cvmapi.CvmUpgradeLinkPrefix + vmTaskId
 		}
 		doc["task_id"] = vmTaskId
 		doc["task_link"] = link
@@ -1169,14 +1139,13 @@ func (g *Generator) createGeneratedDevices(kt *kit.Kit, order *types.ApplyOrder,
 		assetIds = append(assetIds, item.AssetId)
 	}
 
-	mapAssetIDToHost, err := g.syncHostToCMDB(kt, order, generateId, ips, assetIds)
+	devices, err := g.syncHostToCMDB(kt, order, generateId, items)
 	if err != nil {
 		logs.Errorf("failed to syn to cmdb, order id: %s, generateId: %d, err: %v, rid: %s", order.SubOrderId,
 			generateId, err, kt.Rid)
 		return err
 	}
 
-	devices := g.buildDevicesInfo(items, order, generateId, mapAssetIDToHost)
 	if err = model.Operation().DeviceInfo().CreateDeviceInfos(kt.Ctx, devices); err != nil {
 		logs.Errorf("failed to save device info to db, order id: %s, generateId: %d, err: %v, devicesNum: %d, "+
 			"devices: %+v, rid: %s", order.SubOrderId, generateId, err, len(devices), cvt.PtrToSlice(devices), kt.Rid)
@@ -1189,21 +1158,25 @@ func (g *Generator) createGeneratedDevices(kt *kit.Kit, order *types.ApplyOrder,
 	return nil
 }
 
-func (g *Generator) syncHostToCMDB(kt *kit.Kit, order *types.ApplyOrder, generateId uint64, ips, assetIDs []string) (
-	map[string]*cmdb.Host, error) {
+func (g *Generator) syncHostToCMDB(kt *kit.Kit, order *types.ApplyOrder, generateId uint64, items []*types.DeviceInfo) ([]*types.DeviceInfo, error) {
+	ips := make([]string, 0)
+	assetIds := make([]string, 0)
+	for _, item := range items {
+		ips = append(ips, item.Ip)
+		assetIds = append(assetIds, item.AssetId)
+	}
 
 	// 线上Bug，返回了空的DeviceInfo数组，导致mongo插入失败
-	if len(ips) == 0 && len(assetIDs) == 0 {
+	if len(ips) == 0 && len(assetIds) == 0 {
 		logs.Errorf("failed to sync device info to cc, ips and assetIds is empty, subOrderID: %s, generateId: %s, "+
-			"ips: %v, assetIDs: %v, rid: %s", order.SubOrderId, generateId, ips, assetIDs, kt.Rid)
+			"items: %+v, rid: %s", order.SubOrderId, generateId, cvt.PtrToSlice(items), kt.Rid)
 		return nil, errf.Newf(errf.RecordNotFound, "failed to sync device info to cc, ips and assetIds is empty, "+
 			"subOrderID: %s", order.SubOrderId)
 	}
 
 	// 1. sync device info to cc
-	if order.ResourceType == types.ResourceTypeCvm ||
-		order.ResourceType == types.ResourceTypeUpgradeCvm {
-		if err := g.syncHostByAsset(kt, assetIDs); err != nil {
+	if order.ResourceType == types.ResourceTypeCvm {
+		if err := g.syncHostByAsset(kt, assetIds); err != nil {
 			logs.Errorf("failed to sync device info to cc, order id: %s, err: %v, rid: %s",
 				order.SubOrderId, err, kt.Rid)
 			return nil, err
@@ -1217,19 +1190,8 @@ func (g *Generator) syncHostToCMDB(kt *kit.Kit, order *types.ApplyOrder, generat
 	}
 
 	// 2. get cc host detail info
-	// 新申领的CVM默认在931业务下
-	bizID := poolTypes.BizIDMatch
-	bkModuleIDs := []int64{
-		poolTypes.ModuleIDPoolRA,
-		poolTypes.ModuleIDPoolMatch,
-		poolTypes.ModuleIDPoolSCR,
-	}
-	if order.ResourceType == types.ResourceTypeUpgradeCvm {
-		bizID = order.BkBizId
-		bkModuleIDs = make([]int64, 0)
-	}
 	// 由于会存在主机在cc，但是此时机器还没有ip, 所以需要通过固资号进行查询
-	ccHosts, err := g.getHostDetail(bizID, bkModuleIDs, assetIDs)
+	ccHosts, err := g.getHostDetail(assetIds)
 	if err != nil {
 		logs.Errorf("failed to get cc host info, order id: %s, err: %v, rid: %s", order.SubOrderId, err, kt.Rid)
 		return nil, err
@@ -1240,8 +1202,9 @@ func (g *Generator) syncHostToCMDB(kt *kit.Kit, order *types.ApplyOrder, generat
 	}
 
 	logs.Infof("successfully sync device info to cc, subOrderID: %s, ips: %+v, assets: %+v, ccHostNum: %d, rid: %s",
-		order.SubOrderId, ips, assetIDs, len(ccHosts), kt.Rid)
-	return mapAssetIDToHost, nil
+		order.SubOrderId, ips, assetIds, len(ccHosts), kt.Rid)
+	devices := g.buildDevicesInfo(items, order, generateId, mapAssetIDToHost)
+	return devices, nil
 }
 
 func (g *Generator) buildDevicesInfo(items []*types.DeviceInfo, order *types.ApplyOrder, generateId uint64,
@@ -1311,6 +1274,32 @@ func (g *Generator) buildDevicesInfo(items []*types.DeviceInfo, order *types.App
 	return devices
 }
 
+func (g *Generator) createGeneratedDevice(kt *kit.Kit, order *types.ApplyOrder, generateId uint64, items []*types.DeviceInfo) error {
+	ips := make([]string, 0)
+	assetIds := make([]string, 0)
+	for _, item := range items {
+		ips = append(ips, item.Ip)
+		assetIds = append(assetIds, item.AssetId)
+	}
+
+	devices, err := g.syncHostToCMDB(kt, order, generateId, items)
+	if err != nil {
+		logs.Errorf("failed to syn to cmdb, order id: %s, generateId: %d, err: %v", order.SubOrderId, generateId, err)
+		return err
+	}
+
+	if err = model.Operation().DeviceInfo().CreateDeviceInfos(context.Background(), devices); err != nil {
+		logs.Errorf("failed to save device info to db, order id: %s, generateId: %d, err: %v", order.SubOrderId,
+			generateId, err)
+		return err
+	}
+
+	logs.Infof("successfully sync device info to cc, subOrderID: %s, generateId: %d, ips: %+v, assets: %+v, "+
+		"devices: %+v", order.SubOrderId, generateId, ips, assetIds, cvt.PtrToSlice(devices))
+
+	return nil
+}
+
 func (g *Generator) isDuplicateHost(suborderID, assetID string) (bool, error) {
 	filter := map[string]interface{}{
 		"suborder_id": suborderID,
@@ -1330,10 +1319,17 @@ func (g *Generator) isDuplicateHost(suborderID, assetID string) (bool, error) {
 	return false, nil
 }
 
-func (g *Generator) getHostDetail(bizID int64, bkModuleIDs []int64, assetIds []string) ([]*cmdb.Host, error) {
+func (g *Generator) getHostDetail(assetIds []string) ([]*cmdb.Host, error) {
 	req := &cmdb.ListBizHostParams{
-		BizID:       bizID,
-		BkModuleIDs: bkModuleIDs,
+		BizID: 931,
+		BkModuleIDs: []int64{
+			// RA池
+			239148,
+			// SA云化池
+			239149,
+			// SCR_加工池
+			532040,
+		},
 		HostPropertyFilter: &cmdb.QueryFilter{
 			Rule: querybuilder.CombinedRule{
 				Condition: querybuilder.ConditionAnd,
@@ -1409,14 +1405,6 @@ func (g *Generator) MatchCVM(kt *kit.Kit, param *types.MatchDeviceReq) error {
 			types.TicketStageSuspend)
 	}
 
-	// 升降配暂不支持手工匹配
-	if order.ResourceType == types.ResourceTypeUpgradeCvm {
-		logs.Errorf("cannot match device, for order %s resource type is %s, rid: %s", order.SubOrderId,
-			order.ResourceType, kt.Rid)
-		return fmt.Errorf("cannot match device, for order %s resource type is %s", order.SubOrderId,
-			order.ResourceType)
-	}
-
 	// set apply order status MATCHING
 	if err = g.lockApplyOrder(order); err != nil {
 		logs.Errorf("failed to match cvm when lock apply order, err: %v, order id: %s, rid: %s", err, param.SuborderId,
@@ -1427,7 +1415,7 @@ func (g *Generator) MatchCVM(kt *kit.Kit, param *types.MatchDeviceReq) error {
 	replicas := uint(len(param.Device))
 
 	// 2. init generate record
-	generateId, err := g.initGenerateRecord(kt.Ctx, order.ResourceType, order.SubOrderId, replicas, true)
+	generateId, err := g.initGenerateRecord(order.ResourceType, order.SubOrderId, replicas, true)
 	if err != nil {
 		logs.Errorf("failed to match cvm when init generate record, err: %v, order id: %s, rid: %s", err,
 			order.SubOrderId, kt.Rid)
@@ -1471,7 +1459,7 @@ func (g *Generator) MatchCVM(kt *kit.Kit, param *types.MatchDeviceReq) error {
 	}
 
 	// 3. save generated cvm instances info
-	if err = g.createGeneratedDevices(kt, order, generateId, deviceList); err != nil {
+	if err = g.createGeneratedDevice(kt, order, generateId, deviceList); err != nil {
 		logs.Errorf("failed to update generated device, err: %v, order id: %s", err, order.SubOrderId)
 		return fmt.Errorf("failed to update generated device, err: %v, order id: %s, rid: %s", err, order.SubOrderId,
 			kt.Rid)

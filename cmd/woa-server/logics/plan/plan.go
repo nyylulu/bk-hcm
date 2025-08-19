@@ -91,8 +91,7 @@ type Logics interface {
 	VerifyProdDemandsV2(kt *kit.Kit, bkBizID int64, requireType enumor.RequireType, needs []VerifyResPlanElemV2) (
 		[]VerifyResPlanResElem, error)
 	// AddMatchedPlanDemandExpendLogs add matched plan demand expend logs.
-	AddMatchedPlanDemandExpendLogs(kt *kit.Kit, bkBizID int64, subOrder *ttypes.ApplyOrder,
-		verifyGroups []VerifyResPlanElemV2) error
+	AddMatchedPlanDemandExpendLogs(kt *kit.Kit, bkBizID int64, subOrder *ttypes.ApplyOrder) error
 	// GetAllDeviceTypeMap get all device type map.
 	GetAllDeviceTypeMap(kt *kit.Kit) (map[string]wdt.WoaDeviceTypeTable, error)
 	// SyncDeviceTypesFromCRP sync device types from crp.

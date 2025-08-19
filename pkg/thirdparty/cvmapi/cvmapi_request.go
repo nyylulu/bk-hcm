@@ -513,24 +513,6 @@ type ReturnParam struct {
 	AcceptCostShare bool `json:"acceptCostShare"`
 }
 
-// UpgradeReq create cvm upgrade order request
-type UpgradeReq struct {
-	ReqMeta `json:",inline"`
-	Params  *UpgradeParam `json:"params"`
-}
-
-// UpgradeParam create cvm upgrade order parameters
-type UpgradeParam struct {
-	Reason string                 `json:"reason"`
-	Data   []UpgradeParamInstance `json:"data"`
-}
-
-// UpgradeParamInstance cvm upgrade order instance
-type UpgradeParamInstance struct {
-	InstanceID         string `json:"instanceId"`
-	TargetInstanceType string `json:"targetInstanceType"`
-}
-
 // GetCvmProcessReq get cvm process request
 type GetCvmProcessReq struct {
 	ReqMeta `json:",inline"`
@@ -563,17 +545,6 @@ type ReturnDetailReq struct {
 type ReturnDetailParam struct {
 	OrderId string `json:"orderId"`
 	Page    *Page  `json:"page,omitempty"`
-}
-
-// UpgradeDetailReq query cvm upgrade order detail request
-type UpgradeDetailReq struct {
-	ReqMeta `json:",inline"`
-	Params  *UpgradeDetailParam `json:"params"`
-}
-
-// UpgradeDetailParam query cvm upgrade order detail parameters
-type UpgradeDetailParam struct {
-	OrderID string `json:"orderId"`
 }
 
 // QueryCvmInstanceTypeReq query cvm instance type request
