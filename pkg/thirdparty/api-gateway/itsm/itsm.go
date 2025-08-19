@@ -58,7 +58,8 @@ type Client interface {
 	GetTicketResults(kt *kit.Kit, sn []string) ([]TicketResult, error)
 
 	// CreateApplyTicket create itsm ticket
-	CreateApplyTicket(kt *kit.Kit, user string, orderId uint64, bizID int64, remark string) (*CreateTicketResp, error)
+	CreateApplyTicket(kt *kit.Kit, user string, orderId uint64, bizID int64, remark string, resType string) (
+		*CreateTicketResp, error)
 	// OperateNode operate itsm ticket node
 	OperateNode(kt *kit.Kit, req *OperateNodeReq) (*OperateNodeResp, error)
 	// GetTicketLog get itsm ticket logs
@@ -111,7 +112,7 @@ func (i *itsm) header(kt *kit.Kit) http.Header {
 }
 
 // CreateApplyTicket create itsm ticket
-func (i *itsm) CreateApplyTicket(kt *kit.Kit, user string, orderId uint64, bizID int64, remark string) (
+func (i *itsm) CreateApplyTicket(kt *kit.Kit, user string, orderId uint64, bizID int64, remark string, resType string) (
 	*CreateTicketResp, error) {
 
 	req := &CreateTicketReq{
@@ -128,7 +129,7 @@ func (i *itsm) CreateApplyTicket(kt *kit.Kit, user string, orderId uint64, bizID
 			},
 			{
 				Key:   TicketKeyApplyLink,
-				Value: fmt.Sprintf(i.config.ApplyLinkFormat, orderId, bizID, bizID),
+				Value: fmt.Sprintf(i.config.ApplyLinkFormat, orderId, bizID, bizID, resType),
 			},
 			{
 				Key:   TicketKeyNeedSysAudit,
