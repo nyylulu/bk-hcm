@@ -31,53 +31,35 @@ import (
 
 // ApplyOrder resource apply order
 type ApplyOrder struct {
-	OrderId      uint64             `json:"order_id" bson:"order_id"`
-	SubOrderId   string             `json:"suborder_id" bson:"suborder_id"`
-	BkBizId      int64              `json:"bk_biz_id" bson:"bk_biz_id"`
-	User         string             `json:"bk_username" bson:"bk_username"`
-	Follower     []string           `json:"follower" bson:"follower"`
-	Auditor      string             `json:"auditor" bson:"auditor"`
-	RequireType  enumor.RequireType `json:"require_type" bson:"require_type"`
-	ExpectTime   string             `json:"expect_time" bson:"expect_time"`
-	ResourceType ResourceType       `json:"resource_type" bson:"resource_type"`
-	Spec         *ResourceSpec      `json:"spec" bson:"spec"`
-	// UpgradeCVMList cvm升降配列表
-	UpgradeCVMList    []*UpgradeCVMSpec `json:"upgrade_cvm_list" bson:"upgrade_cvm_list"`
-	AntiAffinityLevel string            `json:"anti_affinity_level" bson:"anti_affinity_level"`
-	EnableDiskCheck   bool              `json:"enable_disk_check" bson:"enable_disk_check"`
-	Description       string            `json:"description" bson:"description"`
-	Remark            string            `json:"remark" bson:"remark"`
-	Stage             TicketStage       `json:"stage" bson:"stage"`
-	Status            ApplyStatus       `json:"status" bson:"status"`
-	OriginNum         uint              `json:"origin_num" bson:"origin_num"` // 原始需求总数量，不会修改
-	TotalNum          uint              `json:"total_num" bson:"total_num"`   // 需要交付的总数量，业务会修改
-	SuccessNum        uint              `json:"success_num" bson:"success_num"`
-	PendingNum        uint              `json:"pending_num" bson:"pending_num"`
+	OrderId           uint64             `json:"order_id" bson:"order_id"`
+	SubOrderId        string             `json:"suborder_id" bson:"suborder_id"`
+	BkBizId           int64              `json:"bk_biz_id" bson:"bk_biz_id"`
+	User              string             `json:"bk_username" bson:"bk_username"`
+	Follower          []string           `json:"follower" bson:"follower"`
+	Auditor           string             `json:"auditor" bson:"auditor"`
+	RequireType       enumor.RequireType `json:"require_type" bson:"require_type"`
+	ExpectTime        string             `json:"expect_time" bson:"expect_time"`
+	ResourceType      ResourceType       `json:"resource_type" bson:"resource_type"`
+	Spec              *ResourceSpec      `json:"spec" bson:"spec"`
+	AntiAffinityLevel string             `json:"anti_affinity_level" bson:"anti_affinity_level"`
+	EnableDiskCheck   bool               `json:"enable_disk_check" bson:"enable_disk_check"`
+	Description       string             `json:"description" bson:"description"`
+	Remark            string             `json:"remark" bson:"remark"`
+	Stage             TicketStage        `json:"stage" bson:"stage"`
+	Status            ApplyStatus        `json:"status" bson:"status"`
+	OriginNum         uint               `json:"origin_num" bson:"origin_num"` // 原始需求总数量，不会修改
+	TotalNum          uint               `json:"total_num" bson:"total_num"`   // 需要交付的总数量，业务会修改
+	SuccessNum        uint               `json:"success_num" bson:"success_num"`
+	PendingNum        uint               `json:"pending_num" bson:"pending_num"`
 	// AppliedCore 注意：该字段目前只会记录虚拟机申请的核心数量
 	AppliedCore uint `json:"applied_core" bson:"applied_core,omitempty"`
 	// DeliveredCore 注意：该字段目前只会记录虚拟机交付的核心数量
-	DeliveredCore uint `json:"delivered_core" bson:"delivered_core,omitempty"`
-	// PlanExpendGroup 本单据对应的预测消耗记录，按机型、地域分组（同一单可能出现多种机型、地域）
-	PlanExpendGroup []PlanExpendGroup `json:"plan_expend_group" bson:"plan_expend_group"`
-	ObsProject      enumor.ObsProject `json:"obs_project" bson:"obs_project"`
-	RetryTime       uint              `json:"retry_time" bson:"retry_time"`
-	ModifyTime      uint              `json:"modify_time" bson:"modify_time"`
-	CreateAt        time.Time         `json:"create_at" bson:"create_at"`
-	UpdateAt        time.Time         `json:"update_at" bson:"update_at"`
-}
-
-// UpgradeCVMSpec cvm升降配规格
-type UpgradeCVMSpec struct {
-	InstanceID           string   `json:"instance_id" bson:"instance_id"`
-	PrivateIPv4Addresses []string `json:"private_ipv4_addresses" bson:"private_ipv4_addresses"`
-	PrivateIPv6Addresses []string `json:"private_ipv6_addresses" bson:"private_ipv6_addresses"`
-	BkAssetID            string   `json:"bk_asset_id" bson:"bk_asset_id"`
-	Operator             string   `json:"operator" bson:"operator"`               // 主负责人
-	BkBakOperator        string   `json:"bk_bak_operator" bson:"bk_bak_operator"` // 备份负责人
-	DeviceType           string   `json:"device_type" bson:"device_type"`
-	RegionID             string   `json:"region_id" bson:"region_id"`
-	ZoneID               string   `json:"zone_id" bson:"zone_id"`
-	TargetInstanceType   string   `json:"target_instance_type" bson:"target_instance_type"`
+	DeliveredCore uint              `json:"delivered_core" bson:"delivered_core,omitempty"`
+	ObsProject    enumor.ObsProject `json:"obs_project" bson:"obs_project"`
+	RetryTime     uint              `json:"retry_time" bson:"retry_time"`
+	ModifyTime    uint              `json:"modify_time" bson:"modify_time"`
+	CreateAt      time.Time         `json:"create_at" bson:"create_at"`
+	UpdateAt      time.Time         `json:"update_at" bson:"update_at"`
 }
 
 // ResourceType resource type
@@ -92,8 +74,6 @@ const (
 	ResourceTypePool        ResourceType = "POOL"
 	ResourceTypeOthers      ResourceType = "OTHERS"
 	ResourceTypeUnsupported ResourceType = "UNSUPPORTED"
-	// ResourceTypeUpgradeCvm cvm升降配
-	ResourceTypeUpgradeCvm ResourceType = "UPGRADECVM"
 
 	ApplyLimit = 1000
 )
@@ -104,7 +84,6 @@ var AllResourceType = []ResourceType{
 	ResourceTypeCvm,
 	ResourceTypeIdcDvm,
 	ResourceTypeQcloudDvm,
-	ResourceTypeUpgradeCvm,
 }
 
 // ApplyStatus apply status
@@ -427,7 +406,6 @@ type DeviceInfo struct {
 	BkHostId          int64              `json:"bk_host_id" bson:"bk_host_id"`
 	Ip                string             `json:"ip" bson:"ip"`
 	AssetId           string             `json:"asset_id" bson:"asset_id"`
-	InstanceID        string             `json:"instance_id" bson:"instance_id"`
 	RequireType       enumor.RequireType `json:"require_type" bson:"require_type"`
 	ResourceType      ResourceType       `json:"resource_type" bson:"resource_type"`
 	DeviceType        string             `json:"device_type" bson:"device_type"`
@@ -436,7 +414,6 @@ type DeviceInfo struct {
 	ZoneName          string             `json:"zone_name" bson:"zone_name"`
 	ZoneID            int                `json:"zone_id" bson:"zone_id"`
 	CloudZone         string             `json:"cloud_zone" bson:"cloud_zone"`
-	CloudRegion       string             `json:"cloud_region" bson:"cloud_region"` // 云地域，目前仅升降配需要且赋值了该字段
 	ModuleName        string             `json:"module_name" bson:"module_name"`
 	Equipment         string             `json:"rack_id" bson:"rack_id"`
 	IsMatched         bool               `json:"is_matched" bson:"is_matched"`
@@ -758,8 +735,6 @@ type Suborder struct {
 	Remark            string        `json:"remark" bson:"remark"`
 	Spec              *ResourceSpec `json:"spec" bson:"spec"`
 	AppliedCore       uint          `json:"applied_core" bson:"applied_core,omitempty"`
-	// UpgradeCVMList cvm升降配列表
-	UpgradeCVMList []*UpgradeCVMSpec `json:"upgrade_cvm_list" bson:"upgrade_cvm_list"`
 }
 
 // Validate whether Suborder is valid

@@ -102,7 +102,7 @@ func (s *service) initSchedulerService(h *rest.Handler) {
 	h.Add("CancelApplyTicketCrp", http.MethodPost, "/apply/ticket/crp_audit/cancel", s.CancelApplyTicketCrp)
 	h.Add("AuditApplyTicket", http.MethodPost, "/audit/apply/ticket", s.AuditApplyTicket)
 	h.Add("AutoAuditApplyTicket", http.MethodPost, "/autoaudit/apply/ticket", s.AutoAuditApplyTicket)
-	h.Add("ApproveApplyTicket", http.MethodPost, "/approve/apply/ticket", s.ApproveApplyTicket)
+	h.Add("AutoAuditApplyTicket", http.MethodPost, "/approve/apply/ticket", s.ApproveApplyTicket)
 	h.Add("CreateApplyOrder", http.MethodPost, "/create/apply", s.CreateApplyOrder)
 	h.Add("GetApplyOrder", http.MethodPost, "/findmany/apply", s.GetApplyOrder)
 	h.Add("GetBizApplyOrder", http.MethodPost, "/findmany/biz/apply", s.GetBizApplyOrder)
@@ -167,8 +167,5 @@ func bizService(h *rest.Handler, s *service) {
 
 	h.Add("CheckHostUworkTicketStatus", http.MethodPost, "/hosts/uwork_tickets/status/check",
 		s.CheckHostUworkTicketStatus)
-
-	// 升降配接口
-	h.Add("CreateBizUpgradeCRPOrder", http.MethodPost, "/create/upgrade/crp_order", s.CreateBizUpgradeCRPOrder)
 
 }

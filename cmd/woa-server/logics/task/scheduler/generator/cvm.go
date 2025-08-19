@@ -274,8 +274,7 @@ func (g *Generator) CheckCVM(kt *kit.Kit, orderId, subOrderID string, chargeType
 		}
 
 		// 检查CRP订单是否超出处理时间并记录日志
-		g.checkRecordCrpOrderTimeout(kt, resp.Result.Data[0].OrderId, resp.Result.Data[0].CreateTime, resp.TraceId,
-			subOrderID, chargeType)
+		g.checkRecordCrpOrderTimeout(kt, resp, subOrderID, chargeType)
 
 		status := enumor.CrpOrderStatus(resp.Result.Data[0].Status)
 		if status != enumor.CrpOrderStatusFinish &&
@@ -607,17 +606,22 @@ func (g *Generator) getCvmSubnet(kt *kit.Kit, zone, vpc string, order *types.App
 	return subnetList, nil
 }
 
-func (g *Generator) checkRecordCrpOrderTimeout(kt *kit.Kit, crpOrderID string, crpCreateAt string, crpTraceID string,
-	subOrderID string, chargeType cvmapi.ChargeType) {
+func (g *Generator) checkRecordCrpOrderTimeout(kt *kit.Kit, crpResp *cvmapi.OrderQueryResp, subOrderID string,
+	chargeType cvmapi.ChargeType) {
+
+	if crpResp == nil || crpResp.Result == nil || crpResp.Error.Code != 0 || len(crpResp.Result.Data) != 1 {
+		return
+	}
 
 	// 只有计费模式:包年包月时才需要关注交付时长(计费模式为空时默认包年包月)
 	if len(chargeType) > 0 && chargeType != cvmapi.ChargeTypePrePaid {
 		return
 	}
 
-	createTime, err := time.Parse(constant.DateTimeLayout, crpCreateAt)
+	createTime, err := time.Parse(constant.DateTimeLayout, crpResp.Result.Data[0].CreateTime)
 	if err == nil && createTime.Add(types.OneDayDuration).Before(time.Now()) {
 		logs.Warnf("%s: query crp cvm apply order timeout, subOrderID: %s, crpOrderID: %s, crpTraceID: %s, rid: %s",
-			constant.CvmApplyOrderCrpProductTimeout, subOrderID, crpOrderID, crpTraceID, kt.Rid)
+			constant.CvmApplyOrderCrpProductTimeout, subOrderID, crpResp.Result.Data[0].OrderId,
+			crpResp.TraceId, kt.Rid)
 	}
 }

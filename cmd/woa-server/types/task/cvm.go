@@ -46,20 +46,3 @@ type CVM struct {
 	VirtualDeptID     int64             `json:"virtual_dept_id"`
 	VirtualDeptName   string            `json:"virtual_dept_name"`
 }
-
-// DeliveredCVMKey delivered cvm key
-type DeliveredCVMKey struct {
-	DeviceType string          `json:"device_type"`
-	Region     string          `json:"region"`
-	Zone       string          `json:"zone"`
-	DiskType   enumor.DiskType `json:"disk_type"`
-}
-
-// PlanExpendGroup plan expend group
-type PlanExpendGroup struct {
-	DeviceType string          `json:"device_type" bson:"device_type"`
-	Region     string          `json:"region" bson:"region"`
-	Zone       string          `json:"zone" bson:"zone"`
-	DiskType   enumor.DiskType `json:"disk_type" bson:"disk_type"`
-	CPUCore    int64           `json:"cpu_core" bson:"cpu_core"`
-}

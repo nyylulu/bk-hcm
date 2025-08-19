@@ -67,8 +67,6 @@ type VerifyResPlanDemandResp struct {
 type VerifyResPlanDemandElem struct {
 	VerifyResult enumor.VerifyResPlanRst `json:"verify_result"`
 	Reason       string                  `json:"reason"`
-	NeedCPUCore  int64
-	ResPlanCore  int64
 }
 
 // GetCvmChargeTypeDeviceTypeReq is get cvm charge type and device type request.

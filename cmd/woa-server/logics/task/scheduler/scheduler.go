@@ -75,8 +75,7 @@ type Interface interface {
 	// GetApplyAuditItsm gets resource apply ticket itsm audit info
 	GetApplyAuditItsm(kit *kit.Kit, param *types.GetApplyAuditItsmReq) (*types.GetApplyAuditItsmRst, error)
 	// GetApplyAuditCrp gets resource apply ticket crp audit info
-	GetApplyAuditCrp(kit *kit.Kit, param *types.GetApplyAuditCrpReq, resType types.ResourceType) (
-		*types.GetApplyAuditCrpRst, error)
+	GetApplyAuditCrp(kit *kit.Kit, param *types.GetApplyAuditCrpReq) (*types.GetApplyAuditCrpRst, error)
 	// AuditTicket audit resource apply ticket
 	AuditTicket(kit *kit.Kit, param *types.ApplyAuditReq) error
 	// AutoAuditTicket system automatic audit resource apply ticket callback
@@ -131,7 +130,7 @@ type Interface interface {
 	// AddCvmDevices check and update cvm device
 	AddCvmDevices(kit *kit.Kit, taskId string, generateId uint64, order *types.ApplyOrder) error
 	// UpdateOrderStatus check generate record by order id
-	UpdateOrderStatus(resType types.ResourceType, suborderID string) error
+	UpdateOrderStatus(suborderID string) error
 	// UpdateHostOperator update operator of host
 	UpdateHostOperator(info *types.DeviceInfo, hostId int64, operator string) error
 	// ProcessInitStep process init step
@@ -159,9 +158,6 @@ type Interface interface {
 	CancelApplyTicketCrp(kt *kit.Kit, req *types.CancelApplyTicketCrpReq) error
 	// VerifyCvmGPUChargeMonth verify cvm gpu charge month
 	VerifyCvmGPUChargeMonth(kt *kit.Kit, subOrders []*types.Suborder) error
-
-	// CreateUpgradeTicketANDOrder create upgrade ticket and order
-	CreateUpgradeTicketANDOrder(kt *kit.Kit, param *types.ApplyReq) (*types.CreateUpgradeCrpOrderResult, error)
 }
 
 // scheduler provides resource apply service
@@ -453,7 +449,7 @@ func (s *scheduler) getItsmApplyAuditRst(kt *kit.Kit, param *types.GetApplyAudit
 }
 
 // GetApplyAuditCrp gets resource apply ticket audit info
-func (s *scheduler) GetApplyAuditCrp(kit *kit.Kit, param *types.GetApplyAuditCrpReq, resType types.ResourceType) (
+func (s *scheduler) GetApplyAuditCrp(kit *kit.Kit, param *types.GetApplyAuditCrpReq) (
 	*types.GetApplyAuditCrpRst, error) {
 
 	logsReq := cvmapi.NewCvmQueryApproveLogReq(&cvmapi.GetCvmApproveLogParams{OrderId: param.CrpTicketId})
@@ -474,22 +470,22 @@ func (s *scheduler) GetApplyAuditCrp(kit *kit.Kit, param *types.GetApplyAuditCrp
 		return nil, fmt.Errorf("cvm approve logs is empty")
 	}
 
-	currentStepStatus := new(cvmapi.OrderItem)
-	switch resType {
-	case types.ResourceTypeUpgradeCvm:
-		currentStepStatus, err = s.getUpgradeCurrentStepStatus(kit, param.CrpTicketId)
-		if err != nil {
-			logs.Errorf("failed to get upgrade current step status, err: %v, ticket_id: %s, rid: %s", err,
-				param.CrpTicketId, kit.Rid)
-			return nil, err
-		}
-	default:
-		currentStepStatus, err = s.getCVMCurrentStepStatus(kit, param.CrpTicketId)
-		if err != nil {
-			logs.Errorf("failed to get cvm current step status, err: %v, ticket_id: %s, rid: %s", err,
-				param.CrpTicketId, kit.Rid)
-			return nil, err
-		}
+	orderReq := cvmapi.NewOrderQueryReq(&cvmapi.OrderQueryParam{OrderId: []string{param.CrpTicketId}})
+	orderResp, err := s.crpCli.QueryCvmOrders(kit.Ctx, kit.Header(), orderReq)
+	if err != nil {
+		logs.Errorf("failed to query cvm order, err: %v, rid: %s", err, kit.Rid)
+		return nil, err
+	}
+
+	if orderResp.Error.Code != 0 {
+		logs.Errorf("failed to query cvm order, err: %v, trace id: %s, rid: %s",
+			orderResp.Error.Message, orderResp.TraceId, kit.Rid)
+		return nil, errors.New(orderResp.Error.Message)
+	}
+
+	if orderResp.Result == nil || len(orderResp.Result.Data) == 0 {
+		logs.Errorf("crp order is empty, trace id: %s, rid: %s", orderResp.TraceId, kit.Rid)
+		return nil, fmt.Errorf("crp order is empty")
 	}
 
 	resp := &types.GetApplyAuditCrpRst{
@@ -499,6 +495,8 @@ func (s *scheduler) GetApplyAuditCrp(kit *kit.Kit, param *types.GetApplyAuditCrp
 			CurrentStep: types.ApplyAuditCrpStep{
 				CurrentTaskNo:   logsResp.Result.CurrentTaskNo,
 				CurrentTaskName: logsResp.Result.CurrentTaskName,
+				Status:          orderResp.Result.Data[0].Status,
+				StatusDesc:      orderResp.Result.Data[0].StatusDesc,
 			},
 		},
 	}
@@ -514,77 +512,8 @@ func (s *scheduler) GetApplyAuditCrp(kit *kit.Kit, param *types.GetApplyAuditCrp
 		})
 	}
 
-	resp = generateApplyAuditCurStep(resp, currentStepStatus)
-
-	return resp, nil
-}
-
-func (s *scheduler) getCVMCurrentStepStatus(kt *kit.Kit, crpTicketID string) (*cvmapi.OrderItem, error) {
-	orderReq := cvmapi.NewOrderQueryReq(&cvmapi.OrderQueryParam{OrderId: []string{crpTicketID}})
-	orderResp, err := s.crpCli.QueryCvmOrders(kt.Ctx, kt.Header(), orderReq)
-	if err != nil {
-		logs.Errorf("failed to query cvm order, err: %v, rid: %s", err, kt.Rid)
-		return nil, err
-	}
-
-	if orderResp.Error.Code != 0 {
-		logs.Errorf("failed to query cvm order, err: %v, trace id: %s, rid: %s",
-			orderResp.Error.Message, orderResp.TraceId, kt.Rid)
-		return nil, errors.New(orderResp.Error.Message)
-	}
-
-	if orderResp.Result == nil || len(orderResp.Result.Data) == 0 {
-		logs.Errorf("crp order is empty, trace id: %s, rid: %s", orderResp.TraceId, kt.Rid)
-		return nil, fmt.Errorf("crp order is empty")
-	}
-
-	return orderResp.Result.Data[0], nil
-}
-
-func (s *scheduler) getUpgradeCurrentStepStatus(kt *kit.Kit, crpTicketID string) (*cvmapi.OrderItem, error) {
-	orderReq := cvmapi.NewCvmUpgradeDetailReq(&cvmapi.UpgradeDetailParam{OrderID: crpTicketID})
-	orderResp, err := s.crpCli.QueryCvmUpgradeDetail(kt, orderReq)
-	if err != nil {
-		logs.Errorf("failed to query upgrade order, err: %v, rid: %s", err, kt.Rid)
-		return nil, err
-	}
-
-	if orderResp.Error.Code != 0 {
-		logs.Errorf("failed to query upgrade order, err: %v, trace id: %s, rid: %s",
-			orderResp.Error.Message, orderResp.TraceId, kt.Rid)
-		return nil, errors.New(orderResp.Error.Message)
-	}
-
-	if orderResp.Result == nil {
-		logs.Errorf("crp upgrade order is empty, trace id: %s, rid: %s", orderResp.TraceId, kt.Rid)
-		return nil, fmt.Errorf("crp upgrade order is empty")
-	}
-
-	orderInfo := &cvmapi.OrderItem{
-		OrderId:           crpTicketID,
-		Status:            int(orderResp.Result.Status),
-		StatusDesc:        orderResp.Result.StatusMsg,
-		FailInstanceInfos: nil,
-		CreateTime:        orderResp.Result.CreateTime,
-	}
-
-	if orderResp.Result.Status == enumor.CrpUpgradeOrderFailed {
-		orderInfo.FailInstanceInfos = append(orderInfo.FailInstanceInfos, cvmapi.FailInstanceInfo{
-			ErrorMsg: orderResp.Result.StatusMsg,
-		})
-	}
-	return orderInfo, nil
-}
-
-// generateApplyAuditCurStep generate apply audit current step
-func generateApplyAuditCurStep(auditRst *types.GetApplyAuditCrpRst,
-	crpOrderRst *cvmapi.OrderItem) *types.GetApplyAuditCrpRst {
-
-	auditRst.CurrentStep.Status = crpOrderRst.Status
-	auditRst.CurrentStep.StatusDesc = crpOrderRst.StatusDesc
-
-	for _, failedInfo := range crpOrderRst.FailInstanceInfos {
-		auditRst.CurrentStep.FailInstanceInfo = append(auditRst.CurrentStep.FailInstanceInfo, types.FailInstanceInfo{
+	for _, failedInfo := range orderResp.Result.Data[0].FailInstanceInfos {
+		resp.CurrentStep.FailInstanceInfo = append(resp.CurrentStep.FailInstanceInfo, types.FailInstanceInfo{
 			ErrorMsgTypeEn: failedInfo.ErrorMsgTypeEn,
 			ErrorType:      failedInfo.ErrorType,
 			ErrorMsgTypeCn: failedInfo.ErrorMsgTypeCn,
@@ -595,7 +524,7 @@ func generateApplyAuditCurStep(auditRst *types.GetApplyAuditCrpRst,
 		})
 	}
 
-	return auditRst
+	return resp, nil
 }
 
 // AuditTicket audit resource apply ticket
@@ -1052,12 +981,7 @@ func (s *scheduler) CreateApplyOrder(kt *kit.Kit, param *types.ApplyReq) (*types
 			return err
 		}
 
-		resType := types.ResourceTypeCvm
-		if len(param.Suborders) > 0 && param.Suborders[0] != nil {
-			resType = param.Suborders[0].ResourceType
-		}
-		resp, err := s.itsm.CreateApplyTicket(sessionKit, param.User, rst.OrderId, param.BkBizId, param.Remark,
-			string(resType))
+		resp, err := s.itsm.CreateApplyTicket(sessionKit, param.User, rst.OrderId, param.BkBizId, param.Remark)
 		if err != nil {
 			logs.Errorf("failed to create apply order, for create itsm ticket err: %v, rid: %s, orderId: %d, BkBIzId: %d",
 				err, kt.Rid, rst.OrderId, param.BkBizId)
@@ -1841,17 +1765,10 @@ func (s *scheduler) StartApplyOrder(kt *kit.Kit, param *types.StartApplyOrderReq
 	for _, order := range insts {
 		// cannot start apply order if its stage is not SUSPEND
 		if order.Stage != types.TicketStageSuspend {
-			logs.Errorf("cannot terminate order %s, for its stage %s != %s, rid: %s", order.SubOrderId, order.Stage,
-				types.TicketStageSuspend, kt.Rid)
+			logs.Errorf("cannot terminate order %s, for its stage %s != %s ", order.SubOrderId, order.Stage,
+				types.TicketStageSuspend)
 			return fmt.Errorf("cannot terminate order %s, for its stage %s != %s", order.SubOrderId, order.Stage,
 				types.TicketStageSuspend)
-		}
-
-		// TODO 暂不支持重试升降配类型单据
-		if order.ResourceType == types.ResourceTypeUpgradeCvm {
-			logs.Errorf("cannot start order %s, for its resource type is %s, rid: %s", order.SubOrderId,
-				order.ResourceType, kt.Rid)
-			return fmt.Errorf("CVM升降配单据暂不支持重试")
 		}
 	}
 
@@ -2091,17 +2008,10 @@ func (s *scheduler) ModifyApplyOrder(kt *kit.Kit, param *types.ModifyApplyReq) e
 
 	// cannot modify apply order if its stage is not SUSPEND
 	if order.Stage != types.TicketStageSuspend {
-		logs.Errorf("cannot modify order %s, for its stage %s != %s, rid: %s", order.SubOrderId, order.Stage,
-			types.TicketStageSuspend, kt.Rid)
+		logs.Errorf("cannot modify order %s, for its stage %s != %s", order.SubOrderId, order.Stage,
+			types.TicketStageSuspend)
 		return fmt.Errorf("cannot modify order %s, for its stage %s != %s", order.SubOrderId, order.Stage,
 			types.TicketStageSuspend)
-	}
-
-	// TODO 暂不支持重试升降配类型单据
-	if order.ResourceType == types.ResourceTypeUpgradeCvm {
-		logs.Errorf("cannot modify order %s, for its resource type is %s, rid: %s", order.SubOrderId,
-			order.ResourceType, kt.Rid)
-		return fmt.Errorf("CVM升降配暂不支持修改单据重试")
 	}
 
 	// validate modification
@@ -2192,11 +2102,11 @@ func (s *scheduler) validateReplicasAndModifyParam(kt *kit.Kit, order *types.App
 	}
 
 	// 获取“已生产”的机型及数量并计算“已生产”的总核数
-	_, deliverGroupCntMap := calProductDeviceTypeCountMap(deviceInfos, false)
-	productSuccCPUCore, _, err := s.matcher.GetCpuCoreSum(kt, deliverGroupCntMap)
+	deviceTypeCountMap := calProductDeviceTypeCountMap(deviceInfos, false)
+	productSuccCPUCore, err := s.matcher.GetCpuCoreSum(kt, deviceTypeCountMap)
 	if err != nil {
-		logs.Errorf("get product cpu core failed, subOrderID: %s, err: %v, deviceTypeCountMap: %+v, rid: %s",
-			order.SubOrderId, err, deliverGroupCntMap, kt.Rid)
+		logs.Errorf("get product cpu core failed, subOrderID: %s, err: %v, deviceTypeCountMap: %v, rid: %s",
+			order.SubOrderId, err, deviceTypeCountMap, kt.Rid)
 		return nil, err
 	}
 
@@ -2546,16 +2456,7 @@ func (s *scheduler) GetGenerateRecords(kt *kit.Kit, subOrderId string) ([]*types
 
 // AddCvmDevices check and add cvm device
 func (s *scheduler) AddCvmDevices(kt *kit.Kit, taskId string, generateId uint64, order *types.ApplyOrder) error {
-	var err error
-	switch order.ResourceType {
-	// 升降配使用不同的CRP接口轮询单据状态
-	case types.ResourceTypeUpgradeCvm:
-		err = s.generator.AddUpgradeCvmDevices(kt, taskId, generateId, order)
-	default:
-		err = s.generator.AddCvmDevices(kt, taskId, generateId, order, order.Spec.Zone)
-	}
-
-	if err != nil {
+	if err := s.generator.AddCvmDevices(kt, taskId, generateId, order, order.Spec.Zone); err != nil {
 		logs.Errorf("failed to check and update cvm device, orderId: %s, err: %v, rid: %s", err, order.SubOrderId,
 			kt.Rid)
 		return err
@@ -2564,8 +2465,8 @@ func (s *scheduler) AddCvmDevices(kt *kit.Kit, taskId string, generateId uint64,
 }
 
 // UpdateOrderStatus check generate record by order id
-func (s *scheduler) UpdateOrderStatus(resType types.ResourceType, suborderID string) error {
-	return s.generator.UpdateOrderStatus(resType, suborderID)
+func (s *scheduler) UpdateOrderStatus(suborderID string) error {
+	return s.generator.UpdateOrderStatus(suborderID)
 }
 
 // GetMatcher get matcher
@@ -3054,12 +2955,8 @@ func (s *scheduler) revokeApplyOrder(kt *kit.Kit, subOrderId string, taskIDs []s
 }
 
 // calProductDeviceTypeCountMap calculate device type count map
-func calProductDeviceTypeCountMap(devices []*types.DeviceInfo, checkDelivered bool) (
-	map[string]int, map[types.DeliveredCVMKey]int) {
-
+func calProductDeviceTypeCountMap(devices []*types.DeviceInfo, checkDelivered bool) map[string]int {
 	deviceTypeCountMap := make(map[string]int)
-	deliverGroupCntMap := make(map[types.DeliveredCVMKey]int)
-
 	for _, device := range devices {
 		if checkDelivered && !device.IsDelivered {
 			continue
@@ -3069,17 +2966,6 @@ func calProductDeviceTypeCountMap(devices []*types.DeviceInfo, checkDelivered bo
 			deviceTypeCountMap[device.DeviceType] = 0
 		}
 		deviceTypeCountMap[device.DeviceType]++
-
-		deliveredKey := types.DeliveredCVMKey{
-			DeviceType: device.DeviceType,
-			Region:     device.CloudRegion,
-			Zone:       device.CloudZone,
-		}
-
-		if _, ok := deliverGroupCntMap[deliveredKey]; !ok {
-			deliverGroupCntMap[deliveredKey] = 0
-		}
-		deliverGroupCntMap[deliveredKey]++
 	}
-	return deviceTypeCountMap, deliverGroupCntMap
+	return deviceTypeCountMap
 }

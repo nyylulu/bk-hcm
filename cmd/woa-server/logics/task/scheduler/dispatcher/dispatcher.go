@@ -222,8 +222,6 @@ func (d *Dispatcher) generateDevices(kt *kit.Kit, order *types.ApplyOrder) error
 		return d.generator.GenerateDVM(kt, order)
 	case types.ResourceTypePm:
 		return d.generator.MatchPM(kt, order)
-	case types.ResourceTypeUpgradeCvm:
-		return d.generator.UpgradeCVM(kt, order)
 	default:
 		logs.Errorf("unknown resource type: %s", order.ResourceType)
 		return fmt.Errorf("unknown resource type: %s", order.ResourceType)

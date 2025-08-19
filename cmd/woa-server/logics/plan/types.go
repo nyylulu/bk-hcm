@@ -207,8 +207,6 @@ type VerifyResPlanElemV2 struct {
 type VerifyResPlanResElem struct {
 	VerifyResult   enumor.VerifyResPlanRst `json:"verify_result"`
 	Reason         string                  `json:"reason"`
-	NeedCPUCore    int64                   `json:"need_cpu_core"`
-	ResPlanCore    int64                   `json:"res_plan_core"`
 	MatchDemandIDs []string                `json:"match_demand_ids"`
 }
 
@@ -245,8 +243,8 @@ type ResPlanPoolKeyV2 struct {
 	BkBizID       int64
 	DemandClass   enumor.DemandClass
 	RegionID      string
-	// ZoneID        string  // 预测匹配不要求zoneID相同
-	DiskType enumor.DiskType
+	ZoneID        string
+	DiskType      enumor.DiskType
 }
 
 // ResPlanConsumePool resource plan consume pool.
