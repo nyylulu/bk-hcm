@@ -193,8 +193,10 @@ func (req *BatchCvmPowerOperateReq) Validate(checkSessionID bool) error {
 		return errf.New(errf.InvalidParameter, "session_id is required")
 	}
 
-	if err := req.Source.Validate(); err != nil {
-		return err
+	if len(req.Source) > 0 {
+		if err := req.Source.Validate(); err != nil {
+			return err
+		}
 	}
 
 	return validator.Validate.Struct(req)
