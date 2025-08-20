@@ -572,3 +572,26 @@ func (svc *lbSvc) listTGListenerRuleRelMapByTGIDs(kt *kit.Kit, tgIDs []string) (
 	}
 	return result, nil
 }
+
+func (svc *lbSvc) listListenersByIDs(kt *kit.Kit, lblIDs []string) ([]corelb.BaseListener, error) {
+	if len(lblIDs) == 0 {
+		return nil, nil
+	}
+
+	result := make([]corelb.BaseListener, 0, len(lblIDs))
+
+	for _, batch := range slice.Split(lblIDs, int(core.DefaultMaxPageLimit)) {
+		lblReq := &core.ListReq{
+			Filter: tools.ContainersExpression("id", batch),
+			Page:   core.NewDefaultBasePage(),
+		}
+		listLblResult, err := svc.client.DataService().Global.LoadBalancer.ListListener(kt, lblReq)
+		if err != nil {
+			logs.Errorf("[clb] list clb listener failed, lblIDs: %v, err: %v, rid: %s", lblIDs, err, kt.Rid)
+			return nil, err
+		}
+		result = append(result, listLblResult.Details...)
+	}
+
+	return result, nil
+}
