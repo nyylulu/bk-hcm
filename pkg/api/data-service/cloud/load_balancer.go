@@ -284,7 +284,7 @@ func (req *TCloudUrlRuleCreate) Validate() error {
 
 // TCloudUrlRuleBatchUpdateReq 批量更新url规则
 type TCloudUrlRuleBatchUpdateReq struct {
-	BkBizID   string                 `json:"bk_biz_id" validate:"required"`
+	BkBizID   int64                  `json:"bk_biz_id" validate:"required"`
 	AccountID string                 `json:"account_id" validate:"required"`
 	UrlRules  []*TCloudUrlRuleUpdate `json:"url_rules" validate:"required,min=1,dive"`
 }

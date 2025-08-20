@@ -188,8 +188,7 @@ func (svc *lbSvc) BatchUpdateTCloudUrlRule(cts *rest.Contexts) (any, error) {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	// 添加业务ID和账户ID验证
-	if len(req.BkBizID) == 0 {
+	if req.BkBizID <= 0 {
 		return nil, errf.New(errf.InvalidParameter, "bk_biz_id is required")
 	}
 
@@ -219,6 +218,8 @@ func (svc *lbSvc) BatchUpdateTCloudUrlRule(cts *rest.Contexts) (any, error) {
 				SessionExpire:      converter.PtrToVal(rule.SessionExpire),
 				SessionType:        rule.SessionType,
 				Memo:               rule.Memo,
+				BkBizID:            req.BkBizID,
+				AccountID:          req.AccountID,
 				Reviser:            cts.Kit.User,
 			}
 

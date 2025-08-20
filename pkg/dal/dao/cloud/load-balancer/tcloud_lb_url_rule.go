@@ -102,7 +102,7 @@ func (dao LbTCloudUrlRuleDao) BatchCreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models
 		if !ok {
 			return nil, fmt.Errorf("fail to find lb(%s) of rule(%s)", rule.LbID, rule.URL)
 		}
-		// 优先使用规则表中的业务ID和账户ID，如果为空则使用负载均衡表中的值
+
 		bizID := rule.BkBizID
 		if bizID <= 0 {
 			bizID = lb.BkBizID
@@ -222,7 +222,6 @@ func (dao LbTCloudUrlRuleDao) List(kt *kit.Kit, opt *types.ListOption) (*typeslb
 		return nil, err
 	}
 
-	// 确保查询时包含业务ID和账户ID字段
 	if len(opt.Fields) == 0 {
 		opt.Fields = append(opt.Fields, "bk_biz_id", "account_id")
 	} else {
@@ -311,7 +310,6 @@ func (dao LbTCloudUrlRuleDao) ListJoinListener(kt *kit.Kit, opt *types.ListOptio
 		return nil, err
 	}
 
-	// 确保查询时包含业务ID和账户ID字段
 	if len(opt.Fields) == 0 {
 		opt.Fields = append(opt.Fields, "bk_biz_id", "account_id")
 	} else {
