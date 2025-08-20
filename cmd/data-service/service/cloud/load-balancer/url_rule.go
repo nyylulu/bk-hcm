@@ -55,9 +55,17 @@ func (svc *lbSvc) BatchCreateTCloudUrlRule(cts *rest.Contexts) (any, error) {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
+	if req.BkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "bk_biz_id is required")
+	}
+
+	if len(req.AccountID) == 0 {
+		return nil, errf.New(errf.InvalidParameter, "account_id is required")
+	}
+
 	ruleModels := make([]*tablelb.TCloudLbUrlRuleTable, 0, len(req.UrlRules))
 	for _, rule := range req.UrlRules {
-		ruleModel, err := svc.convRule(cts.Kit, rule)
+		ruleModel, err := svc.convRule(cts.Kit, rule, req.BkBizID, req.AccountID)
 		if err != nil {
 			return nil, err
 		}
@@ -126,7 +134,7 @@ func (svc *lbSvc) convRuleRel(kt *kit.Kit, listenerRuleID string, rule dataproto
 	}
 }
 
-func (svc *lbSvc) convRule(kt *kit.Kit, rule dataproto.TCloudUrlRuleCreate) (
+func (svc *lbSvc) convRule(kt *kit.Kit, rule dataproto.TCloudUrlRuleCreate, bkBizID int64, accountID string) (
 	*tablelb.TCloudLbUrlRuleTable, error) {
 
 	ruleModel := &tablelb.TCloudLbUrlRuleTable{
@@ -146,6 +154,8 @@ func (svc *lbSvc) convRule(kt *kit.Kit, rule dataproto.TCloudUrlRuleCreate) (
 		SessionType:        rule.SessionType,
 		SessionExpire:      rule.SessionExpire,
 		Memo:               rule.Memo,
+		BkBizID:            bkBizID,
+		AccountID:          accountID,
 
 		Creator: kt.User,
 		Reviser: kt.User,
@@ -176,6 +186,15 @@ func (svc *lbSvc) BatchUpdateTCloudUrlRule(cts *rest.Contexts) (any, error) {
 
 	if err := req.Validate(); err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 添加业务ID和账户ID验证
+	if len(req.BkBizID) == 0 {
+		return nil, errf.New(errf.InvalidParameter, "bk_biz_id is required")
+	}
+
+	if len(req.AccountID) == 0 {
+		return nil, errf.New(errf.InvalidParameter, "account_id is required")
 	}
 
 	ruleIds := slice.Map(req.UrlRules, func(one *dataproto.TCloudUrlRuleUpdate) string { return one.ID })

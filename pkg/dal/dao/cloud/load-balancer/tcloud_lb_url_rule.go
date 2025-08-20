@@ -102,15 +102,26 @@ func (dao LbTCloudUrlRuleDao) BatchCreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models
 		if !ok {
 			return nil, fmt.Errorf("fail to find lb(%s) of rule(%s)", rule.LbID, rule.URL)
 		}
+		// 优先使用规则表中的业务ID和账户ID，如果为空则使用负载均衡表中的值
+		bizID := rule.BkBizID
+		if len(bizID) == 0 {
+			bizID = lb.BkBizID
+		}
+
+		accountID := rule.AccountID
+		if len(accountID) == 0 {
+			accountID = lb.AccountID
+		}
+
 		audits = append(audits, &tableaudit.AuditTable{
 			ResID:      rule.ID,
 			CloudResID: rule.CloudID,
 			ResName:    rule.Name,
 			ResType:    enumor.UrlRuleAuditResType,
 			Action:     enumor.Create,
-			BkBizID:    lb.BkBizID,
+			BkBizID:    bizID,
 			Vendor:     enumor.TCloud,
-			AccountID:  lb.AccountID,
+			AccountID:  accountID,
 			Operator:   kt.User,
 			Source:     kt.GetRequestSource(),
 			Rid:        kt.Rid,
@@ -211,6 +222,28 @@ func (dao LbTCloudUrlRuleDao) List(kt *kit.Kit, opt *types.ListOption) (*typeslb
 		return nil, err
 	}
 
+	// 确保查询时包含业务ID和账户ID字段
+	if len(opt.Fields) == 0 {
+		opt.Fields = append(opt.Fields, "bk_biz_id", "account_id")
+	} else {
+		hasBizID := false
+		hasAccountID := false
+		for _, field := range opt.Fields {
+			if field == "bk_biz_id" {
+				hasBizID = true
+			}
+			if field == "account_id" {
+				hasAccountID = true
+			}
+		}
+		if !hasBizID {
+			opt.Fields = append(opt.Fields, "bk_biz_id")
+		}
+		if !hasAccountID {
+			opt.Fields = append(opt.Fields, "account_id")
+		}
+	}
+
 	whereExpr, whereValue, err := opt.Filter.SQLWhereExpr(tools.DefaultSqlWhereOption)
 	if err != nil {
 		return nil, err
@@ -276,6 +309,28 @@ func (dao LbTCloudUrlRuleDao) ListJoinListener(kt *kit.Kit, opt *types.ListOptio
 	if err := opt.Validate(filter.NewExprOption(filter.RuleFields(tablelb.TCloudLbUrlRuleColumns.ColumnTypes())),
 		core.NewDefaultPageOption()); err != nil {
 		return nil, err
+	}
+
+	// 确保查询时包含业务ID和账户ID字段
+	if len(opt.Fields) == 0 {
+		opt.Fields = append(opt.Fields, "bk_biz_id", "account_id")
+	} else {
+		hasBizID := false
+		hasAccountID := false
+		for _, field := range opt.Fields {
+			if field == "bk_biz_id" {
+				hasBizID = true
+			}
+			if field == "account_id" {
+				hasAccountID = true
+			}
+		}
+		if !hasBizID {
+			opt.Fields = append(opt.Fields, "bk_biz_id")
+		}
+		if !hasAccountID {
+			opt.Fields = append(opt.Fields, "account_id")
+		}
 	}
 
 	whereExpr, whereValue, err := opt.Filter.SQLWhereExpr(tools.DefaultSqlWhereOption)

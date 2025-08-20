@@ -239,7 +239,9 @@ type TCloudURLRuleListResult = core.ListResultT[corelb.TCloudLbUrlRule]
 
 // TCloudUrlRuleBatchCreateReq ...
 type TCloudUrlRuleBatchCreateReq struct {
-	UrlRules []TCloudUrlRuleCreate `json:"url_rules" validate:"required,min=1"`
+	BkBizID   int64                 `json:"bk_biz_id" validate:"required"`
+	AccountID string                `json:"account_id" validate:"required"`
+	UrlRules  []TCloudUrlRuleCreate `json:"url_rules" validate:"required,min=1"`
 }
 
 // Validate ...
@@ -282,7 +284,9 @@ func (req *TCloudUrlRuleCreate) Validate() error {
 
 // TCloudUrlRuleBatchUpdateReq 批量更新url规则
 type TCloudUrlRuleBatchUpdateReq struct {
-	UrlRules []*TCloudUrlRuleUpdate `json:"url_rules" validate:"required,min=1,dive"`
+	BkBizID   string                 `json:"bk_biz_id" validate:"required"`
+	AccountID string                 `json:"account_id" validate:"required"`
+	UrlRules  []*TCloudUrlRuleUpdate `json:"url_rules" validate:"required,min=1,dive"`
 }
 
 // Validate ...

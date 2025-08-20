@@ -45,6 +45,8 @@ GET /api/v1/cloud/bizs/{bk_biz_id}/vendors/tcloud/listeners/{lbl_id}/rules/{rule
     "sni_switch": 0,
     "session_type": "NORMAL",
     "session_expire": 0,
+    "account_id": "admin",
+    "bk_biz_id": 0,
     "creator": "Jim",
     "reviser": "Jim",
     "created_at": "2023-02-12T14:47:39Z",
@@ -78,6 +80,8 @@ GET /api/v1/cloud/bizs/{bk_biz_id}/vendors/tcloud/listeners/{lbl_id}/rules/{rule
 | sni_switch     | int    | sni开关                          |
 | session_type   | string | 会话保持类型                         |
 | session_expire | string | 会话过期时间                         |
+| bk_biz_id      | int64  | 业务ID                            |
+| account_id     | string | 账户ID                            |
 | creator        | string | 创建者                            |
 | reviser        | string | 修改者                            |
 | created_at     | string | 创建时间，标准格式：2006-01-02T15:04:05Z |

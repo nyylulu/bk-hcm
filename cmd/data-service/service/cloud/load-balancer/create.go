@@ -179,6 +179,8 @@ func (svc *lbSvc) CreateTargetGroupListenerRel(cts *rest.Contexts) (any, error) 
 		ruleModel := &tablelb.TCloudLbUrlRuleTable{
 			TargetGroupID:      req.TargetGroupID,
 			CloudTargetGroupID: req.CloudTargetGroupID,
+			BkBizID:            req.BkBizID,
+			AccountID:          req.AccountID,
 			Reviser:            cts.Kit.User,
 		}
 		err := svc.dao.LoadBalancerTCloudUrlRule().UpdateByIDWithTx(cts.Kit, txn, req.ListenerRuleID, ruleModel)
