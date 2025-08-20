@@ -104,7 +104,7 @@ func (dao LbTCloudUrlRuleDao) BatchCreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models
 		}
 		// 优先使用规则表中的业务ID和账户ID，如果为空则使用负载均衡表中的值
 		bizID := rule.BkBizID
-		if len(bizID) == 0 {
+		if bizID <= 0 {
 			bizID = lb.BkBizID
 		}
 
