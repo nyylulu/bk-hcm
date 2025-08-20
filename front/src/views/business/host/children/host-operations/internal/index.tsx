@@ -217,7 +217,8 @@ export default defineComponent({
         data={tableData.value}
         columns={computedColumns.value}
         changeData={(data) => (tableData.value = data)}
-        searchData={searchData}>
+        searchData={searchData}
+        {...{ maxHeight: 'calc(100vh - 400px)' }}>
         <div class={cssModule['host-operations-toolbar']}>
           <BkButtonGroup>
             <Button onClick={() => handleSwitch(true)} selected={selected.value === 'target'}>
