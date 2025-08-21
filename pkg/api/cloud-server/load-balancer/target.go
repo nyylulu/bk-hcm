@@ -27,6 +27,7 @@ import (
 
 const (
 	modifyTargetWeightLimit = 5000
+	removeTargetLimit       = 5000
 )
 
 // BatchModifyTargetWeightReq ...
@@ -40,6 +41,20 @@ type BatchModifyTargetWeightReq struct {
 func (b *BatchModifyTargetWeightReq) Validate() error {
 	if len(b.TargetIDs) > modifyTargetWeightLimit {
 		return fmt.Errorf("target_ids length count should <= %d", modifyTargetWeightLimit)
+	}
+	return validator.Validate.Struct(b)
+}
+
+// BatchRemoveTargetReq ...
+type BatchRemoveTargetReq struct {
+	AccountID string   `json:"account_id" validate:"required"`
+	TargetIDs []string `json:"target_ids" validate:"min=1"`
+}
+
+// Validate ...
+func (b *BatchRemoveTargetReq) Validate() error {
+	if len(b.TargetIDs) > removeTargetLimit {
+		return fmt.Errorf("the number of target IDs cannot exceed %d", removeTargetLimit)
 	}
 	return validator.Validate.Struct(b)
 }
