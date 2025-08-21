@@ -229,6 +229,14 @@ func (l *listenerExporter) getRuleCount(kt *kit.Kit, rule *filter.AtomRule) (uin
 			return 0, err
 		}
 		return resp.Count, nil
+	case enumor.TCloudZiyan:
+		resp, err := l.client.DataService().TCloudZiyan.LoadBalancer.ListUrlRule(kt, &req)
+		if err != nil {
+			logs.Errorf("get listener rule count failed, err: %v, vendor: %s, req: %+v, rid: %s", err, l.vendor, req,
+				kt.Rid)
+			return 0, err
+		}
+		return resp.Count, nil
 	default:
 		return 0, errf.New(errf.InvalidParameter, "不支持该厂商的导出")
 	}
@@ -337,7 +345,7 @@ func (l *listenerExporter) Export(kt *kit.Kit) (string, error) {
 	}(zipOperator)
 
 	switch l.vendor {
-	case enumor.TCloud:
+	case enumor.TCloud, enumor.TCloudZiyan:
 		err = l.exportTCloud(kt, zipOperator)
 	default:
 		return "", errf.Newf(errf.InvalidParameter, "unsupported vendor: %s", l.vendor)
