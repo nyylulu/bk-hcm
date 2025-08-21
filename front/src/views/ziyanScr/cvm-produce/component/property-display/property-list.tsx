@@ -1,37 +1,17 @@
 import { defineComponent, computed } from 'vue';
-import PropertyItem from './property-item';
 import { cloneDeep, isEmpty } from 'lodash';
+
+import PropertyItem from './property-item';
 import './index.scss';
+
 export default defineComponent({
   name: 'PropertyList',
-  components: {
-    PropertyItem,
-  },
   props: {
-    properties: {
-      type: Object,
-      default: null,
-    },
-    includes: {
-      type: Array,
-      default: () => {
-        return [];
-      },
-    },
-    hideEmpty: {
-      type: Boolean,
-      default: false,
-    },
-    excludes: {
-      type: Array,
-      default: () => () => {
-        return [];
-      },
-    },
-    horizontal: {
-      type: Boolean,
-      default: false,
-    },
+    properties: { type: Object, default: null },
+    hideEmpty: { type: Boolean, default: false },
+    includes: { type: Array, default: () => [] },
+    excludes: { type: Array, default: () => [] },
+    row: Object,
   },
   emits: ['update:modelValue'],
   setup(props) {
@@ -53,10 +33,11 @@ export default defineComponent({
 
       return properties;
     });
+
     return () => (
-      <div class='property-list'>
+      <div class='cvm-produce-property-list'>
         {Object.keys(visibleProperties.value).map((key) => {
-          return <property-item key={key} k={key} v={visibleProperties.value[key]} />;
+          return <PropertyItem key={key} k={key} v={visibleProperties.value[key]} row={props.row} />;
         })}
       </div>
     );

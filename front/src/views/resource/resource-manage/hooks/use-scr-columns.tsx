@@ -39,10 +39,11 @@ import {
 } from '@/views/ziyanScr/host-recycle/field-dictionary';
 import { getRegionCn, getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
 import { getCvmProduceStatus, getTypeCn } from '@/views/ziyanScr/cvm-produce/transform';
-import { getDiskTypesName, getImageName } from '@/components/property-list/transform';
+import { getImageName } from '@/views/ziyanScr/cvm-produce/component/property-display/transform';
 import { useApplyStages } from '@/views/ziyanScr/hooks/use-apply-stages';
 import { transformAntiAffinityLevels } from '@/views/ziyanScr/hostApplication/components/transform';
 import useCvmChargeType from '@/views/ziyanScr/hooks/use-cvm-charge-type';
+import { ICvmSystemDisk } from '@/views/ziyanScr/components/cvm-system-disk/typings';
 
 import WName from '@/components/w-name';
 import { SCR_POOL_PHASE_MAP, SCR_RECALL_DETAIL_STATUS_MAP } from '@/constants';
@@ -52,6 +53,8 @@ import { ChargeType, ChargeTypeMap } from '@/typings/plan';
 import { RESOURCE_DEMANDS_STATUS_NAME, RESOURCE_DEMANDS_STATUS_CLASSES } from '@/components/resource-plan/constants';
 import QcloudZoneValue from '@/views/ziyanScr/components/qcloud-resource/zone-value.vue';
 import QcloudRegionValue from '@/views/ziyanScr/components/qcloud-resource/region-value.vue';
+import CvmSystemDiskDisplay from '@/views/ziyanScr/components/cvm-system-disk/display.vue';
+import CvmDataDiskDisplay from '@/views/ziyanScr/components/cvm-data-disk/display.vue';
 
 interface LinkFieldOptions {
   type: string; // 资源类型
@@ -255,15 +258,18 @@ export default (type: string, isSimpleShow = false) => {
       width: 120,
     },
     {
-      label: '数据盘大小',
-      field: 'spec.disk_size',
-      width: 100,
+      label: '系统盘',
+      field: 'spec.system_disk',
+      width: 130,
+      render: ({ cell }: { cell: ICvmSystemDisk }) => <CvmSystemDiskDisplay systemDisk={cell} />,
     },
     {
-      label: '数据盘类型',
-      field: 'spec.disk_type',
-      width: 100,
-      render: ({ row }: any) => getDiskTypesName(row.spec.disk_type),
+      label: '数据盘',
+      field: 'spec.data_disk',
+      width: 150,
+      render: ({ cell, row }: { cell: any; row: any }) => (
+        <CvmDataDiskDisplay dataDiskList={cell} diskType={row.spec.disk_type} diskSize={row.spec.disk_size} />
+      ),
     },
     {
       label: '备注',
@@ -355,17 +361,20 @@ export default (type: string, isSimpleShow = false) => {
       isDefaultShow: true,
     },
     {
-      label: '数据盘(G)',
-      field: 'spec.disk_size',
-      minWidth: 90,
+      label: '系统盘',
+      field: 'spec.system_disk',
+      width: 130,
       isDefaultShow: true,
+      render: ({ cell }: { cell: ICvmSystemDisk }) => <CvmSystemDiskDisplay systemDisk={cell} />,
     },
     {
-      label: '数据盘类型',
-      field: 'spec.disk_type',
-      minWidth: 110,
-      render: ({ row }: any) => getDiskTypesName(row.spec.disk_type),
+      label: '数据盘',
+      field: 'spec.data_disk',
+      width: 150,
       isDefaultShow: true,
+      render: ({ cell, row }: { cell: any; row: any }) => (
+        <CvmDataDiskDisplay dataDiskList={cell} diskType={row.spec.disk_type} diskSize={row.spec.disk_size} />
+      ),
     },
     {
       label: '私有网络',
@@ -2884,20 +2893,13 @@ export default (type: string, isSimpleShow = false) => {
 
   // CVM虚拟机 - CVM生产
   const cvmProduceColumns = [
-    {
-      type: 'expand',
-    },
-    {
-      label: '单号',
-      field: 'order_id',
-      width: 60,
-    },
+    { type: 'expand', width: 40, minWidth: 40, showOverflowTooltip: false },
+    { label: '单号', field: 'order_id', width: 60 },
     {
       label: '云梯单号',
       field: 'task_id',
-      showOverflowTooltip: () => ({
-        theme: 'light',
-      }),
+      width: 210,
+      showOverflowTooltip: () => ({ theme: 'light' }),
       render: ({ row }: any) => {
         if (row.task_id)
           return (
@@ -2943,43 +2945,29 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '状态描述',
       field: 'message',
-      showOverflowTooltip: true,
+      width: 120,
     },
     {
       label: '地域',
       field: 'spec.region',
+      width: 120,
       render: ({ row }: any) => getRegionCn(row.spec.region),
     },
     {
       label: '园区',
       field: 'spec.zone',
+      width: 150,
       render: ({ row }: any) => getZoneCn(row.spec.zone),
     },
     {
       label: '机型',
       field: 'spec.device_type',
-    },
-    {
-      label: '生产情况-待交付',
-      field: 'pending_num',
-      width: 150,
-    },
-    {
-      label: '生产情况-失败',
-      field: 'failed_num',
-      width: 150,
-      render: ({ row }: any) => <span class={cssModule['c-danger']}>{row.failed_num}</span>,
-    },
-    {
-      label: '生产情况-总数',
-      field: 'total_num',
-      width: 150,
+      width: 120,
     },
     {
       label: '创建人',
       field: 'bk_username',
       width: 100,
-      showOverflowTooltip: true,
     },
     {
       label: '创建时间',
@@ -2999,7 +2987,25 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '备注',
       field: 'remark',
-      showOverflowTooltip: true,
+    },
+    {
+      label: '生产情况-待交付',
+      field: 'pending_num',
+      width: 130,
+      fixed: 'right',
+    },
+    {
+      label: '生产情况-失败',
+      field: 'failed_num',
+      width: 120,
+      fixed: 'right',
+      render: ({ row }: any) => <span class={cssModule['c-danger']}>{row.failed_num}</span>,
+    },
+    {
+      label: '生产情况-总数',
+      field: 'total_num',
+      width: 120,
+      fixed: 'right',
     },
   ];
 

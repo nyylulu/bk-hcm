@@ -1,6 +1,6 @@
 import { defineComponent, ref, watch } from 'vue';
 import { Sideslider, Table } from 'bkui-vue';
-import { useFieldVal } from '@/components/property-list/field-map';
+import { useFieldVal } from '@/views/ziyanScr/cvm-produce/component/property-display/field-map';
 import { timeFormatter } from '@/common/util';
 import http from '@/http';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
@@ -25,7 +25,7 @@ export default defineComponent({
   emits: ['update:modelValue'],
   setup(props, { attrs, emit }) {
     // 需要跟后端、产品确定哪些字段不展示
-    const FIELD_BLACK_LIST = ['replicas'];
+    const FIELD_BLACK_LIST = ['replicas', 'disk_size', 'disk_type'];
 
     const { getBusinessApiPath } = useWhereAmI();
     const { getFieldCn, getFieldCnVal } = useFieldVal();
@@ -80,7 +80,7 @@ export default defineComponent({
         field: 'prev',
         align: 'left',
         render: ({ row }: any) => {
-          return <span>{getFieldCnVal(row.key, row.prev)}</span>;
+          return <span>{getFieldCnVal(row.key, row.prev, row.prevRow)}</span>;
         },
       },
       {
@@ -88,18 +88,20 @@ export default defineComponent({
         field: 'cur',
         align: 'left',
         render: ({ row }: any) => {
-          return <span>{getFieldCnVal(row.key, row.cur)}</span>;
+          return <span>{getFieldCnVal(row.key, row.cur, row.curRow)}</span>;
         },
       },
     ];
-    const handleDetail = (detail: any) => {
-      return Object.keys(detail?.cur_data).reduce((prev, cur) => {
+    const handleDetail = (details: any) => {
+      return Object.keys(details?.cur_data).reduce((prev, cur) => {
         if (!FIELD_BLACK_LIST.includes(cur)) {
           const obj = {
             key: cur,
-            prev: detail.pre_data[cur],
-            cur: detail.cur_data[cur],
-            hasChange: detail.pre_data[cur] !== detail.cur_data[cur],
+            prev: details.pre_data[cur],
+            cur: details.cur_data[cur],
+            hasChange: details.pre_data[cur] !== details.cur_data[cur],
+            prevRow: details.pre_data,
+            curRow: details.cur_data,
           };
           prev.push(obj);
         }
@@ -113,7 +115,7 @@ export default defineComponent({
         { suborder_id: [props.showObj.suborderId] },
       );
       const list = res.data?.info || [];
-      list.forEach((item) => {
+      list.forEach((item: any) => {
         item.detailList = handleDetail(item.details);
       });
       recordList.value = list;
@@ -145,7 +147,7 @@ export default defineComponent({
               </div>
               <Table data={recordList.value} columns={recordColumns}>
                 {{
-                  expandRow: (row) => (
+                  expandRow: (row: any) => (
                     <div class='record-expand'>
                       <Table data={row.detailList} columns={expandRowTable}></Table>
                     </div>

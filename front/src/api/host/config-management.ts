@@ -29,20 +29,3 @@ export const getZones = ({ vendor, params }, config) => {
     ...config,
   });
 };
-
-// {
-//   filter: [
-//     'AND',
-//     ['enable', '=', filter.enable],
-//     ['region', 'in', filter.region],
-//     ['zone', 'in', filter.zone],
-//     ['vpc_id', 'contains', filter.vpcId],
-//     ['vpc_name', 'contains', filter.vpcName],
-//     ['subnet_id', 'contains', filter.subnetId],
-//     ['subnet_name', 'contains', filter.subnetName],
-//   ],
-//   page,
-// }
-export const getSubnetConfigs = (params) => {
-  return http.post(getEntirePath('config/findmany/config/cvm/subnet/list'), params);
-};

@@ -4,14 +4,18 @@ import { useI18n } from 'vue-i18n';
 import { useUserStore } from '@/store';
 import useCvmChargeType from '@/views/ziyanScr/hooks/use-cvm-charge-type';
 import usePlanDeviceType from '@/views/ziyanScr/hostApplication/plan/usePlanDeviceType';
-import { CLOUD_CVM_DISKTYPE, VendorEnum } from '@/common/constant';
+import { useItDeviceType } from './use-it-device-type';
+import { VendorEnum } from '@/common/constant';
 import { CvmDeviceType } from '@/views/ziyanScr/components/devicetype-selector/types';
 import { ICvmDeviceDetailItem } from '@/typings/ziyanScr';
+import { ICvmDataDisk } from '@/views/ziyanScr/components/cvm-data-disk/typings';
+import { ICvmSystemDisk } from '@/views/ziyanScr/components/cvm-system-disk/typings';
 import http from '@/http';
 
 import { Message } from 'bkui-vue';
 import { HelpFill } from 'bkui-vue/lib/icon';
-import panel from '@/components/panel';
+import Panel from '@/components/panel';
+import AccountSelector from '@/components/account-selector/index-new.vue';
 import AreaSelector from '@/views/ziyanScr/hostApplication/components/AreaSelector';
 import ZoneTagSelector from '@/components/zone-tag-selector/index.vue';
 import PlanLinkAlert from '@/views/ziyanScr/hostApplication/plan/plan-link-alert.vue';
@@ -23,7 +27,8 @@ import ChargeTypeSelector from './children/charge-type-selector.vue';
 import NetworkInfoCollapsePanel from '@/views/ziyanScr/hostApplication/components/network-info-collapse-panel/index.vue';
 import CvmDevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/cvm-devicetype-selector.vue';
 import FormCvmImageSelector from '@/views/ziyanScr/components/ostype-selector/form-cvm-image-selector.vue';
-import DiskTypeSelect from '@/views/ziyanScr/hostApplication/components/DiskTypeSelect';
+import CvmSystemDisk from '@/views/ziyanScr/components/cvm-system-disk/form.vue';
+import CvmDataDisk from '@/views/ziyanScr/components/cvm-data-disk/form.vue';
 import CvmMaxCapacity from '@/views/ziyanScr/components/cvm-max-capacity/index.vue';
 import ModalFooter from '@/components/modal/modal-footer.vue';
 
@@ -52,8 +57,8 @@ const getDefaultModel = () => {
       subnet: '',
       device_type: deviceType || '',
       image_id: '',
-      disk_type: CLOUD_CVM_DISKTYPE.PREMIUM,
-      disk_size: 0,
+      system_disk: { disk_type: undefined, disk_size: 0, disk_num: 1 } as ICvmSystemDisk,
+      data_disk: [] as ICvmDataDisk[],
     },
     bk_asset_id: '',
     replicas: 1,
@@ -160,6 +165,16 @@ const handleDeviceTypeChange = (result: {
   chargeMonthsDisabledState.value = result?.chargeMonthsDisabledState;
 };
 
+const currentSpecDeviceType = computed(() => formModel.spec.device_type);
+const { currentCloudInstanceConfig, ziyanAccountId, isItDeviceType } = useItDeviceType(
+  false,
+  currentSpecDeviceType,
+  () => {
+    const { region, zone, charge_type: chargeType } = formModel.spec;
+    return { region, zone, chargeType };
+  },
+);
+
 // 需求数量
 const cvmMaxCapacityQueryParams = computed(() => {
   const { require_type } = formModel;
@@ -182,6 +197,24 @@ const formRules = {
     {
       validator: (value: string) => (formModel.spec.vpc ? !!value : true),
       message: t('选择 VPC 后必须选择子网'),
+      trigger: 'change',
+    },
+  ],
+  'spec.system_disk': [
+    {
+      validator: (value: ICvmSystemDisk) => !!value.disk_type,
+      message: '请选择系统盘类型',
+      trigger: 'change',
+      required: true,
+    },
+  ],
+  'spec.data_disk': [
+    {
+      validator: (value: ICvmDataDisk[]) => {
+        if (value.length === 0) return true;
+        return value.every((item) => item.disk_type && item.disk_size && item.disk_num);
+      },
+      message: '数据盘信息不能为空',
       trigger: 'change',
     },
   ],
@@ -217,6 +250,14 @@ watchEffect(() => {
       <!-- 基本信息 -->
       <panel :title="t('基本信息')" class="mb12">
         <div class="form-controls-row">
+          <bk-form-item :label="t('云账号')">
+            <account-selector
+              :model-value="ziyanAccountId"
+              :vendor="VendorEnum.ZIYAN"
+              disabled
+              class="form-controls-item small"
+            />
+          </bk-form-item>
           <bk-form-item :label="t('业务')" required>{{ t('资源运营服务') }}</bk-form-item>
           <bk-form-item :label="t('模块')" required>{{ t('SA云化池') }}</bk-form-item>
         </div>
@@ -233,6 +274,7 @@ watchEffect(() => {
             class="form-controls-item"
             v-model="formModel.spec.region"
             :params="{ resourceType: 'QCLOUDCVM' }"
+            :popover-options="{ boundary: 'parent' }"
             @change="handleRegionChange"
           />
         </bk-form-item>
@@ -328,6 +370,7 @@ watchEffect(() => {
             :disabled="!formModel.spec.zone"
             :is-loading="isPlanedDeviceTypeLoading"
             :placeholder="!formModel.spec.zone ? t('请选择可用区') : t('请选择机型')"
+            :popover-options="{ boundary: 'parent' }"
             @change="handleDeviceTypeChange"
           />
         </bk-form-item>
@@ -337,19 +380,34 @@ watchEffect(() => {
             v-model="formModel.spec.image_id"
             :region="[formModel.spec.region]"
             :disabled="!formModel.spec.region"
+            :popover-options="{ boundary: 'parent' }"
           />
         </bk-form-item>
-        <bk-form-item :label="t('数据盘')">
-          <div class="form-controls-item flex-row align-items-center">
-            <disk-type-select class="disk-type" v-model="formModel.spec.disk_type" />
-            <hcm-form-number v-model="formModel.spec.disk_size" :prefix="t('大小')" suffix="GB" :min="0" :max="16000" />
-            <help-fill class="ml4 cursor" v-bk-tooltips="t('最大为 16T(16000 G)，且必须为 10 的倍数')" />
-          </div>
-          <bk-alert
-            v-if="CLOUD_CVM_DISKTYPE.SSD === formModel.spec.disk_type"
-            class="mt4"
-            theme="warning"
-            :title="t('SSD 云硬盘的运营成本约为高性能云盘的 4 倍，请合理评估使用。')"
+        <bk-form-item required property="spec.system_disk">
+          <template #label>
+            系统盘
+            <i
+              class="hcm-icon bkhcm-icon-prompt text-gray cursor ml4"
+              v-bk-tooltips="{ content: '系统盘大小范围为50G-1000G' }"
+            />
+          </template>
+          <cvm-system-disk
+            v-model="formModel.spec.system_disk"
+            :is-it-device-type="isItDeviceType"
+            :current-cloud-instance-config="currentCloudInstanceConfig"
+          />
+        </bk-form-item>
+        <bk-form-item property="spec.data_disk">
+          <template #label>
+            数据盘
+            <i
+              class="hcm-icon bkhcm-icon-prompt text-gray cursor ml4"
+              v-bk-tooltips="{ content: '数据盘大小范围为20G-32000G，且为10的倍数' }"
+            />
+          </template>
+          <cvm-data-disk
+            v-model="formModel.spec.data_disk"
+            :current-cloud-instance-config="currentCloudInstanceConfig"
           />
         </bk-form-item>
         <bk-form-item :label="t('需求数量')" required property="replicas">
@@ -404,6 +462,10 @@ watchEffect(() => {
   :deep(.cvm-vpc-selector),
   :deep(.cvm-subnet-selector) {
     width: 600px;
+
+    &.small {
+      width: 300px;
+    }
   }
 
   .plan-link-alert {

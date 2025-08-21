@@ -1,21 +1,16 @@
-import { getDiskTypesName, getImageName, getNetworkTypeCn } from '../../transform';
+import { h } from 'vue';
+import { ICvmSystemDisk } from '@/views/ziyanScr/components/cvm-system-disk/typings';
+import { getImageName, getNetworkTypeCn } from '../../transform';
 import { getRegionCn, getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
+
+import CvmSystemDiskDisplay from '@/views/ziyanScr/components/cvm-system-disk/display.vue';
+import CvmDataDiskDisplay from '@/views/ziyanScr/components/cvm-data-disk/display.vue';
+import { ICvmDataDisk } from '@/views/ziyanScr/components/cvm-data-disk/typings';
+
 export const imageId = Object.freeze({
   name: 'image_id',
   cn: '镜像',
   transformer: getImageName,
-});
-
-export const diskType = Object.freeze({
-  name: 'disk_type',
-  cn: '数据盘类型',
-  transformer: getDiskTypesName,
-});
-
-export const diskSize = Object.freeze({
-  name: 'disk_size',
-  cn: '数据盘大小',
-  suffix: 'G',
 });
 
 export const vpc = Object.freeze({
@@ -61,4 +56,17 @@ export const networkType = Object.freeze({
   name: 'network_type',
   cn: '网络类型',
   transformer: getNetworkTypeCn,
+});
+
+export const systemDisk = Object.freeze({
+  name: 'system_disk',
+  cn: '系统盘',
+  transformer: (systemDisk: ICvmSystemDisk) => h(CvmSystemDiskDisplay, { systemDisk }),
+});
+
+export const dataDisk = Object.freeze({
+  name: 'data_disk',
+  cn: '数据盘',
+  transformer: (dataDiskList: ICvmDataDisk[], row: any) =>
+    h(CvmDataDiskDisplay, { dataDiskList, diskType: row.disk_type, diskSize: row.disk_size }),
 });
