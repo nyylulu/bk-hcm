@@ -20,6 +20,7 @@ import (
 
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/pkg"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/criteria/validator"
@@ -819,7 +820,9 @@ type ResourceSpec struct {
 	// 被继承云主机实例ID
 	InheritInstanceId string `json:"inherit_instance_id" bson:"inherit_instance_id"`
 	// 分区生产时报错的可用区ID列表
-	FailedZoneIDs []string `json:"failed_zone_ids" bson:"failed_zone_ids"`
+	FailedZoneIDs []string          `json:"failed_zone_ids" bson:"failed_zone_ids"`
+	SystemDisk    enumor.DiskSpec   `json:"system_disk" bson:"system_disk"`
+	DataDisk      []enumor.DiskSpec `json:"data_disk" bson:"data_disk"`
 }
 
 // Validate whether ResourceSpec is valid
@@ -838,20 +841,9 @@ func (s *ResourceSpec) Validate(resType ResourceType) (errKey string, err error)
 		return "device_type", fmt.Errorf("device_type cannot be empty")
 	}
 
-	if s.DiskSize < 0 {
-		return "disk_size", fmt.Errorf("disk_size invalid value < 0")
-	}
-
-	diskLimit := int64(16000)
-	if s.DiskSize > diskLimit {
-		return "disk_size", fmt.Errorf("disk_size exceed limit %d", diskLimit)
-	}
-
-	// 规格为 10 的倍数
-	diskUnit := int64(10)
-	modDisk := s.DiskSize % diskUnit
-	if modDisk != 0 {
-		return "disk_size", fmt.Errorf("disk_size must be in multiples of %d", diskUnit)
+	// 磁盘校验
+	if errKey, err = s.ValidateDisk(); err != nil {
+		return errKey, err
 	}
 
 	switch resType {
@@ -871,6 +863,69 @@ func (s *ResourceSpec) Validate(resType ResourceType) (errKey string, err error)
 		if s.ChargeType == cvmapi.ChargeTypePrePaid && s.ChargeMonths < 1 {
 			return "charge_months", fmt.Errorf("charge_months invalid value < 1")
 		}
+	}
+
+	return "", nil
+}
+
+// ValidateDisk validate disk spec
+func (s *ResourceSpec) ValidateDisk() (string, error) {
+	// 兼容旧的数据盘校验
+	if len(s.DataDisk) == 0 {
+		if s.DiskSize < 0 {
+			return "disk_size", fmt.Errorf("disk_size invalid value < 0")
+		}
+
+		diskLimit := int64(constant.DataDiskMaxSize)
+		if s.DiskSize > diskLimit {
+			return "disk_size", fmt.Errorf("disk_size exceed limit %d", diskLimit)
+		}
+
+		// 规格为 10 的倍数
+		diskUnit := int64(constant.DataDiskMultiple)
+		modDisk := s.DiskSize % diskUnit
+		if modDisk != 0 {
+			return "disk_size", fmt.Errorf("disk_size must be in multiples of %d", diskUnit)
+		}
+	}
+
+	// 系统盘类型校验
+	if len(s.SystemDisk.DiskType) > 0 {
+		if err := s.SystemDisk.Validate(); err != nil {
+			return "system_disk", err
+		}
+		if s.SystemDisk.DiskSize < constant.SystemDiskMinSize || s.SystemDisk.DiskSize > constant.SystemDiskMaxSize {
+			return "system_disk.disk_size", fmt.Errorf("system_disk_size invalid value, must be in range [%d, %d]",
+				constant.SystemDiskMinSize, constant.SystemDiskMaxSize)
+		}
+		// 系统盘大小必须是50的倍数
+		if s.SystemDisk.DiskSize%constant.SystemDiskMultiple != 0 {
+			return "system_disk.disk_size", fmt.Errorf("system_disk_size must be a multiple of %d",
+				constant.SystemDiskMultiple)
+		}
+	}
+
+	// 数据盘类型校验
+	dataDiskTotalNum := uint(0)
+	for _, dd := range s.DataDisk {
+		if err := dd.Validate(); err != nil {
+			return "data_disk", err
+		}
+		if dd.DiskSize < constant.DataDiskMinSize || dd.DiskSize > constant.DataDiskMaxSize {
+			return "data_disk.disk_size", fmt.Errorf("data_disk_size invalid value, must be in range [%d, %d]",
+				constant.DataDiskMinSize, constant.DataDiskMaxSize)
+		}
+		// 数据盘大小必须是10的倍数
+		if dd.DiskSize%constant.DataDiskMultiple != 0 {
+			return "data_disk.disk_size", fmt.Errorf("data_disk_size must be a multiple of %d",
+				constant.DataDiskMultiple)
+		}
+		dataDiskTotalNum += dd.DiskNum
+	}
+	// 数据盘总数量不能超过20块
+	if dataDiskTotalNum < 0 || dataDiskTotalNum > constant.DataDiskTotalNum {
+		return "data_disk.disk_total_num", fmt.Errorf("data_disk_total_num invalid value, must be in range [0, %d]",
+			constant.DataDiskTotalNum)
 	}
 
 	return "", nil

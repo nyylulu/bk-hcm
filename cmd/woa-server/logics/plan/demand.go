@@ -2033,11 +2033,6 @@ func isDiffDemandMatch(key ResPlanPoolKeyV2, need VerifyResPlanElemV2) (bool, st
 		return true, ""
 	}
 
-	// 申请单中包含磁盘时，校验磁盘类型
-	if need.DiskSize > 0 && key.DiskType != need.DiskType {
-		return true, enumor.DiskTypeIsNotMatch.GenerateMsg(need.DiskType.Name(), key.DiskType.Name())
-	}
-
 	if key.DemandClass != need.DemandClass {
 		return true, enumor.DemandClassIsNotMatch.GenerateMsg(string(need.DemandClass), string(key.DemandClass))
 	}
