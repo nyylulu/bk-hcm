@@ -1788,7 +1788,32 @@ func (s *scheduler) GetMatchDevice(kit *kit.Kit, param *types.GetMatchDeviceReq)
 
 // MatchDevice execute resource apply match devices
 func (s *scheduler) MatchDevice(kt *kit.Kit, param *types.MatchDeviceReq) error {
-	if err := s.generator.MatchCVM(kt, param); err != nil {
+	// get order by suborder id
+	order, err := s.generator.GetApplyOrder(param.SuborderId)
+	if err != nil {
+		logs.Errorf("failed to match cvm when get apply order, err: %v, order id: %s, rid: %s", err, param.SuborderId,
+			kt.Rid)
+		return fmt.Errorf("failed to match cvm, err: %v, order id: %s", err, param.SuborderId)
+	}
+
+	// 获取实际生产成功的数量
+	deviceInfos, err := s.matcher.GetUnreleasedDevice(param.SuborderId)
+	if err != nil {
+		logs.Errorf("failed to get product device info, subOrderID: %s, err: %v, rid: %s",
+			param.SuborderId, err, kt.Rid)
+		return err
+	}
+
+	productSuccCount := len(deviceInfos)
+	// 手工匹配的数量 + 已生产的数量 不能大于 需要交付的总数量
+	if len(param.Device)+productSuccCount > int(order.TotalNum) {
+		logs.Errorf("match device && successfully generator amount exceeds origin requirement, subOrderID: %s, "+
+			"productNum: %d, TotalNum: %d, rid: %s", order.SubOrderId, productSuccCount, order.TotalNum, kt.Rid)
+		return fmt.Errorf("match device && successfully generator amount %d exceeds origin value %d",
+			len(param.Device)+productSuccCount, order.TotalNum)
+	}
+
+	if err = s.generator.MatchCVM(kt, param, order); err != nil {
 		logs.Errorf("failed to match devices, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}

@@ -1402,15 +1402,7 @@ func (g *Generator) getHostDetail(bizID int64, bkModuleIDs []int64, assetIds []s
 }
 
 // MatchCVM manual match cvm devices 手工匹配CVM
-func (g *Generator) MatchCVM(kt *kit.Kit, param *types.MatchDeviceReq) error {
-	// 1. get order by suborder id
-	order, err := g.GetApplyOrder(param.SuborderId)
-	if err != nil {
-		logs.Errorf("failed to match cvm when get apply order, err: %v, order id: %s, rid: %s", err, param.SuborderId,
-			kt.Rid)
-		return fmt.Errorf("failed to match cvm, err: %v, order id: %s", err, param.SuborderId)
-	}
-
+func (g *Generator) MatchCVM(kt *kit.Kit, param *types.MatchDeviceReq, order *types.ApplyOrder) error {
 	// cannot match device if its stage is not SUSPEND
 	if order.Stage != types.TicketStageSuspend {
 		logs.Errorf("cannot match device, for order %s stage %s != %s, rid: %s", order.SubOrderId, order.Stage,
@@ -1418,7 +1410,6 @@ func (g *Generator) MatchCVM(kt *kit.Kit, param *types.MatchDeviceReq) error {
 		return fmt.Errorf("cannot match device, for order %s stage %s != %s", order.SubOrderId, order.Stage,
 			types.TicketStageSuspend)
 	}
-
 	// 升降配暂不支持手工匹配
 	if order.ResourceType == types.ResourceTypeUpgradeCvm {
 		logs.Errorf("cannot match device, for order %s resource type is %s, rid: %s", order.SubOrderId,
@@ -1426,16 +1417,14 @@ func (g *Generator) MatchCVM(kt *kit.Kit, param *types.MatchDeviceReq) error {
 		return fmt.Errorf("cannot match device, for order %s resource type is %s", order.SubOrderId,
 			order.ResourceType)
 	}
-
 	// set apply order status MATCHING
-	if err = g.lockApplyOrder(order); err != nil {
+	if err := g.lockApplyOrder(order); err != nil {
 		logs.Errorf("failed to match cvm when lock apply order, err: %v, order id: %s, rid: %s", err, param.SuborderId,
 			kt.Rid)
 		return fmt.Errorf("failed to match cvm, err: %v, order id: %s", err, param.SuborderId)
 	}
 
 	replicas := uint(len(param.Device))
-
 	// 2. init generate record
 	generateId, err := g.initGenerateRecord(kt.Ctx, order.ResourceType, order.SubOrderId, replicas, true)
 	if err != nil {
@@ -1471,7 +1460,6 @@ func (g *Generator) MatchCVM(kt *kit.Kit, param *types.MatchDeviceReq) error {
 			deviceInfo.ZoneName = hostInfo.SubZone
 			deviceInfo.ZoneID, err = strconv.Atoi(hostInfo.SubZoneId)
 			if err != nil {
-				// 记录日志
 				logs.Warnf("failed to convert sub zone id %s to int, subOrderID: %s, err: %+v, rid: %s",
 					hostInfo.SubZoneId, order.SubOrderId, err, kt.Rid)
 			}
@@ -1486,7 +1474,6 @@ func (g *Generator) MatchCVM(kt *kit.Kit, param *types.MatchDeviceReq) error {
 		return fmt.Errorf("failed to update generated device, err: %v, order id: %s, rid: %s", err, order.SubOrderId,
 			kt.Rid)
 	}
-
 	// 4. update generate record status to success
 	msg := fmt.Sprintf("manually matched by %s successfully", param.Operator)
 	if err = g.UpdateGenerateRecord(context.Background(), order.ResourceType, generateId, types.GenerateStatusSuccess,
@@ -1495,7 +1482,6 @@ func (g *Generator) MatchCVM(kt *kit.Kit, param *types.MatchDeviceReq) error {
 			order.SubOrderId, kt.Rid)
 		return fmt.Errorf("failed to match cvm, err: %v, order id: %s", err, order.SubOrderId)
 	}
-
 	return nil
 }
 
