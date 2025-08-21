@@ -71,6 +71,7 @@ func (svc *certSvc) CreateTCloudZiyanCert(cts *rest.Contexts) (interface{}, erro
 		PublicKey:  req.PublicKey,
 		PrivateKey: req.PrivateKey,
 		Repeatable: true,
+		Tags:       req.Tags,
 	}
 	result, err := tcloud.CreateCert(cts.Kit, createOpt)
 	if err != nil {
