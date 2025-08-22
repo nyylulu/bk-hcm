@@ -178,7 +178,7 @@ export default (cond: Cond) => {
     if (cond.vendor === VendorEnum.HUAWEI) {
       saveData.subnet = {
         name: subnet.name,
-        gateway_ip: `${(subnet.ipv4_cidr.split('.').slice(0, 3)).join('.')}.1`,
+        gateway_ip: `${subnet.ipv4_cidr.split('.').slice(0, 3).join('.')}.1`,
         ipv4_cidr: formData.ipv4_cidr,
         ipv6_enable: subnet.ipv6_enable,
       };
@@ -202,7 +202,7 @@ export default (cond: Cond) => {
       };
     }
 
-    if(whereAmI.value === Senarios.resource) {
+    if (whereAmI.value === Senarios.resource) {
       delete saveData.bk_biz_id;
       delete saveData.bizId;
     }
@@ -228,7 +228,7 @@ export default (cond: Cond) => {
       if (isResourcePage) router.back();
       else {
         router.push({
-          path: '/business/applications/detail',
+          path: '/business/ticket/detail',
           query: { id: data.id },
         });
       }

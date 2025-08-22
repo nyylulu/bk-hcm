@@ -355,7 +355,7 @@ export default defineComponent({
           title='结果确认'
           confirmText='查看审批流程'
           onConfirm={() => {
-            const url = `/#/business/applications/detail?bizs=${accountStore.bizs}&type=security_group&id=${accountStore.securityConfirmMessage}&source=bpaas`;
+            const url = `/#/business/ticket/detail?bizs=${accountStore.bizs}&type=security_group&id=${accountStore.securityConfirmMessage}&source=bpaas`;
             window.open(url, '_blank');
             accountStore.updateSecurityConfirmMessage('');
           }}

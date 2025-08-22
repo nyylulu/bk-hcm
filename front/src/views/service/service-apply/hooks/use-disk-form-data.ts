@@ -179,7 +179,7 @@ export default (cond: Cond) => {
       if (isResourcePage) router.back();
       else {
         router.push({
-          path: '/business/applications/detail',
+          path: '/business/ticket/detail',
           query: { id: data.id },
         });
       }

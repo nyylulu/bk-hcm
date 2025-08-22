@@ -115,7 +115,7 @@ export default defineComponent({
     };
     const handleBpaasResultConfirm = () => {
       routerAction.open({
-        path: '/business/applications/detail',
+        path: '/business/ticket/detail',
         query: {
           [GLOBAL_BIZS_KEY]: accountStore.bizs,
           type: 'security_group',

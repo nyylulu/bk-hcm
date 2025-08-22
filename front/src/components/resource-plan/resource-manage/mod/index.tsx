@@ -193,7 +193,7 @@ export default defineComponent({
         theme: 'success',
       });
       router.push({
-        path: '/business/applications/resource-plan/detail',
+        path: '/business/ticket/resource-plan/detail',
         query: {
           id: data.id,
         },

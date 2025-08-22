@@ -34,7 +34,7 @@ import {
 } from '@/constants/clb';
 import { formatBillCost, getInstVip, formatBillRatio, formatBillRatioClass, formatBandwidth } from '@/utils';
 import { Spinner } from 'bkui-vue/lib/icon';
-import { APPLICATION_STATUS_MAP, APPLICATION_TYPE_MAP } from '@/views/service/apply-list/constants';
+import { APPLICATION_STATUS_MAP, APPLICATION_TYPE_MAP } from '@/views/ticket/constants';
 import dayjs from 'dayjs';
 import { BILLS_ROOT_ACCOUNT_SUMMARY_STATE_MAP, BILL_TYPE__MAP_HW, CURRENCY_MAP } from '@/constants';
 import { BILL_VENDORS_MAP, BILL_SITE_TYPES_MAP } from '@/views/bill/account/account-manage/constants';

@@ -108,7 +108,7 @@ export default defineComponent({
         });
         if (whereAmI.value === Senarios.business) {
           router.push({
-            path: '/business/applications/detail',
+            path: '/business/ticket/detail',
             query: { id: data.id },
           });
         } else {

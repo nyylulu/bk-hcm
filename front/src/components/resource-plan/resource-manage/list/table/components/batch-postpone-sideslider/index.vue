@@ -145,7 +145,7 @@ const handleConfirm = async () => {
   const { data } = await planStore.adjust_biz_resource_plan_demand({ adjusts: [info] });
   if (!data.id) return;
   router.push({
-    path: '/business/applications/resource-plan/detail',
+    path: '/business/ticket/resource-plan/detail',
     query: { id: data.id },
   });
 };

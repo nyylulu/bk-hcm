@@ -27,7 +27,7 @@ export default defineComponent({
         await validate();
         const data = await resourcePlanStore.createBizPlan(props.modelValue, props.modelValue.bk_biz_id);
         router.push({
-          path: '/business/applications/resource-plan/detail',
+          path: '/business/ticket/resource-plan/detail',
           query: {
             id: data.data.id,
             [GLOBAL_BIZS_KEY]: props.modelValue.bk_biz_id,

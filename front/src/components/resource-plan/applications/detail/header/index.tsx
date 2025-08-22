@@ -20,7 +20,7 @@ export default defineComponent({
     const route = useRoute();
 
     const handleClick = () => {
-      const path = props.isBiz ? '/business/applications' : '/service/my-apply';
+      const path = props.isBiz ? '/business/ticket' : '/service/my-apply';
       router.push({
         path,
         query: {

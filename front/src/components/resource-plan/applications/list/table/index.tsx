@@ -94,7 +94,7 @@ export default defineComponent({
     const handleToDetail = (data: IResourcesTicketItem) => {
       if (props.isBiz) {
         router.push({
-          path: '/business/applications/resource-plan/detail',
+          path: '/business/ticket/resource-plan/detail',
           query: { id: data.id, bizs: route.query[GLOBAL_BIZS_KEY] },
         });
       } else {

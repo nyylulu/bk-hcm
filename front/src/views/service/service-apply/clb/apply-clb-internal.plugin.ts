@@ -8,7 +8,7 @@ export const applyClbSuccessHandler = (isBusinessPage: boolean, goBack: () => vo
   if (isBusinessPage) {
     // 业务下购买CLB, 跳转至单据管理-负载均衡
     routerAction.redirect({
-      path: '/business/applications/detail',
+      path: '/business/ticket/detail',
       query: {
         [GLOBAL_BIZS_KEY]: bkBizId,
         type: 'load_balancer',
