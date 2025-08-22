@@ -311,8 +311,8 @@ func (cli *client) createLocalTargetGroupL7(kt *kit.Kit, opt *SyncListenerOption
 		TargetGroup: dataproto.TargetGroupBatchCreate[corelb.TCloudTargetGroupExtension]{
 			Name:            genTargetGroupNameL7(dbRule),
 			Vendor:          enumor.TCloud,
-			AccountID:       lb.AccountID,
-			BkBizID:         opt.BizID,
+			AccountID:       dbRule.AccountID,
+			BkBizID:         dbRule.BkBizID,
 			Protocol:        listener.GetProtocol(),
 			Port:            cvt.PtrToVal(listener.Port),
 			TargetGroupType: enumor.LocalTargetGroupType,

@@ -55,17 +55,9 @@ func (svc *lbSvc) BatchCreateTCloudUrlRule(cts *rest.Contexts) (any, error) {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	if req.BkBizID <= 0 {
-		return nil, errf.New(errf.InvalidParameter, "bk_biz_id is required")
-	}
-
-	if len(req.AccountID) == 0 {
-		return nil, errf.New(errf.InvalidParameter, "account_id is required")
-	}
-
 	ruleModels := make([]*tablelb.TCloudLbUrlRuleTable, 0, len(req.UrlRules))
 	for _, rule := range req.UrlRules {
-		ruleModel, err := svc.convRule(cts.Kit, rule, req.BkBizID, req.AccountID)
+		ruleModel, err := svc.convRule(cts.Kit, rule, rule.BkBizID, rule.AccountID)
 		if err != nil {
 			return nil, err
 		}
@@ -188,14 +180,6 @@ func (svc *lbSvc) BatchUpdateTCloudUrlRule(cts *rest.Contexts) (any, error) {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	if req.BkBizID <= 0 {
-		return nil, errf.New(errf.InvalidParameter, "bk_biz_id is required")
-	}
-
-	if len(req.AccountID) == 0 {
-		return nil, errf.New(errf.InvalidParameter, "account_id is required")
-	}
-
 	ruleIds := slice.Map(req.UrlRules, func(one *dataproto.TCloudUrlRuleUpdate) string { return one.ID })
 
 	healthCertMap, err := svc.listRuleHealthAndCert(cts.Kit, ruleIds)
@@ -218,8 +202,8 @@ func (svc *lbSvc) BatchUpdateTCloudUrlRule(cts *rest.Contexts) (any, error) {
 				SessionExpire:      converter.PtrToVal(rule.SessionExpire),
 				SessionType:        rule.SessionType,
 				Memo:               rule.Memo,
-				BkBizID:            req.BkBizID,
-				AccountID:          req.AccountID,
+				BkBizID:            rule.BkBizID,
+				AccountID:          rule.AccountID,
 				Reviser:            cts.Kit.User,
 			}
 

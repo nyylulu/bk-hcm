@@ -146,8 +146,6 @@ func createRel[T corelb.TargetGroupExtension](kt *kit.Kit, svc *lbSvc, txn *sqlx
 		rule := &tablelb.TCloudLbUrlRuleTable{
 			TargetGroupID:      tgID,
 			CloudTargetGroupID: tgID,
-			BkBizID:            tgReq.TargetGroup.BkBizID,
-			AccountID:          tgReq.TargetGroup.AccountID,
 			Reviser:            kt.User,
 		}
 		err := svc.dao.LoadBalancerTCloudUrlRule().UpdateByIDWithTx(kt, txn, tgReq.ListenerRuleID, rule)

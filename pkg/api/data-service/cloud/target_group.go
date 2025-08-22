@@ -283,8 +283,6 @@ type TargetGroupListenerRelCreateReq struct {
 	CloudLblID          string               `json:"cloud_lbl_id" validate:"required"`
 	BindingStatus       enumor.BindingStatus `json:"binding_status" validate:"omitempty"`
 	Detail              types.JsonField      `json:"detail" validate:"omitempty"`
-	BkBizID             int64                `json:"bk_biz_id" validate:"required"`
-	AccountID           string               `json:"account_id" validate:"required"`
 }
 
 // Validate 验证目标组与监听器关系接口的参数

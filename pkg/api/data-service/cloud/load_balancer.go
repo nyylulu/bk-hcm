@@ -239,9 +239,7 @@ type TCloudURLRuleListResult = core.ListResultT[corelb.TCloudLbUrlRule]
 
 // TCloudUrlRuleBatchCreateReq ...
 type TCloudUrlRuleBatchCreateReq struct {
-	BkBizID   int64                 `json:"bk_biz_id" validate:"required"`
-	AccountID string                `json:"account_id" validate:"required"`
-	UrlRules  []TCloudUrlRuleCreate `json:"url_rules" validate:"required,min=1"`
+	UrlRules []TCloudUrlRuleCreate `json:"url_rules" validate:"required,min=1"`
 }
 
 // Validate ...
@@ -275,6 +273,8 @@ type TCloudUrlRuleCreate struct {
 	HealthCheck        *corelb.TCloudHealthCheckInfo `json:"health_check" validate:"required"`
 	Certificate        *corelb.TCloudCertificateInfo `json:"certificate" validate:"required"`
 	Memo               *string                       `json:"memo" validate:"lte=255"`
+	BkBizID            int64                         `json:"bk_biz_id" validate:"required"`
+	AccountID          string                        `json:"account_id" validate:"required"`
 }
 
 // Validate ...
@@ -284,9 +284,7 @@ func (req *TCloudUrlRuleCreate) Validate() error {
 
 // TCloudUrlRuleBatchUpdateReq 批量更新url规则
 type TCloudUrlRuleBatchUpdateReq struct {
-	BkBizID   int64                  `json:"bk_biz_id" validate:"required"`
-	AccountID string                 `json:"account_id" validate:"required"`
-	UrlRules  []*TCloudUrlRuleUpdate `json:"url_rules" validate:"required,min=1,dive"`
+	UrlRules []*TCloudUrlRuleUpdate `json:"url_rules" validate:"required,min=1,dive"`
 }
 
 // Validate ...
@@ -313,6 +311,8 @@ type TCloudUrlRuleUpdate struct {
 	HealthCheck        *corelb.TCloudHealthCheckInfo `json:"health_check" validate:"omitempty"`
 	Certificate        *corelb.TCloudCertificateInfo `json:"certificate" validate:"omitempty"`
 	Memo               *string                       `json:"memo" validate:"omitempty,lte=255"`
+	BkBizID            int64                         `json:"bk_biz_id" validate:"required"`
+	AccountID          string                        `json:"account_id" validate:"required"`
 }
 
 // Validate ...
