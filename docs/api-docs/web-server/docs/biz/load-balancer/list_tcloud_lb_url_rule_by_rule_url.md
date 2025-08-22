@@ -2,7 +2,7 @@
 
 - 该接口提供版本：v9.9.9+。
 - 该接口所需权限：业务访问。
-- 该接口功能描述：查询URL规则。
+- 该接口功能描述： 根据负载均衡拓扑条件查询URL规则信息
 
 ### URL
 
@@ -26,6 +26,7 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/vendors/{vendor}/targets/by_rule_urls/list
 | rule_domains     | string array | 否  | 规则域名列表，长度限制500                                           |
 | rule_urls        | string array | 否  | 规则url列表，长度限制500                                          |
 | target_ips       | string array | 否  | rs ip列表，长度限制5000                                         |
+| target_ports     | int array    | 否  | rs port列表，长度限制500                                        |
 | page             |  object      | 是  | 分页设置                                                     |
 
 #### page
@@ -56,6 +57,7 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/vendors/{vendor}/targets/by_rule_urls/list
   "rule_domains": ["www.xxx.com"],
   "rule_urls": ["/xxx"],
   "target_ips": ["127.0.0.1"],
+  "target_ports": [8080],
   "page": {
     "count": false,
     "start": 0,
@@ -80,6 +82,7 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/vendors/{vendor}/targets/by_rule_urls/list
   "rule_domains": ["www.xxx.com"],
   "rule_urls": ["/xxx"],
   "target_ips": ["127.0.0.1"],
+  "target_ports": [8080],
   "page": {
     "count": true
   }
@@ -104,7 +107,7 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/vendors/{vendor}/targets/by_rule_urls/list
         "rule_url": "/xxx",
         "rule_domain": "www.xxx.com",
         "target_count": 1,
-        "targets": [
+        "listener": [
           {
             "id": "00000001",
             "name": "listener-name",
@@ -197,9 +200,9 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/vendors/{vendor}/targets/by_rule_urls/list
 | rule_url      | string       | 监听器的URL  |
 | rule_domain   | string array | 监听器的域名   | 
 | target_count  | int          | 监听器的RS数量 |
-| targets       | object array | 监听器详情列表  |
+| listener      | object array | 监听器详情列表  |
 
-#### data.details[n].targets[n]
+#### data.details[n].listener[n]
 
 | 参数名称                  | 参数类型   | 描述                             |
 |-----------------------|--------|--------------------------------|
