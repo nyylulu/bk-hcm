@@ -57,6 +57,7 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/vendors/{vendor}/targets/by_rule_urls/list
   "rule_domains": ["www.xxx.com"],
   "rule_urls": ["/xxx"],
   "target_ips": ["127.0.0.1"],
+  "target_ports": [8080],
   "page": {
     "count": false,
     "start": 0,
@@ -81,6 +82,7 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/vendors/{vendor}/targets/by_rule_urls/list
   "rule_domains": ["www.xxx.com"],
   "rule_urls": ["/xxx"],
   "target_ips": ["127.0.0.1"],
+  "target_ports": [8080],
   "page": {
     "count": true
   }
@@ -105,7 +107,7 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/vendors/{vendor}/targets/by_rule_urls/list
         "rule_url": "/xxx",
         "rule_domain": "www.xxx.com",
         "target_count": 1,
-        "targets": [
+        "listener": [
           {
             "id": "00000001",
             "name": "listener-name",
@@ -198,9 +200,9 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/vendors/{vendor}/targets/by_rule_urls/list
 | rule_url      | string       | 监听器的URL  |
 | rule_domain   | string array | 监听器的域名   | 
 | target_count  | int          | 监听器的RS数量 |
-| targets       | object array | 监听器详情列表  |
+| listener      | object array | 监听器详情列表  |
 
-#### data.details[n].targets[n]
+#### data.details[n].listener[n]
 
 | 参数名称                  | 参数类型   | 描述                             |
 |-----------------------|--------|--------------------------------|
