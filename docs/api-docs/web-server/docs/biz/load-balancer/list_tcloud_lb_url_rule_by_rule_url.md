@@ -2,7 +2,7 @@
 
 - 该接口提供版本：v9.9.9+。
 - 该接口所需权限：业务访问。
-- 该接口功能描述：查询URL规则。
+- 该接口功能描述： 根据负载均衡拓扑条件查询URL规则信息
 
 ### URL
 
@@ -26,6 +26,7 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/vendors/{vendor}/targets/by_rule_urls/list
 | rule_domains     | string array | 否  | 规则域名列表，长度限制500                                           |
 | rule_urls        | string array | 否  | 规则url列表，长度限制500                                          |
 | target_ips       | string array | 否  | rs ip列表，长度限制5000                                         |
+| target_ports     | int array    | 否  | rs port列表，长度限制500                                        |
 | page             |  object      | 是  | 分页设置                                                     |
 
 #### page
