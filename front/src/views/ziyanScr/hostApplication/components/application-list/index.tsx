@@ -1,7 +1,7 @@
 import { defineComponent, onMounted, ref, computed, watch, reactive } from 'vue';
 import './index.scss';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
-import { Button, Message, Table } from 'bkui-vue';
+import { Button, Message, Table, Sideslider } from 'bkui-vue';
 import { useTable } from '@/hooks/useTable/useTable';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { useRoute, useRouter } from 'vue-router';
@@ -294,7 +294,8 @@ export default defineComponent({
             width: 90,
             field: 'pending_num',
             render({ cell, data }: any) {
-              return cell ? (
+              const isUpgradeCvm = ScrResourceType.UPGRADECVM === data.resource_type;
+              return !isUpgradeCvm && cell > 0 ? (
                 <Button
                   theme='primary'
                   text
@@ -733,9 +734,9 @@ export default defineComponent({
           />
         </CommonDialog>
 
-        <CommonSideslider v-model:isShow={isMatchPanelShow.value} title='待匹配' width={1600} renderType='if'>
+        <Sideslider v-model:isShow={isMatchPanelShow.value} title='待匹配' width={1600} renderDirective='if'>
           <MatchPanel data={curRow.value} handleClose={() => (isMatchPanelShow.value = false)} />
-        </CommonSideslider>
+        </Sideslider>
       </div>
     );
   },
