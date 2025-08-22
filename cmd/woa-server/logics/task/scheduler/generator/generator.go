@@ -903,6 +903,7 @@ func (g *Generator) createDeviceInfo(kt *kit.Kit, order *types.ApplyOrder, gener
 			GenerateTaskId:   taskId,
 			GenerateTaskLink: cvmapi.CvmOrderLinkPrefix + taskId,
 			Deliverer:        "icr",
+			CloudRegion:      host.CloudRegion,
 			CloudZone:        host.CloudCampus, // 记录当前主机所在可用区
 		})
 		successIps = append(successIps, host.LanIp)

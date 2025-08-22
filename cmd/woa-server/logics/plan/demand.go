@@ -1629,21 +1629,43 @@ func (c *Controller) getApplyOrderConsumePoolMapV2(kt *kit.Kit, subOrders []*tas
 			return nil, err
 		}
 
-		for _, expendPlan := range subOrderInfo.PlanExpendGroup {
-			var planType enumor.PlanTypeCode
-			switch subOrderInfo.ResourceType {
-			case tasktypes.ResourceTypeUpgradeCvm:
-				// 升降配需要忽略预测内外
-				planType = ""
-			default:
-				planType, err = c.GetPlanTypeByChargeType(subOrderInfo.Spec.ChargeType)
-				if err != nil {
-					logs.Errorf("failed to get plan type by charge type, err: %v, subOrder: %+v, rid: %s", err,
-						*subOrderInfo, kt.Rid)
-					return nil, err
-				}
+		var planType enumor.PlanTypeCode
+		switch subOrderInfo.ResourceType {
+		case tasktypes.ResourceTypeUpgradeCvm:
+			// 升降配需要忽略预测内外
+			planType = ""
+		default:
+			planType, err = c.GetPlanTypeByChargeType(subOrderInfo.Spec.ChargeType)
+			if err != nil {
+				logs.Errorf("failed to get plan type by charge type, err: %v, subOrder: %+v, rid: %s", err,
+					*subOrderInfo, kt.Rid)
+				return nil, err
 			}
+		}
 
+		// 兼容历史单据，CVM申领单依然使用spec进行计算
+		if subOrderInfo.Spec != nil {
+			consumePoolKey := ResPlanPoolKeyV2{
+				PlanType:      planType,
+				AvailableTime: NewAvailableTime(demandYear, demandMonth),
+				DeviceType:    subOrderInfo.Spec.DeviceType,
+				ObsProject:    subOrderInfo.ObsProject,
+				BkBizID:       subOrderInfo.BkBizId,
+				DemandClass:   enumor.DemandClassCVM,
+				RegionID:      subOrderInfo.Spec.Region,
+				DiskType:      subOrderInfo.Spec.DiskType,
+			}
+			// 机房裁撤需要忽略预测内、预测外 --story=121848852
+			if subOrderInfo.RequireType == enumor.RequireTypeDissolve {
+				consumePoolKey.PlanType = ""
+			}
+			// 交付的核心数量(消耗预测CRP的核心数)
+			consumeCpuCore := int64(subOrderInfo.DeliveredCore)
+			orderConsumePoolMap[consumePoolKey] += consumeCpuCore
+			continue
+		}
+
+		for _, expendPlan := range subOrderInfo.PlanExpendGroup {
 			consumePoolKey := ResPlanPoolKeyV2{
 				PlanType:      planType,
 				AvailableTime: NewAvailableTime(demandYear, demandMonth),
@@ -1658,7 +1680,6 @@ func (c *Controller) getApplyOrderConsumePoolMapV2(kt *kit.Kit, subOrders []*tas
 			if subOrderInfo.RequireType == enumor.RequireTypeDissolve {
 				consumePoolKey.PlanType = ""
 			}
-
 			// 交付的核心数量(消耗预测CRP的核心数)
 			consumeCpuCore := expendPlan.CPUCore
 			orderConsumePoolMap[consumePoolKey] += consumeCpuCore

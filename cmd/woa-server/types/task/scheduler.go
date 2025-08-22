@@ -420,41 +420,42 @@ func (param *MatchPoolDeviceReq) Validate() (errKey string, err error) {
 
 // DeviceInfo device info
 type DeviceInfo struct {
-	OrderId           uint64             `json:"order_id" bson:"order_id"`
-	SubOrderId        string             `json:"suborder_id" bson:"suborder_id"`
-	GenerateId        uint64             `json:"generate_id" bson:"generate_id"`
-	BkBizId           int                `json:"bk_biz_id" bson:"bk_biz_id"`
-	User              string             `json:"bk_username" bson:"bk_username"`
-	BkHostId          int64              `json:"bk_host_id" bson:"bk_host_id"`
-	Ip                string             `json:"ip" bson:"ip"`
-	AssetId           string             `json:"asset_id" bson:"asset_id"`
-	InstanceID        string             `json:"instance_id" bson:"instance_id"`
-	RequireType       enumor.RequireType `json:"require_type" bson:"require_type"`
-	ResourceType      ResourceType       `json:"resource_type" bson:"resource_type"`
-	DeviceType        string             `json:"device_type" bson:"device_type"`
-	Description       string             `json:"description" bson:"description"`
-	Remark            string             `json:"remark" bson:"remark"`
-	ZoneName          string             `json:"zone_name" bson:"zone_name"`
-	ZoneID            int                `json:"zone_id" bson:"zone_id"`
-	CloudZone         string             `json:"cloud_zone" bson:"cloud_zone"`
-	CloudRegion       string             `json:"cloud_region" bson:"cloud_region"` // 云地域，目前仅升降配需要且赋值了该字段
-	ModuleName        string             `json:"module_name" bson:"module_name"`
-	Equipment         string             `json:"rack_id" bson:"rack_id"`
-	IsMatched         bool               `json:"is_matched" bson:"is_matched"`
-	IsChecked         bool               `json:"is_checked" bson:"is_checked"`
-	IsInited          bool               `json:"is_inited" bson:"is_inited"`
-	IsDiskChecked     bool               `json:"is_disk_checked" bson:"is_disk_checked"`
-	IsDelivered       bool               `json:"is_delivered" bson:"is_delivered"`
-	Deliverer         string             `json:"deliverer" bson:"deliverer"`
-	GenerateTaskId    string             `json:"generate_task_id" bson:"generate_task_id"`
-	GenerateTaskLink  string             `json:"generate_task_link" bson:"generate_task_link"`
-	InitTaskId        string             `json:"init_task_id" bson:"init_task_id"`
-	InitTaskLink      string             `json:"init_task_link" bson:"init_task_link"`
-	DiskCheckTaskId   string             `json:"disk_check_task_id" bson:"disk_check_task_id"`
-	DiskCheckTaskLink string             `json:"disk_check_task_link" bson:"disk_check_task_link"`
-	IsManualMatched   bool               `json:"is_manual_matched" bson:"is_manual_matched"` // 是否手工匹配
-	CreateAt          time.Time          `json:"create_at" bson:"create_at"`
-	UpdateAt          time.Time          `json:"update_at" bson:"update_at"`
+	OrderId      uint64             `json:"order_id" bson:"order_id"`
+	SubOrderId   string             `json:"suborder_id" bson:"suborder_id"`
+	GenerateId   uint64             `json:"generate_id" bson:"generate_id"`
+	BkBizId      int                `json:"bk_biz_id" bson:"bk_biz_id"`
+	User         string             `json:"bk_username" bson:"bk_username"`
+	BkHostId     int64              `json:"bk_host_id" bson:"bk_host_id"`
+	Ip           string             `json:"ip" bson:"ip"`
+	AssetId      string             `json:"asset_id" bson:"asset_id"`
+	InstanceID   string             `json:"instance_id" bson:"instance_id"`
+	RequireType  enumor.RequireType `json:"require_type" bson:"require_type"`
+	ResourceType ResourceType       `json:"resource_type" bson:"resource_type"`
+	DeviceType   string             `json:"device_type" bson:"device_type"`
+	Description  string             `json:"description" bson:"description"`
+	Remark       string             `json:"remark" bson:"remark"`
+	ZoneName     string             `json:"zone_name" bson:"zone_name"`
+	ZoneID       int                `json:"zone_id" bson:"zone_id"`
+	CloudZone    string             `json:"cloud_zone" bson:"cloud_zone"`
+	// CloudRegion TODO 仅升降配有该字段，CVM生产返回的数据中没有该字段，待排查原因；影响交付后预测用量的判断
+	CloudRegion       string    `json:"cloud_region" bson:"cloud_region"`
+	ModuleName        string    `json:"module_name" bson:"module_name"`
+	Equipment         string    `json:"rack_id" bson:"rack_id"`
+	IsMatched         bool      `json:"is_matched" bson:"is_matched"`
+	IsChecked         bool      `json:"is_checked" bson:"is_checked"`
+	IsInited          bool      `json:"is_inited" bson:"is_inited"`
+	IsDiskChecked     bool      `json:"is_disk_checked" bson:"is_disk_checked"`
+	IsDelivered       bool      `json:"is_delivered" bson:"is_delivered"`
+	Deliverer         string    `json:"deliverer" bson:"deliverer"`
+	GenerateTaskId    string    `json:"generate_task_id" bson:"generate_task_id"`
+	GenerateTaskLink  string    `json:"generate_task_link" bson:"generate_task_link"`
+	InitTaskId        string    `json:"init_task_id" bson:"init_task_id"`
+	InitTaskLink      string    `json:"init_task_link" bson:"init_task_link"`
+	DiskCheckTaskId   string    `json:"disk_check_task_id" bson:"disk_check_task_id"`
+	DiskCheckTaskLink string    `json:"disk_check_task_link" bson:"disk_check_task_link"`
+	IsManualMatched   bool      `json:"is_manual_matched" bson:"is_manual_matched"` // 是否手工匹配
+	CreateAt          time.Time `json:"create_at" bson:"create_at"`
+	UpdateAt          time.Time `json:"update_at" bson:"update_at"`
 }
 
 // ApplyTicket resource apply ticket
