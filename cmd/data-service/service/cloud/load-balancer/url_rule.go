@@ -57,7 +57,7 @@ func (svc *lbSvc) BatchCreateTCloudUrlRule(cts *rest.Contexts) (any, error) {
 
 	ruleModels := make([]*tablelb.TCloudLbUrlRuleTable, 0, len(req.UrlRules))
 	for _, rule := range req.UrlRules {
-		ruleModel, err := svc.convRule(cts.Kit, rule, rule.BkBizID, rule.AccountID)
+		ruleModel, err := svc.convRule(cts.Kit, rule)
 		if err != nil {
 			return nil, err
 		}
@@ -126,7 +126,7 @@ func (svc *lbSvc) convRuleRel(kt *kit.Kit, listenerRuleID string, rule dataproto
 	}
 }
 
-func (svc *lbSvc) convRule(kt *kit.Kit, rule dataproto.TCloudUrlRuleCreate, bkBizID int64, accountID string) (
+func (svc *lbSvc) convRule(kt *kit.Kit, rule dataproto.TCloudUrlRuleCreate) (
 	*tablelb.TCloudLbUrlRuleTable, error) {
 
 	ruleModel := &tablelb.TCloudLbUrlRuleTable{
@@ -146,8 +146,8 @@ func (svc *lbSvc) convRule(kt *kit.Kit, rule dataproto.TCloudUrlRuleCreate, bkBi
 		SessionType:        rule.SessionType,
 		SessionExpire:      rule.SessionExpire,
 		Memo:               rule.Memo,
-		BkBizID:            bkBizID,
-		AccountID:          accountID,
+		BkBizID:            rule.BkBizID,
+		AccountID:          rule.AccountID,
 
 		Creator: kt.User,
 		Reviser: kt.User,
