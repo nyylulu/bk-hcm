@@ -494,7 +494,7 @@ func (g *securityGroup) ZiyanSecurityGroupDisassociateLoadBalancer(cts *rest.Con
 	}
 
 	deleteReq := buildSGCommonRelDeleteReq(
-		enumor.TCloud, req.LbID, []string{req.SecurityGroupID}, enumor.LoadBalancerCloudResType)
+		enumor.TCloudZiyan, req.LbID, []string{req.SecurityGroupID}, enumor.LoadBalancerCloudResType)
 	if err = g.dataCli.Global.SGCommonRel.BatchDeleteSgCommonRels(cts.Kit, deleteReq); err != nil {
 		logs.Errorf("request dataservice tcloud delete security group lb rels failed, err: %v, req: %+v, rid: %s",
 			err, req, cts.Kit.Rid)
