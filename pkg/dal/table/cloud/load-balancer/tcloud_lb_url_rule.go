@@ -54,7 +54,7 @@ var TCloudLbUrlRuleColumnsDescriptor = utils.ColumnDescriptors{
 	{Column: "health_check", NamedC: "health_check", Type: enumor.Json},
 	{Column: "certificate", NamedC: "certificate", Type: enumor.Json},
 	{Column: "memo", NamedC: "memo", Type: enumor.String},
-	{Column: "bk_biz_id", NamedC: "bk_biz_id", Type: enumor.String},
+	{Column: "bk_biz_id", NamedC: "bk_biz_id", Type: enumor.Numeric},
 	{Column: "account_id", NamedC: "account_id", Type: enumor.String},
 
 	{Column: "creator", NamedC: "creator", Type: enumor.String},
