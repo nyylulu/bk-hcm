@@ -178,7 +178,7 @@ func bizURLRuleService(h *rest.Handler, svc *lbSvc) {
 		"/vendors/{vendor}/rules/target_group/bind", svc.BizUrlRuleBindTargetGroup)
 	h.Add("CreateBizUrlRuleWithoutBinding", http.MethodPost,
 		"/vendors/{vendor}/listeners/{lbl_id}/rule/create", svc.CreateBizUrlRuleWithoutBinding)
-	h.Add("ListUrlRulesByTopology", http.MethodPatch,
+	h.Add("ListUrlRulesByTopology", http.MethodPost,
 		"/vendors/{vendor}/targets/by_rule_urls/list", svc.ListUrlRulesByTopology)
 }
 
