@@ -68,19 +68,16 @@ func (svc *lbSvc) ListUrlRulesByTopology(cts *rest.Contexts) (any, error) {
 
 	filters, err := svc.buildUrlRuleQueryFilter(cts.Kit, bizID, req)
 	if err != nil {
-		logs.Errorf("build url rule query filter failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	urlRuleList, err := svc.queryUrlRulesByFilter(cts.Kit, vendor, filters, req.Page)
 	if err != nil {
-		logs.Errorf("query url rules by filter failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	result, err := svc.buildUrlRuleResponse(cts.Kit, urlRuleList)
 	if err != nil {
-		logs.Errorf("build url rule response failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -90,24 +87,27 @@ func (svc *lbSvc) ListUrlRulesByTopology(cts *rest.Contexts) (any, error) {
 // buildUrlRuleQueryFilter 构建URL规则查询条件
 func (svc *lbSvc) buildUrlRuleQueryFilter(kt *kit.Kit, bizID int64, req *cslb.ListUrlRulesByTopologyReq) (*filter.Expression, error) {
 
+	listenerIDs, err := svc.queryListenerIDsByConditions(kt, bizID, req)
+	if err != nil {
+		return nil, fmt.Errorf("query listener ids failed, err: %v", err)
+	}
+
+	if len(listenerIDs) == 0 {
+		return tools.ExpressionAnd(tools.RuleEqual("id", "nonexistent")), nil
+	}
+
 	conditions := []*filter.AtomRule{
-		tools.RuleEqual("bk_biz_id", bizID),
-		tools.RuleEqual("vendor", req.Vendor),
-		tools.RuleEqual("account_id", req.AccountID),
 		tools.RuleIn("rule_type", []string{string(enumor.Layer4RuleType), string(enumor.Layer7RuleType)}),
+		tools.RuleIn("lbl_id", listenerIDs),
 	}
 
-	if err := svc.addLoadBalancerConditions(kt, req, conditions); err != nil {
-		return nil, err
-	}
-
-	if err := svc.addListenerConditions(req, conditions); err != nil {
+	if err = svc.addLoadBalancerConditions(kt, req, conditions); err != nil {
 		return nil, err
 	}
 
 	svc.addRuleConditions(req, conditions)
 
-	if err := svc.addTargetConditions(kt, req, conditions); err != nil {
+	if err = svc.addTargetConditions(kt, req, conditions); err != nil {
 		return nil, err
 	}
 
@@ -140,24 +140,6 @@ func (svc *lbSvc) addLoadBalancerConditions(kt *kit.Kit, req *cslb.ListUrlRulesB
 		if len(lbIDs) > 0 {
 			conditions = append(conditions, tools.RuleIn("lb_id", lbIDs))
 		}
-	}
-
-	return nil
-}
-
-// addListenerConditions 添加监听器相关条件
-func (svc *lbSvc) addListenerConditions(req *cslb.ListUrlRulesByTopologyReq, conditions []*filter.AtomRule) error {
-
-	if len(req.LblProtocols) > 0 {
-		conditions = append(conditions, tools.RuleIn("protocol", req.LblProtocols))
-	}
-
-	if len(req.LblPorts) > 0 {
-		portStrs := make([]string, 0, len(req.LblPorts))
-		for _, port := range req.LblPorts {
-			portStrs = append(portStrs, fmt.Sprintf("%d", port))
-		}
-		conditions = append(conditions, tools.RuleIn("port", portStrs))
 	}
 
 	return nil
@@ -199,17 +181,40 @@ func (svc *lbSvc) queryLoadBalancerIDsByConditions(kt *kit.Kit, req *cslb.ListUr
 		tools.RuleEqual("account_id", req.AccountID),
 	}
 
-	if len(req.LbVips) > 0 {
-		lbConditions = append(lbConditions, tools.RuleIn("vip", req.LbVips))
-	}
-
 	if len(req.LbDomains) > 0 {
 		lbConditions = append(lbConditions, tools.RuleIn("domain", req.LbDomains))
 	}
 
-	lbFilter := tools.ExpressionAnd(lbConditions...)
+	if len(req.LbVips) > 0 {
+		vipConditions := []*filter.AtomRule{
+			tools.RuleJsonOverlaps("private_ipv4_addresses", req.LbVips),
+			tools.RuleJsonOverlaps("private_ipv6_addresses", req.LbVips),
+			tools.RuleJsonOverlaps("public_ipv4_addresses", req.LbVips),
+			tools.RuleJsonOverlaps("public_ipv6_addresses", req.LbVips),
+		}
+		vipOrFilter := tools.ExpressionOr(vipConditions...)
+
+		lbFilter, err := tools.And(tools.ExpressionAnd(lbConditions...), vipOrFilter)
+		if err != nil {
+			return nil, err
+		}
+		lbReq := &core.ListReq{
+			Filter: lbFilter,
+			Page:   core.NewDefaultBasePage(),
+		}
+
+		lbResp, err := svc.client.DataService().Global.LoadBalancer.ListLoadBalancer(kt, lbReq)
+		if err != nil {
+			return nil, err
+		}
+
+		lbIDs := extractLoadBalancerIDs(lbResp.Details)
+
+		return lbIDs, nil
+	}
+
 	lbReq := &core.ListReq{
-		Filter: lbFilter,
+		Filter: tools.ExpressionAnd(lbConditions...),
 		Page:   core.NewDefaultBasePage(),
 	}
 
@@ -218,19 +223,52 @@ func (svc *lbSvc) queryLoadBalancerIDsByConditions(kt *kit.Kit, req *cslb.ListUr
 		return nil, err
 	}
 
-	lbIDs := make([]string, 0, len(lbResp.Details))
-	for _, lb := range lbResp.Details {
-		lbIDs = append(lbIDs, lb.ID)
-	}
+	lbIDs := extractLoadBalancerIDs(lbResp.Details)
 
 	return lbIDs, nil
+}
+
+// queryListenerIDsByConditions 根据条件查询监听器ID
+func (svc *lbSvc) queryListenerIDsByConditions(kt *kit.Kit, bizID int64, req *cslb.ListUrlRulesByTopologyReq) ([]string, error) {
+
+	listenerConditions := []*filter.AtomRule{
+		tools.RuleEqual("account_id", req.AccountID),
+	}
+
+	if len(req.LblProtocols) > 0 {
+		listenerConditions = append(listenerConditions, tools.RuleIn("protocol", req.LblProtocols))
+	}
+
+	if len(req.LblPorts) > 0 {
+		portInt64s := convertIntSliceToInt64Slice(req.LblPorts)
+		listenerConditions = append(listenerConditions, tools.RuleIn("port", portInt64s))
+	}
+
+	listenerFilter := tools.ExpressionAnd(listenerConditions...)
+
+	listenerReq := &core.ListReq{
+		Filter: listenerFilter,
+		Page:   core.NewDefaultBasePage(),
+	}
+
+	listenerResp, err := svc.client.DataService().Global.LoadBalancer.ListListener(kt, listenerReq)
+	if err != nil {
+		return nil, err
+	}
+
+	listenerIDs := extractListenerIDs(listenerResp.Details)
+	for _, listener := range listenerResp.Details {
+		logs.Infof("queryListenerIDsByConditions: listener ID: %s, account_id: %s, bk_biz_id: %d",
+			listener.ID, listener.AccountID, listener.BkBizID)
+	}
+
+	return listenerIDs, nil
 }
 
 // queryTargetGroupIDsByTargetConditions 根据目标条件查询目标组ID
 func (svc *lbSvc) queryTargetGroupIDsByTargetConditions(kt *kit.Kit, req *cslb.ListUrlRulesByTopologyReq) ([]string, error) {
 
 	targetConditions := []*filter.AtomRule{
-		tools.RuleEqual("vendor", req.Vendor),
 		tools.RuleEqual("account_id", req.AccountID),
 	}
 
@@ -239,11 +277,8 @@ func (svc *lbSvc) queryTargetGroupIDsByTargetConditions(kt *kit.Kit, req *cslb.L
 	}
 
 	if len(req.TargetPorts) > 0 {
-		portStrs := make([]string, 0, len(req.TargetPorts))
-		for _, port := range req.TargetPorts {
-			portStrs = append(portStrs, fmt.Sprintf("%d", port))
-		}
-		targetConditions = append(targetConditions, tools.RuleIn("port", portStrs))
+		portInt64s := convertIntSliceToInt64Slice(req.TargetPorts)
+		targetConditions = append(targetConditions, tools.RuleIn("port", portInt64s))
 	}
 
 	targetFilter := tools.ExpressionAnd(targetConditions...)
@@ -479,15 +514,7 @@ func (svc *lbSvc) batchGetTargetCountByTargetGroupIDs(kt *kit.Kit, targetGroupID
 		return make(map[string]int), nil
 	}
 
-	targetGroupIDMap := make(map[string]struct{})
-	for _, id := range targetGroupIDs {
-		targetGroupIDMap[id] = struct{}{}
-	}
-
-	uniqueTargetGroupIDs := make([]string, 0, len(targetGroupIDMap))
-	for id := range targetGroupIDMap {
-		uniqueTargetGroupIDs = append(uniqueTargetGroupIDs, id)
-	}
+	uniqueTargetGroupIDs := removeDuplicates(targetGroupIDs)
 	targets, err := svc.getTargetByTGIDs(kt, uniqueTargetGroupIDs)
 	if err != nil {
 		return nil, fmt.Errorf("batch query targets failed, err: %v", err)
@@ -501,4 +528,56 @@ func (svc *lbSvc) batchGetTargetCountByTargetGroupIDs(kt *kit.Kit, targetGroupID
 	}
 
 	return targetCountMap, nil
+}
+
+// convertIntSliceToInt64Slice 将int切片转换为int64切片
+func convertIntSliceToInt64Slice(intSlice []int) []int64 {
+	if len(intSlice) == 0 {
+		return nil
+	}
+	int64Slice := make([]int64, len(intSlice))
+	for i, v := range intSlice {
+		int64Slice[i] = int64(v)
+	}
+	return int64Slice
+}
+
+// extractLoadBalancerIDs 从负载均衡器响应中提取ID列表
+func extractLoadBalancerIDs(items []corelb.BaseLoadBalancer) []string {
+	if len(items) == 0 {
+		return nil
+	}
+	ids := make([]string, 0, len(items))
+	for _, item := range items {
+		ids = append(ids, item.ID)
+	}
+	return ids
+}
+
+// extractListenerIDs 从监听器响应中提取ID列表
+func extractListenerIDs(items []corelb.BaseListener) []string {
+	if len(items) == 0 {
+		return nil
+	}
+	ids := make([]string, 0, len(items))
+	for _, item := range items {
+		ids = append(ids, item.ID)
+	}
+	return ids
+}
+
+// removeDuplicates 去除字符串切片中的重复元素
+func removeDuplicates(items []string) []string {
+	if len(items) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{})
+	result := make([]string, 0, len(items))
+	for _, item := range items {
+		if _, exists := seen[item]; !exists {
+			seen[item] = struct{}{}
+			result = append(result, item)
+		}
+	}
+	return result
 }
