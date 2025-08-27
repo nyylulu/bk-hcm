@@ -367,6 +367,7 @@ func (cli *client) updateLoadBalancer(kt *kit.Kit, accountID string, region stri
 	updateMap map[string]typeslb.TCloudClb) error {
 
 	if len(updateMap) == 0 {
+		logs.Infof("[%s] no lbs need to update, accountID: %s, rid: %s", enumor.TCloud, accountID, kt.Rid)
 		return nil
 	}
 	var cloudSubnetIDs, cloudVpcIds []string
@@ -387,11 +388,19 @@ func (cli *client) updateLoadBalancer(kt *kit.Kit, accountID string, region stri
 	for id, clb := range updateMap {
 		updateReq.Lbs = append(updateReq.Lbs, convCloudToDBUpdate(id, clb, vpcMap, subnetMap, region))
 	}
+
+	if len(updateReq.Lbs) == 0 {
+		logs.Warnf("[%s] lbs array is empty after conversion, accountID: %s, rid: %s", enumor.TCloud, accountID, kt.Rid)
+		return nil
+	}
+
 	if err := cli.dbCli.TCloud.LoadBalancer.BatchUpdate(kt, &updateReq); err != nil {
 		logs.Errorf("[%s] call data service to update tcloud load balancer failed, err: %v, rid: %s",
 			enumor.TCloud, err, kt.Rid)
 		return err
 	}
+
+	logs.Infof("[%s] sync lb to update lb success, accountID: %s, count: %d, rid: %s", enumor.TCloud, accountID, len(updateReq.Lbs), kt.Rid)
 	return nil
 }
 
@@ -489,6 +498,11 @@ func (cli *client) listLBFromDB(kt *kit.Kit, params *SyncBaseParams) ([]corelb.T
 }
 
 func (cli *client) updateLoadBalancerSyncTime(kt *kit.Kit, ids []string) error {
+	if len(ids) == 0 {
+		logs.Infof("[%s] no lbs need to update sync time, rid: %s", enumor.TCloud, kt.Rid)
+		return nil
+	}
+
 	var updateReq protocloud.TCloudClbBatchUpdateReq
 	syncTime := times.ConvStdTimeFormat(time.Now())
 
@@ -499,11 +513,19 @@ func (cli *client) updateLoadBalancerSyncTime(kt *kit.Kit, ids []string) error {
 		}
 		updateReq.Lbs = append(updateReq.Lbs, lb)
 	}
+
+	if len(updateReq.Lbs) == 0 {
+		logs.Warnf("[%s] lbs array is empty after conversion, rid: %s", enumor.TCloud, kt.Rid)
+		return nil
+	}
+
 	if err := cli.dbCli.TCloud.LoadBalancer.BatchUpdate(kt, &updateReq); err != nil {
 		logs.Errorf("[%s] call data service to update tcloud load balancer failed, err: %v, rid: %s",
 			enumor.TCloud, err, kt.Rid)
 		return err
 	}
+
+	logs.Infof("[%s] update load balancer sync time success, count: %d, rid: %s", enumor.TCloud, len(updateReq.Lbs), kt.Rid)
 	return nil
 }
 

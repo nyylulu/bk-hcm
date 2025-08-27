@@ -145,6 +145,11 @@ func (cli *client) LoadBalancer(kt *kit.Kit, params *SyncBaseParams, opt *SyncLB
 }
 
 func (cli *client) updateLoadBalancerSyncTime(kt *kit.Kit, ids []string) error {
+	if len(ids) == 0 {
+		logs.Infof("[%s] no lbs need to update sync time, rid: %s", enumor.TCloudZiyan, kt.Rid)
+		return nil
+	}
+
 	var updateReq protocloud.TCloudClbBatchUpdateReq
 	syncTime := times.ConvStdTimeFormat(time.Now())
 
@@ -155,11 +160,19 @@ func (cli *client) updateLoadBalancerSyncTime(kt *kit.Kit, ids []string) error {
 		}
 		updateReq.Lbs = append(updateReq.Lbs, lb)
 	}
+
+	if len(updateReq.Lbs) == 0 {
+		logs.Warnf("[%s] lbs array is empty after conversion, rid: %s", enumor.TCloudZiyan, kt.Rid)
+		return nil
+	}
+
 	if err := cli.dbCli.TCloudZiyan.LoadBalancer.BatchUpdate(kt, &updateReq); err != nil {
 		logs.Errorf("[%s] call data service to update tcloud load balancer failed, err: %v, rid: %s",
 			enumor.TCloud, err, kt.Rid)
 		return err
 	}
+
+	logs.Infof("[%s] update load balancer sync time success, count: %d, rid: %s", enumor.TCloudZiyan, len(updateReq.Lbs), kt.Rid)
 	return nil
 }
 
@@ -394,6 +407,7 @@ func (cli *client) updateLoadBalancer(kt *kit.Kit, accountID string, region stri
 	updateMap map[string]typeslb.TCloudClb) error {
 
 	if len(updateMap) == 0 {
+		logs.Infof("[%s] no lbs need to update, accountID: %s, rid: %s", enumor.TCloudZiyan, accountID, kt.Rid)
 		return nil
 	}
 	var cloudSubnetIDs, cloudVpcIds []string
@@ -416,11 +430,19 @@ func (cli *client) updateLoadBalancer(kt *kit.Kit, accountID string, region stri
 		logs.Infof("convCloudToDBUpdate, one: %+v, rid: %s", one, kt.Rid)
 		updateReq.Lbs = append(updateReq.Lbs, one)
 	}
+
+	if len(updateReq.Lbs) == 0 {
+		logs.Warnf("[%s] lbs array is empty after conversion, accountID: %s, rid: %s", enumor.TCloudZiyan, accountID, kt.Rid)
+		return nil
+	}
+
 	if err := cli.dbCli.TCloudZiyan.LoadBalancer.BatchUpdate(kt, &updateReq); err != nil {
 		logs.Errorf("[%s] call data service to update load balancer failed, err: %v, rid: %s",
 			enumor.TCloudZiyan, err, kt.Rid)
 		return err
 	}
+
+	logs.Infof("[%s] update load balancer success, count: %d, accountID: %s, rid: %s", enumor.TCloudZiyan, len(updateReq.Lbs), accountID, kt.Rid)
 	return nil
 }
 
