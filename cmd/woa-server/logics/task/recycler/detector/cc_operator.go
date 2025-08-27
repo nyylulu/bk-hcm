@@ -262,6 +262,8 @@ func (op *cmdbOperator) GetHostBaseInfoByID(kt *kit.Kit, hostIDs []int64) ([]cmd
 			"bk_bak_operator",
 			"srv_status",
 			"bk_svr_source_type_id",
+			"bk_cloud_region",
+			"bk_cloud_zone",
 		},
 		Page: cmdb.BasePage{
 			Start: 0,
