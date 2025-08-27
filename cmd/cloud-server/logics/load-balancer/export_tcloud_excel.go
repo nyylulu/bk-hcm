@@ -124,11 +124,11 @@ func (l *listenerExporter) getTCloudListenersByProtocol(kt *kit.Kit, lbIDs []str
 	result := make(map[string]loadbalancer.TCloudListener)
 
 	if len(lbIDs) != 0 {
+		req := core.ListReq{
+			Filter: tools.ExpressionAnd(tools.RuleIn("lb_id", lbIDs), tools.RuleIn("protocol", protocols)),
+			Page:   core.NewDefaultBasePage(),
+		}
 		for {
-			req := core.ListReq{
-				Filter: tools.ExpressionAnd(tools.RuleIn("lb_id", lbIDs), tools.RuleIn("protocol", protocols)),
-				Page:   core.NewDefaultBasePage(),
-			}
 			resp := &cloud.TCloudListenerListResult{}
 			var err error
 			switch l.vendor {
@@ -289,11 +289,11 @@ func (l *listenerExporter) getTCloudRulesByRuleType(kt *kit.Kit, lbIDs []string,
 	result := make(map[string]loadbalancer.TCloudLbUrlRule)
 
 	if len(lbIDs) != 0 {
+		req := core.ListReq{
+			Filter: tools.ExpressionAnd(tools.RuleIn("lb_id", lbIDs), tools.RuleEqual("rule_type", ruleType)),
+			Page:   core.NewDefaultBasePage(),
+		}
 		for {
-			req := core.ListReq{
-				Filter: tools.ExpressionAnd(tools.RuleIn("lb_id", lbIDs), tools.RuleEqual("rule_type", ruleType)),
-				Page:   core.NewDefaultBasePage(),
-			}
 			resp := &cloud.TCloudURLRuleListResult{}
 			var err error
 			switch l.vendor {
@@ -331,28 +331,36 @@ func (l *listenerExporter) getTCloudRulesByRuleType(kt *kit.Kit, lbIDs []string,
 			Filter: tools.ExpressionAnd(tools.RuleIn("lbl_id", lblIDs), tools.RuleEqual("rule_type", ruleType)),
 			Page:   core.NewDefaultBasePage(),
 		}
-		resp := &cloud.TCloudURLRuleListResult{}
-		var err error
-		switch l.vendor {
-		case enumor.TCloud:
-			resp, err = l.client.DataService().TCloud.LoadBalancer.ListUrlRule(kt, &req)
-			if err != nil {
-				logs.Errorf("get rule by listener id failed, err: %v, vendor: %s, req: %+v, rid: %s", err, l.vendor,
-					req, kt.Rid)
-				return nil, err
+		for {
+			resp := &cloud.TCloudURLRuleListResult{}
+			var err error
+			switch l.vendor {
+			case enumor.TCloud:
+				resp, err = l.client.DataService().TCloud.LoadBalancer.ListUrlRule(kt, &req)
+				if err != nil {
+					logs.Errorf("get rule by listener id failed, err: %v, vendor: %s, req: %+v, rid: %s", err, l.vendor,
+						req, kt.Rid)
+					return nil, err
+				}
+			case enumor.TCloudZiyan:
+				resp, err = l.client.DataService().TCloudZiyan.LoadBalancer.ListUrlRule(kt, &req)
+				if err != nil {
+					logs.Errorf("get rule by listener id failed, err: %v, vendor: %s, req: %+v, rid: %s", err, l.vendor,
+						req, kt.Rid)
+					return nil, err
+				}
+			default:
+				return nil, fmt.Errorf("not support vendor: %s", l.vendor)
 			}
-		case enumor.TCloudZiyan:
-			resp, err = l.client.DataService().TCloudZiyan.LoadBalancer.ListUrlRule(kt, &req)
-			if err != nil {
-				logs.Errorf("get rule by listener id failed, err: %v, vendor: %s, req: %+v, rid: %s", err, l.vendor,
-					req, kt.Rid)
-				return nil, err
+			for _, detail := range resp.Details {
+				result[detail.ID] = detail
 			}
-		default:
-			return nil, fmt.Errorf("not support vendor: %s", l.vendor)
-		}
-		for _, detail := range resp.Details {
-			result[detail.ID] = detail
+
+			if len(resp.Details) < int(core.DefaultMaxPageLimit) {
+				break
+			}
+
+			req.Page.Start += uint32(core.DefaultMaxPageLimit)
 		}
 	}
 
