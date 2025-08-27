@@ -1,4 +1,4 @@
-import { computed, defineComponent, ref, watch } from 'vue';
+import { computed, defineComponent, ref, watch, PropType, onMounted } from 'vue';
 // import components
 import { SearchSelect, Table, Input, Button, Form } from 'bkui-vue';
 import Empty from '@/components/empty';
@@ -13,12 +13,15 @@ import bus from '@/common/bus';
 import { getLocalFilterConditions } from '@/utils';
 import './index.scss';
 import { TargetGroupOperationScene } from '@/constants';
+import useTimeoutPoll from '@/hooks/use-timeout-poll';
+import { ValidateValuesFunc } from 'bkui-vue/lib/search-select/utils';
 
 const { FormItem } = Form;
 
 export default defineComponent({
   name: 'RsConfigTable',
   props: {
+    id: String,
     rsList: Array<any>,
     deletedRsList: Array<any>,
     accountId: String,
@@ -29,6 +32,9 @@ export default defineComponent({
     onlyShow: Boolean, // 只用于显示(基本信息页面使用)
     lbDetail: Object,
     loading: Boolean,
+    getTargetGroupDetail: {
+      type: Function as PropType<(...args: any) => any>,
+    },
   },
   emits: ['update:rsList', 'update:deletedRsList'],
   setup(props, { emit }) {
@@ -123,6 +129,14 @@ export default defineComponent({
         // 如果变更为ip+port, 则后端在cvm/list以及target_groups/detail接口中提供rs的「ip类型」字段或「统一的ip地址」字段, 前端处理起来会方便一点
         props.rsList.filter((item) => item.id !== id),
       );
+    };
+    const handleValidate: ValidateValuesFunc = async (item, values) => {
+      if (!item) return '请选择条件';
+      if (item.id === 'port') {
+        const port = parseInt(values[0].id, 10);
+        return port >= 1 && port <= 65535 ? true : '端口范围为1-65535';
+      }
+      return true;
     };
 
     const rsTableColumns = [
@@ -298,6 +312,18 @@ export default defineComponent({
       },
     );
 
+    onMounted(() => {
+      refresh.resume();
+    });
+
+    const refresh = useTimeoutPoll(
+      () => {
+        props.getTargetGroupDetail(props.id);
+      },
+      30000,
+      { max: 60 },
+    );
+
     const searchData = computed(() => {
       const tmpArr = [
         { id: 'private_ip_address', name: '内网IP' },
@@ -373,7 +399,12 @@ export default defineComponent({
           )}
           {props.noSearch ? null : (
             <div class='search-wrap'>
-              <SearchSelect class='table-search-select' v-model={searchValue.value} data={searchData.value} />
+              <SearchSelect
+                class='table-search-select'
+                v-model={searchValue.value}
+                data={searchData.value}
+                validateValues={handleValidate}
+              />
             </div>
           )}
         </div>

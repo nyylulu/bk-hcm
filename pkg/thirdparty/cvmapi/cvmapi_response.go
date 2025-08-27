@@ -111,11 +111,12 @@ type InstanceItem struct {
 	SecurityGroupId string                `json:"securityGroupId"`
 	ImageName       string                `json:"imageName"`
 	PrivateVpcId    string                `json:"privateVpcId"`
-	CloudRegion     string                `json:"cloudRegion"`
-	PrivateSubnetId string                `json:"privateSubnetId"`
-	CreateTime      string                `json:"createTime"`
-	Pool            int                   `json:"pool"`
-	ObsProject      string                `json:"obsProject"`
+	// TODO CRP返回该字段为空，需确认
+	CloudRegion     string `json:"cloudRegion"`
+	PrivateSubnetId string `json:"privateSubnetId"`
+	CreateTime      string `json:"createTime"`
+	Pool            int    `json:"pool"`
+	ObsProject      string `json:"obsProject"`
 }
 
 // PlanOrderChangeResp cvm plan order change response
@@ -574,6 +575,76 @@ type ReturnDetail struct {
 	// RetPlanMsg return plan and cost sharing remark
 	RetPlanMsg string `json:"returnPlanMessage"`
 	FinishTime string `json:"finishTime"`
+}
+
+// UpgradeDetailResp cvm upgrade order detail query response
+type UpgradeDetailResp struct {
+	RespMeta `json:",inline"`
+	Result   *UpgradeDetail `json:"result"`
+}
+
+// UpgradeDetail cvm upgrade order detail info
+type UpgradeDetail struct {
+	OrderID string `json:"orderId"`
+	// Status 订单状态：
+	// 0 - 部门管理员审批
+	// 1 - 规划经理审批 （免审流程不存在）
+	// 2 - 资源经理审批（免审流程不存在）
+	// 9 - 待确认执行
+	// 10 - 执行中
+	// 20 - 执行完成
+	// 127 - 驳回 （免审流程不存在）
+	// 128 - 订单失败
+	Status          enumor.CrpUpgradeOrderStatus `json:"status"`
+	StatusMsg       string                       `json:"statusMsg"`
+	InstanceCount   int                          `json:"instanceCount"`
+	BG              string                       `json:"bg"`
+	VirtualDeptID   int                          `json:"virtualDeptId"`
+	VirtualDept     string                       `json:"virtualDept"`
+	Region          string                       `json:"region"`
+	RegionName      string                       `json:"regionName"`
+	Creator         string                       `json:"creator"`
+	ProjectName     string                       `json:"projectName"`
+	Reason          string                       `json:"reason"`
+	CurrentApprover string                       `json:"currentApprover"`
+	CreateTime      string                       `json:"createTime"`
+	UpdateTime      string                       `json:"updateTime"`
+	FinishTime      string                       `json:"finishTime"`
+	AuditTime       string                       `json:"auditTime"`
+	DetailList      []UpgradeDetailInstance      `json:"detailList"`
+}
+
+// UpgradeDetailInstance cvm upgrade order detail instance
+type UpgradeDetailInstance struct {
+	// InstanceID 实例云上ID
+	InstanceID string `json:"instanceId"`
+	// InstanceAssetID 实例固资号
+	InstanceAssetID string `json:"instanceAssetId"`
+	Zone            string `json:"zone"`
+	ZoneName        string `json:"zoneName"`
+	// Status 实例状态
+	// WAITING - 待操作
+	// OPERATING - 操作中
+	// SUCCESS - 成功
+	// FAILED - 失败
+	Status             enumor.CrpUpgradeCVMStatus `json:"status"`
+	StatusDesc         string                     `json:"statusDesc"`
+	ReqID              string                     `json:"reqId"`
+	SourceInstanceType string                     `json:"sourceInstanceType"`
+	TargetInstanceType string                     `json:"targetInstanceType"`
+	ResetType          string                     `json:"resetType"`
+	CreateTime         string                     `json:"createTime"`
+	UpdateTime         string                     `json:"updateTime"`
+	FinishTime         string                     `json:"finishTime"`
+	CloudFinishTime    string                     `json:"cloudFinishTime"`
+	Business1ID        int                        `json:"business1Id"`
+	Business1Name      string                     `json:"business1Name"`
+	Business2ID        int                        `json:"business2Id"`
+	Business2Name      string                     `json:"business2Name"`
+	Business3ID        int                        `json:"business3Id"`
+	Business3Name      string                     `json:"business3Name"`
+	ProductID          int                        `json:"productId"`
+	ProductName        string                     `json:"productName"`
 }
 
 // GetCvmProcessResp get cvm process response

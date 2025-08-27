@@ -20,6 +20,7 @@ import (
 
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/pkg"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/criteria/validator"
@@ -31,35 +32,53 @@ import (
 
 // ApplyOrder resource apply order
 type ApplyOrder struct {
-	OrderId           uint64             `json:"order_id" bson:"order_id"`
-	SubOrderId        string             `json:"suborder_id" bson:"suborder_id"`
-	BkBizId           int64              `json:"bk_biz_id" bson:"bk_biz_id"`
-	User              string             `json:"bk_username" bson:"bk_username"`
-	Follower          []string           `json:"follower" bson:"follower"`
-	Auditor           string             `json:"auditor" bson:"auditor"`
-	RequireType       enumor.RequireType `json:"require_type" bson:"require_type"`
-	ExpectTime        string             `json:"expect_time" bson:"expect_time"`
-	ResourceType      ResourceType       `json:"resource_type" bson:"resource_type"`
-	Spec              *ResourceSpec      `json:"spec" bson:"spec"`
-	AntiAffinityLevel string             `json:"anti_affinity_level" bson:"anti_affinity_level"`
-	EnableDiskCheck   bool               `json:"enable_disk_check" bson:"enable_disk_check"`
-	Description       string             `json:"description" bson:"description"`
-	Remark            string             `json:"remark" bson:"remark"`
-	Stage             TicketStage        `json:"stage" bson:"stage"`
-	Status            ApplyStatus        `json:"status" bson:"status"`
-	OriginNum         uint               `json:"origin_num" bson:"origin_num"` // 原始需求总数量，不会修改
-	TotalNum          uint               `json:"total_num" bson:"total_num"`   // 需要交付的总数量，业务会修改
-	SuccessNum        uint               `json:"success_num" bson:"success_num"`
-	PendingNum        uint               `json:"pending_num" bson:"pending_num"`
+	OrderId      uint64             `json:"order_id" bson:"order_id"`
+	SubOrderId   string             `json:"suborder_id" bson:"suborder_id"`
+	BkBizId      int64              `json:"bk_biz_id" bson:"bk_biz_id"`
+	User         string             `json:"bk_username" bson:"bk_username"`
+	Follower     []string           `json:"follower" bson:"follower"`
+	Auditor      string             `json:"auditor" bson:"auditor"`
+	RequireType  enumor.RequireType `json:"require_type" bson:"require_type"`
+	ExpectTime   string             `json:"expect_time" bson:"expect_time"`
+	ResourceType ResourceType       `json:"resource_type" bson:"resource_type"`
+	Spec         *ResourceSpec      `json:"spec" bson:"spec"`
+	// UpgradeCVMList cvm升降配列表
+	UpgradeCVMList    []*UpgradeCVMSpec `json:"upgrade_cvm_list" bson:"upgrade_cvm_list"`
+	AntiAffinityLevel string            `json:"anti_affinity_level" bson:"anti_affinity_level"`
+	EnableDiskCheck   bool              `json:"enable_disk_check" bson:"enable_disk_check"`
+	Description       string            `json:"description" bson:"description"`
+	Remark            string            `json:"remark" bson:"remark"`
+	Stage             TicketStage       `json:"stage" bson:"stage"`
+	Status            ApplyStatus       `json:"status" bson:"status"`
+	OriginNum         uint              `json:"origin_num" bson:"origin_num"` // 原始需求总数量，不会修改
+	TotalNum          uint              `json:"total_num" bson:"total_num"`   // 需要交付的总数量，业务会修改
+	SuccessNum        uint              `json:"success_num" bson:"success_num"`
+	PendingNum        uint              `json:"pending_num" bson:"pending_num"`
 	// AppliedCore 注意：该字段目前只会记录虚拟机申请的核心数量
 	AppliedCore uint `json:"applied_core" bson:"applied_core,omitempty"`
 	// DeliveredCore 注意：该字段目前只会记录虚拟机交付的核心数量
-	DeliveredCore uint              `json:"delivered_core" bson:"delivered_core,omitempty"`
-	ObsProject    enumor.ObsProject `json:"obs_project" bson:"obs_project"`
-	RetryTime     uint              `json:"retry_time" bson:"retry_time"`
-	ModifyTime    uint              `json:"modify_time" bson:"modify_time"`
-	CreateAt      time.Time         `json:"create_at" bson:"create_at"`
-	UpdateAt      time.Time         `json:"update_at" bson:"update_at"`
+	DeliveredCore uint `json:"delivered_core" bson:"delivered_core,omitempty"`
+	// PlanExpendGroup 本单据对应的预测消耗记录，按机型、地域分组（同一单可能出现多种机型、地域）
+	PlanExpendGroup []PlanExpendGroup `json:"plan_expend_group" bson:"plan_expend_group"`
+	ObsProject      enumor.ObsProject `json:"obs_project" bson:"obs_project"`
+	RetryTime       uint              `json:"retry_time" bson:"retry_time"`
+	ModifyTime      uint              `json:"modify_time" bson:"modify_time"`
+	CreateAt        time.Time         `json:"create_at" bson:"create_at"`
+	UpdateAt        time.Time         `json:"update_at" bson:"update_at"`
+}
+
+// UpgradeCVMSpec cvm升降配规格
+type UpgradeCVMSpec struct {
+	InstanceID           string   `json:"instance_id" bson:"instance_id"`
+	PrivateIPv4Addresses []string `json:"private_ipv4_addresses" bson:"private_ipv4_addresses"`
+	PrivateIPv6Addresses []string `json:"private_ipv6_addresses" bson:"private_ipv6_addresses"`
+	BkAssetID            string   `json:"bk_asset_id" bson:"bk_asset_id"`
+	Operator             string   `json:"operator" bson:"operator"`               // 主负责人
+	BkBakOperator        string   `json:"bk_bak_operator" bson:"bk_bak_operator"` // 备份负责人
+	DeviceType           string   `json:"device_type" bson:"device_type"`
+	RegionID             string   `json:"region_id" bson:"region_id"`
+	ZoneID               string   `json:"zone_id" bson:"zone_id"`
+	TargetInstanceType   string   `json:"target_instance_type" bson:"target_instance_type"`
 }
 
 // ResourceType resource type
@@ -74,6 +93,8 @@ const (
 	ResourceTypePool        ResourceType = "POOL"
 	ResourceTypeOthers      ResourceType = "OTHERS"
 	ResourceTypeUnsupported ResourceType = "UNSUPPORTED"
+	// ResourceTypeUpgradeCvm cvm升降配
+	ResourceTypeUpgradeCvm ResourceType = "UPGRADECVM"
 
 	ApplyLimit = 1000
 )
@@ -84,6 +105,7 @@ var AllResourceType = []ResourceType{
 	ResourceTypeCvm,
 	ResourceTypeIdcDvm,
 	ResourceTypeQcloudDvm,
+	ResourceTypeUpgradeCvm,
 }
 
 // ApplyStatus apply status
@@ -398,39 +420,42 @@ func (param *MatchPoolDeviceReq) Validate() (errKey string, err error) {
 
 // DeviceInfo device info
 type DeviceInfo struct {
-	OrderId           uint64             `json:"order_id" bson:"order_id"`
-	SubOrderId        string             `json:"suborder_id" bson:"suborder_id"`
-	GenerateId        uint64             `json:"generate_id" bson:"generate_id"`
-	BkBizId           int                `json:"bk_biz_id" bson:"bk_biz_id"`
-	User              string             `json:"bk_username" bson:"bk_username"`
-	BkHostId          int64              `json:"bk_host_id" bson:"bk_host_id"`
-	Ip                string             `json:"ip" bson:"ip"`
-	AssetId           string             `json:"asset_id" bson:"asset_id"`
-	RequireType       enumor.RequireType `json:"require_type" bson:"require_type"`
-	ResourceType      ResourceType       `json:"resource_type" bson:"resource_type"`
-	DeviceType        string             `json:"device_type" bson:"device_type"`
-	Description       string             `json:"description" bson:"description"`
-	Remark            string             `json:"remark" bson:"remark"`
-	ZoneName          string             `json:"zone_name" bson:"zone_name"`
-	ZoneID            int                `json:"zone_id" bson:"zone_id"`
-	CloudZone         string             `json:"cloud_zone" bson:"cloud_zone"`
-	ModuleName        string             `json:"module_name" bson:"module_name"`
-	Equipment         string             `json:"rack_id" bson:"rack_id"`
-	IsMatched         bool               `json:"is_matched" bson:"is_matched"`
-	IsChecked         bool               `json:"is_checked" bson:"is_checked"`
-	IsInited          bool               `json:"is_inited" bson:"is_inited"`
-	IsDiskChecked     bool               `json:"is_disk_checked" bson:"is_disk_checked"`
-	IsDelivered       bool               `json:"is_delivered" bson:"is_delivered"`
-	Deliverer         string             `json:"deliverer" bson:"deliverer"`
-	GenerateTaskId    string             `json:"generate_task_id" bson:"generate_task_id"`
-	GenerateTaskLink  string             `json:"generate_task_link" bson:"generate_task_link"`
-	InitTaskId        string             `json:"init_task_id" bson:"init_task_id"`
-	InitTaskLink      string             `json:"init_task_link" bson:"init_task_link"`
-	DiskCheckTaskId   string             `json:"disk_check_task_id" bson:"disk_check_task_id"`
-	DiskCheckTaskLink string             `json:"disk_check_task_link" bson:"disk_check_task_link"`
-	IsManualMatched   bool               `json:"is_manual_matched" bson:"is_manual_matched"` // 是否手工匹配
-	CreateAt          time.Time          `json:"create_at" bson:"create_at"`
-	UpdateAt          time.Time          `json:"update_at" bson:"update_at"`
+	OrderId      uint64             `json:"order_id" bson:"order_id"`
+	SubOrderId   string             `json:"suborder_id" bson:"suborder_id"`
+	GenerateId   uint64             `json:"generate_id" bson:"generate_id"`
+	BkBizId      int                `json:"bk_biz_id" bson:"bk_biz_id"`
+	User         string             `json:"bk_username" bson:"bk_username"`
+	BkHostId     int64              `json:"bk_host_id" bson:"bk_host_id"`
+	Ip           string             `json:"ip" bson:"ip"`
+	AssetId      string             `json:"asset_id" bson:"asset_id"`
+	InstanceID   string             `json:"instance_id" bson:"instance_id"`
+	RequireType  enumor.RequireType `json:"require_type" bson:"require_type"`
+	ResourceType ResourceType       `json:"resource_type" bson:"resource_type"`
+	DeviceType   string             `json:"device_type" bson:"device_type"`
+	Description  string             `json:"description" bson:"description"`
+	Remark       string             `json:"remark" bson:"remark"`
+	ZoneName     string             `json:"zone_name" bson:"zone_name"`
+	ZoneID       int                `json:"zone_id" bson:"zone_id"`
+	CloudZone    string             `json:"cloud_zone" bson:"cloud_zone"`
+	// CloudRegion TODO 仅升降配有该字段，CVM生产返回的数据中没有该字段，待排查原因；影响交付后预测用量的判断
+	CloudRegion       string    `json:"cloud_region" bson:"cloud_region"`
+	ModuleName        string    `json:"module_name" bson:"module_name"`
+	Equipment         string    `json:"rack_id" bson:"rack_id"`
+	IsMatched         bool      `json:"is_matched" bson:"is_matched"`
+	IsChecked         bool      `json:"is_checked" bson:"is_checked"`
+	IsInited          bool      `json:"is_inited" bson:"is_inited"`
+	IsDiskChecked     bool      `json:"is_disk_checked" bson:"is_disk_checked"`
+	IsDelivered       bool      `json:"is_delivered" bson:"is_delivered"`
+	Deliverer         string    `json:"deliverer" bson:"deliverer"`
+	GenerateTaskId    string    `json:"generate_task_id" bson:"generate_task_id"`
+	GenerateTaskLink  string    `json:"generate_task_link" bson:"generate_task_link"`
+	InitTaskId        string    `json:"init_task_id" bson:"init_task_id"`
+	InitTaskLink      string    `json:"init_task_link" bson:"init_task_link"`
+	DiskCheckTaskId   string    `json:"disk_check_task_id" bson:"disk_check_task_id"`
+	DiskCheckTaskLink string    `json:"disk_check_task_link" bson:"disk_check_task_link"`
+	IsManualMatched   bool      `json:"is_manual_matched" bson:"is_manual_matched"` // 是否手工匹配
+	CreateAt          time.Time `json:"create_at" bson:"create_at"`
+	UpdateAt          time.Time `json:"update_at" bson:"update_at"`
 }
 
 // ApplyTicket resource apply ticket
@@ -735,6 +760,8 @@ type Suborder struct {
 	Remark            string        `json:"remark" bson:"remark"`
 	Spec              *ResourceSpec `json:"spec" bson:"spec"`
 	AppliedCore       uint          `json:"applied_core" bson:"applied_core,omitempty"`
+	// UpgradeCVMList cvm升降配列表
+	UpgradeCVMList []*UpgradeCVMSpec `json:"upgrade_cvm_list" bson:"upgrade_cvm_list"`
 }
 
 // Validate whether Suborder is valid
@@ -794,7 +821,9 @@ type ResourceSpec struct {
 	// 被继承云主机实例ID
 	InheritInstanceId string `json:"inherit_instance_id" bson:"inherit_instance_id"`
 	// 分区生产时报错的可用区ID列表
-	FailedZoneIDs []string `json:"failed_zone_ids" bson:"failed_zone_ids"`
+	FailedZoneIDs []string          `json:"failed_zone_ids" bson:"failed_zone_ids"`
+	SystemDisk    enumor.DiskSpec   `json:"system_disk" bson:"system_disk"`
+	DataDisk      []enumor.DiskSpec `json:"data_disk" bson:"data_disk"`
 }
 
 // Validate whether ResourceSpec is valid
@@ -813,20 +842,9 @@ func (s *ResourceSpec) Validate(resType ResourceType) (errKey string, err error)
 		return "device_type", fmt.Errorf("device_type cannot be empty")
 	}
 
-	if s.DiskSize < 0 {
-		return "disk_size", fmt.Errorf("disk_size invalid value < 0")
-	}
-
-	diskLimit := int64(16000)
-	if s.DiskSize > diskLimit {
-		return "disk_size", fmt.Errorf("disk_size exceed limit %d", diskLimit)
-	}
-
-	// 规格为 10 的倍数
-	diskUnit := int64(10)
-	modDisk := s.DiskSize % diskUnit
-	if modDisk != 0 {
-		return "disk_size", fmt.Errorf("disk_size must be in multiples of %d", diskUnit)
+	// 磁盘校验
+	if errKey, err = s.ValidateDisk(); err != nil {
+		return errKey, err
 	}
 
 	switch resType {
@@ -846,6 +864,69 @@ func (s *ResourceSpec) Validate(resType ResourceType) (errKey string, err error)
 		if s.ChargeType == cvmapi.ChargeTypePrePaid && s.ChargeMonths < 1 {
 			return "charge_months", fmt.Errorf("charge_months invalid value < 1")
 		}
+	}
+
+	return "", nil
+}
+
+// ValidateDisk validate disk spec
+func (s *ResourceSpec) ValidateDisk() (string, error) {
+	// 兼容旧的数据盘校验
+	if len(s.DataDisk) == 0 {
+		if s.DiskSize < 0 {
+			return "disk_size", fmt.Errorf("disk_size invalid value < 0")
+		}
+
+		diskLimit := int64(constant.DataDiskMaxSize)
+		if s.DiskSize > diskLimit {
+			return "disk_size", fmt.Errorf("disk_size exceed limit %d", diskLimit)
+		}
+
+		// 规格为 10 的倍数
+		diskUnit := int64(constant.DataDiskMultiple)
+		modDisk := s.DiskSize % diskUnit
+		if modDisk != 0 {
+			return "disk_size", fmt.Errorf("disk_size must be in multiples of %d", diskUnit)
+		}
+	}
+
+	// 系统盘类型校验
+	if len(s.SystemDisk.DiskType) > 0 {
+		if err := s.SystemDisk.Validate(); err != nil {
+			return "system_disk", err
+		}
+		if s.SystemDisk.DiskSize < constant.SystemDiskMinSize || s.SystemDisk.DiskSize > constant.SystemDiskMaxSize {
+			return "system_disk.disk_size", fmt.Errorf("system_disk_size invalid value, must be in range [%d, %d]",
+				constant.SystemDiskMinSize, constant.SystemDiskMaxSize)
+		}
+		// 系统盘大小必须是50的倍数
+		if s.SystemDisk.DiskSize%constant.SystemDiskMultiple != 0 {
+			return "system_disk.disk_size", fmt.Errorf("system_disk_size must be a multiple of %d",
+				constant.SystemDiskMultiple)
+		}
+	}
+
+	// 数据盘类型校验
+	dataDiskTotalNum := uint(0)
+	for _, dd := range s.DataDisk {
+		if err := dd.Validate(); err != nil {
+			return "data_disk", err
+		}
+		if dd.DiskSize < constant.DataDiskMinSize || dd.DiskSize > constant.DataDiskMaxSize {
+			return "data_disk.disk_size", fmt.Errorf("data_disk_size invalid value, must be in range [%d, %d]",
+				constant.DataDiskMinSize, constant.DataDiskMaxSize)
+		}
+		// 数据盘大小必须是10的倍数
+		if dd.DiskSize%constant.DataDiskMultiple != 0 {
+			return "data_disk.disk_size", fmt.Errorf("data_disk_size must be a multiple of %d",
+				constant.DataDiskMultiple)
+		}
+		dataDiskTotalNum += dd.DiskNum
+	}
+	// 数据盘总数量不能超过20块
+	if dataDiskTotalNum < 0 || dataDiskTotalNum > constant.DataDiskTotalNum {
+		return "data_disk.disk_total_num", fmt.Errorf("data_disk_total_num invalid value, must be in range [0, %d]",
+			constant.DataDiskTotalNum)
 	}
 
 	return "", nil

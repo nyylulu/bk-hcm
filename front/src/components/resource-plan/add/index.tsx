@@ -1,4 +1,4 @@
-import { defineComponent, type PropType, ref, watch, watchEffect } from 'vue';
+import { computed, defineComponent, type PropType, ref, watch, watchEffect } from 'vue';
 import { useResourcePlanStore } from '@/store';
 import CommonSideslider from '@/components/common-sideslider';
 import Basic from './basic';
@@ -33,6 +33,7 @@ export default defineComponent({
     initAddParams: {
       type: Object as PropType<Partial<IPlanTicketDemand>>,
     },
+    currentGlobalBusinessId: Number,
   },
 
   emits: ['update:isShow', 'update:modelValue', 'updateDemand', 'hidden'],
@@ -55,6 +56,7 @@ export default defineComponent({
 
     // 记录当前次编辑操作的原始数据，用于当前次操作场景的判断
     let currEditOriginPlanTicketDemand: IPlanTicketDemand;
+    const is931Business = computed(() => props.currentGlobalBusinessId === 931);
     const initData = async () => {
       resourceType.value =
         props.initDemand?.demand_res_types.length < 2 ? props.initDemand.demand_res_type.toLocaleLowerCase() : 'cvm';
@@ -168,6 +170,7 @@ export default defineComponent({
           v-model:resourceType={resourceType.value}
           type={props.isEdit ? adjustType.value : AdjustType.none}
           originPlanTicketDemand={currEditOriginPlanTicketDemand}
+          is931Business={is931Business.value}
           onDisableTypeChange={handleDisableTypeChange}
         />
         <CVM

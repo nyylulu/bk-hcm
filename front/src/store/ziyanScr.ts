@@ -16,10 +16,12 @@ import type {
   IApplyCrpTicketAudit,
   ITaskApplyRecordInitItem,
   IApplyOrderItem,
+  ICloudInstanceConfigItem,
 } from '@/typings/ziyanScr';
 import { transferSimpleConditions } from '@/utils/scr/simple-query-builder';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
 import rollRequest from '@blueking/roll-request';
+import { VendorEnum } from '@/common/constant';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 
@@ -273,6 +275,28 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
     }
   };
 
+  const queryCloudInstanceConfigLoading = ref(false);
+  const queryCloudInstanceConfig = async (params: {
+    account_id: string;
+    region: string;
+    filters?: {
+      name: 'zone' | 'instance-family' | 'instance-type' | 'instance-charge-type' | 'sort-keys';
+      values: string[];
+    }[];
+  }) => {
+    queryCloudInstanceConfigLoading.value = true;
+    try {
+      const res = await http.post(
+        `/api/v1/cloud/${getBusinessApiPath()}vendors/${VendorEnum.ZIYAN}/instances/config/query_from_cloud`,
+        params,
+      );
+      return (res.data?.details ?? []) as ICloudInstanceConfigItem[];
+    } catch (error) {
+    } finally {
+      queryCloudInstanceConfigLoading.value = false;
+    }
+  };
+
   return {
     listVpc,
     listSubnet,
@@ -307,5 +331,7 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
     getApplyOrderList,
     modifyApplyOrderLoading,
     modifyApplyOrder,
+    queryCloudInstanceConfigLoading,
+    queryCloudInstanceConfig,
   };
 });

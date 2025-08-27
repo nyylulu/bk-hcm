@@ -67,7 +67,7 @@ type Interface interface {
 		*types.PreviewRecycleOrderCpuRst, error)
 	// AuditRecycleOrder audit resource recycle orders
 	AuditRecycleOrder(kit *kit.Kit, param *types.AuditRecycleReq) error
-	// CreateRecycleOrder create resource recycle order
+	// CreateRecycleOrder 创建回收单，并启动回收流程，Preview+SetNextState， 直接到 COMMITTED状态
 	CreateRecycleOrder(kit *kit.Kit, param *types.CreateRecycleReq, bkBizIDMap map[int64]struct{},
 		resType meta.ResourceType, action meta.Action) (*types.CreateRecycleOrderRst, error)
 	// GetRecycleOrder gets resource recycle order info
@@ -79,7 +79,7 @@ type Interface interface {
 	// GetRecycleDetectStep gets resource recycle detection step info
 	GetRecycleDetectStep(kit *kit.Kit, param *types.GetDetectStepReq) (*types.GetDetectStepRst, error)
 
-	// StartRecycleOrder starts resource recycle order
+	// StartRecycleOrder 提交回收单（转到 committed)
 	StartRecycleOrder(kit *kit.Kit, param *types.StartRecycleOrderReq) error
 	// StartRecycleOrderByRecycleType starts resource recycle order by recycle type
 	StartRecycleOrderByRecycleType(kit *kit.Kit, param *types.StartRecycleOrderByRecycleTypeReq) error
@@ -108,8 +108,10 @@ type Interface interface {
 	GetDetectStepCfg(kit *kit.Kit) (*types.GetDetectStepCfgRst, error)
 	// GetDispatcher gets dispatcher instance
 	GetDispatcher() *dispatcher.Dispatcher
+
 	// RunRecycleTask run resource recycle detect task
-	RunRecycleTask(task *table.DetectTask, startStep uint)
+	// RunRecycleTask(task *table.DetectTask, startStep uint)
+
 	// CheckDetectStatus check whether detection is finished or not
 	CheckDetectStatus(orderId string) error
 	// CheckUworkOpenTicket check whether uwork has open ticket
@@ -169,17 +171,16 @@ func New(ctx context.Context, thirdCli *thirdparty.Client, cmdbCli cmdb.Client, 
 	}
 
 	// new transit
-	moduleTransit, err := transit.New(ctx, thirdCli, cmdbCli, rsLogic)
-
-	// new dispatcher
-	dispatch, err := dispatcher.New(ctx)
+	moduleTransit, err := transit.New(ctx, thirdCli, cmdbCli, rsLogic, cliSet)
 	if err != nil {
 		return nil, err
 	}
-	dispatch.SetDetector(moduleDetector)
-	dispatch.SetReturner(moduleReturner)
-	dispatch.SetTransit(moduleTransit)
-	dispatch.SetRollServerLogic(rsLogic)
+
+	// new dispatcher
+	dispatch, err := dispatcher.New(ctx, moduleDetector, moduleReturner, moduleTransit, rsLogic)
+	if err != nil {
+		return nil, err
+	}
 
 	recycler := &recycler{
 		lang:          language.NewFromCtx(language.EmptyLanguageSetting),
@@ -1060,7 +1061,7 @@ func (r *recycler) AuditRecycleOrder(kit *kit.Kit, param *types.AuditRecycleReq)
 	return nil
 }
 
-// CreateRecycleOrder create resource recycle order
+// CreateRecycleOrder 创建回收单，并启动回收流程，Preview+SetNextState， 直接到COMMITTED状态
 func (r *recycler) CreateRecycleOrder(kt *kit.Kit, param *types.CreateRecycleReq, bkBizIDMap map[int64]struct{},
 	resType meta.ResourceType, action meta.Action) (*types.CreateRecycleOrderRst, error) {
 
@@ -1247,7 +1248,7 @@ func (r *recycler) GetRecycleDetectStep(kit *kit.Kit, param *types.GetDetectStep
 	return rst, nil
 }
 
-// StartRecycleOrder starts resource recycle order
+// StartRecycleOrder 提交回收单（转到 committed)
 func (r *recycler) StartRecycleOrder(kt *kit.Kit, param *types.StartRecycleOrderReq) error {
 	filter := map[string]interface{}{}
 	if len(param.OrderID) > 0 {
@@ -1298,10 +1299,10 @@ func (r *recycler) setOrderNextStatus(kt *kit.Kit, orders []*table.RecycleOrder)
 		case table.RecycleStatusUncommit:
 			nextStatus = table.RecycleStatusCommitted
 			// 根据回收子订单ID解锁滚服回收的状态(仅限未提交状态)
-			if err := r.rsLogic.UpdateReturnedStatusBySubOrderID(kt, order.BizID,
-				order.SuborderID, enumor.NormalStatus); err != nil {
-				logs.Errorf("failed to set order %s to next status, failed to update returned status, err: %v, "+
-					"subOrderID: %s, rid: %s", err, order.SuborderID, kt.Rid)
+			err := r.rsLogic.UpdateReturnedStatusBySubOrderID(kt, order.BizID, order.SuborderID, enumor.NormalStatus)
+			if err != nil {
+				logs.Errorf("failed to set order %s to next status, update returned status failed err: %v, rid: %s",
+					order.SuborderID, err, kt.Rid)
 				continue
 			}
 		case table.RecycleStatusDetectFailed:
@@ -1326,6 +1327,9 @@ func (r *recycler) setOrderNextStatus(kt *kit.Kit, orders []*table.RecycleOrder)
 			"status":       nextStatus,
 			"recycle_type": order.RecycleType,
 			"update_at":    now,
+		}
+		if nextStatus == table.RecycleStatusCommitted {
+			(*update)["committed_at"] = now
 		}
 
 		// do not dispatch order to start if set next status failed
@@ -1651,6 +1655,12 @@ func (r *recycler) terminateOrder(kt *kit.Kit, orders []*table.RecycleOrder) err
 		case table.RecycleStatusTransiting, table.RecycleStatusReturning:
 			logs.Errorf("cannot terminate order %s, for its status %s, rid: %s", order.SuborderID, order.Status, kt.Rid)
 			return fmt.Errorf("cannot terminate order %s, for its status %s", order.SuborderID, order.Status)
+		case table.RecycleStatusDetecting:
+			if err := r.dispatcher.Cancel(kt, order.SuborderID); err != nil {
+				logs.Errorf("fail to call dispatcher to cancel detecting order %s, err: %s, rid: %s",
+					order.SuborderID, err, kt.Rid)
+				return err
+			}
 		}
 
 		filter := &mapstr.MapStr{
@@ -1862,12 +1872,7 @@ func (r *recycler) GetDetectStepCfg(kit *kit.Kit) (*types.GetDetectStepCfgRst, e
 	return rst, nil
 }
 
-// RunRecycleTask runs recycle task
-func (r *recycler) RunRecycleTask(task *table.DetectTask, startStep uint) {
-	r.dispatcher.GetDetector().RunRecycleTask(task, startStep)
-}
-
-// CheckDetectStatus ckeck recycle task info
+// CheckDetectStatus check recycle task info
 func (r *recycler) CheckDetectStatus(orderId string) error {
 	return r.dispatcher.GetDetector().CheckDetectStatus(orderId)
 }
@@ -1899,7 +1904,9 @@ func (r *recycler) DealTransitTask2Transit(order *table.RecycleOrder, hosts []*t
 }
 
 // TransferHost2BizTransit transit host to biz
-func (r *recycler) TransferHost2BizTransit(kt *kit.Kit, hosts []*table.RecycleHost, srcBizID, srcModuleID, destBizId int64) error {
+func (r *recycler) TransferHost2BizTransit(kt *kit.Kit, hosts []*table.RecycleHost,
+	srcBizID, srcModuleID, destBizId int64) error {
+
 	return r.dispatcher.GetTransit().TransferHost2BizTransit(kt, hosts, srcBizID, srcModuleID, destBizId)
 }
 

@@ -23,7 +23,7 @@ export default defineComponent({
       type: Function as PropType<(data: Array<Record<string, any>>) => void>,
     },
   },
-  setup(props, { slots }) {
+  setup(props, { attrs, slots }) {
     const pagination = reactive({
       start: 0,
       limit: 10,
@@ -64,7 +64,13 @@ export default defineComponent({
           <SearchSelect class='w500 common-search-selector' v-model={searchVal.value} data={props.searchData} />
         </div>
         <Loading loading={isLoading.value}>
-          <Table data={localData.value} columns={props.columns} pagination={pagination} showOverflowTooltip />
+          <Table
+            data={localData.value}
+            columns={props.columns}
+            pagination={pagination}
+            showOverflowTooltip
+            {...attrs}
+          />
         </Loading>
       </>
     );

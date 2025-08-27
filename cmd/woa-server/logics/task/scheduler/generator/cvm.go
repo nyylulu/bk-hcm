@@ -40,6 +40,8 @@ var (
 	cvmApplyNumReg = regexp.MustCompile(`计算最终当前可申领量(\d+)`)
 	// crpProductFailedMsg CRP生产失败的错误描述
 	crpProductFailedMsg = "CRP申领失败"
+	// crpCapacityLackMsg CRP容量不足的错误描述
+	crpCapacityLackMsg = "无法满足本次需求量"
 	// crpProductZeroNumMsg CRP生产数量为0的错误描述
 	crpProductZeroNumMsg = "list cvm instance failed, for result is null"
 )
@@ -167,30 +169,10 @@ func (g *Generator) getCreateCvmReq(cvm *types.CVM) *cvmapi.OrderCreateReq {
 	if createReq.Params.ChargeType == cvmapi.ChargeTypePrePaid && cvm.ChargeMonths > 0 {
 		createReq.Params.ChargeMonths = cvm.ChargeMonths
 	}
-	// set system disk parameters
-	itDev := regexp.MustCompile(`^IT3\.|^IT2\.|^I3\.|^IT5\.|^IT5c\.`).FindStringSubmatch(cvm.InstanceType)
-	if len(itDev) > 0 {
-		createReq.Params.SystemDiskType = cvmapi.CvmLaunchSystemDiskTypeBasic
-		createReq.Params.SystemDiskSize = cvmapi.CvmLaunchSystemDiskSizeBasic
-	} else {
-		createReq.Params.SystemDiskType = cvmapi.CvmLaunchSystemDiskTypePremium
-		createReq.Params.SystemDiskSize = cvmapi.CvmLaunchSystemDiskSizePremium
-	}
-	// set system disk and data disk for special instance type.
-	if cvm.InstanceType == "BMGY5.16XLARGE256" {
-		createReq.Params.SystemDiskType = cvmapi.CvmLaunchSystemDiskTypeBasic
-		createReq.Params.SystemDiskSize = 440
-		createReq.Params.DataDisk = append(createReq.Params.DataDisk, &cvmapi.DataDisk{
-			DataDiskType: cvmapi.CvmLaunchSystemDiskTypeBasic,
-			DataDiskSize: 1320,
-		})
-	}
-	if cvm.DiskSize > 0 {
-		createReq.Params.DataDisk = append(createReq.Params.DataDisk, &cvmapi.DataDisk{
-			DataDiskType: cvm.DiskType,
-			DataDiskSize: int(cvm.DiskSize),
-		})
-	}
+
+	// set system and data disks params
+	createReq.Params = g.setSystemAndDataDisksParams(cvm, createReq.Params)
+
 	// set obs project type
 	requireType := enumor.RequireType(cvm.ApplyType)
 	createReq.Params.ObsProject = string(requireType.ToObsProject())
@@ -198,6 +180,51 @@ func (g *Generator) getCreateCvmReq(cvm *types.CVM) *cvmapi.OrderCreateReq {
 		createReq.Params.ResourceType = cvmapi.ResourceTypeQuick
 	}
 	return createReq
+}
+
+func (g *Generator) setSystemAndDataDisksParams(cvm *types.CVM,
+	createReqParams *cvmapi.OrderCreateParams) *cvmapi.OrderCreateParams {
+
+	// 系统盘
+	if len(cvm.SystemDisk.DiskType) == 0 {
+		// set system disk parameters 特殊的IT类机型，使用指定的系统盘&数据盘-磁盘类型
+		itDev := regexp.MustCompile(`^IT3\.|^IT2\.|^I3\.|^IT5\.|^IT5c\.`).FindStringSubmatch(cvm.InstanceType)
+		if len(itDev) > 0 {
+			createReqParams.SystemDiskType = cvmapi.CvmLaunchSystemDiskTypeBasic
+			createReqParams.SystemDiskSize = cvmapi.CvmLaunchSystemDiskSizeBasic
+		} else {
+			createReqParams.SystemDiskType = cvmapi.CvmLaunchSystemDiskTypePremium
+			createReqParams.SystemDiskSize = cvmapi.CvmLaunchSystemDiskSizePremium
+		}
+
+		// 特殊的机型，使用指定的系统盘&数据盘-磁盘类型：本地盘
+		if cvm.InstanceType == "BMGY5.16XLARGE256" {
+			createReqParams.SystemDiskType = cvmapi.CvmLaunchSystemDiskTypeBasic
+			createReqParams.SystemDiskSize = 440
+			createReqParams.DataDisk = append(createReqParams.DataDisk, &cvmapi.DataDisk{
+				DataDiskType: cvmapi.CvmLaunchSystemDiskTypeBasic, DataDiskSize: 1320,
+			})
+		}
+	} else {
+		createReqParams.SystemDiskType = cvm.SystemDisk.DiskType
+		createReqParams.SystemDiskSize = cvm.SystemDisk.DiskSize
+	}
+
+	// 数据盘
+	if len(cvm.DataDisk) == 0 && cvm.DiskSize > 0 {
+		createReqParams.DataDisk = append(createReqParams.DataDisk, &cvmapi.DataDisk{
+			DataDiskType: cvm.DiskType, DataDiskSize: uint(cvm.DiskSize),
+		})
+	}
+
+	for _, dd := range cvm.DataDisk {
+		for i := uint(0); i < dd.DiskNum; i++ {
+			createReqParams.DataDisk = append(createReqParams.DataDisk, &cvmapi.DataDisk{
+				DataDiskType: dd.DiskType, DataDiskSize: dd.DiskSize,
+			})
+		}
+	}
+	return createReqParams
 }
 
 func (g *Generator) needRetryCreateCvm(code int, msg string) (bool, int) {
@@ -274,7 +301,8 @@ func (g *Generator) CheckCVM(kt *kit.Kit, orderId, subOrderID string, chargeType
 		}
 
 		// 检查CRP订单是否超出处理时间并记录日志
-		g.checkRecordCrpOrderTimeout(kt, resp, subOrderID, chargeType)
+		g.checkRecordCrpOrderTimeout(kt, resp.Result.Data[0].OrderId, resp.Result.Data[0].CreateTime, resp.TraceId,
+			subOrderID, chargeType)
 
 		status := enumor.CrpOrderStatus(resp.Result.Data[0].Status)
 		if status != enumor.CrpOrderStatusFinish &&
@@ -385,6 +413,8 @@ func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone strin
 		ChargeType:        order.Spec.ChargeType,
 		ChargeMonths:      order.Spec.ChargeMonths,
 		InheritInstanceId: order.Spec.InheritInstanceId,
+		SystemDisk:        order.Spec.SystemDisk,
+		DataDisk:          order.Spec.DataDisk,
 	}
 	// set disk type default value
 	if len(req.DiskType) == 0 {
@@ -606,22 +636,17 @@ func (g *Generator) getCvmSubnet(kt *kit.Kit, zone, vpc string, order *types.App
 	return subnetList, nil
 }
 
-func (g *Generator) checkRecordCrpOrderTimeout(kt *kit.Kit, crpResp *cvmapi.OrderQueryResp, subOrderID string,
-	chargeType cvmapi.ChargeType) {
-
-	if crpResp == nil || crpResp.Result == nil || crpResp.Error.Code != 0 || len(crpResp.Result.Data) != 1 {
-		return
-	}
+func (g *Generator) checkRecordCrpOrderTimeout(kt *kit.Kit, crpOrderID string, crpCreateAt string, crpTraceID string,
+	subOrderID string, chargeType cvmapi.ChargeType) {
 
 	// 只有计费模式:包年包月时才需要关注交付时长(计费模式为空时默认包年包月)
 	if len(chargeType) > 0 && chargeType != cvmapi.ChargeTypePrePaid {
 		return
 	}
 
-	createTime, err := time.Parse(constant.DateTimeLayout, crpResp.Result.Data[0].CreateTime)
+	createTime, err := time.Parse(constant.DateTimeLayout, crpCreateAt)
 	if err == nil && createTime.Add(types.OneDayDuration).Before(time.Now()) {
 		logs.Warnf("%s: query crp cvm apply order timeout, subOrderID: %s, crpOrderID: %s, crpTraceID: %s, rid: %s",
-			constant.CvmApplyOrderCrpProductTimeout, subOrderID, crpResp.Result.Data[0].OrderId,
-			crpResp.TraceId, kt.Rid)
+			constant.CvmApplyOrderCrpProductTimeout, subOrderID, crpOrderID, crpTraceID, kt.Rid)
 	}
 }

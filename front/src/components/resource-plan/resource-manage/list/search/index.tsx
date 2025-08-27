@@ -1,4 +1,4 @@
-import { defineComponent, nextTick, onBeforeMount, PropType, ref } from 'vue';
+import { computed, defineComponent, nextTick, onBeforeMount, PropType, ref } from 'vue';
 import Panel from '@/components/panel';
 import { Button, DatePicker, Select, Checkbox } from 'bkui-vue';
 import { Info as InfoIcon } from 'bkui-vue/lib/icon';
@@ -20,6 +20,8 @@ import dayjs from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';
 import { useRoute, useRouter } from 'vue-router';
 import { RESOURCE_DEMANDS_STATUS_NAME } from '@/components/resource-plan/constants';
+import ObsProjectSelector from '@/views/business/resource-plan/children/obs-project-selector.vue';
+import { useWhereAmI } from '@/hooks/useWhereAmI';
 
 dayjs.extend(isoWeek);
 
@@ -37,6 +39,7 @@ export default defineComponent({
     const router = useRouter();
     const route = useRoute();
     const { t } = useI18n();
+    const { getBizsId } = useWhereAmI();
     const resourcePlanStore = useResourcePlanStore();
     const initialSearchModel: Partial<IListResourcesDemandsParam> = {
       bk_biz_ids: [], // 业务
@@ -56,7 +59,6 @@ export default defineComponent({
 
     const opProductList = ref<{ op_product_id: number; op_product_name: string }[]>([]);
     const planProductsList = ref<IPlanProducts[]>([]);
-    const projectTypesList = ref<string[]>([]);
     const demandClassList = ref<string[]>([]);
     const deviceClassList = ref<string[]>([]);
     const deviceTypeList = ref<IDeviceType[]>([]);
@@ -66,7 +68,6 @@ export default defineComponent({
 
     const isLoadingOpProducts = ref(false);
     const isLoadingPlanProducts = ref(false);
-    const isLoadingProjectsType = ref(false);
     const isLoadingDemandClass = ref(false);
     const isLoadingDeviceClass = ref(false);
     const isLoadingDeviceType = ref(false);
@@ -75,6 +76,7 @@ export default defineComponent({
     const isLoadingPlanClass = ref(false);
 
     const searchModel = ref(JSON.parse(JSON.stringify(initialSearchModel)));
+    const showRollingServerProject = computed(() => (props.isBiz ? 931 === getBizsId() : true));
 
     const handleSearch = () => {
       storeSearchModelInQuery(JSON.stringify(searchModel.value));
@@ -127,18 +129,6 @@ export default defineComponent({
         })
         .finally(() => {
           isLoadingPlanProducts.value = false;
-        });
-    };
-
-    const getObsProjectList = () => {
-      isLoadingProjectsType.value = true;
-      resourcePlanStore
-        .getObsProjects()
-        .then((data: { data: { details: string[] } }) => {
-          projectTypesList.value = data?.data?.details || [];
-        })
-        .finally(() => {
-          isLoadingProjectsType.value = false;
         });
     };
 
@@ -224,7 +214,6 @@ export default defineComponent({
         getOpProductsList();
         getPlanProductsList();
       }
-      getObsProjectList();
       getDemandClassList();
       getDeviceClassList();
       getDeviceTypeList();
@@ -233,7 +222,12 @@ export default defineComponent({
       getZoneList();
       nextTick(() => {
         if (route.query.searchModel) {
-          searchModel.value = JSON.parse(route.query.searchModel as string);
+          const querySearchModel = JSON.parse(route.query.searchModel as string);
+          if (!showRollingServerProject.value) {
+            const idx = querySearchModel.obs_projects.indexOf('滚服项目');
+            idx !== -1 && querySearchModel.obs_projects.splice(idx, 1);
+          }
+          searchModel.value = querySearchModel;
           emit('update:expectTimeRange', searchModel.value.expect_time_range);
         }
         handleSearch();
@@ -291,11 +285,11 @@ export default defineComponent({
                 )}
                 <div>
                   <div class={cssModule['search-label']}>{t('项目类型')}</div>
-                  <Select multiple v-model={searchModel.value.obs_projects} loading={isLoadingProjectsType.value}>
-                    {projectTypesList.value.map((item) => (
-                      <Option name={item} id={item} />
-                    ))}
-                  </Select>
+                  <ObsProjectSelector
+                    v-model={searchModel.value.obs_projects}
+                    multiple
+                    showRollingServerProject={showRollingServerProject.value}
+                  />
                 </div>
                 <div>
                   <div class={cssModule['search-label']}>{t('预测类型')}</div>

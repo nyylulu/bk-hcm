@@ -30,9 +30,19 @@ func (d *cvmDevice) NextSequence(ctx context.Context) (uint64, error) {
 	return mongodb.Client().NextSequence(ctx, pkg.BKTableNameCfgDevice)
 }
 
+// NextSequences returns next resource device type config sequence id from db
+func (d *cvmDevice) NextSequences(ctx context.Context, num int) ([]uint64, error) {
+	return mongodb.Client().NextSequences(ctx, pkg.BKTableNameCfgDevice, num)
+}
+
 // CreateDevice creates resource device type config in db
 func (d *cvmDevice) CreateDevice(ctx context.Context, inst *types.DeviceInfo) error {
 	return mongodb.Client().Table(pkg.BKTableNameCfgDevice).Insert(ctx, inst)
+}
+
+// BatchCreateDevices batch create resource device type config in db
+func (d *cvmDevice) BatchCreateDevices(ctx context.Context, insts []*types.DeviceInfo) error {
+	return mongodb.Client().Table(pkg.BKTableNameCfgDevice).Insert(ctx, insts)
 }
 
 // GetDevice gets resource device type config by filter from db

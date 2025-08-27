@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"hcm/cmd/cloud-server/logics/ziyan"
 	cloudserver "hcm/pkg/api/cloud-server"
 	hccert "hcm/pkg/api/hc-service/cert"
 	"hcm/pkg/criteria/constant"
@@ -147,9 +148,15 @@ func (svc *certSvc) createTCloudZiyanCert(kt *kit.Kit, body json.RawMessage, bkB
 		logs.Errorf("create tcloud ziyan cert decode privatekey failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
+	tags, err := ziyan.GenTagsForBizsWithManager(kt, svc.cmdbCli, bkBizID, kt.User, kt.User)
+	if err != nil {
+		logs.Errorf("create tcloud ziyan cert gen tags failed, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
 	req.PublicKey = string(publicKey)
 	req.PrivateKey = string(privateKey)
 	req.BkBizID = bkBizID
+	req.Tags = tags
 
 	if err = req.Validate(); err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)

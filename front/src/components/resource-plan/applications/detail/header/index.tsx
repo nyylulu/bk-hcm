@@ -28,6 +28,7 @@ export default defineComponent({
           type: 'resource_plan',
         },
       });
+      // router.go(-1);
     };
 
     return () => (

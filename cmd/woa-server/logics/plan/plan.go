@@ -91,13 +91,12 @@ type Logics interface {
 	VerifyProdDemandsV2(kt *kit.Kit, bkBizID int64, requireType enumor.RequireType, needs []VerifyResPlanElemV2) (
 		[]VerifyResPlanResElem, error)
 	// AddMatchedPlanDemandExpendLogs add matched plan demand expend logs.
-	AddMatchedPlanDemandExpendLogs(kt *kit.Kit, bkBizID int64, subOrder *ttypes.ApplyOrder) error
+	AddMatchedPlanDemandExpendLogs(kt *kit.Kit, bkBizID int64, subOrder *ttypes.ApplyOrder,
+		verifyGroups []VerifyResPlanElemV2) error
 	// GetAllDeviceTypeMap get all device type map.
 	GetAllDeviceTypeMap(kt *kit.Kit) (map[string]wdt.WoaDeviceTypeTable, error)
 	// SyncDeviceTypesFromCRP sync device types from crp.
 	SyncDeviceTypesFromCRP(kt *kit.Kit, deviceTypes []string) error
-	// ListCvmInstanceTypeFromCrp get device type info from crp.
-	ListCvmInstanceTypeFromCrp(kt *kit.Kit, deviceTypes []string) (map[string]wdt.WoaDeviceTypeTable, error)
 }
 
 // Controller motivates the resource plan ticket status flow.
@@ -374,7 +373,7 @@ func (c *Controller) runWorker() error {
 }
 
 func (c *Controller) checkCrpTicket(kt *kit.Kit, ticket *TicketInfo) error {
-	logs.Infof("ready to check crp flow, sn: %s, id: %s", ticket.CrpSn, ticket.ID)
+	logs.Infof("ready to check crp flow, sn: %s, id: %s, rid: %s", ticket.CrpSn, ticket.ID, kt.Rid)
 
 	req := &cvmapi.QueryPlanOrderReq{
 		ReqMeta: cvmapi.ReqMeta{

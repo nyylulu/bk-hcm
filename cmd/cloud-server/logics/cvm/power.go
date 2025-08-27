@@ -45,8 +45,8 @@ import (
 */
 
 // CvmPowerOperation 开关机或重启CVM
-func (c *cvm) CvmPowerOperation(kt *kit.Kit, bkBizID int64, uniqueID string, taskOperation enumor.TaskOperation,
-	cvmList []corecvm.BaseCvm) (string, error) {
+func (c *cvm) CvmPowerOperation(kt *kit.Kit, bkBizID int64, uniqueID string, source enumor.TaskManagementSource,
+	taskOperation enumor.TaskOperation, cvmList []corecvm.BaseCvm) (string, error) {
 
 	flowName, actionName, taskType, err := chooseFlowNameAndActionName(taskOperation)
 	if err != nil {
@@ -55,7 +55,7 @@ func (c *cvm) CvmPowerOperation(kt *kit.Kit, bkBizID int64, uniqueID string, tas
 
 	vendorList, accountList, groupResult, detailList := groupCvmByVendorAndAccountAndRegion(cvmList)
 	taskManagementID, err := c.createTaskManagement(kt, bkBizID, vendorList, accountList,
-		enumor.TaskManagementSourceAPI, taskOperation, enumor.TaskManagementResCVM)
+		source, taskOperation, enumor.TaskManagementResCVM)
 	if err != nil {
 		logs.Errorf("create task management failed,bizID: %d, accountList: %v, err: %v, rid: %s",
 			bkBizID, accountList, err, kt.Rid)

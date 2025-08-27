@@ -33,40 +33,40 @@ type OrderCreateReq struct {
 
 // OrderCreateParams cvm create order parameters
 type OrderCreateParams struct {
-	Zone              string       `json:"zone"`
-	DeptName          string       `json:"deptName"`
-	ProductName       string       `json:"productName"`
-	Business1Id       int          `json:"business1Id"`
-	Business1Name     string       `json:"business1Name"`
-	Business2Id       int          `json:"business2Id"`
-	Business2Name     string       `json:"business2Name"`
-	Business3Id       int          `json:"business3Id"`
-	Business3Name     string       `json:"business3Name"`
-	ProjectId         int          `json:"projectId"`
-	Image             *Image       `json:"image,omitempty"`
-	InstanceType      string       `json:"instanceType"`
-	SystemDiskType    string       `json:"systemDiskType"`
-	SystemDiskSize    int          `json:"systemDiskSize"`
-	DataDisk          []*DataDisk  `json:"dataDisk,omitempty"`
-	VpcId             string       `json:"vpcId"`
-	SubnetId          string       `json:"subnetId"`
-	AsVpcGateway      int          `json:"asVpcGateway,omitempty"`
-	ApplyNum          int          `json:"applyNum"`
-	PassWord          string       `json:"passWord"`
-	Security          *Security    `json:"security,omitempty"`
-	IsSecurityService int          `json:"isSecurityService,omitempty"`
-	IsMonitorService  int          `json:"isMonitorService,omitempty"`
-	RecoverGrpId      string       `json:"recoverGrpId,omitempty"`
-	InstanceName      string       `json:"instanceName,omitempty"`
-	UseTime           string       `json:"useTime,omitempty"`
-	Memo              string       `json:"memo,omitempty"`
-	Operator          string       `json:"operator"`
-	BakOperator       string       `json:"bakOperator"`
-	ObsProject        string       `json:"obsProject"`
-	ResourceType      ResourceType `json:"resourceType,omitempty"`
-	ChargeType        ChargeType   `json:"chargeType,omitempty"`
-	ChargeMonths      uint         `json:"chargeMonths,omitempty"`
-	InheritInstanceId string       `json:"inheritInstanceId,omitempty"`
+	Zone              string          `json:"zone"`
+	DeptName          string          `json:"deptName"`
+	ProductName       string          `json:"productName"`
+	Business1Id       int             `json:"business1Id"`
+	Business1Name     string          `json:"business1Name"`
+	Business2Id       int             `json:"business2Id"`
+	Business2Name     string          `json:"business2Name"`
+	Business3Id       int             `json:"business3Id"`
+	Business3Name     string          `json:"business3Name"`
+	ProjectId         int             `json:"projectId"`
+	Image             *Image          `json:"image,omitempty"`
+	InstanceType      string          `json:"instanceType"`
+	SystemDiskType    enumor.DiskType `json:"systemDiskType"`
+	SystemDiskSize    uint            `json:"systemDiskSize"`
+	DataDisk          []*DataDisk     `json:"dataDisk,omitempty"`
+	VpcId             string          `json:"vpcId"`
+	SubnetId          string          `json:"subnetId"`
+	AsVpcGateway      int             `json:"asVpcGateway,omitempty"`
+	ApplyNum          int             `json:"applyNum"`
+	PassWord          string          `json:"passWord"`
+	Security          *Security       `json:"security,omitempty"`
+	IsSecurityService int             `json:"isSecurityService,omitempty"`
+	IsMonitorService  int             `json:"isMonitorService,omitempty"`
+	RecoverGrpId      string          `json:"recoverGrpId,omitempty"`
+	InstanceName      string          `json:"instanceName,omitempty"`
+	UseTime           string          `json:"useTime,omitempty"`
+	Memo              string          `json:"memo,omitempty"`
+	Operator          string          `json:"operator"`
+	BakOperator       string          `json:"bakOperator"`
+	ObsProject        string          `json:"obsProject"`
+	ResourceType      ResourceType    `json:"resourceType,omitempty"`
+	ChargeType        ChargeType      `json:"chargeType,omitempty"`
+	ChargeMonths      uint            `json:"chargeMonths,omitempty"`
+	InheritInstanceId string          `json:"inheritInstanceId,omitempty"`
 }
 
 // ResourceType 申请类型
@@ -121,7 +121,7 @@ type Image struct {
 // DataDisk cvm specification
 type DataDisk struct {
 	DataDiskType enumor.DiskType `json:"dataDiskType"`
-	DataDiskSize int             `json:"dataDiskSize"`
+	DataDiskSize uint            `json:"dataDiskSize"`
 }
 
 // Security cvm security specification
@@ -513,6 +513,24 @@ type ReturnParam struct {
 	AcceptCostShare bool `json:"acceptCostShare"`
 }
 
+// UpgradeReq create cvm upgrade order request
+type UpgradeReq struct {
+	ReqMeta `json:",inline"`
+	Params  *UpgradeParam `json:"params"`
+}
+
+// UpgradeParam create cvm upgrade order parameters
+type UpgradeParam struct {
+	Reason string                 `json:"reason"`
+	Data   []UpgradeParamInstance `json:"data"`
+}
+
+// UpgradeParamInstance cvm upgrade order instance
+type UpgradeParamInstance struct {
+	InstanceID         string `json:"instanceId"`
+	TargetInstanceType string `json:"targetInstanceType"`
+}
+
 // GetCvmProcessReq get cvm process request
 type GetCvmProcessReq struct {
 	ReqMeta `json:",inline"`
@@ -545,6 +563,17 @@ type ReturnDetailReq struct {
 type ReturnDetailParam struct {
 	OrderId string `json:"orderId"`
 	Page    *Page  `json:"page,omitempty"`
+}
+
+// UpgradeDetailReq query cvm upgrade order detail request
+type UpgradeDetailReq struct {
+	ReqMeta `json:",inline"`
+	Params  *UpgradeDetailParam `json:"params"`
+}
+
+// UpgradeDetailParam query cvm upgrade order detail parameters
+type UpgradeDetailParam struct {
+	OrderID string `json:"orderId"`
 }
 
 // QueryCvmInstanceTypeReq query cvm instance type request

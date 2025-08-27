@@ -364,15 +364,16 @@ defineExpose({
             :columns="preRecycleColumns"
             remote-pagination
             show-overflow-tooltip
-            @selectionChange="(selections: any) => handleSelectionChange(selections, () => true)"
-            @selectAll="(selections: any) => handleSelectionChange(selections, () => true, true)"
+            max-height="calc(100vh - 400px)"
+            @selection-change="(selections: any) => handleSelectionChange(selections, () => true)"
+            @select-all="(selections: any) => handleSelectionChange(selections, () => true, true)"
           ></Table>
         </Loading>
         <recycle-quota-tips class="mt8" :returned-way="returnedWay" :selections="selections" />
       </div>
     </div>
   </div>
-  <Sideslider v-model:isShow="sidesliderState.show" :title="sidesliderState.title" :width="1150">
+  <Sideslider v-model:is-show="sidesliderState.show" :title="sidesliderState.title" :width="1150">
     <div class="order-host-container">
       <Table
         :data="orderHostList"
@@ -398,16 +399,15 @@ defineExpose({
     padding: 6px 4px;
     margin-bottom: 8px;
   }
+
   .recycle-steps {
     width: 60%;
     margin: 16px 8px;
   }
 
-  .confirm-host {
-  }
-
   .confirm-setting {
     padding: 16px;
+
     .setting-item {
       display: flex;
       align-items: baseline;
@@ -423,6 +423,7 @@ defineExpose({
           font-size: 12px;
           margin-top: 6px;
         }
+
         .radio-group {
           width: 360px;
         }
@@ -430,6 +431,7 @@ defineExpose({
     }
   }
 }
+
 .order-host-container {
   padding: 16px 24px;
 }

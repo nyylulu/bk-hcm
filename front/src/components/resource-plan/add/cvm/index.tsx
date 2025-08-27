@@ -184,6 +184,7 @@ export default defineComponent({
                 clearable
                 loading={isLoadingDeviceClasses.value}
                 modelValue={props.planTicketDemand.cvm.device_class}
+                popoverOptions={{ boundary: 'parent' }}
                 onChange={(val: string) => handleUpdatePlanTicketDemand({ device_class: val })}>
                 {deviceClasses.value.map((deviceClass) => (
                   <bk-option id={deviceClass} name={deviceClass} key={deviceClass}></bk-option>
@@ -196,6 +197,7 @@ export default defineComponent({
                 clearable
                 loading={isLoadingDeviceTypes.value}
                 modelValue={props.planTicketDemand.cvm.device_type}
+                popoverOptions={{ boundary: 'parent' }}
                 onChange={(val: string) => handleUpdatePlanTicketDemand({ device_type: val })}>
                 {deviceTypes.value.map((deviceType) => (
                   <bk-option

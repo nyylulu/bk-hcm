@@ -62,6 +62,8 @@ const (
 	CvmReturnLinkPrefix = "https://yunti.woa.com/orders/cvmreturn/"
 	// CvmPlanLinkPrefix CVM&CBS需求单据详情链接前缀
 	CvmPlanLinkPrefix = "https://yunti.woa.com/orders/iaasplan/"
+	// CvmUpgradeLinkPrefix CVM升降配单据详情链接前缀
+	CvmUpgradeLinkPrefix = "https://crp.woa.com/crp-outside/yunti/orders/cvmadjust/"
 
 	// CvmSeparateCampus 分Campus
 	CvmSeparateCampus = "cvm_separate_campus"
@@ -102,6 +104,44 @@ const (
 	CvmSubnetMethod = "getSubNetInfo"
 	// CvmRealSubnetMethod CVM 获取私有子网
 	CvmRealSubnetMethod = "getRealSubnetInfo"
+	// CvmGetProcessMethod CVM流程查询方法
+	CvmGetProcessMethod = "getCVMProcess"
+	// GetErpProcessMethod ERP流程查询方法
+	GetErpProcessMethod = "getERPProcess"
+	// CvmReturnMethod CVM退回提单方法
+	CvmReturnMethod = "createCvmReturnOrder"
+	// CvmReturnStatusMethod CVM退回单据状态查询方法
+	CvmReturnStatusMethod = "queryCvmReturnOrder"
+	// CvmReturnDetailMethod 根据单号查询退回CVM方法
+	CvmReturnDetailMethod = "queryReturnCvmByOrder"
+	// QueryCvmInstanceType 查询CVM机型信息
+	QueryCvmInstanceType = "queryCvmInstanceType"
+	// GetApproveLogMethod 查询审批日志
+	GetApproveLogMethod = "getApproveLog"
+
+	// CvmUpgradeMethod CVM升降配提单方法
+	CvmUpgradeMethod = "createUpgradeOrder"
+	// CvmUpgradeDetailMethod CVM升降配单据明细查询方法
+	CvmUpgradeDetailMethod = "queryUpgradeOrderDetail"
+
+	// CvmCbsPlanDefaultCvmDesc 需求预测单据的默认CVM备注，用于管理员判断需求来源
+	CvmCbsPlanDefaultCvmDesc = "[From IEG HCM CVM]"
+	// CvmCbsPlanDefaultCADesc 需求预测单据的默认CA备注
+	CvmCbsPlanDefaultCADesc = "[From IEG HCM CA]"
+
+	// DftImageID default image id of TencentOS Server 2.6 (TK4)
+	DftImageID = "img-fjxtfi0n"
+
+	// AdjustTypeAdjust 预测调整类型-常规修改
+	AdjustTypeAdjust = "常规修改"
+	// AdjustTypeDelay 预测调整类型-加急延期
+	AdjustTypeDelay = "加急延期"
+	// AdjustTypeCancel 预测调整类型-需求取消
+	AdjustTypeCancel = "需求取消"
+)
+
+// 资源预测相关方法
+const (
 	// CvmCbsDemandChangeLogQueryMethod 预测需求的变更记录查询接口
 	CvmCbsDemandChangeLogQueryMethod = "queryDemandChangeLogForIEG"
 	// CvmCbsPlanOrderChangeMethod 预测需求的订单变更流水接口
@@ -120,35 +160,6 @@ const (
 	CvmCbsPlanOrderQueryMethod = "queryYuntiOrder"
 	// CvmCbsPlanPenaltyRatioReportMethod 需求预测罚金分摊比例上报接口
 	CvmCbsPlanPenaltyRatioReportMethod = "reportForecastPartition"
-	// CvmGetProcessMethod CVM流程查询方法
-	CvmGetProcessMethod = "getCVMProcess"
-	// GetErpProcessMethod ERP流程查询方法
-	GetErpProcessMethod = "getERPProcess"
-	// CvmReturnMethod CVM退回提单方法
-	CvmReturnMethod = "createCvmReturnOrder"
-	// CvmReturnStatusMethod CVM退回单据状态查询方法
-	CvmReturnStatusMethod = "queryCvmReturnOrder"
-	// CvmReturnDetailMethod 根据单号查询退回CVM方法
-	CvmReturnDetailMethod = "queryReturnCvmByOrder"
-	// QueryCvmInstanceType 查询CVM机型信息
-	QueryCvmInstanceType = "queryCvmInstanceType"
-	// GetApproveLogMethod 查询审批日志
-	GetApproveLogMethod = "getApproveLog"
-
-	// CvmCbsPlanDefaultCvmDesc 需求预测单据的默认CVM备注，用于管理员判断需求来源
-	CvmCbsPlanDefaultCvmDesc = "[From IEG HCM CVM]"
-	// CvmCbsPlanDefaultCADesc 需求预测单据的默认CA备注
-	CvmCbsPlanDefaultCADesc = "[From IEG HCM CA]"
-
-	// DftImageID default image id of TencentOS Server 2.6 (TK4)
-	DftImageID = "img-fjxtfi0n"
-
-	// AdjustTypeAdjust 预测调整类型-常规修改
-	AdjustTypeAdjust = "常规修改"
-	// AdjustTypeDelay 预测调整类型-加急延期
-	AdjustTypeDelay = "加急延期"
-	// AdjustTypeCancel 预测调整类型-需求取消
-	AdjustTypeCancel = "需求取消"
 )
 
 // CVMCli yunti client options
@@ -189,6 +200,30 @@ func NewRevokeCvmOrderReq(params *RevokeCvmOrderParams) *RevokeCvmOrderReq {
 			Id:      CvmId,
 			JsonRpc: CvmJsonRpc,
 			Method:  CvmRevokeOrderMethod,
+		},
+		Params: params,
+	}
+}
+
+// NewCvmUpgradeOrderReq CVM升降配订单创建请求元数据
+func NewCvmUpgradeOrderReq(params *UpgradeParam) *UpgradeReq {
+	return &UpgradeReq{
+		ReqMeta: ReqMeta{
+			Id:      CvmId,
+			JsonRpc: CvmJsonRpc,
+			Method:  CvmUpgradeMethod,
+		},
+		Params: params,
+	}
+}
+
+// NewCvmUpgradeDetailReq CVM升降配订单查询请求元数据
+func NewCvmUpgradeDetailReq(params *UpgradeDetailParam) *UpgradeDetailReq {
+	return &UpgradeDetailReq{
+		ReqMeta: ReqMeta{
+			Id:      CvmId,
+			JsonRpc: CvmJsonRpc,
+			Method:  CvmUpgradeDetailMethod,
 		},
 		Params: params,
 	}

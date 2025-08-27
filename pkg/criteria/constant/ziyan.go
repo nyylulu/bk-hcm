@@ -79,3 +79,20 @@ const (
 // 原理TGW包含了TGW，伪7层TGW（定制了tgw_forward），伪7层已经2年多不维护2020年全面下线，可以使用STGW替代接入（TGW+nginx+加解密）；
 // CLB：负载均衡（Cloud Load Balancer，CLB），是腾讯云产品化的名称，CLB 4层就对应自研的TGW， CLB 7层对应自研的STGW；
 const TgwGroupNameZiyan = "ziyan"
+
+const (
+	// DataDiskTotalNum 数据盘总数量
+	DataDiskTotalNum = 20
+	// DataDiskMinSize 最小数据盘大小，单位GB
+	DataDiskMinSize = 10
+	// DataDiskMaxSize 最大数据盘大小，单位GB
+	DataDiskMaxSize = 32000
+	// DataDiskMultiple 数据盘大小倍数
+	DataDiskMultiple = 10
+	// SystemDiskMinSize 最小数据盘大小，单位GB
+	SystemDiskMinSize = 50
+	// SystemDiskMaxSize 最大数据盘大小，单位GB
+	SystemDiskMaxSize = 1000
+	// SystemDiskMultiple 数据盘大小倍数
+	SystemDiskMultiple = 50
+)

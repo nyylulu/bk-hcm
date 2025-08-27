@@ -1,4 +1,4 @@
-import { computed, defineComponent, onBeforeUnmount, onMounted, PropType, reactive, Ref, ref, watch } from 'vue';
+import { computed, defineComponent, onBeforeUnmount, onMounted, reactive, Ref, ref, watch } from 'vue';
 import './index.scss';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import { Button, DatePicker, Dialog, Form, InfoBox, Message, PopConfirm, Table } from 'bkui-vue';
@@ -23,9 +23,9 @@ const { FormItem } = Form;
 
 export default defineComponent({
   props: {
-    isBiz: Boolean as PropType<boolean>,
+    currentGlobalBusinessId: Number,
   },
-  setup() {
+  setup(props) {
     const planStore = usePlanStore();
     const tableData = ref([]);
     const originData = ref([]);
@@ -403,6 +403,7 @@ export default defineComponent({
             isEdit
             initDemand={curEditData.value}
             originDemand={curEditOriginData}
+            currentGlobalBusinessId={props.currentGlobalBusinessId}
             onUpdateDemand={(val) => {
               const idx = tableData.value.findIndex(({ demand_id }) => demand_id === val.demand_id);
               const originItem = tableData.value[idx];

@@ -21,6 +21,7 @@ import (
 	"strconv"
 
 	"hcm/cmd/woa-server/model/task"
+	"hcm/cmd/woa-server/types/config"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
 	"hcm/pkg/criteria/enumor"
@@ -30,9 +31,11 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
+	"hcm/pkg/thirdparty/cvmapi"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/metadata"
 	"hcm/pkg/tools/querybuilder"
+	"hcm/pkg/tools/slice"
 	"hcm/pkg/tools/util"
 )
 
@@ -267,7 +270,7 @@ func (s *service) GetBizApplyAuditCrp(cts *rest.Contexts) (any, error) {
 		return nil, errf.NewFromErr(errf.InvalidParameter, errors.New("apply order not found"))
 	}
 
-	return s.getApplyAuditCrp(cts.Kit, req)
+	return s.getApplyAuditCrp(cts.Kit, req, applyOrders[0].ResourceType)
 }
 
 // GetApplyAuditItsm get apply audit
@@ -342,7 +345,7 @@ func (s *service) GetApplyAuditCrp(cts *rest.Contexts) (interface{}, error) {
 		return nil, err
 	}
 
-	return s.getApplyAuditCrp(cts.Kit, req)
+	return s.getApplyAuditCrp(cts.Kit, req, applyOrders[0].ResourceType)
 }
 
 // getApplyAuditItsm get apply ticket audit info
@@ -357,8 +360,10 @@ func (s *service) getApplyAuditItsm(kt *kit.Kit, req *types.GetApplyAuditItsmReq
 }
 
 // getApplyAuditCrp get apply ticket audit info
-func (s *service) getApplyAuditCrp(kt *kit.Kit, req *types.GetApplyAuditCrpReq) (any, error) {
-	rst, err := s.logics.Scheduler().GetApplyAuditCrp(kt, req)
+func (s *service) getApplyAuditCrp(kt *kit.Kit, req *types.GetApplyAuditCrpReq, resType types.ResourceType) (any,
+	error) {
+
+	rst, err := s.logics.Scheduler().GetApplyAuditCrp(kt, req, resType)
 	if err != nil {
 		logs.Errorf("failed to get apply ticket crp audit info, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -564,8 +569,57 @@ func (s *service) CreateApplyOrder(cts *rest.Contexts) (any, error) {
 	return s.createApplyOrder(cts.Kit, input)
 }
 
+func (s *service) validateDeviceTypeForGreenAndRoll(kt *kit.Kit, input *types.ApplyReq) error {
+	if input.RequireType != enumor.RequireTypeGreenChannel && input.RequireType != enumor.RequireTypeRollServer {
+		return nil
+	}
+
+	deviceTypes := make([]string, 0)
+	for _, suborder := range input.Suborders {
+		if suborder.Spec != nil {
+			deviceTypes = append(deviceTypes, suborder.Spec.DeviceType)
+		}
+	}
+
+	deviceReq := &config.GetDeviceParam{
+		Filter: &querybuilder.QueryFilter{
+			Rule: querybuilder.CombinedRule{
+				Condition: querybuilder.ConditionAnd,
+				Rules: []querybuilder.Rule{
+					querybuilder.AtomRule{
+						Field:    "device_type",
+						Operator: querybuilder.OperatorIn,
+						Value:    deviceTypes,
+					}},
+			},
+		},
+		Page: metadata.BasePage{Limit: pkg.BKNoLimit, Start: 0},
+	}
+	resp, err := s.configLogics.Device().GetDevice(kt, deviceReq)
+	if err != nil {
+		logs.Errorf("failed to get device type info, err: %v, deviceTypes: %v, rid: %s", err, deviceTypes, kt.Rid)
+		return err
+	}
+	var unsupportedTypes []string
+	for _, item := range resp.Info {
+		if item.DeviceTypeClass == cvmapi.SpecialType {
+			unsupportedTypes = append(unsupportedTypes, item.DeviceType)
+		}
+	}
+	if len(unsupportedTypes) > 0 {
+		return fmt.Errorf("device types %v are not supported for green channel or roll server apply",
+			slice.Unique(unsupportedTypes))
+	}
+	return nil
+}
+
 // createApplyOrder creates apply order
 func (s *service) createApplyOrder(kt *kit.Kit, input *types.ApplyReq) (any, error) {
+	if err := s.validateDeviceTypeForGreenAndRoll(kt, input); err != nil {
+		logs.Errorf("failed to validate device type for green channel or roll server apply, err: %v, rid: %s", err, kt.Rid)
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
 	if err := s.verifyResPlanDemand(kt, input); err != nil {
 		logs.Errorf("failed to verify res plan demand, err: %v, rid: %s", err, kt.Rid)
 		return nil, err

@@ -14,6 +14,7 @@
 package table
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -26,6 +27,8 @@ type DetectStep struct {
 	StepID     int            `json:"step_id" bson:"step_id"`
 	StepName   DetectStepName `json:"step_name" bson:"step_name"`
 	StepDesc   string         `json:"step_desc" bson:"step_desc"`
+	HostID     int64          `json:"bk_host_id" bson:"bk_host_id"`
+	AssetID    string         `json:"bk_asset_id" bson:"bk_asset_id"`
 	IP         string         `json:"ip" bson:"ip"`
 	User       string         `json:"bk_username" bson:"bk_username"`
 	RetryTime  uint32         `json:"retry_time" bson:"retry_time"`
@@ -37,4 +40,12 @@ type DetectStep struct {
 	EndAt      time.Time      `json:"end_at" bson:"end_at"`
 	CreateAt   time.Time      `json:"create_at" bson:"create_at"`
 	UpdateAt   time.Time      `json:"update_at" bson:"update_at"`
+}
+
+// Describe describe DetectStep
+func (s *DetectStep) Describe() string {
+	if s == nil {
+		return "nil"
+	}
+	return fmt.Sprintf("<%s/%s(%d)/%s>", s.SuborderID, s.IP, s.HostID, s.StepName)
 }

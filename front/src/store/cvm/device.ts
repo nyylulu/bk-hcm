@@ -24,7 +24,18 @@ export interface ICvmDeviceItem {
   enable_apply: boolean;
   score: number;
   comment: string;
+  device_type_class: 'SpecialType' | 'CommonType';
   [k: string]: any;
+}
+
+export interface ICvmDevicetypeItem {
+  device_type: string;
+  device_type_class: string;
+  device_group: string;
+  cpu_amount: number;
+  ram_amount: number;
+  core_type: number;
+  device_class: string;
 }
 
 export const useCvmDeviceStore = defineStore('cvm-device', () => {
@@ -47,8 +58,34 @@ export const useCvmDeviceStore = defineStore('cvm-device', () => {
     }
   };
 
+  const devicetypeListLoading = ref(false);
+  const getDevicetypeListWithoutPage = async (params: QueryBuilderType) => {
+    devicetypeListLoading.value = true;
+    const api = '/api/v1/woa/config/findmany/config/cvm/devicetype';
+    try {
+      const { page } = params;
+      if (page) {
+        const [listRes, countRes] = await Promise.all<
+          [Promise<IListResData<ICvmDevicetypeItem[]>>, Promise<IListResData<ICvmDevicetypeItem[]>>]
+        >([http.post(api, enableCount(params, false)), http.post(api, enableCount(params, true))]);
+        const [{ info: list = [] }, { count = 0 }] = [listRes?.data ?? {}, countRes?.data ?? {}];
+        return { list, count };
+      }
+
+      const res = await http.post(api, params);
+      return res?.data?.info ?? [];
+    } catch (error) {
+      console.error(error);
+      return Promise.reject(error);
+    } finally {
+      devicetypeListLoading.value = false;
+    }
+  };
+
   return {
     deviceListLoading,
     getDeviceList,
+    devicetypeListLoading,
+    getDevicetypeListWithoutPage,
   };
 });

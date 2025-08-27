@@ -290,7 +290,8 @@ func (d *device) CreateDevice(kt *kit.Kit, input *types.DeviceInfo) (mapstr.MapS
 
 	if cnt != 0 {
 		logs.Errorf("device exist locally, need not create again, rid: %s", kt.Rid)
-		return nil, errf.NewFromErr(errf.DeviceTypeExistLocally, errors.New("device exist locally, need not create again"))
+		return nil, errf.NewFromErr(errf.DeviceTypeExistLocally,
+			errors.New("device exist locally, need not create again"))
 	}
 
 	// create instance
@@ -327,10 +328,8 @@ func (d *device) CreateManyDevice(kt *kit.Kit, input *types.CreateManyDevicePara
 		return err
 	}
 
-	for _, zoneItem := range zones {
+	for _, requireType := range input.RequireType {
 		param := &types.DeviceInfo{
-			Region:     zoneItem.Region,
-			Zone:       zoneItem.Zone,
 			DeviceType: input.DeviceType,
 			Cpu:        input.Cpu,
 			Mem:        input.Mem,
@@ -341,20 +340,80 @@ func (d *device) CreateManyDevice(kt *kit.Kit, input *types.CreateManyDevicePara
 				"device_group": input.DeviceGroup,
 				"device_size":  input.DeviceSize,
 			},
-			EnableCapacity: true,
-			EnableApply:    true,
-			Score:          0,
-			Comment:        "",
+			EnableCapacity:  true,
+			EnableApply:     true,
+			Score:           0,
+			Comment:         "",
+			DeviceTypeClass: input.DeviceTypeClass,
+			RequireType:     requireType,
 		}
 
-		for _, requireType := range input.RequireType {
-			param.RequireType = requireType
-
-			if _, err = d.CreateDevice(kt, param); err != nil {
-				logs.Errorf("failed to create device, err: %v, param: %+v, rid: %s", err, cvt.PtrToVal(param), kt.Rid)
-				return err
-			}
+		if err = d.batchCreateDeviceForZones(kt, param, zones); err != nil {
+			logs.Errorf("failed to create device, err: %v, param: %+v, rid: %s", err, cvt.PtrToVal(param), kt.Rid)
+			return err
 		}
+	}
+
+	return nil
+}
+
+// batchCreateDeviceForZones batch creates device config for zone
+func (d *device) batchCreateDeviceForZones(kt *kit.Kit, input *types.DeviceInfo, zones []*types.Zone) error {
+
+	// uniqueness check
+	zoneConditions := make([]string, 0, len(zones))
+	for _, item := range zones {
+		zoneConditions = append(zoneConditions, item.Zone)
+	}
+	filter := map[string]interface{}{
+		"require_type": input.RequireType,
+		"device_type":  input.DeviceType,
+		"zone": &mapstr.MapStr{
+			pkg.BKDBIN: zoneConditions,
+		},
+	}
+
+	page := metadata.BasePage{Limit: pkg.BKNoLimit, Start: 0}
+	resp, err := config.Operation().CvmDevice().FindManyDevice(kt.Ctx, page, filter)
+	if err != nil {
+		logs.Errorf("failed to find device, err: %v, filter: %v, rid: %s", err, filter, kt.Rid)
+		return err
+	}
+	// 删除db中已有的数据，并在后面重新创建
+	if len(resp) > 0 {
+		logs.Warnf("the device info exist more than one, device info: %+v, rid: %s", cvt.PtrToSlice(resp), kt.Rid)
+		ids := make([]int64, 0, len(resp))
+		for _, item := range resp {
+			ids = append(ids, item.BkInstId)
+		}
+		delFilter := &mapstr.MapStr{
+			"id": &mapstr.MapStr{
+				pkg.BKDBIN: ids,
+			},
+		}
+		if err = config.Operation().CvmDevice().DeleteDevice(kt.Ctx, delFilter); err != nil {
+			logs.Errorf("failed to delete device, err: %v, filter: %v, rid: %s", err, filter, kt.Rid)
+			return err
+		}
+	}
+
+	// create instance
+	devices := make([]types.DeviceInfo, 0, len(zones))
+	ids, err := config.Operation().CvmDevice().NextSequences(kt.Ctx, len(zones))
+	if err != nil {
+		logs.Errorf("failed to create device, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+	for i, item := range zones {
+		input.Zone = item.Zone
+		input.Region = item.Region
+		input.BkInstId = int64(ids[i])
+		devices = append(devices, *input)
+	}
+
+	if err := config.Operation().CvmDevice().BatchCreateDevices(kt.Ctx, cvt.SliceToPtr(devices)); err != nil {
+		logs.Errorf("failed to create device, err: %v, rid: %s", err, kt.Rid)
+		return err
 	}
 
 	return nil
@@ -581,7 +640,7 @@ func (d *device) ListCvmInstanceInfoByDeviceTypes(kt *kit.Kit, deviceTypes []str
 
 	// 记录日志
 	logs.Infof("get cvm instance info from crp by device types, deviceTypes: %v, notExistDevice: %v, "+
-		"deviceTypeMap; %+v, rid: %s", deviceTypes, notExistDevice, deviceTypeMap, kt.Rid)
+		"deviceTypeMap: %+v, rid: %s", deviceTypes, notExistDevice, deviceTypeMap, kt.Rid)
 
 	return deviceTypeMap, nil
 }

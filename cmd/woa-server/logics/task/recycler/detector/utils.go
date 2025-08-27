@@ -39,11 +39,11 @@ func init() {
 	cvmLimiter = ratelimit.New(50)
 }
 
-func (d *Detector) isTcDevice(host *cmdb.Host) bool {
+func isTcDevice(host *cmdb.Host) bool {
 	return strings.HasPrefix(host.BkAssetID, "TC")
 }
 
-func (d *Detector) isDockerVM(host *cmdb.Host) bool {
+func isDockerVM(host *cmdb.Host) bool {
 	dashIdx := strings.Index(host.BkAssetID, "-")
 	if dashIdx < 0 {
 		return false
@@ -137,7 +137,7 @@ func (d *Detector) getHostBaseInfo(ips []string) ([]*cmdb.Host, error) {
 
 	// set rate limit to avoid cc api error "API rate limit exceeded by stage/resource strategy"
 	ccLimiter.Take()
-	resp, err := d.cc.ListHost(d.kt, req)
+	resp, err := d.cc.ListHost(d.backendKit, req)
 	if err != nil {
 		logs.Errorf("recycler:logics:cvm:getHostBaseInfo:failed, failed to get cc host info, err: %v", err)
 		return nil, err
@@ -183,7 +183,7 @@ func (d *Detector) getHostBaseInfoByAsset(assetIds []string) ([]*cmdb.Host, erro
 
 	// set rate limit to avoid cc api error "API rate limit exceeded by stage/resource strategy"
 	ccLimiter.Take()
-	resp, err := d.cc.ListHost(d.kt, req)
+	resp, err := d.cc.ListHost(d.backendKit, req)
 	if err != nil {
 		logs.Errorf("failed to get cc host info, err: %v", err)
 		return nil, err
@@ -199,7 +199,7 @@ func (d *Detector) getHostTopoInfo(hostIds []int64) ([]*cmdb.HostTopoRelation, e
 
 	// set rate limit to avoid cc api error "API rate limit exceeded by stage/resource strategy"
 	ccLimiter.Take()
-	resp, err := d.cc.FindHostBizRelations(d.kt, req)
+	resp, err := d.cc.FindHostBizRelations(d.backendKit, req)
 	if err != nil {
 		logs.Errorf("failed to get cc host topo info, err: %v", err)
 		return nil, err
@@ -236,6 +236,10 @@ func (d *Detector) getModuleInfo(bizId int64, moduleIds []int64) ([]*cmdb.Module
 }
 
 func (d *Detector) structToStr(v interface{}) string {
+	return structToStr(v)
+}
+
+func structToStr(v interface{}) string {
 	b, err := json.Marshal(v)
 	if err != nil {
 		logs.Warnf("failed to convert struct to string: %+v", v)
@@ -243,4 +247,11 @@ func (d *Detector) structToStr(v interface{}) string {
 	}
 
 	return string(b)
+}
+
+// HostExecInfo 执行信息辅助结构
+type HostExecInfo struct {
+	*StepMeta
+	ExecLog string
+	Error   error
 }

@@ -20,18 +20,12 @@
 package recycle
 
 import (
-	"fmt"
-	"sync"
-	"time"
-
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/logics/task/recycler/event"
-	"hcm/pkg"
-	"hcm/pkg/criteria/mapstr"
+	"hcm/cmd/woa-server/types/task"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
-	"hcm/pkg/tools/metadata"
 )
 
 // recoverDetectedOrder 恢复状态为RecycleStatusDetecting的回收订单
@@ -87,110 +81,17 @@ func (r *recycleRecoverer) recoverDetectedOrder(kt *kit.Kit, order *table.Recycl
 
 // dealDetectingTask 恢复detecting状态回收订单
 func (r *recycleRecoverer) dealDetectingTask(kt *kit.Kit, order *table.RecycleOrder) error {
-	// 更新状态以重入检测步骤
-	if err := r.updateTasksInit(kt, order.SuborderID); err != nil {
-		logs.Errorf("failed to update detectTask status to init, subOrderId: %s, err: %v, rid: %s", order.SuborderID,
-			err, kt.Rid)
-		return err
-	}
 
-	detectingTasks, err := r.getDetectTasks(kt, order.SuborderID, table.DetectStatusInit)
+	resumeReq := &task.ResumeRecycleOrderReq{
+		SuborderID: []string{order.SuborderID},
+	}
+	err := r.recyclerIf.ResumeRecycleOrder(kt, resumeReq)
 	if err != nil {
-		logs.Errorf("failed to get detectTasks, subOrderId: %s, status: %s, err: %v, rid: %s", order.SuborderID,
-			table.DetectStatusInit, err, kt.Rid)
-		return err
-	}
-
-	// run recycle tasks
-	wg := sync.WaitGroup{}
-	for _, detectTask := range detectingTasks {
-		wg.Add(1)
-		go func(task *table.DetectTask) {
-			defer wg.Done()
-			logs.Infof("start to recover detectTask, taskID: %s, subOrderId: %s, rid: %s", task.TaskID, task.SuborderID,
-				kt.Rid)
-			if err := r.recoverDetectTask(kt, task); err != nil {
-				logs.Errorf("failed to recover detect detectTask, subOrderId: %s, taskID: %s, err: %v, rid: %s",
-					order.SuborderID, task.TaskID, err, kt.Rid)
-				return
-			}
-			logs.Infof("success to recover detectTask, taskID: %s, subOrderId: %s, rid: %s", task.TaskID,
-				task.SuborderID, kt.Rid)
-		}(detectTask)
-	}
-	wg.Wait()
-
-	return nil
-}
-
-// recoverDetectTask 恢复检测步骤
-func (r *recycleRecoverer) recoverDetectTask(kt *kit.Kit, task *table.DetectTask) error {
-	// 更新检测步骤状态以便再次重入检测步骤
-	if err := r.updateStepInit(kt, task); err != nil {
-		logs.Errorf("failed to update detect task status to init, taskID: %s, err: %v, rid: %s", task.TaskID, err,
-			kt.Rid)
-		return fmt.Errorf("failed to update detect task status to init, taskID: %s, err: %v, rid: %s", task.TaskID, err,
-			kt.Rid)
-	}
-
-	dealedStepNum := task.SuccessNum + task.FailedNum
-	// 未开始执行检测步骤
-	if dealedStepNum == 0 {
-		r.recyclerIf.RunRecycleTask(task, 0)
-		return nil
-	}
-	// 未执行完成检测步骤
-	if dealedStepNum <= task.TotalNum {
-		r.recyclerIf.RunRecycleTask(task, dealedStepNum)
-		return nil
-	}
-
-	logs.Errorf("too many detect task steps, subOrderId: %s, dealedStepNum: %d, total: %d, rid: %s", task.SuborderID,
-		dealedStepNum, task.TotalNum, kt.Rid)
-	return fmt.Errorf("too many detect task steps, subOrderId: %s, rid: %s", task.SuborderID, kt.Rid)
-}
-
-// updateStepInit update step status to init to start detect step
-func (r *recycleRecoverer) updateStepInit(kt *kit.Kit, task *table.DetectTask) error {
-	stepId := task.SuccessNum + task.FailedNum + 1
-	filter := &mapstr.MapStr{
-		"step_id":     stepId,
-		"suborder_id": task.SuborderID,
-		"status":      table.DetectStatusRunning,
-	}
-	doc := &mapstr.MapStr{
-		"status":    table.DetectStatusInit,
-		"message":   "init",
-		"update_at": time.Now(),
-	}
-
-	if err := dao.Set().DetectStep().UpdateDetectStep(kt.Ctx, filter, doc); err != nil {
-		logs.Errorf("failed to update recycle step, err: %v, step id: %s, rid: %s", err, stepId, kt.Rid)
+		logs.Errorf("recover failed to resume recycle order, subOrderId: %s, err: %v, rid: %s",
+			order.SuborderID, err, kt.Rid)
 		return err
 	}
 	return nil
-}
-
-// getDetectTasks 获取检测任务
-func (r *recycleRecoverer) getDetectTasks(kt *kit.Kit, subOrderId string,
-	status table.DetectStatus) ([]*table.DetectTask, error) {
-
-	filter := map[string]interface{}{
-		"suborder_id": subOrderId,
-		"status":      status,
-	}
-	page := metadata.BasePage{
-		Start: 0,
-		Limit: pkg.BKNoLimit,
-	}
-
-	tasks, err := dao.Set().DetectTask().FindManyDetectTask(kt.Ctx, page, filter)
-	if err != nil {
-		logs.Errorf("failed to get detectTasks by subOrderId and status, subOrderId: %s, err: %v, rid: %s", subOrderId,
-			err, kt.Rid)
-		return nil, err
-	}
-	return tasks, nil
 }
 
 // getDetectTaskCount get count of detect task by orderId and status
@@ -208,22 +109,4 @@ func (r *recycleRecoverer) getDetectTaskCount(kt *kit.Kit, subOrderId string, st
 		return 0, err
 	}
 	return cnt, nil
-}
-
-func (r *recycleRecoverer) updateTasksInit(kt *kit.Kit, subOrderId string) error {
-	filter := &mapstr.MapStr{
-		"suborder_id": subOrderId,
-		"status":      table.DetectStatusRunning,
-	}
-	doc := &mapstr.MapStr{
-		"status":    table.DetectStatusInit,
-		"message":   "init",
-		"update_at": time.Now(),
-	}
-
-	if err := dao.Set().DetectTask().UpdateDetectTasks(kt, filter, doc); err != nil {
-		logs.Errorf("failed to update recycle detect task, subOrderId: %s, err: %v, rid: %s", subOrderId, err, kt.Rid)
-		return err
-	}
-	return nil
 }

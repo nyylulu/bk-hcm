@@ -56,12 +56,12 @@ type Logics interface {
 }
 
 type logics struct {
-	cvm       cvmapi.CVMClientInterface
-	cliConf   cc.ClientConfig
-	confLogic config.Logics
-	cmdbCli   cmdb.Client
-	rsLogic   rollingserver.Logics
-	taskLogic taskLogics.Logics
+	cvm            cvmapi.CVMClientInterface
+	cliConf        cc.ClientConfig
+	confLogic      config.Logics
+	cmdbCli        cmdb.Client
+	rsLogic        rollingserver.Logics
+	taskLogic      taskLogics.Logics
 	schedulerLogic scheduler.Interface
 }
 
@@ -71,12 +71,12 @@ func New(thirdCli *thirdparty.Client, cliConf cc.ClientConfig, confLogic config.
 	schedulerLogic scheduler.Interface) Logics {
 
 	return &logics{
-		cvm:       thirdCli.CVM,
-		confLogic: confLogic,
-		cliConf:   cliConf,
-		cmdbCli:   cmdbCli,
-		rsLogic:   rsLogic,
-		taskLogic: taskLogic,
+		cvm:            thirdCli.CVM,
+		confLogic:      confLogic,
+		cliConf:        cliConf,
+		cmdbCli:        cmdbCli,
+		rsLogic:        rsLogic,
+		taskLogic:      taskLogic,
 		schedulerLogic: schedulerLogic,
 	}
 }
@@ -109,6 +109,7 @@ func (l *logics) CreateApplyOrder(kt *kit.Kit, param *types.CvmCreateReq) (*type
 		CreateAt:    now,
 		UpdateAt:    now,
 	}
+
 	if enumor.RequireType(order.RequireType) == enumor.RequireTypeRollServer {
 		canApply, reason, err := l.rsLogic.CanApplyHost(kt, order.BkBizId, order.Total, enumor.CvmProduceAppliedType)
 		if err != nil {

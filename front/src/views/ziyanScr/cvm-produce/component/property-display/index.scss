@@ -1,0 +1,17 @@
+.cvm-produce-property-list {
+  padding: 8px 40px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  background: #f5f7fa;
+  font-size: 12px;
+
+  .cvm-produce-property-item {
+    display: flex;
+
+    .cvm-produce-property-value {
+      color: $font-deep-color;
+    }
+  }
+}

@@ -562,6 +562,11 @@ func convResConsumePoolToPenaltyMap(kt *kit.Kit, pool ResPlanConsumePool, region
 	consumeMap := make(map[ptypes.DemandPenaltyBaseKey]int64)
 
 	for key, cpuCore := range pool {
+		// 预测罚金，需要过滤掉滚服项目
+		if key.ObsProject == enumor.ObsProjectRollServer {
+			continue
+		}
+
 		if _, ok := regionAreaMap[key.RegionID]; !ok {
 			logs.Errorf("failed to get region area, region id: %s, rid: %s", key.RegionID, kt.Rid)
 			return nil, fmt.Errorf("failed to get region area, region id: %s", key.RegionID)
@@ -773,6 +778,11 @@ func (c *Controller) PushExpireNotifications(kt *kit.Kit, bkBizIDs []int64, extr
 	// 3.分业务处理
 	bkBizDemands := make(map[int64][]*ptypes.ListResPlanDemandItem)
 	for _, demand := range demandDetails {
+		// 预测到期提醒，需要过滤掉滚服项目
+		if demand.ObsProject == enumor.ObsProjectRollServer {
+			continue
+		}
+
 		if _, ok := bkBizDemands[demand.BkBizID]; !ok {
 			bkBizDemands[demand.BkBizID] = make([]*ptypes.ListResPlanDemandItem, 0)
 		}

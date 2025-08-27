@@ -24,7 +24,7 @@ export default defineComponent({
       router.push({
         path: '/business/service/resource-plan-mod',
         query: {
-          planIds: route.query.crpDemandId,
+          planIds: route.query.demandId,
           start: searchModel.expect_time_range.start,
           end: searchModel.expect_time_range.end,
         },

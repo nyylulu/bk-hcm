@@ -1,5 +1,5 @@
 <template>
-  <bk-sideslider v-model:isShow="model" :title="title" width="640" @closed="handleClosed" @hidden="emit('hidden')">
+  <bk-sideslider v-model:is-show="model" :title="title" width="640" @closed="handleClosed" @hidden="emit('hidden')">
     <template #default>
       <div class="container">
         <bk-alert theme="info" class="mb16">
@@ -65,15 +65,16 @@
 import { computed, onBeforeMount, reactive, ref, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
 import usePlanStore from '@/store/usePlanStore';
+import { useCvmDeviceStore } from '@/store/cvm/device';
 import { IListResourcesDemandsItem } from '@/typings/resourcePlan';
 import { CvmDeviceType } from '@/views/ziyanScr/components/devicetype-selector/types';
+import { AdjustType } from '@/typings/plan';
+import { QueryRuleOPEnumLegacy } from '@/typings';
 import { timeFormatter } from '@/common/util';
 import dayjs from 'dayjs';
-import http from '@/http';
 
 import GridContainer from '@/components/layout/grid-container/grid-container.vue';
 import GridItem from '@/components/layout/grid-container/grid-item.vue';
-import { AdjustType } from '@/typings/plan';
 
 interface IProps {
   data: IListResourcesDemandsItem;
@@ -82,8 +83,10 @@ interface IProps {
 const model = defineModel<boolean>();
 const props = defineProps<IProps>();
 const emit = defineEmits(['hidden']);
-const planStore = usePlanStore();
+
 const router = useRouter();
+const planStore = usePlanStore();
+const cvmDeviceStore = useCvmDeviceStore();
 
 const title = computed(() => `部分延期配置 - ${props.data.demand_id}`);
 
@@ -115,16 +118,15 @@ watchEffect(() => {
 
 const devicetypeInfo = ref<CvmDeviceType>(null);
 const getDevicetypeInfo = async () => {
-  const res = await http.post('/api/v1/woa/config/findmany/config/cvm/devicetype', {
+  devicetypeInfo.value = await cvmDeviceStore.getDevicetypeListWithoutPage({
     filter: {
       condition: 'AND',
       rules: [
-        { field: 'zone', operator: 'equal', value: props.data.zone_id },
-        { field: 'device_type', operator: 'equal', value: props.data.device_type },
+        { field: 'zone', operator: QueryRuleOPEnumLegacy.EQ, value: props.data.zone_id },
+        { field: 'device_type', operator: QueryRuleOPEnumLegacy.EQ, value: props.data.device_type },
       ],
     },
   });
-  [devicetypeInfo.value] = res.data.info;
 };
 
 const delayTotalCpuCore = computed(() => formModel.delay_os * (devicetypeInfo.value?.cpu_amount ?? 0));
@@ -189,6 +191,7 @@ onBeforeMount(() => {
     }
   }
 }
+
 .button {
   min-width: 88px;
 }

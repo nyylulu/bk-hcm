@@ -113,6 +113,15 @@ const columns: ModelPropertyColumn[] = [
     render: ({ row }: any) => getZoneCn(row.zone),
   },
   {
+    id: 'device_type_class',
+    name: '机型类型',
+    type: 'enum',
+    option: {
+      SpecialType: '专用机型',
+      CommonType: '通用机型',
+    },
+  },
+  {
     id: 'device_type',
     name: '机型',
     type: 'string',
@@ -302,8 +311,26 @@ const handleReset = () => {
         </template>
       </bk-table-column>
       <bk-table-column :label="'操作'" :width="110">
-        <template #default="{ row }">
-          <bk-button theme="primary" text @click="emit('apply', row)">一键申领</bk-button>
+        <template #default="{ row }: { row: ICvmDeviceItem }">
+          <!-- 滚服项目、小额绿通不支持一键申领专用机型 -->
+          <bk-button
+            theme="primary"
+            text
+            :disabled="
+              [RequirementType.GreenChannel, RequirementType.RollServer].includes(requireType) &&
+              row.device_type_class === 'SpecialType'
+            "
+            v-bk-tooltips="{
+              content: '滚服项目、小额绿通不支持一键申领专用机型',
+              disabled: !(
+                [RequirementType.GreenChannel, RequirementType.RollServer].includes(requireType) &&
+                row.device_type_class === 'SpecialType'
+              ),
+            }"
+            @click="emit('apply', row)"
+          >
+            一键申领
+          </bk-button>
         </template>
       </bk-table-column>
     </bk-table>
@@ -315,19 +342,24 @@ const handleReset = () => {
   margin-bottom: 16px;
   padding-bottom: 16px;
   border-bottom: 1px solid #dcdee5;
+
   .row-action {
     padding: 4px 0;
+
     :deep(.item-content) {
       gap: 10px;
     }
+
     .bk-button {
       min-width: 86px;
     }
   }
 }
+
 .list {
   margin-top: 16px;
 }
+
 .alert-content {
   display: flex;
   align-items: center;

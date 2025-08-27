@@ -1,4 +1,4 @@
-import { defineComponent, ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { defineComponent, ref, computed, onMounted, watch } from 'vue';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { useTable } from '@/hooks/useTable/useTable';
 import { getRequireTypes } from '@/api/host/task';
@@ -19,7 +19,11 @@ import { merge, throttle } from 'lodash';
 import dayjs from 'dayjs';
 import './index.scss';
 import { ICvmDeviceDetailItem } from '@/typings/ziyanScr';
+import useTimeoutPoll from '@/hooks/use-timeout-poll';
+import PropertyList from '@/views/ziyanScr/cvm-produce/component/property-display/property-list';
+
 const { FormItem } = Form;
+
 export default defineComponent({
   components: {
     MemberSelect,
@@ -96,10 +100,11 @@ export default defineComponent({
       isShowProduceDetail.value = true;
     };
     const { columns } = useColumns('cvmProduceQuery');
-    columns.splice(9, 0, {
+    columns.splice(14, 0, {
       label: '生产情况-成功',
       field: 'success_num',
-      width: 150,
+      width: 120,
+      fixed: 'right',
       render: ({ row }) => {
         if (row.success_num > 0) {
           const { order_id } = row;
@@ -211,7 +216,6 @@ export default defineComponent({
         throttleLoadHostInfo.value(row);
       }
     };
-    const poller = ref(null);
     const pollProduceOrderList = () => {
       const newPage = {
         start: pagination.start,
@@ -234,20 +238,17 @@ export default defineComponent({
       return { region, zone };
     });
 
+    const taskPoll = useTimeoutPoll(pollProduceOrderList, 30000, { max: 60 });
+
     onMounted(() => {
       fetchRequireType();
       loadCvmProduceDetail();
-      if (poller.value) clearInterval(poller.value);
-      poller.value = setInterval(() => {
-        pollProduceOrderList();
-      }, 5000);
+      taskPoll.resume();
     });
-    onUnmounted(() => {
-      clearInterval(poller.value);
-    });
+
     return () => (
       <div class='apply-list-container cvm-produce-wrapper'>
-        <div class={'filter-container'}>
+        <div class={'filter-container search-container'}>
           <Form formType='vertical' class='scr-form-wrapper' model={cvmProduceForm}>
             <FormItem label='需求类型'>
               <Select v-model={cvmProduceForm.value.require_type} multiple clearable placeholder='请选择'>
@@ -305,7 +306,7 @@ export default defineComponent({
               <bk-date-picker v-model={timeForm.value} type='daterange' />
             </FormItem>
           </Form>
-          <div class='btn-container'>
+          <div class='button-container'>
             <Button theme='primary' onClick={filterOrders}>
               <Search />
               查询
@@ -313,34 +314,37 @@ export default defineComponent({
             <Button onClick={() => clearFilter()}>重置</Button>
           </div>
         </div>
-        <div class='btn-container oper-btn-pad'>
-          <Button theme='primary' onClick={() => handleOrderCreate(null)}>
-            <Plus />
-            创建单据
-          </Button>
-          <Button theme='primary' onClick={handleFastCvmProduce}>
-            快速生产
-          </Button>
+        <div class='cvm-produce-table-panel'>
+          <div class='toolbar'>
+            <Button theme='primary' onClick={() => handleOrderCreate(null)}>
+              <Plus class='f22' />
+              创建单据
+            </Button>
+            <Button theme='primary' onClick={handleFastCvmProduce}>
+              快速生产
+            </Button>
+          </div>
+          <CommonTable class={'filter-common-table cvm-produce-table'}>
+            {{
+              expandRow: (row: any) => {
+                return (
+                  <PropertyList
+                    properties={{
+                      imageId: row.spec.image_id,
+                      systemDisk: row.spec.system_disk,
+                      dataDisk: row.spec.data_disk,
+                      bkBizId: row.bk_biz_id,
+                      module: 'SA云化池',
+                      vpc: row.spec.vpc,
+                      subnet: row.spec.subnet,
+                    }}
+                    row={row}
+                  />
+                );
+              },
+            }}
+          </CommonTable>
         </div>
-        <CommonTable class={'filter-common-table'}>
-          {{
-            expandRow: (row) => {
-              return (
-                <property-list
-                  properties={{
-                    imageId: row.spec.image_id,
-                    diskType: row.spec.disk_type,
-                    diskSize: row.spec.disk_size,
-                    bkBizId: row.bk_biz_id,
-                    module: 'SA云化池',
-                    vpc: row.spec.vpc,
-                    subnet: row.spec.subnet,
-                  }}
-                />
-              );
-            },
-          }}
-        </CommonTable>
         <CreateOrderDialog
           v-model={isCreateCvmDialogShow.value}
           cvmDeviceDetail={fastProduceData.value}

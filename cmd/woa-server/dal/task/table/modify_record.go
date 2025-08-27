@@ -36,15 +36,17 @@ type ModifyDetail struct {
 
 // ModifyData apply order modified data
 type ModifyData struct {
-	TotalNum    uint            `json:"total_num" bson:"total_num"`
-	Replicas    uint            `json:"replicas" bson:"replicas"`
-	Region      string          `json:"region" bson:"region"`
-	Zone        string          `json:"zone" bson:"zone"`
-	DeviceType  string          `json:"device_type" bson:"device_type"`
-	ImageId     string          `json:"image_id" bson:"image_id"`
-	DiskSize    int64           `json:"disk_size" bson:"disk_size"`
-	DiskType    enumor.DiskType `json:"disk_type" bson:"disk_type"`
-	NetworkType string          `json:"network_type" bson:"network_type"`
-	Vpc         string          `json:"vpc" bson:"vpc"`
-	Subnet      string          `json:"subnet" bson:"subnet"`
+	TotalNum    uint              `json:"total_num" bson:"total_num"`
+	Replicas    uint              `json:"replicas" bson:"replicas"`
+	Region      string            `json:"region" bson:"region"`
+	Zone        string            `json:"zone" bson:"zone"`
+	DeviceType  string            `json:"device_type" bson:"device_type"`
+	ImageId     string            `json:"image_id" bson:"image_id"`
+	DiskSize    int64             `json:"disk_size" bson:"disk_size"`
+	DiskType    enumor.DiskType   `json:"disk_type" bson:"disk_type"`
+	NetworkType string            `json:"network_type" bson:"network_type"`
+	Vpc         string            `json:"vpc" bson:"vpc"`
+	Subnet      string            `json:"subnet" bson:"subnet"`
+	SystemDisk  enumor.DiskSpec   `json:"system_disk" bson:"system_disk"`
+	DataDisk    []enumor.DiskSpec `json:"data_disk" bson:"data_disk"`
 }

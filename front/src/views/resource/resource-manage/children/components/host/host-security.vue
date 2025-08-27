@@ -14,7 +14,7 @@ import bus from '@/common/bus';
 import { bkTooltips, Button, Message, OverflowTitle } from 'bkui-vue';
 import SecurityGroupSelectorDialog from '@/components/security-group-selector-dialog/index.vue';
 import CopyToClipboard from '@/components/copy-to-clipboard/index.vue';
-import DialogFooter from '@/components/common-dialog/dialog-footer.vue';
+import ModalFooter from '@/components/modal/modal-footer.vue';
 
 const props = defineProps({
   data: {
@@ -539,7 +539,7 @@ getSecurityGroupsList();
       show-overflow-tooltip
     />
     <bk-dialog
-      v-model:isShow="isShow"
+      v-model:is-show="isShow"
       :title="activeType === 'ingress' ? '入站规则' : '出站规则'"
       width="1200"
       :theme="'primary'"
@@ -584,7 +584,7 @@ getSecurityGroupsList();
       </span>
 
       <template #footer>
-        <dialog-footer
+        <modal-footer
           :disabled="tableData.length === 1"
           :loading="unBindLoading"
           @confirm="handleConfirmUnBind"
@@ -621,6 +621,7 @@ getSecurityGroupsList();
       }
     }
   }
+
   .toolbar {
     display: flex;
     align-items: center;
@@ -636,10 +637,12 @@ getSecurityGroupsList();
     }
   }
 }
+
 .security-head {
   display: flex;
   align-items: center;
 }
+
 .error-text {
   color: #ea3636;
 }

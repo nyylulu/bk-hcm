@@ -8,7 +8,8 @@ import DetailHeader from '@/views/resource/resource-manage/common/header/detail-
 import BusinessSelector from '@/components/business-selector/index.vue';
 import AreaSelector from '../AreaSelector';
 import ZoneTagSelector from '@/components/zone-tag-selector/index.vue';
-import DiskTypeSelect from '../DiskTypeSelect';
+import CvmSystemDisk from '@/views/ziyanScr/components/cvm-system-disk/form.vue';
+import CvmDataDisk from '@/views/ziyanScr/components/cvm-data-disk/form.vue';
 import NetworkInfoCollapsePanel from '../network-info-collapse-panel/index.vue';
 import AntiAffinityLevelSelect from '../AntiAffinityLevelSelect';
 import CvmDevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/cvm-devicetype-selector.vue';
@@ -28,13 +29,15 @@ import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import useFormModel from '@/hooks/useFormModel';
 import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
 import apiService from '@/api/scrApi';
-import { VendorEnum, CLOUD_CVM_DISKTYPE, GLOBAL_BIZS_KEY } from '@/common/constant';
+import { VendorEnum, GLOBAL_BIZS_KEY } from '@/common/constant';
 import { VerifyStatus, VerifyStatusMap } from './constants';
 import { ChargeType } from '@/typings/plan';
 import { cloneDeep } from 'lodash';
 import { timeFormatter, expectedDeliveryTime } from '@/common/util';
 import http from '@/http';
 
+import { useItDeviceType } from '@/views/ziyanScr/cvm-produce/component/create-order/use-it-device-type';
+import { ICvmSystemDisk } from '@/views/ziyanScr/components/cvm-system-disk/typings';
 // 滚服项目
 import RollingServerTipsAlert from '@/views/ziyanScr/rolling-server/tips-alert/index.vue';
 import InheritPackageFormItem, {
@@ -64,6 +67,9 @@ export default defineComponent({
   },
   setup(props) {
     const accountStore = useAccountStore();
+
+    const { cvmChargeTypes, cvmChargeTypeNames, cvmChargeTypeTips } = useCvmChargeType();
+
     const IDCPMformRef = ref();
     const QCLOUDCVMformRef = ref();
 
@@ -109,6 +115,34 @@ export default defineComponent({
       },
     });
 
+    // 添加按钮侧边栏公共表单对象
+    const resourceForm = ref({
+      resourceType: 'QCLOUDCVM', // 主机类型
+      remark: '', // 备注
+      enable_disk_check: false,
+      region: '', // 地域
+      zone: '', // 园区
+      charge_type: cvmChargeTypes.PREPAID,
+      charge_months: 36, // 计费时长
+      bk_asset_id: '', // 继承套餐的机器代表固资号
+    });
+    // 侧边栏腾讯云CVM
+    const QCLOUDCVMForm = ref({
+      spec: {
+        device_type: '', // 机型
+        replicas: 1, // 需求数量
+        anti_affinity_level: 'ANTI_NONE',
+        vpc: '', //  vpc
+        subnet: '', //  子网
+        image_id: '', // 镜像
+        system_disk: { disk_type: '', disk_size: 0, disk_num: 1 },
+        data_disk: [],
+        network_type: 'TENTHOUSAND',
+        inherit_instance_id: '', // 继承套餐的机器代表实例ID
+        cpu: undefined,
+      },
+    });
+
     const cvmDevicetypeSelectorRef = useTemplateRef<typeof CvmDevicetypeSelector>('cvm-devicetype-selector');
     const selectedChargeType = computed(() => resourceForm.value.charge_type);
     const {
@@ -130,7 +164,6 @@ export default defineComponent({
     const { columns: CloudHostcolumns, generateColumnsSettings } = useColumns('CloudHost');
     let cloudHostSetting = generateColumnsSettings(CloudHostcolumns);
     const { columns: PhysicalMachinecolumns } = useColumns('PhysicalMachine');
-    const { cvmChargeTypes, cvmChargeTypeNames, cvmChargeTypeTips } = useCvmChargeType();
     const cloudTableColumns = ref([]);
 
     // 特殊需求类型（滚服项目、小额绿通）-状态
@@ -150,6 +183,12 @@ export default defineComponent({
       resourceForm.value.charge_months = result?.chargeMonths;
       chargeMonthsDisabledState.value = result?.chargeMonthsDisabledState;
     };
+
+    const currentSpecDeviceType = computed(() => QCLOUDCVMForm.value.spec.device_type);
+    const { currentCloudInstanceConfig, isItDeviceType } = useItDeviceType(true, currentSpecDeviceType, () => {
+      const { region, zone, charge_type: chargeType } = resourceForm.value;
+      return { region, zone, chargeType };
+    });
 
     // 滚服继承套餐的机器
     let rollingServerHost: RollingServerHost = null;
@@ -292,33 +331,7 @@ export default defineComponent({
         showOverflowTooltip: false,
       },
     ];
-    // 添加按钮侧边栏公共表单对象
-    const resourceForm = ref({
-      resourceType: 'QCLOUDCVM', // 主机类型
-      remark: '', // 备注
-      enable_disk_check: false,
-      region: '', // 地域
-      zone: '', // 园区
-      charge_type: cvmChargeTypes.PREPAID,
-      charge_months: 36, // 计费时长
-      bk_asset_id: '', // 继承套餐的机器代表固资号
-    });
-    // 侧边栏腾讯云CVM
-    const QCLOUDCVMForm = ref({
-      spec: {
-        device_type: '', // 机型
-        replicas: 1, // 需求数量
-        anti_affinity_level: 'ANTI_NONE',
-        vpc: '', //  vpc
-        subnet: '', //  子网
-        image_id: '', // 镜像
-        disk_type: 'CLOUD_PREMIUM', // 数据盘tyle
-        disk_size: 0, // 数据盘size
-        network_type: 'TENTHOUSAND',
-        inherit_instance_id: '', // 继承套餐的机器代表实例ID
-        cpu: undefined,
-      },
-    });
+
     // 主机类型列表
     const resourceTypes = ref([
       {
@@ -501,6 +514,16 @@ export default defineComponent({
         }
       },
     );
+
+    const resolveSpecDataDiskInReApply = (spec: any) => {
+      const { data_disk, disk_type, disk_size } = spec;
+      // 兼容旧单据数据
+      if (!data_disk) {
+        return disk_type ? { ...spec, data_disk: [{ disk_type, disk_size, disk_num: 1 }] } : { ...spec, data_disk: [] };
+      }
+      return spec;
+    };
+
     const unReapply = async () => {
       if (route?.query?.order_id) {
         const data = await apiService.getOrderDetail(+route?.query?.order_id);
@@ -528,11 +551,18 @@ export default defineComponent({
         };
 
         suborders.forEach(({ resource_type, remark, replicas, spec, applied_core }: any) => {
-          const data = { resource_type, remark, replicas: +replicas, spec, applied_core };
+          const data = {
+            resource_type,
+            remark,
+            replicas: +replicas,
+            spec: resolveSpecDataDiskInReApply(spec),
+            applied_core,
+          };
 
           resource_type === 'QCLOUDCVM' ? cloudTableData.value.push(data) : physicalTableData.value.push(data);
         });
       }
+
       if (route?.query?.id) {
         assignment(route?.query);
 
@@ -635,8 +665,8 @@ export default defineComponent({
         replicas: 1,
         anti_affinity_level: 'ANTI_NONE',
         image_id: 'img-fjxtfi0n', // 镜像
-        disk_type: 'CLOUD_PREMIUM', // 数据盘tyle
-        disk_size: 0, // 数据盘size
+        system_disk: { disk_type: '', disk_size: 0, disk_num: 1 },
+        data_disk: [],
         network_type: 'TENTHOUSAND',
         inherit_instance_id: '',
         cpu: data.cpu,
@@ -687,8 +717,8 @@ export default defineComponent({
           subnet: '', //  子网
           anti_affinity_level: 'ANTI_NONE',
           image_id: '', // 镜像
-          disk_type: 'CLOUD_PREMIUM', // 数据盘tyle
-          disk_size: 0, // 数据盘size
+          system_disk: { disk_type: '', disk_size: 0, disk_num: 1 },
+          data_disk: [],
           network_type: 'TENTHOUSAND',
           inherit_instance_id: QCLOUDCVMForm.value.spec.inherit_instance_id, // 继承套餐的机器实例id不用清除
           cpu: undefined,
@@ -725,8 +755,6 @@ export default defineComponent({
         replicas: +QCLOUDCVMForm.value.spec.replicas,
         spec: {
           ...QCLOUDCVMForm.value.spec,
-          // bk-input[number]粘贴与当前值相同的字符数值最终得到的是字符串值，这里统一转换为数字
-          disk_size: Number(QCLOUDCVMForm.value.spec.disk_size),
           region,
           zone,
           charge_type,
@@ -747,7 +775,7 @@ export default defineComponent({
         },
       };
     };
-    const QCLOUDCVMformRules = ref({
+    const QCLOUDCVMformRules = computed(() => ({
       device_type: [{ required: true, message: '请选择机型', trigger: 'change' }],
       image_id: [{ required: true, message: '请选择镜像', trigger: 'change' }],
       replicas: [
@@ -756,19 +784,28 @@ export default defineComponent({
         {
           validator: (value: number) => !(isRollingServerLike.value && value > 100),
           message: '注意：因云接口限制，单次的机器数最大值为100，超过后请手动克隆为多条配置',
-          trigger: 'blur',
-        },
-      ],
-      disk_size: [
-        {
           trigger: 'change',
-          message: '数据盘大小范围在0-16000GB之间，数值必须是10的整数倍',
-          validator: (val: number) => {
-            return val >= 0 && val <= 16000 && val % 10 === 0;
-          },
         },
       ],
-    });
+      system_disk: [
+        {
+          validator: (value: ICvmSystemDisk) => !!value.disk_type,
+          message: '请选择系统盘类型',
+          trigger: 'change',
+          required: true,
+        },
+      ],
+      data_disk: [
+        {
+          validator: (value: { disk_type: string; disk_size: number; disk_num: number }[]) => {
+            if (value.length === 0) return true;
+            return value.every((item) => item.disk_type && item.disk_size && item.disk_num);
+          },
+          message: '数据盘信息不能为空',
+          trigger: 'change',
+        },
+      ],
+    }));
     const resourceFormrules = ref({
       resourceType: [{ required: true, message: '请选择主机类型', trigger: 'change' }],
       region: [{ required: true, message: '请选择云地域', trigger: 'change' }],
@@ -1337,6 +1374,7 @@ export default defineComponent({
                           class={'selection-box'}
                           v-model={resourceForm.value.region}
                           params={{ resourceType: resourceForm.value.resourceType }}
+                          popoverOptions={{ boundary: 'parent' }}
                           onChange={handleRegionChange}></AreaSelector>
                       </bk-form-item>
                       <bk-form-item label='可用区' required property='zone'>
@@ -1543,6 +1581,7 @@ export default defineComponent({
                                 isLoading={isPlanedDeviceTypeLoading.value}
                                 placeholder={resourceForm.value.zone === '' ? '请先选择可用区' : '请选择机型'}
                                 showTip
+                                popoverOptions={{ boundary: 'parent' }}
                                 onChange={handleDeviceTypeChange}
                               />
                             </bk-form-item>
@@ -1552,35 +1591,45 @@ export default defineComponent({
                                 v-model={QCLOUDCVMForm.value.spec.image_id}
                                 region={[resourceForm.value.region]}
                                 disabled={resourceForm.value.region === ''}
+                                popoverOptions={{ boundary: 'parent' }}
                               />
                             </bk-form-item>
-                            <bk-form-item label='数据盘' property='disk_size'>
-                              <div
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                }}>
-                                <DiskTypeSelect
-                                  style={'width:360px'}
-                                  v-model={QCLOUDCVMForm.value.spec.disk_type}></DiskTypeSelect>
-                                <Input
-                                  class={'ml8'}
-                                  type='number'
-                                  style={'width:210px'}
-                                  prefix='大小'
-                                  suffix='GB'
-                                  v-model={QCLOUDCVMForm.value.spec.disk_size}
-                                  min={0}
-                                  max={16000}></Input>
-                                <i
-                                  class={'hcm-icon bkhcm-icon-question-circle-fill ml5'}
-                                  v-bk-tooltips={'最大为 16T(16000 G)，且必须为 10 的倍数'}></i>
-                              </div>
-                              {[CLOUD_CVM_DISKTYPE.SSD].includes(QCLOUDCVMForm.value.spec.disk_type) && (
-                                <bk-alert theme='warning' class='form-item-tips' style='width:600px'>
-                                  <>SSD 云硬盘的运营成本约为高性能云盘的 4 倍，请合理评估使用。</>
-                                </bk-alert>
-                              )}
+                            <bk-form-item property='system_disk' required>
+                              {{
+                                label: () => (
+                                  <>
+                                    系统盘
+                                    <i
+                                      class='hcm-icon bkhcm-icon-prompt text-gray cursor ml4'
+                                      v-bk-tooltips={{ content: '系统盘大小范围为50G-1000G' }}></i>
+                                  </>
+                                ),
+                                default: () => (
+                                  <CvmSystemDisk
+                                    v-model={QCLOUDCVMForm.value.spec.system_disk}
+                                    isItDeviceType={isItDeviceType.value}
+                                    currentCloudInstanceConfig={currentCloudInstanceConfig.value}
+                                  />
+                                ),
+                              }}
+                            </bk-form-item>
+                            <bk-form-item property='data_disk'>
+                              {{
+                                label: () => (
+                                  <>
+                                    数据盘
+                                    <i
+                                      class='hcm-icon bkhcm-icon-prompt text-gray cursor ml4'
+                                      v-bk-tooltips={{ content: '数据盘大小范围为20G-32000G，且为10的倍数' }}></i>
+                                  </>
+                                ),
+                                default: () => (
+                                  <CvmDataDisk
+                                    v-model={QCLOUDCVMForm.value.spec.data_disk}
+                                    currentCloudInstanceConfig={currentCloudInstanceConfig.value}
+                                  />
+                                ),
+                              }}
                             </bk-form-item>
                             <bk-form-item label='需求数量' required property='replicas'>
                               <hcm-form-number

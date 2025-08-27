@@ -32,7 +32,7 @@ func (g *Generator) matchPM(kt *kit.Kit, order *types.ApplyOrder, existDevices [
 	replicas := order.TotalNum - uint(len(existDevices))
 
 	// 1. init generate record
-	generateId, err := g.initGenerateRecord(order.ResourceType, order.SubOrderId, replicas, false)
+	generateId, err := g.initGenerateRecord(kt.Ctx, order.ResourceType, order.SubOrderId, replicas, false)
 	if err != nil {
 		logs.Errorf("failed to match pm when init generate record, err: %v, order id: %s", err, order.SubOrderId)
 		return fmt.Errorf("failed to match pm, err: %v, order id: %s", err, order.SubOrderId)
@@ -85,7 +85,7 @@ func (g *Generator) matchPM(kt *kit.Kit, order *types.ApplyOrder, existDevices [
 	}
 
 	// 4. save matched pm instances info
-	if err := g.createGeneratedDevice(kt, order, generateId, deviceList); err != nil {
+	if err := g.createGeneratedDevices(kt, order, generateId, deviceList); err != nil {
 		logs.Errorf("failed to update generated device, err: %v, order id: %s", err, order.SubOrderId)
 		return fmt.Errorf("failed to update generated device, err: %v, order id: %s", err, order.SubOrderId)
 	}

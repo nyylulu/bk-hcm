@@ -15,53 +15,102 @@ package detector
 
 import (
 	"fmt"
-	"time"
+	"sync/atomic"
 
-	"hcm/cmd/woa-server/dal/task/table"
-	"hcm/pkg/api/core"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/api-gateway/bkdbm"
+	cvt "hcm/pkg/tools/converter"
+	"hcm/pkg/tools/slice"
 )
 
-func (d *Detector) checkDbm(step *table.DetectStep, retry int) (int, string, error) {
-	attempt := 0
-	exeInfo := ""
-	var err error = nil
-	var isRetry bool
+// CheckDBMMaxBatchSize DBM 暂未限定长度，暂定200
+const CheckDBMMaxBatchSize = 200
 
-	for i := 0; i < retry; i++ {
-		attempt = i
-		exeInfo, err, isRetry = d.checkDbmMachinePool(step.IP)
-		if err == nil || !isRetry {
-			break
-		}
-
-		// retry gap until last retry
-		if (i + 1) < retry {
-			time.Sleep(3 * time.Second)
-		}
-	}
-
-	return attempt, exeInfo, err
+// CheckDBMWorkGroup 查询bk dbm的主机池，如果该主机在dbm主机池里面，则不允许回收
+type CheckDBMWorkGroup struct {
+	stepBatchChan chan *stepBatch
+	started       atomic.Bool
+	currency      int
+	dbmCLi        bkdbm.Client
+	resultHandler StepResultHandler
 }
 
-func (d *Detector) checkDbmMachinePool(ip string) (exeInfo string, err error, isRetry bool) {
-	// 查询bkdbm的主机池，如果该主机在dbm主机池里面，则不允许回收
-	req := &bkdbm.ListMachinePool{IPs: []string{ip}, Offset: 0, Limit: 1}
-	resp, err := d.bkDbm.QueryMachinePool(core.NewBackendKit(), req)
+// MaxBatchSize ...
+func (t *CheckDBMWorkGroup) MaxBatchSize() int {
+	return CheckDBMMaxBatchSize
+}
+
+// NewCheckDBMWorkGroup ...
+func NewCheckDBMWorkGroup(dbmCli bkdbm.Client, resultHandler StepResultHandler, workerNum int) *CheckDBMWorkGroup {
+
+	return &CheckDBMWorkGroup{
+		dbmCLi:        dbmCli,
+		resultHandler: resultHandler,
+		currency:      workerNum,
+		stepBatchChan: make(chan *stepBatch, workerNum),
+	}
+}
+
+// HandleResult ...
+func (t *CheckDBMWorkGroup) HandleResult(kt *kit.Kit, steps []*StepMeta, detectErr error, log string, needRetry bool) {
+	t.resultHandler.HandleResult(kt, steps, detectErr, log, needRetry)
+}
+
+// Submit 提交检查
+func (t *CheckDBMWorkGroup) Submit(kt *kit.Kit, steps []*StepMeta) {
+	t.stepBatchChan <- &stepBatch{kt: kt, steps: steps}
+}
+
+// Start 启动worker
+func (t *CheckDBMWorkGroup) Start(kt *kit.Kit) {
+	if !t.started.CompareAndSwap(false, true) {
+		// already started
+		return
+	}
+
+	for i := 0; i < t.currency; i++ {
+		subKit := kt.NewSubKit()
+		go t.queryWorker(subKit, i)
+	}
+}
+
+func (t *CheckDBMWorkGroup) queryWorker(kt *kit.Kit, idx int) {
+	logs.Infof("check DBM query worker %d start, rid: %s", idx, kt.Rid)
+	defer logs.Infof("check DBM query worker %d exit, rid: %s", idx, kt.Rid)
+
+	for {
+		select {
+		case batch := <-t.stepBatchChan:
+			logs.V(4).Infof("check DBM worker %d got steps: %d:%s, rid: %s",
+				idx, len(batch.steps), batch.steps, kt.Rid)
+			t.check(batch.kt, batch.steps)
+		case <-kt.Ctx.Done():
+			return
+		}
+	}
+}
+
+func (t *CheckDBMWorkGroup) check(kt *kit.Kit, steps []*StepMeta) {
+	hostIDs := slice.Map(steps, func(step *StepMeta) int64 { return step.Step.HostID })
+
+	req := &bkdbm.ListMachinePool{HostIDs: hostIDs, Offset: 0, Limit: int64(len(steps))}
+	resp, err := t.dbmCLi.QueryMachinePool(kt, req)
 	if err != nil {
-		logs.Errorf("failed to check bkdbm machine pool, ip: %s, err: %v", ip, err)
-		return "", fmt.Errorf("failed to check bkdbm machine pool, err: %v", err), true
+		t.HandleResult(kt, steps, err, fmt.Sprintf("check DBM failed, err: %s", err), true)
+		return
 	}
-
-	dbmRespStr := d.structToStr(resp)
-	exeInfo = fmt.Sprintf("check bkdbm machine pool response: %s", dbmRespStr)
-
-	if len(resp.Results) > 0 {
-		logs.Infof("failed to check bkdbm machine pool, ip:%s is in the BK-DBM's machine pool, bkdbm resp: %s",
-			ip, dbmRespStr)
-		return exeInfo, fmt.Errorf("该主机在DBM中使用，不允许回收"), false
+	existsMap := make(map[string][]*bkdbm.MachinePoolResult, len(resp.Results))
+	for _, item := range resp.Results {
+		existsMap[item.IP] = append(existsMap[item.IP], cvt.ValToPtr(item))
 	}
-
-	return exeInfo, nil, false
+	for _, step := range steps {
+		if _, ok := existsMap[step.Step.IP]; ok {
+			str := structToStr(existsMap[step.Step.IP])
+			terr := fmt.Errorf("该主机在DBM中使用，不允许回收: %s", step.Step.IP)
+			t.HandleResult(kt, []*StepMeta{step}, terr, str, false)
+			continue
+		}
+		t.HandleResult(kt, []*StepMeta{step}, nil, fmt.Sprintf("dbm response: %+v", existsMap[step.Step.IP]), false)
+	}
 }

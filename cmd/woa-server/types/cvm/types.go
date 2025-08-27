@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"hcm/pkg"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/thirdparty/cvmapi"
@@ -81,7 +82,9 @@ type OrderSpec struct {
 	// 计费时长，单位：月
 	ChargeMonths uint `json:"charge_months" bson:"charge_months"`
 	// 被继承云主机实例ID
-	InheritInstanceId string `json:"inherit_instance_id" bson:"inherit_instance_id"`
+	InheritInstanceId string            `json:"inherit_instance_id" bson:"inherit_instance_id"`
+	SystemDisk        enumor.DiskSpec   `json:"system_disk" bson:"system_disk"`
+	DataDisk          []enumor.DiskSpec `json:"data_disk" bson:"data_disk"`
 }
 
 // Validate whether OrderSpec is valid
@@ -96,22 +99,6 @@ func (s *OrderSpec) Validate() error {
 		return fmt.Errorf("subnet cannot be empty while vpc is set")
 	}
 
-	if s.DiskSize < 0 {
-		return fmt.Errorf("disk_size invalid value < 0")
-	}
-
-	diskLimit := int64(16000)
-	if s.DiskSize > diskLimit {
-		return fmt.Errorf("disk_size exceed limit %d", diskLimit)
-	}
-
-	// 规格为 10 的倍数
-	diskUnit := int64(10)
-	modDisk := s.DiskSize % diskUnit
-	if modDisk != 0 {
-		return fmt.Errorf("disk_size must be in multiples of %d", diskUnit)
-	}
-
 	// 计费模式校验-该接口没有对外提供，可以为必传参数
 	if err := s.ChargeType.Validate(); err != nil {
 		return err
@@ -120,6 +107,42 @@ func (s *OrderSpec) Validate() error {
 	// 包年包月时，计费时长必传
 	if s.ChargeType == cvmapi.ChargeTypePrePaid && s.ChargeMonths < 1 {
 		return fmt.Errorf("charge_months invalid value < 1")
+	}
+
+	// 系统盘类型校验
+	if err := s.SystemDisk.Validate(); err != nil {
+		return err
+	}
+	if s.SystemDisk.DiskSize < constant.SystemDiskMinSize || s.SystemDisk.DiskSize > constant.SystemDiskMaxSize {
+		return fmt.Errorf("system_disk_size invalid value, must be in range [%d, %d]",
+			constant.SystemDiskMinSize, constant.SystemDiskMaxSize)
+	}
+	// 系统盘大小必须是50的倍数
+	if s.SystemDisk.DiskSize%constant.SystemDiskMultiple != 0 {
+		return fmt.Errorf("system_disk_size must be a multiple of %d", constant.SystemDiskMultiple)
+	}
+
+	// 数据盘类型校验
+	if len(s.DataDisk) > 0 {
+		dataDiskTotalNum := uint(0)
+		for _, dd := range s.DataDisk {
+			if err := dd.Validate(); err != nil {
+				return err
+			}
+			if dd.DiskSize < constant.DataDiskMinSize || dd.DiskSize > constant.DataDiskMaxSize {
+				return fmt.Errorf("data_disk_size invalid value, must be in range [%d, %d]",
+					constant.DataDiskMinSize, constant.DataDiskMaxSize)
+			}
+			// 数据盘大小必须是10的倍数
+			if dd.DiskSize%constant.DataDiskMultiple != 0 {
+				return fmt.Errorf("data_disk_size must be a multiple of %d", constant.DataDiskMultiple)
+			}
+			dataDiskTotalNum += dd.DiskNum
+		}
+		// 数据盘总数量不能超过20块
+		if dataDiskTotalNum < 0 || dataDiskTotalNum > constant.DataDiskTotalNum {
+			return fmt.Errorf("data_disk_total_num invalid value, must be in range [0, %d]", constant.DataDiskTotalNum)
+		}
 	}
 
 	return nil

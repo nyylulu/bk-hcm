@@ -13,7 +13,7 @@ import { MENU_SERVICE_HOST_APPLICATION } from '@/constants/menu-symbol';
 import { RequirementType } from '@/store/config/requirement';
 
 // TODO: 这些翻译项，后续都要通过display组件进行优化
-import { getDiskTypesName, getImageName } from '@/components/property-list/transform';
+import { getDiskTypesName, getImageName } from '@/views/ziyanScr/cvm-produce/component/property-display/transform';
 import { getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
 
 import { Form, Message } from 'bkui-vue';

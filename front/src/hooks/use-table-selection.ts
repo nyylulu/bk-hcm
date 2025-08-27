@@ -1,4 +1,5 @@
-import { computed, ref, toRaw } from 'vue';
+import { cloneDeep } from 'lodash';
+import { computed, ref } from 'vue';
 
 type SelectionType = {
   checked: boolean;
@@ -7,8 +8,8 @@ type SelectionType = {
 };
 
 type UseTableSelectionParams = {
-  isRowSelectable: (args: { row: SelectionType['row'] }) => boolean;
   rowKey?: string;
+  isRowSelectable: (args: { row: SelectionType['row'] }) => boolean;
 };
 
 export default function useTableSelection({ isRowSelectable, rowKey = 'id' }: UseTableSelectionParams) {
@@ -19,7 +20,7 @@ export default function useTableSelection({ isRowSelectable, rowKey = 'id' }: Us
   const handleSelectChange = (selection: SelectionType, isAll = false) => {
     // 全选
     if (isAll && selection.checked) {
-      const selectionClone = structuredClone(toRaw(selection.data));
+      const selectionClone = cloneDeep(selection.data);
       selections.value = selectionClone.filter((row) => isRowSelectable({ row }));
     }
     // 取消全选
@@ -28,7 +29,7 @@ export default function useTableSelection({ isRowSelectable, rowKey = 'id' }: Us
     }
     // 选择某一个
     if (!isAll && selection.checked) {
-      selections.value.push(structuredClone(toRaw(selection.row)));
+      selections.value.push(cloneDeep(selection.row));
     }
     // 取消选择某一个
     if (!isAll && !selection.checked) {

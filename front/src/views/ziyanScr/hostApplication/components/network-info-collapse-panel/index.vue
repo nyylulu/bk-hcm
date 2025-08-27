@@ -79,7 +79,7 @@ defineExpose({ handleToggle });
       icon="right-shape"
       alone
       :disabled="disabled"
-      @update:modelValue="handleToggle"
+      @update:model-value="handleToggle"
     >
       <template #default v-if="!isExpand">
         {{ t('网络信息') }}
@@ -107,6 +107,7 @@ defineExpose({ handleToggle });
             v-model="vpc"
             :region="props.region"
             :disabled="props.disabledVpc"
+            :popover-options="{ boundary: 'parent' }"
             @change="handleCvmVpcChange"
           />
           <!-- 如果选择BSC集群的VPC，提供引导提示 -->
@@ -121,6 +122,7 @@ defineExpose({ handleToggle });
             :zone="props.zone"
             :vpc="vpc"
             :disabled="props.disabledSubnet"
+            :popover-options="{ boundary: 'parent' }"
             @change="handleCvmSubnetChange"
           />
           <!-- 如果选择BSC集群的子网，提供引导提示 -->
@@ -141,7 +143,7 @@ defineExpose({ handleToggle });
 
 <style scoped lang="scss">
 .home {
-  background-color: #ffffff;
+  background-color: #fff;
   box-shadow: 0 2px 4px 0 #1919290d;
 
   :deep(.bk-collapse-title) {

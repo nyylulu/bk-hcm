@@ -1,8 +1,12 @@
 import Mod from '@/components/resource-plan/resource-manage/mod';
-import { defineComponent } from 'vue';
+import { useWhereAmI } from '@/hooks/useWhereAmI';
+import { computed, defineComponent } from 'vue';
 
 export default defineComponent({
   setup() {
-    return () => <Mod isBiz={true} />;
+    const { getBizsId } = useWhereAmI();
+    const currentGlobalBusinessId = computed(() => getBizsId());
+
+    return () => <Mod currentGlobalBusinessId={currentGlobalBusinessId.value} />;
   },
 });

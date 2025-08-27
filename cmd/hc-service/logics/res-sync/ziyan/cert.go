@@ -126,7 +126,10 @@ func (cli *client) updateCert(kt *kit.Kit, accountID string, updateMap map[strin
 		if err != nil {
 			return fmt.Errorf("json marshal extension failed, err: %w", err)
 		}
-
+		tagMap := core.TagMap{}
+		for _, tag := range one.Tags {
+			tagMap.Set(converter.PtrToVal(tag.TagKey), converter.PtrToVal(tag.TagValue))
+		}
 		cert := &protocloud.CertExtUpdateReq[corecert.TCloudCertExtension]{
 			ID:               id,
 			Name:             converter.PtrToVal(one.Alias),
@@ -138,6 +141,7 @@ func (cli *client) updateCert(kt *kit.Kit, accountID string, updateMap map[strin
 			CertStatus:       strconv.FormatUint(converter.PtrToVal(one.Status), 10),
 			CloudCreatedTime: convTCloudTimeStd(converter.PtrToVal(one.InsertTime)),
 			CloudExpiredTime: convTCloudTimeStd(converter.PtrToVal(one.CertEndTime)),
+			Tags:             tagMap,
 		}
 
 		certs = append(certs, cert)
@@ -174,6 +178,10 @@ func (cli *client) createCert(kt *kit.Kit, accountID string, opt *SyncCertOption
 			return fmt.Errorf("json marshal extension failed, err: %w", err)
 		}
 
+		tagMap := core.TagMap{}
+		for _, tag := range one.Tags {
+			tagMap.Set(converter.PtrToVal(tag.TagKey), converter.PtrToVal(tag.TagValue))
+		}
 		cert := []protocloud.CertBatchCreate[corecert.TCloudCertExtension]{
 			{
 				CloudID:          one.GetCloudID(),
@@ -187,6 +195,7 @@ func (cli *client) createCert(kt *kit.Kit, accountID string, opt *SyncCertOption
 				CertStatus:       strconv.FormatUint(converter.PtrToVal(one.Status), 10),
 				CloudCreatedTime: convTCloudTimeStd(converter.PtrToVal(one.InsertTime)),
 				CloudExpiredTime: convTCloudTimeStd(converter.PtrToVal(one.CertEndTime)),
+				Tags:             tagMap,
 			},
 		}
 
@@ -313,6 +322,19 @@ func isCertChange(cloud typecert.TCloudCert, db *corecert.Cert[corecert.TCloudCe
 
 	if converter.PtrToVal(cloud.EncryptAlgorithm) != db.EncryptAlgorithm {
 		return true
+	}
+
+	if len(cloud.Tags) != len(db.Tags) {
+		return true
+	}
+	for _, tag := range cloud.Tags {
+		value, ok := db.Tags.Get(converter.PtrToVal(tag.TagKey))
+		if !ok {
+			return true
+		}
+		if value != converter.PtrToVal(tag.TagValue) {
+			return true
+		}
 	}
 
 	return false

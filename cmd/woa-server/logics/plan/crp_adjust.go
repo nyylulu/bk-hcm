@@ -72,7 +72,8 @@ func (c *CrpAdjustTicketCreator) CreateCRPTicket(kt *kit.Kit, ticket *TicketInfo
 	// 1. 生成调整请求
 	srcData, updateData, err := c.constructCrpAdjustReqParams(kt, ticket)
 	if err != nil {
-		logs.Errorf("failed to construct adjust crp plan order request params, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to construct adjust crp plan order request params, ticketID: %s, err: %v, rid: %s",
+			ticket.ID, err, kt.Rid)
 		return "", err
 	}
 
@@ -107,20 +108,21 @@ func (c *CrpAdjustTicketCreator) CreateCRPTicket(kt *kit.Kit, ticket *TicketInfo
 	// 2. 发起提单
 	resp, err := c.crpCli.AdjustCvmCbsPlans(kt.Ctx, kt.Header(), adjustReq)
 	if err != nil {
-		logs.Errorf("failed to adjust cvm & cbs plan order, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to adjust cvm & cbs plan order, ticketID: %s, err: %v, rid: %s", ticket.ID, err, kt.Rid)
 		return "", err
 	}
 
 	if resp.Error.Code != 0 {
-		logs.Errorf("failed to adjust cvm & cbs plan order, code: %d, msg: %s, req: %v, crp_trace: %s, rid: %s",
-			resp.Error.Code, resp.Error.Message, *adjustReq, resp.TraceId, kt.Rid)
-		return "", fmt.Errorf("failed to create crp ticket, code: %d, msg: %s", resp.Error.Code,
-			resp.Error.Message)
+		logs.Errorf("failed to adjust cvm & cbs plan order, ticketID: %s, code: %d, msg: %s, req: %v, crp_trace: %s, "+
+			"rid: %s", ticket.ID, resp.Error.Code, resp.Error.Message, converter.PtrToVal(adjustReq),
+			resp.TraceId, kt.Rid)
+		return "", fmt.Errorf("failed to create crp ticket, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
 	}
 
 	sn := resp.Result.OrderId
 	if sn == "" {
-		logs.Errorf("failed to adjust cvm & cbs plan order, for return empty order id, rid: %s", kt.Rid)
+		logs.Errorf("failed to adjust cvm & cbs plan order, for return empty order id, ticketID: %s, rid: %s",
+			ticket.ID, kt.Rid)
 		return "", errors.New("failed to create crp ticket, for return empty order id")
 	}
 

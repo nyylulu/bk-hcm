@@ -51,10 +51,12 @@ func GetObsProjectMembers() []ObsProject {
 }
 
 // GetObsProjectMembersForResPlan get ObsProject's members for resource plan.
+// 顺序为： 常规项目、滚服项目、春节保障、机房裁撤、改造复用、轻量云徙
 func GetObsProjectMembersForResPlan() []ObsProject {
-	obsProjects := []ObsProject{ObsProjectNormal, ObsProjectReuse, ObsProjectMigrate}
+	obsProjects := []ObsProject{ObsProjectNormal, ObsProjectRollServer}
 	obsProjects = append(obsProjects, getSpringObsProjectForResPlan()...)
 	obsProjects = append(obsProjects, getDissolveObsProjectForResPlan()...)
+	obsProjects = append(obsProjects, []ObsProject{ObsProjectReuse, ObsProjectMigrate}...)
 
 	return obsProjects
 }
@@ -341,6 +343,58 @@ var CrpOrderStatusCanRevoke = []CrpOrderStatus{
 	CrpOrderStatusDelivering,
 }
 
+// CrpUpgradeOrderStatus is crp upgrade order status.
+type CrpUpgradeOrderStatus int
+
+const (
+	// CrpUpgradeOrderDeptApprove 部门管理员审批
+	CrpUpgradeOrderDeptApprove CrpUpgradeOrderStatus = 0
+	// CrpUpgradeOrderPlanApprove 规划经理审批
+	CrpUpgradeOrderPlanApprove CrpUpgradeOrderStatus = 1
+	// CrpUpgradeOrderResourceApprove 资源经理审批
+	CrpUpgradeOrderResourceApprove CrpUpgradeOrderStatus = 2
+	// CrpUpgradeOrderWaitProcess 等待执行
+	CrpUpgradeOrderWaitProcess CrpUpgradeOrderStatus = 9
+	// CrpUpgradeOrderProcessing 执行中
+	CrpUpgradeOrderProcessing CrpUpgradeOrderStatus = 10
+	// CrpUpgradeOrderFinish 执行完成
+	CrpUpgradeOrderFinish CrpUpgradeOrderStatus = 20
+	// CrpUpgradeOrderReject 驳回
+	CrpUpgradeOrderReject CrpUpgradeOrderStatus = 127
+	// CrpUpgradeOrderFailed 订单失败
+	CrpUpgradeOrderFailed CrpUpgradeOrderStatus = 128
+)
+
+// StatusName CrpUpgradeOrderStatus.
+func (cs CrpUpgradeOrderStatus) StatusName() string {
+	switch cs {
+	case CrpUpgradeOrderProcessing:
+		return "CRP-升降配执行中"
+	case CrpUpgradeOrderFinish:
+		return "CRP-升降配完成"
+	case CrpUpgradeOrderReject:
+		return "CRP-驳回"
+	case CrpUpgradeOrderFailed:
+		return "CRP-升降配失败"
+	default:
+		return fmt.Sprintf("CRP-unsupported crp order status: %d", cs)
+	}
+}
+
+// CrpUpgradeCVMStatus is crp upgrade cvm status.
+type CrpUpgradeCVMStatus string
+
+const (
+	// CrpUpgradeCVMWaiting 待操作
+	CrpUpgradeCVMWaiting CrpUpgradeCVMStatus = "WAITING"
+	// CrpUpgradeCVMOperating 操作中
+	CrpUpgradeCVMOperating CrpUpgradeCVMStatus = "OPERATING"
+	// CrpUpgradeCVMSuccess 成功
+	CrpUpgradeCVMSuccess CrpUpgradeCVMStatus = "SUCCESS"
+	// CrpUpgradeCVMFailed 失败
+	CrpUpgradeCVMFailed CrpUpgradeCVMStatus = "FAILED"
+)
+
 // CoreType 核心类型
 type CoreType string
 
@@ -384,6 +438,8 @@ const ItsmServiceNameApply = "资源申领流程"
 const (
 	// ResourcePoolBiz 资源池业务
 	ResourcePoolBiz = 931
+	// ResourcePlanRollServerBiz 资源预测提报滚服项目的业务
+	ResourcePlanRollServerBiz = 931
 )
 
 // AbolishPhase 裁撤阶段

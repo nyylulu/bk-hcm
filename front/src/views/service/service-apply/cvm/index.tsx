@@ -27,7 +27,7 @@ import { useAccountStore, useResourceStore } from '@/store';
 import { useCloudAreaStore } from '@/store/useCloudAreaStore';
 import CommonCard from '@/components/CommonCard';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
-import { useRouter } from 'vue-router';
+import { RouteLocationRaw, useRoute, useRouter } from 'vue-router';
 import VpcPreviewDialog from './children/VpcPreviewDialog';
 import SubnetPreviewDialog, { ISubnetItem } from './children/SubnetPreviewDialog';
 import http from '@/http';
@@ -67,6 +67,7 @@ export default defineComponent({
     );
     const { t } = useI18n();
     const router = useRouter();
+    const route = useRoute();
     const isSubmitBtnLoading = ref(false);
     const usageNum = ref(0);
     const limitNum = ref(-1);
@@ -1037,9 +1038,13 @@ export default defineComponent({
       { immediate: true },
     );
 
+    const fromConfig = computed<Partial<RouteLocationRaw>>(() => {
+      return { query: { ...route.query } };
+    });
+
     return () => (
       <div>
-        <DetailHeader>
+        <DetailHeader fromConfig={fromConfig.value}>
           <p class={'purchase-cvm-header-title'}>购买主机</p>
         </DetailHeader>
         <div

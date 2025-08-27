@@ -27,6 +27,7 @@ import (
 	"hcm/cmd/woa-server/logics/task/scheduler/record"
 	"hcm/cmd/woa-server/logics/task/sops"
 	"hcm/cmd/woa-server/model/task"
+	cfgtype "hcm/cmd/woa-server/types/config"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
 	"hcm/pkg/api/core"
@@ -43,6 +44,7 @@ import (
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/maps"
 	"hcm/pkg/tools/metadata"
+	"hcm/pkg/tools/slice"
 	toolsutil "hcm/pkg/tools/util"
 	"hcm/pkg/tools/utils/wait"
 	"hcm/pkg/tools/uuid"
@@ -249,7 +251,11 @@ func (m *Matcher) UpdateApplyOrderStatus(order *types.ApplyOrder) error {
 	}
 
 	// 2. calculate apply order status by total and matched count
-	deviceTypeCountMap := calDeviceTypeCountMap(devices)
+	var diskType enumor.DiskType
+	if order.Spec != nil {
+		diskType = order.Spec.DiskType
+	}
+	deviceTypeCountMap, deliverGroupCntMap := m.calDeviceTypeCountMap(devices, diskType)
 	matchedCnt := calMatchCnt(devices)
 
 	genRecords, err := m.GetOrderGenRecords(order.SubOrderId)
@@ -263,8 +269,7 @@ func (m *Matcher) UpdateApplyOrderStatus(order *types.ApplyOrder) error {
 	suspendCnt := 0
 
 	for _, recordItem := range genRecords {
-		if recordItem.Status == types.GenerateStatusInit ||
-			recordItem.Status == types.GenerateStatusHandling ||
+		if recordItem.Status == types.GenerateStatusInit || recordItem.Status == types.GenerateStatusHandling ||
 			recordItem.Status == types.GenerateStatusSuccess && !recordItem.IsMatched {
 			hasGenRecordMatching = true
 		}
@@ -274,24 +279,14 @@ func (m *Matcher) UpdateApplyOrderStatus(order *types.ApplyOrder) error {
 			suspendCnt += int(recordItem.TotalNum)
 			logs.Infof("generate failed, unknown if generate interface was called, task_id not obtained, check machines")
 			if err := m.updateGenerateFailed(recordItem.GenerateId); err != nil {
-				logs.Errorf("failed to update generate status to failed, suborderId: %s, err: %v", order.SubOrderId,
-					err)
+				logs.Errorf("failed to update generate status to failed, suborderId: %s, err: %v",
+					order.SubOrderId, err)
 			}
 		}
 	}
 
-	pendingCnt := 0
-	status := types.ApplyStatusDone
-	stage := types.TicketStageDone
-	if matchedCnt < int(order.TotalNum) {
-		pendingCnt = int(order.TotalNum) - matchedCnt
-		// do not set status to MATCHED_SOME if there are matching tasks
-		status = types.ApplyStatusMatchedSome
-		if hasGenRecordMatching {
-			status = types.ApplyStatusMatching
-		}
-		stage = types.TicketStageRunning
-	}
+	pendingCnt, status, stage := m.calcApplyOrderStatus(order.ResourceType, matchedCnt, order.TotalNum,
+		hasGenRecordMatching)
 
 	if isSuspend && suspendCnt+matchedCnt >= int(order.TotalNum) {
 		status = types.ApplyStatusTerminate
@@ -314,12 +309,38 @@ func (m *Matcher) UpdateApplyOrderStatus(order *types.ApplyOrder) error {
 	}
 
 	// 3. do update apply order status
-	err = m.updateApplyOrderToDb(kt, order, matchedCnt, pendingCnt, stage, status, deviceTypeCountMap)
+	err = m.updateApplyOrderToDb(kt, order, matchedCnt, pendingCnt, stage, status, deliverGroupCntMap)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (m *Matcher) calcApplyOrderStatus(resType types.ResourceType, matchedCnt int, totalNum uint,
+	hasGenRecordMatching bool) (int, types.ApplyStatus, types.TicketStage) {
+
+	pendingCnt := 0
+	status := types.ApplyStatusDone
+	stage := types.TicketStageDone
+	if matchedCnt < int(totalNum) {
+		pendingCnt = int(totalNum) - matchedCnt
+		// TODO 临时，升降配order不进入matchedSome，直接失败
+		if resType == types.ResourceTypeUpgradeCvm {
+			stage = types.TicketStageSuspend
+			status = types.ApplyStatusTerminate
+			return pendingCnt, status, stage
+		}
+
+		// do not set status to MATCHED_SOME if there are matching tasks
+		status = types.ApplyStatusMatchedSome
+		if hasGenRecordMatching {
+			status = types.ApplyStatusMatching
+		}
+		stage = types.TicketStageRunning
+	}
+
+	return pendingCnt, status, stage
 }
 
 // calMatchCnt calculate matched count
@@ -335,9 +356,30 @@ func calMatchCnt(devices []*types.DeviceInfo) int {
 	return matchedCnt
 }
 
+// getRegionList get region list by zone list
+func (m *Matcher) getRegionList(kt *kit.Kit, zoneList []string) ([]*cfgtype.Zone, error) {
+	cond := mapstr.MapStr{}
+	// if input is empty list, return all zone info
+	if len(zoneList) > 0 {
+		cond["zone"] = mapstr.MapStr{
+			pkg.BKDBIN: zoneList,
+		}
+	}
+	zoneResp, err := m.configLogics.Zone().GetZone(kt, &cond)
+	if err != nil {
+		return nil, err
+	}
+
+	return zoneResp.Info, nil
+}
+
 // calDeviceTypeCountMap calculate matched count
-func calDeviceTypeCountMap(devices []*types.DeviceInfo) map[string]int {
+func (m *Matcher) calDeviceTypeCountMap(devices []*types.DeviceInfo, diskType enumor.DiskType) (
+	map[string]int, map[types.DeliveredCVMKey]int) {
+
 	deviceTypeCountMap := make(map[string]int)
+	deliverGroupCntMap := make(map[types.DeliveredCVMKey]int)
+
 	for _, device := range devices {
 		if !device.IsDelivered {
 			continue
@@ -347,13 +389,25 @@ func calDeviceTypeCountMap(devices []*types.DeviceInfo) map[string]int {
 			deviceTypeCountMap[device.DeviceType] = 0
 		}
 		deviceTypeCountMap[device.DeviceType]++
+
+		deliveredKey := types.DeliveredCVMKey{
+			DeviceType: device.DeviceType,
+			Region:     device.CloudRegion,
+			Zone:       device.CloudZone,
+			DiskType:   diskType,
+		}
+
+		if _, ok := deliverGroupCntMap[deliveredKey]; !ok {
+			deliverGroupCntMap[deliveredKey] = 0
+		}
+		deliverGroupCntMap[deliveredKey]++
 	}
-	return deviceTypeCountMap
+	return deviceTypeCountMap, deliverGroupCntMap
 }
 
 // updateApplyOrderToDb update apply order status to db
 func (m *Matcher) updateApplyOrderToDb(kt *kit.Kit, order *types.ApplyOrder, matchedCnt int, pendingCnt int,
-	stage types.TicketStage, status types.ApplyStatus, deviceTypeCountMap map[string]int) error {
+	stage types.TicketStage, status types.ApplyStatus, deviceTypeCountMap map[types.DeliveredCVMKey]int) error {
 
 	filter := &mapstr.MapStr{
 		"suborder_id": order.SubOrderId,
@@ -365,17 +419,28 @@ func (m *Matcher) updateApplyOrderToDb(kt *kit.Kit, order *types.ApplyOrder, mat
 		"status":      status,
 		"update_at":   time.Now(),
 	}
-	if order.ResourceType == types.ResourceTypeCvm {
-		sum, err := m.GetCpuCoreSum(kt, deviceTypeCountMap)
+	// 记录交付核数，用于预测扣除
+	if order.ResourceType == types.ResourceTypeCvm ||
+		order.ResourceType == types.ResourceTypeUpgradeCvm {
+		sum, verifyGroups, err := m.GetCpuCoreSum(kt, deviceTypeCountMap)
 		if err != nil {
 			logs.Errorf("get cpu core failed, err: %v, deviceTypeCountMap: %v, rid: %s",
 				err, deviceTypeCountMap, kt.Rid)
 			return err
 		}
 		doc.Set("delivered_core", sum)
+		planExpendGroups := slice.Map(verifyGroups, func(t plan.VerifyResPlanElemV2) types.PlanExpendGroup {
+			return types.PlanExpendGroup{
+				DeviceType: t.DeviceType,
+				Region:     t.RegionID,
+				Zone:       t.ZoneID,
+				CPUCore:    t.CpuCore,
+			}
+		})
+		doc.Set("plan_expend_group", planExpendGroups)
 
 		// 为该子订单匹配CVM资源预测单并生成预测变更记录
-		if err = m.planLogics.AddMatchedPlanDemandExpendLogs(kt, order.BkBizId, order); err != nil {
+		if err = m.planLogics.AddMatchedPlanDemandExpendLogs(kt, order.BkBizId, order, verifyGroups); err != nil {
 			logs.Errorf("failed to add matched plan demand expend logs, subOrderID: %s, err: %v, subOrder: %+v",
 				order.SubOrderId, err, cvt.PtrToVal(order))
 			return err
@@ -389,30 +454,50 @@ func (m *Matcher) updateApplyOrderToDb(kt *kit.Kit, order *types.ApplyOrder, mat
 	return nil
 }
 
-// GetCpuCoreSum 获取机型对应的cpu核数之和
-func (m *Matcher) GetCpuCoreSum(kt *kit.Kit, deviceTypeCountMap map[string]int) (int64, error) {
-	deviceTypes := make([]string, 0)
-	for deviceType := range deviceTypeCountMap {
-		deviceTypes = append(deviceTypes, deviceType)
+// GetCpuCoreSum 获取机型对应的cpu核数之和，以及按照机型类型、region、zone分组的核数之和
+func (m *Matcher) GetCpuCoreSum(kt *kit.Kit, deviceTypeCountMap map[types.DeliveredCVMKey]int) (
+	int64, []plan.VerifyResPlanElemV2, error) {
+
+	deviceTypesMap := make(map[string]interface{})
+	for deliverGroup := range deviceTypeCountMap {
+		deviceTypesMap[deliverGroup.DeviceType] = nil
 	}
+	deviceTypes := maps.Keys(deviceTypesMap)
 	deviceTypeInfoMap, err := m.configLogics.Device().ListCvmInstanceInfoByDeviceTypes(kt, deviceTypes)
 	if err != nil {
 		logs.Errorf("get cvm instance info by device type failed, err: %v, device_types: %v, rid: %s",
 			err, deviceTypes, kt.Rid)
-		return 0, err
+		return 0, nil, err
 	}
 
-	var deliveredCore int64 = 0
-	for deviceType, count := range deviceTypeCountMap {
-		deviceTypeInfo, ok := deviceTypeInfoMap[deviceType]
+	var deliveredCore int64
+	verifyGroupMap := make(map[plan.VerifyResPlanElemV2]int64)
+	for deliverGroup, count := range deviceTypeCountMap {
+		deviceTypeInfo, ok := deviceTypeInfoMap[deliverGroup.DeviceType]
 		if !ok {
-			logs.Errorf("can not find device_type, type: %s, rid: %s", deviceType, kt.Rid)
-			return 0, fmt.Errorf("can not find device_type, type: %s", deviceType)
+			logs.Errorf("can not find device_type, type: %s, rid: %s", deliverGroup.DeviceType, kt.Rid)
+			return 0, nil, fmt.Errorf("can not find device_type, type: %s", deliverGroup.DeviceType)
 		}
 		deliveredCore += deviceTypeInfo.CPUAmount * int64(count)
+		verifyGroupKey := plan.VerifyResPlanElemV2{
+			DeviceType: deliverGroup.DeviceType,
+			RegionID:   deliverGroup.Region,
+			ZoneID:     deliverGroup.Zone,
+		}
+		verifyGroupMap[verifyGroupKey] += deliveredCore
 	}
 
-	return deliveredCore, nil
+	verifyGroups := make([]plan.VerifyResPlanElemV2, 0, len(verifyGroupMap))
+	for key, val := range verifyGroupMap {
+		verifyGroups = append(verifyGroups, plan.VerifyResPlanElemV2{
+			DeviceType: key.DeviceType,
+			RegionID:   key.RegionID,
+			ZoneID:     key.ZoneID,
+			CpuCore:    val,
+		})
+	}
+
+	return deliveredCore, verifyGroups, nil
 }
 
 // GetGenerateRecord gets generate record from db by generate id
@@ -918,8 +1003,12 @@ func (m *Matcher) notifyApplyDone(orderId uint64) error {
 		}
 		createTime = ticket.CreateAt.In(location).Format(constant.DateTimeLayout)
 	}
+	resType := types.ResourceTypeCvm
+	if len(ticket.Suborders) > 0 && ticket.Suborders[0] != nil {
+		resType = ticket.Suborders[0].ResourceType
+	}
 	content := fmt.Sprintf(noticeFmt, orderId, orderId, ticket.User, bizName, requireName, createTime, ticket.Remark,
-		orderId, ticket.BkBizId)
+		orderId, ticket.BkBizId, resType)
 
 	for _, user := range users {
 		resp, err := m.bkchat.SendApplyDoneMsg(nil, nil, user, content)

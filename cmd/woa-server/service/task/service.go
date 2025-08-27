@@ -15,6 +15,7 @@ package task
 import (
 	"net/http"
 
+	"hcm/cmd/woa-server/logics/config"
 	planLogics "hcm/cmd/woa-server/logics/plan"
 	taskLogics "hcm/cmd/woa-server/logics/task"
 	"hcm/cmd/woa-server/service/capability"
@@ -27,10 +28,11 @@ import (
 func InitService(c *capability.Capability) {
 	logics := taskLogics.New(c.SchedulerIf, c.RecyclerIf, c.InformerIf, c.OperationIf)
 	s := &service{
-		client:     c.Client,
-		logics:     logics,
-		planLogics: c.PlanController,
-		authorizer: c.Authorizer,
+		client:       c.Client,
+		logics:       logics,
+		configLogics: c.ConfigLogics,
+		planLogics:   c.PlanController,
+		authorizer:   c.Authorizer,
 	}
 	h := rest.NewHandler()
 	h.Path("/task")
@@ -50,10 +52,11 @@ func InitService(c *capability.Capability) {
 }
 
 type service struct {
-	client     *client.ClientSet
-	logics     taskLogics.Logics
-	planLogics planLogics.Logics
-	authorizer auth.Authorizer
+	client       *client.ClientSet
+	logics       taskLogics.Logics
+	configLogics config.Logics
+	planLogics   planLogics.Logics
+	authorizer   auth.Authorizer
 }
 
 func (s *service) initOperationService(h *rest.Handler) {
@@ -71,8 +74,8 @@ func (s *service) initRecyclerService(h *rest.Handler) {
 	h.Add("ListDetectHost", http.MethodPost, "/list/recycle/detect/host", s.ListDetectHost)
 	h.Add("GetRecycleDetectStep", http.MethodPost, "/findmany/recycle/detect/step", s.GetRecycleDetectStep)
 	h.Add("StartRecycleOrder", http.MethodPost, "/start/recycle/order", s.StartRecycleOrder)
-	h.Add("StartRecycleOrder", http.MethodPost, "/start/recycle/order/by/recycle_type",
-		s.StartRecycleOrderByRecycleType)
+	h.Add("StartRecycleOrderByRecycleType", http.MethodPost,
+		"/start/recycle/order/by/recycle_type", s.StartRecycleOrderByRecycleType)
 	h.Add("StartRecycleDetect", http.MethodPost, "/start/recycle/detect", s.StartRecycleDetect)
 	h.Add("ReviseRecycleOrder", http.MethodPost, "/revise/recycle/order", s.ReviseRecycleOrder)
 	h.Add("PauseRecycleOrder", http.MethodPost, "/pause/recycle", s.PauseRecycleOrder)
@@ -99,7 +102,7 @@ func (s *service) initSchedulerService(h *rest.Handler) {
 	h.Add("CancelApplyTicketCrp", http.MethodPost, "/apply/ticket/crp_audit/cancel", s.CancelApplyTicketCrp)
 	h.Add("AuditApplyTicket", http.MethodPost, "/audit/apply/ticket", s.AuditApplyTicket)
 	h.Add("AutoAuditApplyTicket", http.MethodPost, "/autoaudit/apply/ticket", s.AutoAuditApplyTicket)
-	h.Add("AutoAuditApplyTicket", http.MethodPost, "/approve/apply/ticket", s.ApproveApplyTicket)
+	h.Add("ApproveApplyTicket", http.MethodPost, "/approve/apply/ticket", s.ApproveApplyTicket)
 	h.Add("CreateApplyOrder", http.MethodPost, "/create/apply", s.CreateApplyOrder)
 	h.Add("GetApplyOrder", http.MethodPost, "/findmany/apply", s.GetApplyOrder)
 	h.Add("GetBizApplyOrder", http.MethodPost, "/findmany/biz/apply", s.GetBizApplyOrder)
@@ -164,5 +167,8 @@ func bizService(h *rest.Handler, s *service) {
 
 	h.Add("CheckHostUworkTicketStatus", http.MethodPost, "/hosts/uwork_tickets/status/check",
 		s.CheckHostUworkTicketStatus)
+
+	// 升降配接口
+	h.Add("CreateBizUpgradeCRPOrder", http.MethodPost, "/create/upgrade/crp_order", s.CreateBizUpgradeCRPOrder)
 
 }

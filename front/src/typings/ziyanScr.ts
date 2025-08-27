@@ -1,4 +1,5 @@
 import type { IPageQuery, IListResData, IQueryResData } from '@/typings/common';
+import { CvmDataDiskType } from '@/views/ziyanScr/components/cvm-data-disk/constants';
 export interface IRecycleArea {
   id: string;
   name: string;
@@ -246,4 +247,41 @@ export interface IApplyOrderItem {
   modify_time: number;
   create_at: string;
   update_at: string;
+}
+
+export interface ICloudInstanceConfigItem {
+  zone: string;
+  instance_type: string;
+  instance_charge_type: string;
+  network_card: number;
+  externals: {
+    unsupport_networks: string[];
+    storage_block_attr: {
+      max_size: number;
+      min_size: number;
+      type: CvmDataDiskType;
+    };
+  };
+  cpu: number;
+  memory: number;
+  instance_family: string;
+  type_name: string;
+  local_disk_type_list: {
+    max_size: number;
+    min_size: number;
+    partition_type: string;
+    required: string;
+    type: string;
+  }[];
+  status: string;
+  instance_bandwidth: number;
+  instance_pps: number;
+  storage_block_amount: number;
+  cpu_type: string;
+  gpu: number;
+  fpga: number;
+  remark: string;
+  gpu_count: number;
+  frequency: string;
+  status_category: string;
 }

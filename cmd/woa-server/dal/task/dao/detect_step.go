@@ -37,11 +37,19 @@ type DetectStep interface {
 	UpdateDetectStep(ctx context.Context, filter *mapstr.MapStr, doc *mapstr.MapStr) error
 	// DeleteDetectStep deletes recycle detection step from db
 	DeleteDetectStep(ctx context.Context, filter map[string]interface{}) (uint64, error)
+
+	// BatchCreateDetectSteps batch creates recycle detection steps in db
+	BatchCreateDetectSteps(ctx context.Context, insts []*table.DetectStep) error
 }
 
 var _ DetectStep = new(detectStepDao)
 
 type detectStepDao struct {
+}
+
+// BatchCreateDetectSteps batch creates recycle detection steps in db
+func (ds *detectStepDao) BatchCreateDetectSteps(ctx context.Context, insts []*table.DetectStep) error {
+	return mongodb.Client().Table(table.DetectStepTable).Insert(ctx, insts)
 }
 
 // CreateDetectStep creates recycle detection step in db

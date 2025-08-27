@@ -116,6 +116,9 @@ func (ts *TransitingState) setNextState(order *table.RecycleOrder, ev *event.Eve
 	case event.TransitFailed:
 		update["status"] = table.RecycleStatusTransitFailed
 		update["handler"] = recovertask.Handler
+		if ev.Error != nil {
+			update["message"] = ev.Error.Error()
+		}
 	default:
 		logs.Errorf("unknown event type: %s, subOrderId: %s, status: %s", ev.Type, order.SuborderID, order.Status)
 		return fmt.Errorf("unknown event type: %s, subOrderId: %s, status: %s", ev.Type, order.SuborderID, order.Status)

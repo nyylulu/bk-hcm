@@ -151,6 +151,7 @@ export default defineComponent({
                 clearable
                 loading={isLoadingDiskTypes.value}
                 modelValue={props.planTicketDemand.cbs.disk_type}
+                popoverOptions={{ boundary: 'parent' }}
                 onChange={(val: string) => handleUpdateDiskType(val)}>
                 {diskTypes.value.map((diskType) => (
                   <bk-option id={diskType.disk_type} name={diskType.disk_type_name}></bk-option>

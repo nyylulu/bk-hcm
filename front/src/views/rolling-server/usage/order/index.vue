@@ -30,7 +30,7 @@ const condition = ref<Record<string, any>>({});
 
 const getList = async (query: LocationQuery) => {
   condition.value = searchQs.get(query, {
-    roll_date: getDateRange('last30d'),
+    roll_date: isBusinessPage ? getDateRange('last120d', true) : getDateRange('last30d'),
     suborder_id: [],
     bk_biz_id: [],
   });
