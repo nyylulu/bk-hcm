@@ -514,11 +514,6 @@ func (cli *client) updateLoadBalancerSyncTime(kt *kit.Kit, ids []string) error {
 		updateReq.Lbs = append(updateReq.Lbs, lb)
 	}
 
-	if len(updateReq.Lbs) == 0 {
-		logs.Warnf("[%s] lbs array is empty after conversion, rid: %s", enumor.TCloud, kt.Rid)
-		return nil
-	}
-
 	if err := cli.dbCli.TCloud.LoadBalancer.BatchUpdate(kt, &updateReq); err != nil {
 		logs.Errorf("[%s] call data service to update tcloud load balancer failed, err: %v, rid: %s",
 			enumor.TCloud, err, kt.Rid)
