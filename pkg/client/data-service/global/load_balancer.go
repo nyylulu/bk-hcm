@@ -24,6 +24,7 @@ import (
 	dataservice "hcm/pkg/api/data-service"
 	dataproto "hcm/pkg/api/data-service/cloud"
 	"hcm/pkg/client/common"
+	typeslb "hcm/pkg/dal/dao/types/load-balancer"
 	"hcm/pkg/kit"
 	"hcm/pkg/rest"
 )
@@ -241,4 +242,10 @@ func (cli *LoadBalancerClient) ListListenerByCond(kt *kit.Kit,
 
 	return common.Request[dataproto.ListListenerByCondReq, dataproto.ListListenerByCondResp](cli.client,
 		rest.POST, kt, req, "/load_balancers/listeners/list_by_cond")
+}
+
+// ListTargetCvmInfo list target cvm info.
+func (cli *LoadBalancerClient) ListTargetCvmInfo(kt *kit.Kit, req *core.ListReq) (*typeslb.ListCvmInfoDetails, error) {
+	return common.Request[core.ListReq, typeslb.ListCvmInfoDetails](
+		cli.client, rest.POST, kt, req, "/load_balancers/targets/cvm_info/list")
 }

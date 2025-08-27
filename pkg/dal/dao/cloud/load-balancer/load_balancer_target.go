@@ -24,6 +24,7 @@ import (
 	"fmt"
 
 	"hcm/pkg/api/core"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/audit"
 	idgen "hcm/pkg/dal/dao/id-generator"
@@ -48,6 +49,7 @@ type TargetInterface interface {
 	UpdateByIDWithTx(kt *kit.Kit, tx *sqlx.Tx, id string, model *tablelb.LoadBalancerTargetTable) error
 	List(kt *kit.Kit, opt *types.ListOption) (*typeslb.ListLoadBalancerTargetDetails, error)
 	DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression) error
+	ListCvmInfo(kt *kit.Kit, opt *types.ListOption) (*typeslb.ListCvmInfoDetails, error)
 }
 
 var _ TargetInterface = new(TargetDao)
@@ -166,8 +168,8 @@ func (dao TargetDao) List(kt *kit.Kit, opt *types.ListOption) (*typeslb.ListLoad
 		return nil, errf.New(errf.InvalidParameter, "list options is nil")
 	}
 
-	if err := opt.Validate(filter.NewExprOption(filter.RuleFields(tablelb.LoadBalancerTargetColumns.ColumnTypes())),
-		core.NewDefaultPageOption()); err != nil {
+	if err := opt.Validate(filter.NewExprOption(filter.RuleFields(tablelb.LoadBalancerTargetColumns.ColumnTypes()),
+		filter.MaxInLimit(constant.CLBTopoFindInLimit)), core.NewDefaultPageOption()); err != nil {
 		return nil, err
 	}
 
@@ -223,4 +225,49 @@ func (dao TargetDao) DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Express
 	}
 
 	return nil
+}
+
+// ListCvmInfo list cvm info.
+func (dao TargetDao) ListCvmInfo(kt *kit.Kit, opt *types.ListOption) (*typeslb.ListCvmInfoDetails, error) {
+	if opt == nil {
+		return nil, errf.New(errf.InvalidParameter, "list options is nil")
+	}
+
+	if err := opt.Validate(filter.NewExprOption(filter.RuleFields(tablelb.LoadBalancerTargetColumns.ColumnTypes()),
+		filter.MaxInLimit(constant.CLBTopoFindInLimit)), core.NewDefaultPageOption()); err != nil {
+		return nil, err
+	}
+
+	whereExpr, whereValue, err := opt.Filter.SQLWhereExpr(tools.DefaultSqlWhereOption)
+	if err != nil {
+		return nil, err
+	}
+
+	if opt.Page.Count {
+		// this is a count request, then do count operation only.
+		sql := fmt.Sprintf(`SELECT COUNT(Distinct(ip)) FROM %s %s`, table.LoadBalancerTargetTable, whereExpr)
+
+		count, err := dao.Orm.Do().Count(kt.Ctx, sql, whereValue)
+		if err != nil {
+			logs.Errorf("count load balancer target cvm info failed, err: %v, filter: %s, rid: %s", err, opt.Filter,
+				kt.Rid)
+			return nil, err
+		}
+
+		return &typeslb.ListCvmInfoDetails{Count: count}, nil
+	}
+
+	pageExpr, err := types.PageSQLExpr(opt.Page, types.DefaultPageSQLOption)
+	if err != nil {
+		return nil, err
+	}
+
+	sql := fmt.Sprintf(`SELECT ip,inst_id,inst_type,zone,cloud_vpc_ids FROM %s %s group by ip %s`,
+		table.LoadBalancerTargetTable, whereExpr, pageExpr)
+	details := make([]typeslb.ListCvmInfo, 0)
+	if err = dao.Orm.Do().Select(kt.Ctx, &details, sql, whereValue); err != nil {
+		return nil, err
+	}
+
+	return &typeslb.ListCvmInfoDetails{Details: details}, nil
 }

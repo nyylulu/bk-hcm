@@ -161,3 +161,27 @@ func (svc *lbSvc) listTargetByCond(kt *kit.Kit, lblReq protocloud.ListListenerQu
 	}
 	return targetList, nil
 }
+
+// ListTargetCvmInfo list target cvm info.
+func (svc *lbSvc) ListTargetCvmInfo(cts *rest.Contexts) (interface{}, error) {
+	req := new(core.ListReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, err
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	opt := &types.ListOption{
+		Filter: req.Filter,
+		Page:   req.Page,
+	}
+	result, err := svc.dao.LoadBalancerTarget().ListCvmInfo(cts.Kit, opt)
+	if err != nil {
+		logs.Errorf("list lb target failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, fmt.Errorf("list lb target failed, err: %v", err)
+	}
+
+	return result, nil
+}

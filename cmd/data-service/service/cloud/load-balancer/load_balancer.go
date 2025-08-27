@@ -93,6 +93,7 @@ func InitService(cap *capability.Capability) {
 	h.Add("BatchUpdateTarget", http.MethodPatch, "/load_balancers/targets/batch/update", svc.BatchUpdateTarget)
 	h.Add("ListTarget", http.MethodPost, "/load_balancers/targets/list", svc.ListTarget)
 	h.Add("BatchCreateTarget", http.MethodPost, "/targets/batch/create", svc.BatchCreateTarget)
+	h.Add("ListTargetCvmInfo", http.MethodPost, "/load_balancers/targets/cvm_info/list", svc.ListTargetCvmInfo)
 
 	// 目标组 规则关联关系
 	h.Add("CreateTargetGroupListenerRel", http.MethodPost,

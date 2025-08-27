@@ -24,6 +24,7 @@ import (
 	"fmt"
 
 	"hcm/pkg/api/core"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/audit"
@@ -206,8 +207,8 @@ func (dao LbTCloudUrlRuleDao) List(kt *kit.Kit, opt *types.ListOption) (*typeslb
 		return nil, errf.New(errf.InvalidParameter, "list options is nil")
 	}
 
-	if err := opt.Validate(filter.NewExprOption(filter.RuleFields(tablelb.TCloudLbUrlRuleColumns.ColumnTypes())),
-		core.NewDefaultPageOption()); err != nil {
+	if err := opt.Validate(filter.NewExprOption(filter.RuleFields(tablelb.TCloudLbUrlRuleColumns.ColumnTypes()),
+		filter.MaxInLimit(constant.CLBTopoFindInLimit)), core.NewDefaultPageOption()); err != nil {
 		return nil, err
 	}
 

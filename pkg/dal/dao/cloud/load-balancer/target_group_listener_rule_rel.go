@@ -24,6 +24,7 @@ import (
 	"fmt"
 
 	"hcm/pkg/api/core"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/audit"
 	idgen "hcm/pkg/dal/dao/id-generator"
@@ -173,7 +174,8 @@ func (dao TargetGroupListenerRuleRelDao) List(kt *kit.Kit, opt *types.ListOption
 	}
 
 	if err := opt.Validate(filter.NewExprOption(
-		filter.RuleFields(tablelb.TargetGroupListenerRuleRelColumns.ColumnTypes())),
+		filter.RuleFields(tablelb.TargetGroupListenerRuleRelColumns.ColumnTypes()),
+		filter.MaxInLimit(constant.CLBTopoFindInLimit)),
 		core.NewDefaultPageOption()); err != nil {
 		return nil, err
 	}
