@@ -525,3 +525,73 @@ func (svc *lbSvc) getLoadBalancerByID(kt *kit.Kit, lbID string) (*corelb.BaseLoa
 	}
 	return &resp.Details[0], nil
 }
+
+func (svc *lbSvc) listTargetsByIDs(kt *kit.Kit, targetIDs []string) ([]corelb.BaseTarget, error) {
+	if len(targetIDs) == 0 {
+		return nil, nil
+	}
+
+	result := make([]corelb.BaseTarget, 0)
+	for _, batch := range slice.Split(targetIDs, int(core.DefaultMaxPageLimit)) {
+		req := &core.ListReq{
+			Filter: tools.ContainersExpression("id", batch),
+			Page:   core.NewDefaultBasePage(),
+		}
+		rsList, err := svc.client.DataService().Global.LoadBalancer.ListTarget(kt, req)
+		if err != nil {
+			logs.Errorf("list target failed, targetIDs: %v, err: %v, rid: %s", targetIDs, err, kt.Rid)
+			return nil, err
+		}
+		result = append(result, rsList.Details...)
+	}
+
+	return result, nil
+}
+
+func (svc *lbSvc) listTGListenerRuleRelMapByTGIDs(kt *kit.Kit, tgIDs []string) (
+	map[string]corelb.BaseTargetListenerRuleRel, error) {
+
+	if len(tgIDs) == 0 {
+		return nil, nil
+	}
+
+	result := make(map[string]corelb.BaseTargetListenerRuleRel, 0)
+	for _, batch := range slice.Split(tgIDs, int(core.DefaultMaxPageLimit)) {
+		req := &core.ListReq{
+			Filter: tools.ContainersExpression("target_group_id", batch),
+			Page:   core.NewDefaultBasePage(),
+		}
+		list, err := svc.client.DataService().Global.LoadBalancer.ListTargetGroupListenerRel(kt, req)
+		if err != nil {
+			logs.Errorf("list target group listener rel failed, tgIDs: %v, err: %v, rid: %s", tgIDs, err, kt.Rid)
+			return nil, err
+		}
+		for _, detail := range list.Details {
+			result[detail.TargetGroupID] = detail
+		}
+	}
+	return result, nil
+}
+
+func (svc *lbSvc) listListenersByIDs(kt *kit.Kit, lblIDs []string) ([]corelb.BaseListener, error) {
+	if len(lblIDs) == 0 {
+		return nil, nil
+	}
+
+	result := make([]corelb.BaseListener, 0, len(lblIDs))
+
+	for _, batch := range slice.Split(lblIDs, int(core.DefaultMaxPageLimit)) {
+		lblReq := &core.ListReq{
+			Filter: tools.ContainersExpression("id", batch),
+			Page:   core.NewDefaultBasePage(),
+		}
+		listLblResult, err := svc.client.DataService().Global.LoadBalancer.ListListener(kt, lblReq)
+		if err != nil {
+			logs.Errorf("[clb] list clb listener failed, lblIDs: %v, err: %v, rid: %s", lblIDs, err, kt.Rid)
+			return nil, err
+		}
+		result = append(result, listLblResult.Details...)
+	}
+
+	return result, nil
+}
