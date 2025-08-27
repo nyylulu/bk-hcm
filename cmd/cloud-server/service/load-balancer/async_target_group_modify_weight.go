@@ -324,13 +324,10 @@ func (svc *lbSvc) buildModifyWeightFlowTasks(kt *kit.Kit, lbID, accountID, taskM
 	for tgID, targets := range tgToTargetsMap {
 		elems := slice.Split(targets, constant.BatchModifyTargetWeightCloudMaxLimit)
 		for _, parts := range elems {
-			targetsIDs := slice.Map(parts, func(item loadbalancer.BaseTarget) string {
-				return item.ID
-			})
-			rsWeightParams, err := svc.convTCloudOperateTargetReq(kt, targetsIDs, lbID, tgID, accountID, nil, newWeight)
+			rsWeightParams, err := svc.convTCloudOperateTargetReq(parts, lbID, tgID, accountID, nil, newWeight)
 			if err != nil {
-				logs.Errorf("convert tcloud operate target req failed, err: %v, targetsIDs: %v, lbID: %s,"+
-					" tgID: %s, accountID: %s, rid: %s", err, targetsIDs, lbID, tgID, accountID, kt.Rid)
+				logs.Errorf("convert tcloud operate target req failed, err: %v, lbID: %s,"+
+					" tgID: %s, accountID: %s, rid: %s", err, lbID, tgID, accountID, kt.Rid)
 				return nil, nil, err
 			}
 			details, err := svc.createTargetGroupModifyWeightTaskDetails(kt, taskManagementID, bkBizID, rsWeightParams)
