@@ -75,9 +75,64 @@ func (svc *lbSvc) ListTargetByTopo(cts *rest.Contexts) (any, error) {
 	return svc.listTargetByTopo(cts.Kit, bizID, vendor, req)
 }
 
+// CountTargetByTopo count target by topo
+func (svc *lbSvc) CountTargetByTopo(cts *rest.Contexts) (any, error) {
+	req := new(cslb.LbTopoCond)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, err
+	}
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	vendor := enumor.Vendor(cts.PathParameter("vendor").String())
+	if err := vendor.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	_, noPermFlag, err := handler.ListBizAuthRes(cts, &handler.ListAuthResOption{Authorizer: svc.authorizer,
+		ResType: meta.LoadBalancer, Action: meta.Find})
+	if err != nil {
+		logs.Errorf("count target by topo failed, noPermFlag: %v, err: %v, rid: %s", noPermFlag, err, cts.Kit.Rid)
+		return nil, err
+	}
+	if noPermFlag {
+		logs.Errorf("count target by topo no auth, req: %+v, rid: %s", noPermFlag, req, cts.Kit.Rid)
+		return &core.ListResult{Count: 0}, nil
+	}
+	bizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+
+	info, err := svc.getTargetTopoInfoByReq(cts.Kit, bizID, vendor, req)
+	if err != nil {
+		logs.Errorf("get clb topo info failed, err: %v, bizID: %d, vendor: %s, req: %+v, rid: %s", err, bizID, vendor,
+			req, cts.Kit.Rid)
+		return nil, err
+	}
+	if !info.Match {
+		return core.ListResult{Count: 0}, nil
+	}
+
+	targetCond := []filter.RuleFactory{tools.RuleIn("target_group_id", maps.Keys(info.TgMap))}
+	targetCond = append(targetCond, req.GetTargetCond()...)
+	targetReq := core.ListReq{
+		Filter: &filter.Expression{Op: filter.And, Rules: targetCond},
+		Page:   core.NewCountPage(),
+	}
+	resp, err := svc.client.DataService().Global.LoadBalancer.ListTarget(cts.Kit, &targetReq)
+	if err != nil {
+		logs.Errorf("count target failed, err: %v, req: %+v, rid: %s", err, targetReq, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return core.ListResult{Count: resp.Count}, nil
+}
+
 func (svc *lbSvc) listTargetByTopo(kt *kit.Kit, bizID int64, vendor enumor.Vendor, req *cslb.LbTopoReq) (any, error) {
 	// 查询target关联的clb拓扑信息
-	info, err := svc.getTargetTopoInfoByReq(kt, bizID, vendor, req)
+	info, err := svc.getTargetTopoInfoByReq(kt, bizID, vendor, &req.LbTopoCond)
 	if err != nil {
 		logs.Errorf("get clb topo info failed, err: %v, bizID: %d, vendor: %s, req: %+v, rid: %s", err, bizID, vendor,
 			req, kt.Rid)
@@ -135,7 +190,7 @@ func (svc *lbSvc) listTargetByTopo(kt *kit.Kit, bizID int64, vendor enumor.Vendo
 	return core.ListResultT[cslb.CvmWithTargets]{Details: details}, nil
 }
 
-func (svc *lbSvc) getTargetTopoInfoByReq(kt *kit.Kit, bizID int64, vendor enumor.Vendor, req *cslb.LbTopoReq) (
+func (svc *lbSvc) getTargetTopoInfoByReq(kt *kit.Kit, bizID int64, vendor enumor.Vendor, req *cslb.LbTopoCond) (
 	*cslb.TargetTopoInfo, error) {
 
 	commonCond := make([]filter.RuleFactory, 0)

@@ -983,8 +983,8 @@ func (e *ExportTargetReq) Validate() error {
 	return validator.Validate.Struct(e)
 }
 
-// LbTopoReq lb topo request
-type LbTopoReq struct {
+// LbTopoCond lb topo condition
+type LbTopoCond struct {
 	AccountID      string                                `json:"account_id" validate:"required"`
 	LbRegions      []string                              `json:"lb_regions" validate:"max=500"`
 	LbNetworkTypes []loadbalancer.TCloudLoadBalancerType `json:"lb_network_types" validate:"max=500"`
@@ -998,16 +998,15 @@ type LbTopoReq struct {
 	RuleUrls       []string                              `json:"rule_urls" validate:"max=500"`
 	TargetIPs      []string                              `json:"target_ips" validate:"max=5000"`
 	TargetPorts    []int64                               `json:"target_ports" validate:"max=500"`
-	Page           *core.BasePage                        `json:"page" validate:"required"`
 }
 
 // Validate ...
-func (l *LbTopoReq) Validate() error {
+func (l *LbTopoCond) Validate() error {
 	return validator.Validate.Struct(l)
 }
 
 // GetLbCond get lb condition
-func (l *LbTopoReq) GetLbCond() []filter.RuleFactory {
+func (l *LbTopoCond) GetLbCond() []filter.RuleFactory {
 	rules := make([]filter.RuleFactory, 0)
 
 	if len(l.LbRegions) != 0 {
@@ -1043,7 +1042,7 @@ func (l *LbTopoReq) GetLbCond() []filter.RuleFactory {
 }
 
 // GetLblCond get listener condition
-func (l *LbTopoReq) GetLblCond() []filter.RuleFactory {
+func (l *LbTopoCond) GetLblCond() []filter.RuleFactory {
 	rules := make([]filter.RuleFactory, 0)
 
 	if len(l.LblProtocols) != 0 {
@@ -1058,7 +1057,7 @@ func (l *LbTopoReq) GetLblCond() []filter.RuleFactory {
 }
 
 // GetRuleCond get rule condition
-func (l *LbTopoReq) GetRuleCond() []filter.RuleFactory {
+func (l *LbTopoCond) GetRuleCond() []filter.RuleFactory {
 	rules := make([]filter.RuleFactory, 0)
 
 	if len(l.RuleDomains) != 0 {
@@ -1073,7 +1072,7 @@ func (l *LbTopoReq) GetRuleCond() []filter.RuleFactory {
 }
 
 // GetTargetCond get target condition
-func (l *LbTopoReq) GetTargetCond() []filter.RuleFactory {
+func (l *LbTopoCond) GetTargetCond() []filter.RuleFactory {
 	rules := make([]filter.RuleFactory, 0)
 
 	if len(l.TargetIPs) != 0 {
@@ -1085,6 +1084,17 @@ func (l *LbTopoReq) GetTargetCond() []filter.RuleFactory {
 	}
 
 	return rules
+}
+
+// LbTopoReq lb topo request
+type LbTopoReq struct {
+	LbTopoCond `json:",inline" validate:"required,dive,required"`
+	Page       *core.BasePage `json:"page" validate:"required"`
+}
+
+// Validate ...
+func (l *LbTopoReq) Validate() error {
+	return validator.Validate.Struct(l)
 }
 
 // CvmWithTargets cvm with targets
