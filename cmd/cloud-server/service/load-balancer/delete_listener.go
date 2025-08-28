@@ -142,14 +142,10 @@ func (svc *lbSvc) buildDeleteListenerTaskManagement(kt *kit.Kit, bkBizID int64, 
 	flowIDs := make([]string, 0)
 	for lbID, infos := range infoByLB {
 		// 一个clb 对应一个flow
-		ids := slice.Map(infos, func(item corelb.BaseListener) string {
-			return item.ID
-		})
-
-		flowID, err := svc.buildDeleteListenerTask(kt, vendor, lbID, taskManagementID, bkBizID, ids)
+		flowID, err := svc.buildDeleteListenerTask(kt, vendor, lbID, taskManagementID, bkBizID, infos)
 		if err != nil {
-			logs.Errorf("build delete listener task failed, lbID: %s, ids: %v, err: %v, rid: %s",
-				lbID, ids, err, kt.Rid)
+			logs.Errorf("build delete listener task failed, lbID: %s, err: %v, rid: %s",
+				lbID, err, kt.Rid)
 			return "", err
 		}
 		flowIDs = append(flowIDs, flowID)
@@ -164,7 +160,7 @@ func (svc *lbSvc) buildDeleteListenerTaskManagement(kt *kit.Kit, bkBizID int64, 
 }
 
 func (svc *lbSvc) buildDeleteListenerTask(kt *kit.Kit, vendor enumor.Vendor, lbID, taskManagementID string,
-	bkBizID int64, lblIDs []string) (string, error) {
+	bkBizID int64, listeners []corelb.BaseListener) (string, error) {
 
 	// 预检测-是否有执行中的负载均衡
 	_, err := svc.checkResFlowRel(kt, lbID, enumor.LoadBalancerCloudResType)
@@ -185,13 +181,11 @@ func (svc *lbSvc) buildDeleteListenerTask(kt *kit.Kit, vendor enumor.Vendor, lbI
 			logs.Errorf("update task details state to failed failed, err: %v, taskDetails: %+v, rid: %s")
 		}
 	}()
-	taskDetails, err = svc.createDeleteListenerTaskDetails(kt, taskManagementID, bkBizID, lblIDs)
+
+	tasks, taskDetails, err := svc.generateFlowTasks(kt, listeners, vendor, lbID, taskManagementID, bkBizID)
 	if err != nil {
-		logs.Errorf("create delete listener task details failed, err: %v, lbID: %s, ids: %v, rid: %s",
-			err, lbID, lblIDs, kt.Rid)
 		return "", err
 	}
-	tasks := generateFlowTasks(taskDetails, vendor, lbID)
 	flowID, err := svc.buildFlow(kt, enumor.FlowBatchTaskDeleteListener, tableasync.NewShareData(map[string]string{
 		"lb_id": lbID,
 	}), tasks)
@@ -219,10 +213,19 @@ func (svc *lbSvc) buildDeleteListenerTask(kt *kit.Kit, vendor enumor.Vendor, lbI
 }
 
 // generateFlowTasks ...
-func generateFlowTasks(taskDetails []*taskManagementDetail, vendor enumor.Vendor, lbID string) []apits.CustomFlowTask {
+func (svc *lbSvc) generateFlowTasks(kt *kit.Kit, listeners []corelb.BaseListener, vendor enumor.Vendor, lbID,
+	taskManagementID string, bkBizID int64) ([]apits.CustomFlowTask, []*taskManagementDetail, error) {
+
 	var tasks []apits.CustomFlowTask
+	var taskDetails []*taskManagementDetail
 	getNextID := counter.NewNumberCounterWithPrev(1, 10)
-	for _, batch := range slice.Split(taskDetails, constant.BatchDeleteListenerCloudMaxLimit) {
+	for _, batch := range slice.Split(listeners, constant.BatchDeleteListenerCloudMaxLimit) {
+		details, err := svc.createDeleteListenerTaskDetails(kt, taskManagementID, bkBizID, batch)
+		if err != nil {
+			logs.Errorf("create delete listener task details failed, err: %v, lbID: %s, rid: %s",
+				err, lbID, kt.Rid)
+			return nil, nil, err
+		}
 		cur, prev := getNextID()
 		tmpTask := apits.CustomFlowTask{
 			ActionID:   action.ActIDType(cur),
@@ -230,12 +233,12 @@ func generateFlowTasks(taskDetails []*taskManagementDetail, vendor enumor.Vendor
 			Params: &actionlb.BatchTaskDeleteListenerOption{
 				Vendor:         vendor,
 				LoadBalancerID: lbID,
-				ManagementDetailIDs: slice.Map(batch, func(item *taskManagementDetail) string {
+				ManagementDetailIDs: slice.Map(details, func(item *taskManagementDetail) string {
 					return item.taskDetailID
 				}),
 				BatchDeleteReq: &core.BatchDeleteReq{
-					IDs: slice.Map(batch, func(item *taskManagementDetail) string {
-						return item.param.(string)
+					IDs: slice.Map(batch, func(item corelb.BaseListener) string {
+						return item.ID
 					}),
 				},
 			},
@@ -244,21 +247,22 @@ func generateFlowTasks(taskDetails []*taskManagementDetail, vendor enumor.Vendor
 		if prev != "" {
 			tmpTask.DependOn = []action.ActIDType{action.ActIDType(prev)}
 		}
-		for _, detail := range batch {
+		for _, detail := range details {
 			detail.actionID = cur
 		}
 		tasks = append(tasks, tmpTask)
+		taskDetails = append(taskDetails, details...)
 	}
-	return tasks
+	return tasks, taskDetails, nil
 }
 
 func (svc *lbSvc) createDeleteListenerTaskDetails(kt *kit.Kit, taskManagementID string, bkBizID int64,
-	lblIDs []string) ([]*taskManagementDetail, error) {
+	listeners []corelb.BaseListener) ([]*taskManagementDetail, error) {
 
 	details := make([]*taskManagementDetail, 0)
-	for _, param := range lblIDs {
+	for _, listener := range listeners {
 		detail := &taskManagementDetail{
-			param: param,
+			param: listener,
 		}
 		details = append(details, detail)
 	}
