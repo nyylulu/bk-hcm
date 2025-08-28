@@ -24,7 +24,6 @@ import (
 	"hcm/cmd/woa-server/logics/task/recycler/event"
 	recovertask "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/api/core"
-	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -113,8 +112,8 @@ func (ds *DetectingState) dealDetectTask(kt *kit.Kit, ctx *CommonContext) *event
 		return &event.Event{Type: event.DetectFailed, Error: err}
 	}
 
-	if err := ctx.Dispatcher.detector.CheckDetectStatus(orderId); err != nil {
-		logs.Errorf("%s: detection tasks failed, err: %v, rid: %s", constant.CvmRecycleFailed, err, kt.Rid)
+	if err := ctx.Dispatcher.detector.CheckDetectStatus(kt, orderId); err != nil {
+		logs.Errorf("recycle detection failed, order id: %s, err: %v, rid: %s", orderId, err, kt.Rid)
 		return &event.Event{Type: event.DetectFailed, Error: err}
 	}
 

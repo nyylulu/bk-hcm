@@ -25,6 +25,7 @@ import (
 	"hcm/pkg/api/core"
 	"hcm/pkg/cc"
 	"hcm/pkg/client"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -104,7 +105,7 @@ func New(ctx context.Context, thirdCli *thirdparty.Client, cmdbCli cmdb.Client, 
 }
 
 // CheckDetectStatus checks if detection is finished
-func (d *Detector) CheckDetectStatus(subOrderId string) error {
+func (d *Detector) CheckDetectStatus(kt *kit.Kit, subOrderId string) error {
 	filter := map[string]interface{}{
 		"suborder_id": subOrderId,
 		"status": mapstr.MapStr{
@@ -113,7 +114,8 @@ func (d *Detector) CheckDetectStatus(subOrderId string) error {
 	}
 	cnt, err := dao.Set().DetectTask().CountDetectTask(context.Background(), filter)
 	if err != nil {
-		logs.Errorf("failed to get detection task count, err: %v, subOrderId: %s", err, subOrderId)
+		logs.Errorf("%s: failed to get detection task count, err: %v, subOrderId: %s, rid: %s",
+			constant.CvmRecycleFailed, err, subOrderId, kt.Rid)
 		return err
 	}
 
@@ -130,14 +132,13 @@ func (d *Detector) CheckDetectStatus(subOrderId string) error {
 	}
 	// ignore and continue when update failed_num error
 	if err := dao.Set().RecycleOrder().UpdateRecycleOrder(context.Background(), &filterOrder, &update); err != nil {
-		logs.Errorf("failed to update recycle order, ignore and continue when update failed_num error, "+
-			"subOrderId: %s, err: %v", subOrderId, err)
+		logs.Errorf("%s: failed to update recycle order, ignore and continue when update failed_num error, "+
+			"subOrderId: %s, err: %v, rid: %s", constant.CvmRecycleFailed, subOrderId, err, kt.Rid)
 	}
 
-	logs.Errorf("recycle order detection failed, for detection tasks is not success, subOrderId: %s, failedStepNum: %d",
-		subOrderId, cnt)
-	return fmt.Errorf("recycle order detection failed, for detection tasks is not success, subOrderId: %s, failedStepNum"+
-		": %d", subOrderId, cnt)
+	logs.Errorf("some recycle steps failed, subOrderId: %s, failedStepNum: %d, rid: %s",
+		subOrderId, cnt, kt.Rid)
+	return fmt.Errorf("some recycle steps failed, subOrderId: %s, failedStepNum: %d", subOrderId, cnt)
 }
 
 // getDetectTasks 查询预检任务，每个主机会有一个DetectTask

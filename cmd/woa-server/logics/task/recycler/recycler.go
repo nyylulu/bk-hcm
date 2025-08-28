@@ -113,7 +113,7 @@ type Interface interface {
 	// RunRecycleTask(task *table.DetectTask, startStep uint)
 
 	// CheckDetectStatus check whether detection is finished or not
-	CheckDetectStatus(orderId string) error
+	CheckDetectStatus(kt *kit.Kit, orderId string) error
 	// CheckUworkOpenTicket check whether uwork has open ticket
 	CheckUworkOpenTicket(kt *kit.Kit, assetID string) ([]string, error)
 	// TransitCvm transit CVM resource
@@ -1873,8 +1873,8 @@ func (r *recycler) GetDetectStepCfg(kit *kit.Kit) (*types.GetDetectStepCfgRst, e
 }
 
 // CheckDetectStatus check recycle task info
-func (r *recycler) CheckDetectStatus(orderId string) error {
-	return r.dispatcher.GetDetector().CheckDetectStatus(orderId)
+func (r *recycler) CheckDetectStatus(kt *kit.Kit, orderId string) error {
+	return r.dispatcher.GetDetector().CheckDetectStatus(kt, orderId)
 }
 
 // CheckUworkOpenTicket ckeck host uwork ticket status
