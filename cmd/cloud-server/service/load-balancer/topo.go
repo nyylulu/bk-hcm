@@ -644,7 +644,7 @@ func (svc *lbSvc) listListenerByTopo(kt *kit.Kit, bizID int64, vendor enumor.Ven
 func (svc *lbSvc) buildListenerWithTopoInfo(kt *kit.Kit, vendor enumor.Vendor, info *cslb.LblTopoInfo,
 	listeners []corelb.TCloudListener) ([]cslb.ListenerWithTopo, error) {
 
-	lblIDRulesMap, lblTargetCountMap, lblNonZeroWeightTargetCountMap, err := svc.getListenerLayer7RuleAndTargetCount(
+	lblIDRulesMap, lblTargetCountMap, lblNonZeroWeightTargetCountMap, err := svc.getListenerRuleAndTargetCount(
 		kt, vendor, listeners)
 	if err != nil {
 		logs.Errorf("get listener layer7 rule and target count failed, err: %v, listeners: %+v, rid: %s", err,
@@ -665,17 +665,22 @@ func (svc *lbSvc) buildListenerWithTopoInfo(kt *kit.Kit, vendor enumor.Vendor, i
 		}
 
 		ruleDomainCount, urlCount := 0, 0
-		rules, ok := lblIDRulesMap[lbl.ID]
-		if lbl.Protocol.IsLayer7Protocol() && ok {
+		var scheduler string
+		rules := lblIDRulesMap[lbl.ID]
+		if lbl.Protocol.IsLayer7Protocol() && len(rules) != 0 {
 			domains := converter.SliceToMap(rules,
 				func(r corelb.TCloudLbUrlRule) (string, struct{}) { return r.Domain, struct{}{} })
 			ruleDomainCount = len(domains)
 			urlCount = len(rules)
 		}
+		if lbl.Protocol.IsLayer4Protocol() && len(rules) != 0 {
+			scheduler = rules[0].Scheduler
+		}
 
 		detail := cslb.ListenerWithTopo{
 			BaseListener:             converter.PtrToVal(lbl.BaseListener),
 			EndPort:                  endPort,
+			Scheduler:                scheduler,
 			LbVips:                   getLbVips(lb),
 			LbDomain:                 lb.Domain,
 			LbRegion:                 lb.Region,
@@ -691,39 +696,33 @@ func (svc *lbSvc) buildListenerWithTopoInfo(kt *kit.Kit, vendor enumor.Vendor, i
 	return details, nil
 }
 
-func (svc *lbSvc) getListenerLayer7RuleAndTargetCount(kt *kit.Kit, vendor enumor.Vendor,
-	listeners []corelb.TCloudListener) (map[string][]corelb.TCloudLbUrlRule, map[string]int, map[string]int, error) {
+func (svc *lbSvc) getListenerRuleAndTargetCount(kt *kit.Kit, vendor enumor.Vendor, listeners []corelb.TCloudListener) (
+	map[string][]corelb.TCloudLbUrlRule, map[string]int, map[string]int, error) {
 
 	if len(listeners) == 0 {
 		return nil, nil, nil, fmt.Errorf("listeners is empty")
 	}
 
-	// 查询七层监听器规则
+	// 查询监听器规则
 	lblIDs := make([]string, 0)
-	layer7LblIDs := make([]string, 0)
 	for _, lbl := range listeners {
 		lblIDs = append(lblIDs, lbl.ID)
-		if lbl.Protocol.IsLayer7Protocol() {
-			layer7LblIDs = append(layer7LblIDs, lbl.ID)
-		}
 	}
 	lblIDRulesMap := make(map[string][]corelb.TCloudLbUrlRule)
-	if len(layer7LblIDs) != 0 {
-		ruleCond := []filter.RuleFactory{tools.RuleIn("lbl_id", layer7LblIDs)}
-		ruleMap, err := svc.getRuleByCond(kt, vendor, ruleCond)
-		if err != nil {
-			logs.Errorf("get rule by cond failed, err: %v, req: %+v, rid: %s", err, ruleCond, kt.Rid)
-			return nil, nil, nil, err
+	ruleCond := []filter.RuleFactory{tools.RuleIn("lbl_id", lblIDs)}
+	ruleMap, err := svc.getRuleByCond(kt, vendor, ruleCond)
+	if err != nil {
+		logs.Errorf("get rule by cond failed, err: %v, req: %+v, rid: %s", err, ruleCond, kt.Rid)
+		return nil, nil, nil, err
+	}
+	for _, rule := range maps.Values(ruleMap) {
+		if _, ok := lblIDRulesMap[rule.LblID]; !ok {
+			lblIDRulesMap[rule.LblID] = make([]corelb.TCloudLbUrlRule, 0)
 		}
-		for _, rule := range maps.Values(ruleMap) {
-			if _, ok := lblIDRulesMap[rule.LblID]; !ok {
-				lblIDRulesMap[rule.LblID] = make([]corelb.TCloudLbUrlRule, 0)
-			}
-			lblIDRulesMap[rule.LblID] = append(lblIDRulesMap[rule.LblID], rule)
-		}
+		lblIDRulesMap[rule.LblID] = append(lblIDRulesMap[rule.LblID], rule)
 	}
 
-	// 查询监听器关联的target数量
+	// 查询监听器关联的target数量和权重不为0的target数量
 	tgLbRels, err := svc.getTgLbRelByCond(kt, []filter.RuleFactory{tools.RuleIn("lbl_id", lblIDs)})
 	if err != nil {
 		logs.Errorf("get tg lb rel by cond failed, err: %v, lblIDs: %+v, rid: %s", err, lblIDs, kt.Rid)

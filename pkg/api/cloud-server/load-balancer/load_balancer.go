@@ -1141,6 +1141,7 @@ type TargetTopoInfo struct {
 type ListenerWithTopo struct {
 	corelb.BaseListener      `json:",inline"`
 	EndPort                  *int64                              `json:"end_port"`
+	Scheduler                string                              `json:"scheduler"`
 	LbVips                   []string                            `json:"lb_vips"`
 	LbDomain                 string                              `json:"lb_domain"`
 	LbRegion                 string                              `json:"lb_region"`
