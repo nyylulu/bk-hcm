@@ -1139,15 +1139,16 @@ type TargetTopoInfo struct {
 
 // ListenerWithTopo listener with topo
 type ListenerWithTopo struct {
-	corelb.BaseListener `json:",inline"`
-	EndPort             *int64                              `json:"end_port"`
-	LbVips              []string                            `json:"lb_vips"`
-	LbDomain            string                              `json:"lb_domain"`
-	LbRegion            string                              `json:"lb_region"`
-	LbNetworkType       loadbalancer.TCloudLoadBalancerType `json:"lb_network_type"`
-	RuleDomainCount     int                                 `json:"rule_domain_count"`
-	UrlCount            int                                 `json:"url_count"`
-	TargetCount         int                                 `json:"target_count"`
+	corelb.BaseListener      `json:",inline"`
+	EndPort                  *int64                              `json:"end_port"`
+	LbVips                   []string                            `json:"lb_vips"`
+	LbDomain                 string                              `json:"lb_domain"`
+	LbRegion                 string                              `json:"lb_region"`
+	LbNetworkType            loadbalancer.TCloudLoadBalancerType `json:"lb_network_type"`
+	RuleDomainCount          int                                 `json:"rule_domain_count"`
+	UrlCount                 int                                 `json:"url_count"`
+	TargetCount              int                                 `json:"target_count"`
+	NonZeroWeightTargetCount int                                 `json:"non_zero_weight_target_count"`
 }
 
 // LblTopoInfo listener topo info
