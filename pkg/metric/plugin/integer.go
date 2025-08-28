@@ -18,7 +18,7 @@ import (
 	"hcm/pkg/metric"
 )
 
-// integer
+// NewIntegerCounter ...
 func NewIntegerCounter(name, help string) *IntegerCounter {
 	return &IntegerCounter{
 		name:  name,
@@ -34,6 +34,7 @@ type IntegerCounter struct {
 	value int64
 }
 
+// GetMeta ...
 func (c *IntegerCounter) GetMeta() metric.MetricMeta {
 	return metric.MetricMeta{
 		Name: c.name,
@@ -41,22 +42,27 @@ func (c *IntegerCounter) GetMeta() metric.MetricMeta {
 	}
 }
 
+// GetValue ...
 func (c *IntegerCounter) GetValue() (*metric.FloatOrString, error) {
 	return metric.FormFloatOrString(c.value)
 }
 
+// GetExtension ...
 func (c *IntegerCounter) GetExtension() (*metric.MetricExtension, error) {
 	return nil, nil
 }
 
+// Reset ...
 func (c *IntegerCounter) Reset() {
 	atomic.StoreInt64(&c.value, 0)
 }
 
+// Inc ...
 func (c *IntegerCounter) Inc(i int64) {
 	atomic.AddInt64(&c.value, i)
 }
 
+// Dec ...
 func (c *IntegerCounter) Dec(i int64) {
 	atomic.AddInt64(&c.value, -i)
 }

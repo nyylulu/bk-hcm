@@ -10,10 +10,11 @@
  * limitations under the License.
  */
 
+// Package universalsql ...
 package universalsql
 
 const (
-	//Comparison Operator
+	// Comparison Operator
 	GT    string = "$gt"
 	LT    string = "$lt"
 	GTE   string = "$gte"
@@ -24,18 +25,18 @@ const (
 	NEQ   string = "$ne"
 	REGEX string = "$regex"
 
-	//Logic Operator
+	// Logic Operator
 	AND string = "$and"
 	OR  string = "$or"
 	NOT string = "$not"
 	NOR string = "$nor"
 
-	//TODO:
-	//Elements Operator
+	// TODO:
+	// Elements Operator
 	EXISTS string = "$exists"
 	TYPE   string = "$type"
 
-	//Array Operator
+	// Array Operator
 	ALL       string = "$all"
 	ELEMMATCH string = "$elemMatch"
 	SIZE      string = "$size"

@@ -18,15 +18,21 @@ import (
 	"hcm/cmd/woa-server/storage/stream/types"
 )
 
+// EventType ...
 type EventType string
 
 const (
-	Create  EventType = "create"
-	Update  EventType = "update"
-	Delete  EventType = "delete"
+	// Create ...
+	Create EventType = "create"
+	// Update ...
+	Update EventType = "update"
+	// Delete ...
+	Delete EventType = "delete"
+	// Unknown ...
 	Unknown EventType = "unknown"
 )
 
+// Validate ...
 func (e EventType) Validate() error {
 	switch e {
 	case Create, Update, Delete:
@@ -36,6 +42,7 @@ func (e EventType) Validate() error {
 	}
 }
 
+// ConvertOperateType ...
 func ConvertOperateType(typ types.OperType) EventType {
 	switch typ {
 	case types.Insert:
@@ -49,6 +56,7 @@ func ConvertOperateType(typ types.OperType) EventType {
 	}
 }
 
+// ChainNode ...
 type ChainNode struct {
 	// self increasing id, used for sequential batch query
 	ID uint64 `json:"id" bson:"id"`
@@ -69,6 +77,7 @@ type ChainNode struct {
 	SubResource []string `json:"bk_sub_resource,omitempty" bson:"bk_sub_resource,omitempty"`
 }
 
+// LastChainNodeData ...
 type LastChainNodeData struct {
 	Coll        string          `json:"_id" bson:"_id"`
 	ID          uint64          `json:"id" bson:"id"`
