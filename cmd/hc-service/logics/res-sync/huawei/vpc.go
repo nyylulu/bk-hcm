@@ -287,8 +287,10 @@ func (cli *client) createVpc(kt *kit.Kit, accountID string, addVpc []types.HuaWe
 		Vpcs: vpcs,
 	}
 	if _, err := cli.dbCli.HuaWei.Vpc.BatchCreate(kt.Ctx, kt.Header(), createReq); err != nil {
-		if strings.Contains(err.Error(), "Duplicate entry") && strings.Contains(err.Error(), "idx_cloud_id_vendor_tenant_id") {
-			logs.Warnf("[%s] skip create vpc due to duplicate key constraint, err: %v, rid: %s", enumor.HuaWei, err, kt.Rid)
+		if strings.Contains(err.Error(), "Duplicate entry") &&
+			strings.Contains(err.Error(), "idx_cloud_id_vendor_tenant_id") {
+			logs.Warnf("[%s] skip create vpc due to duplicate key constraint, "+
+				"err: %v, rid: %s", enumor.HuaWei, err, kt.Rid)
 			return nil
 		}
 		logs.Errorf("[%s] request dataservice to batch create vpc failed, err: %v, rid: %s", enumor.HuaWei, err, kt.Rid)
