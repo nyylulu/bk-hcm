@@ -262,8 +262,8 @@ func (dao TargetDao) ListCvmInfo(kt *kit.Kit, opt *types.ListOption) (*typeslb.L
 		return nil, err
 	}
 
-	sql := fmt.Sprintf(`SELECT ip,inst_id,inst_type,zone,cloud_vpc_ids FROM %s %s group by ip %s`,
-		table.LoadBalancerTargetTable, whereExpr, pageExpr)
+	sql := fmt.Sprintf(`SELECT ip,inst_id,inst_type,zone,cloud_vpc_ids FROM %s %s group by ip,inst_id,inst_type,zone,
+cloud_vpc_ids %s`, table.LoadBalancerTargetTable, whereExpr, pageExpr)
 	details := make([]typeslb.ListCvmInfo, 0)
 	if err = dao.Orm.Do().Select(kt.Ctx, &details, sql, whereValue); err != nil {
 		return nil, err
