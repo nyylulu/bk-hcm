@@ -28,6 +28,7 @@ import (
 	protocore "hcm/pkg/api/core/cloud"
 	dataservice "hcm/pkg/api/data-service"
 	protocloud "hcm/pkg/api/data-service/cloud"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao"
@@ -114,7 +115,7 @@ func batchCreateVpc[T protocloud.VpcCreateExtension](cts *rest.Contexts, vendor 
 
 			tenantID := createReq.TenantID
 			if tenantID == "" {
-				tenantID = "default"
+				tenantID = constant.DefaultTenantID
 			}
 
 			vpc := tablecloud.VpcTable{
