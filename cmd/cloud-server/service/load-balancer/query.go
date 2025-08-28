@@ -681,10 +681,13 @@ func (svc *lbSvc) listTGRelatedInfoByRels(kt *kit.Kit, vendor enumor.Vendor, rel
 		return nil, err
 	}
 
-	lblMap, err := svc.listListenerMap(kt, slice.Map(rels, corelb.BaseTargetListenerRuleRel.GetLblID))
+	lbls, err := svc.listListenersByIDs(kt, slice.Map(rels, corelb.BaseTargetListenerRuleRel.GetLblID))
 	if err != nil {
 		return nil, err
 	}
+	lblMap := cvt.SliceToMap(lbls, func(item corelb.BaseListener) (string, corelb.BaseListener) {
+		return item.ID, item
+	})
 
 	ruleMap, err := svc.listUrlRuleMapByIDs(kt, vendor, slice.Map(rels, corelb.BaseTargetListenerRuleRel.GetListenerRuleID))
 	if err != nil {
