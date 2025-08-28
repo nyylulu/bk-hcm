@@ -112,6 +112,11 @@ func batchCreateVpc[T protocloud.VpcCreateExtension](cts *rest.Contexts, vendor 
 				return nil, errf.NewFromErr(errf.InvalidParameter, err)
 			}
 
+			tenantID := createReq.TenantID
+			if tenantID == "" {
+				tenantID = "default"
+			}
+
 			vpc := tablecloud.VpcTable{
 				Vendor:    vendor,
 				AccountID: createReq.AccountID,
@@ -122,6 +127,7 @@ func batchCreateVpc[T protocloud.VpcCreateExtension](cts *rest.Contexts, vendor 
 				Memo:      createReq.Memo,
 				Extension: ext,
 				BkBizID:   createReq.BkBizID,
+				TenantID:  tenantID,
 				Creator:   cts.Kit.User,
 				Reviser:   cts.Kit.User,
 			}

@@ -43,6 +43,7 @@ type VpcCreateReq[T VpcCreateExtension] struct {
 	Category  enumor.VpcCategory `json:"category" validate:"required"`
 	Memo      *string            `json:"memo,omitempty" validate:"omitempty"`
 	Extension *T                 `json:"extension" validate:"required"`
+	TenantID  string             `json:"tenant_id" validate:"omitempty"`
 }
 
 // VpcCreateExtension defines create vpc extensional info.
