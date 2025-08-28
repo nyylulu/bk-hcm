@@ -257,6 +257,10 @@ func (dao TargetDao) ListCvmInfo(kt *kit.Kit, opt *types.ListOption) (*typeslb.L
 		return &typeslb.ListCvmInfoDetails{Count: count}, nil
 	}
 
+	if opt.Page.Sort == "" {
+		opt.Page.Sort = "ip"
+	}
+
 	pageExpr, err := types.PageSQLExpr(opt.Page, types.DefaultPageSQLOption)
 	if err != nil {
 		return nil, err
