@@ -22,6 +22,7 @@ package lblogic
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	actionlb "hcm/cmd/task-server/logics/action/load-balancer"
 	actionflow "hcm/cmd/task-server/logics/flow"
@@ -263,6 +264,11 @@ func (c *Layer7ListenerBindRSExecutor) taskDetailsGroupByTargetGroup(kt *kit.Kit
 			logs.Errorf("get target group id failed, rule(%s),err: %v, rid: %s", rule.CloudID, err, kt.Rid)
 			return nil, nil, nil, err
 		}
+
+		if targetGroupID == "" {
+			targetGroupID = fmt.Sprintf("temp_tg_%s_%s", rule.CloudID, listener.CloudID)
+		}
+
 		tgToListenerCloudID[targetGroupID] = listener.CloudID
 		tgToCloudRuleIDs[targetGroupID] = rule.CloudID
 		tgToDetails[targetGroupID] = append(tgToDetails[targetGroupID], detail)
@@ -326,28 +332,48 @@ func (c *Layer7ListenerBindRSExecutor) buildTCloudFlowTask(kt *kit.Kit, lb corel
 			managementDetailIDs = append(managementDetailIDs, detail.taskDetailID)
 		}
 
-		req := &hclb.BatchRegisterTCloudTargetReq{
-			CloudListenerID: tgToListenerCloudIDs[targetGroupID],
-			CloudRuleID:     tgToCloudRuleIDs[targetGroupID],
-			TargetGroupID:   targetGroupID,
-			RuleType:        enumor.Layer7RuleType,
-			Targets:         targets,
+		if strings.HasPrefix(targetGroupID, "temp_tg_") {
+			createTgTask := ts.CustomFlowTask{
+				ActionID:   action.ActIDType(cur),
+				ActionName: enumor.ActionCreateTargetGroupWithRel,
+				Params: &actionlb.CreateTargetGroupWithRelOption{
+					Vendor:              c.vendor,
+					LoadBalancerID:      lb.ID,
+					ListenerCloudID:     tgToListenerCloudIDs[targetGroupID],
+					RuleCloudID:         tgToCloudRuleIDs[targetGroupID],
+					Targets:             targets,
+					ManagementDetailIDs: managementDetailIDs,
+				},
+				Retry: tableasync.NewRetryWithPolicy(3, 100, 200),
+			}
+			if prev != "" {
+				createTgTask.DependOn = []action.ActIDType{action.ActIDType(prev)}
+			}
+			result = append(result, createTgTask)
+		} else {
+			req := &hclb.BatchRegisterTCloudTargetReq{
+				CloudListenerID: tgToListenerCloudIDs[targetGroupID],
+				CloudRuleID:     tgToCloudRuleIDs[targetGroupID],
+				TargetGroupID:   targetGroupID,
+				RuleType:        enumor.Layer7RuleType,
+				Targets:         targets,
+			}
+			tmpTask := ts.CustomFlowTask{
+				ActionID:   action.ActIDType(cur),
+				ActionName: enumor.ActionBatchTaskTCloudBindTarget,
+				Params: &actionlb.BatchTaskBindTargetOption{
+					Vendor:                       c.vendor,
+					LoadBalancerID:               lb.ID,
+					ManagementDetailIDs:          managementDetailIDs,
+					BatchRegisterTCloudTargetReq: req,
+				},
+				Retry: tableasync.NewRetryWithPolicy(3, 100, 200),
+			}
+			if prev != "" {
+				tmpTask.DependOn = []action.ActIDType{action.ActIDType(prev)}
+			}
+			result = append(result, tmpTask)
 		}
-		tmpTask := ts.CustomFlowTask{
-			ActionID:   action.ActIDType(cur),
-			ActionName: enumor.ActionBatchTaskTCloudBindTarget,
-			Params: &actionlb.BatchTaskBindTargetOption{
-				Vendor:                       c.vendor,
-				LoadBalancerID:               lb.ID,
-				ManagementDetailIDs:          managementDetailIDs,
-				BatchRegisterTCloudTargetReq: req,
-			},
-			Retry: tableasync.NewRetryWithPolicy(3, 100, 200),
-		}
-		if prev != "" {
-			tmpTask.DependOn = []action.ActIDType{action.ActIDType(prev)}
-		}
-		result = append(result, tmpTask)
 		// update taskDetail.actionID
 		for _, detail := range taskDetails {
 			detail.actionID = cur

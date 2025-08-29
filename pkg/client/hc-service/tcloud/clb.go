@@ -84,6 +84,14 @@ func (c *ClbClient) CreateListenerWithTargetGroup(kt *kit.Kit, req *hcproto.List
 		c.client, http.MethodPost, kt, req, "/listeners/create_with_target_group")
 }
 
+// CreateTargetGroupWithRel 创建目标组并绑定监听器
+func (c *ClbClient) CreateTargetGroupWithRel(kt *kit.Kit, req *hcproto.CreateTargetGroupWithRelReq) (
+	*hcproto.CreateTargetGroupWithRelResult, error) {
+
+	return common.Request[hcproto.CreateTargetGroupWithRelReq, hcproto.CreateTargetGroupWithRelResult](
+		c.client, http.MethodPost, kt, req, "/target_groups/create_with_rel")
+}
+
 // CreateListener 创建监听器自身
 func (c *ClbClient) CreateListener(kt *kit.Kit, req *hcproto.TCloudListenerCreateReq) (
 	*hcproto.ListenerCreateResult, error) {

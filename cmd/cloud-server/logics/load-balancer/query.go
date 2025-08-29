@@ -199,7 +199,30 @@ func getTargetGroupID(kt *kit.Kit, cli *dataservice.Client, lbID string, ruleClo
 	}
 
 	if len(rel.Details) == 0 {
-		return "", fmt.Errorf("target group not found")
+		return "", nil
+	}
+	return rel.Details[0].TargetGroupID, nil
+}
+
+// getTargetGroupIDByListener
+func getTargetGroupIDByListener(kt *kit.Kit, cli *dataservice.Client, lbID string, listenerCloudID string) (string, error) {
+	listReq := &core.ListReq{
+		Fields: []string{"target_group_id"},
+		Page:   core.NewDefaultBasePage(),
+		Filter: tools.ExpressionAnd(
+			tools.RuleEqual("lb_id", lbID),
+			tools.RuleEqual("cloud_lbl_id", listenerCloudID),
+			tools.RuleEqual("listener_rule_id", ""),
+		),
+	}
+	rel, err := cli.Global.LoadBalancer.ListTargetGroupListenerRel(kt, listReq)
+	if err != nil {
+		logs.Errorf("list target group listener rel failed, err: %v, rid: %s", err, kt.Rid)
+		return "", err
+	}
+
+	if len(rel.Details) == 0 {
+		return "", nil
 	}
 	return rel.Details[0].TargetGroupID, nil
 }
