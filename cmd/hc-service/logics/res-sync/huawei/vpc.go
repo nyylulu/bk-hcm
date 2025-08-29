@@ -261,7 +261,6 @@ func (cli *client) createVpc(kt *kit.Kit, accountID string, addVpc []types.HuaWe
 			Region:    one.Region,
 			Category:  enumor.BizVpcCategory,
 			Memo:      one.Memo,
-			TenantID:  constant.DefaultTenantID,
 			Extension: &cloud.HuaWeiVpcCreateExt{
 				Status:              one.Extension.Status,
 				EnterpriseProjectID: one.Extension.EnterpriseProjectId,
@@ -332,11 +331,6 @@ func (cli *client) listVpcFromDB(kt *kit.Kit, params *SyncBaseParams) (
 		Filter: &filter.Expression{
 			Op: filter.And,
 			Rules: []filter.RuleFactory{
-				&filter.AtomRule{
-					Field: "account_id",
-					Op:    filter.Equal.Factory(),
-					Value: params.AccountID,
-				},
 				&filter.AtomRule{
 					Field: "cloud_id",
 					Op:    filter.In.Factory(),

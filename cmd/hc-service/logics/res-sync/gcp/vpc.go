@@ -251,7 +251,6 @@ func (cli *client) createVpc(kt *kit.Kit, accountID string, addVpc []types.GcpVp
 			Name:      converter.ValToPtr(item.Name),
 			Category:  enumor.BizVpcCategory,
 			Memo:      item.Memo,
-			TenantID:  constant.DefaultTenantID,
 			Extension: &cloud.GcpVpcCreateExt{
 				SelfLink:              item.Extension.SelfLink,
 				AutoCreateSubnetworks: item.Extension.AutoCreateSubnetworks,
@@ -332,11 +331,6 @@ func (cli *client) listVpcFromDB(kt *kit.Kit, params *SyncBaseParams) (
 		Filter: &filter.Expression{
 			Op: filter.And,
 			Rules: []filter.RuleFactory{
-				&filter.AtomRule{
-					Field: "account_id",
-					Op:    filter.Equal.Factory(),
-					Value: params.AccountID,
-				},
 				&filter.AtomRule{
 					Field: "cloud_id",
 					Op:    filter.In.Factory(),
