@@ -147,6 +147,8 @@ const (
 	ActionBatchTaskTCloudModifyRsWeight = "batch_task_tcloud_listener_modify_rs_weight"
 	// ActionBatchTaskDeleteListener 异步任务-批量删除监听器
 	ActionBatchTaskDeleteListener ActionName = "batch_task_tcloud_delete_listener"
+	// ActionCreateTargetGroupWithRel 异步任务-创建目标组并绑定监听器
+	ActionCreateTargetGroupWithRel ActionName = "create_target_group_with_rel"
 )
 
 const (

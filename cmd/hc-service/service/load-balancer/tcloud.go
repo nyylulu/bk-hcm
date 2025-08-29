@@ -99,6 +99,8 @@ func (svc *clbSvc) initTCloudClbService(cap *capability.Capability) {
 
 	h.Add("RegisterTargetToListenerRule", http.MethodPost,
 		"/vendors/tcloud/load_balancers/{lb_id}/targets/create", svc.RegisterTargetToListenerRule)
+	h.Add("CreateTargetGroupWithRel", http.MethodPost,
+		"/vendors/tcloud/target_groups/create_with_rel", svc.CreateTargetGroupWithRel)
 	h.Add("BatchRemoveTCloudListenerTargets", http.MethodDelete,
 		"/vendors/tcloud/load_balancers/{lb_id}/targets/batch", svc.BatchRemoveTCloudListenerTargets)
 	h.Add("BatchModifyTCloudListenerTargetsWeight", http.MethodPatch,

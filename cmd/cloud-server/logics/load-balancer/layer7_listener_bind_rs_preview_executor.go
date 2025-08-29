@@ -207,6 +207,14 @@ func (l *Layer7ListenerBindRSPreviewExecutor) validateTarget(kt *kit.Kit, lbID s
 	if err != nil {
 		return err
 	}
+
+	if tgID == "" {
+		detail.Status.SetExecutable()
+		detail.ValidateResult = append(detail.ValidateResult,
+			"Listener rule not bound to target group, will automatically create target group and bind")
+		return nil
+	}
+
 	target, err := getTarget(kt, l.dataServiceCli, tgID, instID, port)
 	if err != nil {
 		return err

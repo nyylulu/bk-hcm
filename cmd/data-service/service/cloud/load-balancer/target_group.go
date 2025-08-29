@@ -139,16 +139,18 @@ func createRel[T corelb.TargetGroupExtension](kt *kit.Kit, svc *lbSvc, txn *sqlx
 	}}
 	switch vendor {
 	case enumor.TCloud:
-		// 更新规则表
-		rule := &tablelb.TCloudLbUrlRuleTable{
-			TargetGroupID:      tgID,
-			CloudTargetGroupID: tgID,
-			Reviser:            kt.User,
-		}
-		err := svc.dao.LoadBalancerTCloudUrlRule().UpdateByIDWithTx(kt, txn, tgReq.ListenerRuleID, rule)
-		if err != nil {
-			logs.Errorf("fail to update rule while creating target group with rel, err: %v, rid: %s", err, kt.Rid)
-			return nil, err
+		//更新规则表
+		if tgReq.ListenerRuleID != "" {
+			rule := &tablelb.TCloudLbUrlRuleTable{
+				TargetGroupID:      tgID,
+				CloudTargetGroupID: tgID,
+				Reviser:            kt.User,
+			}
+			err := svc.dao.LoadBalancerTCloudUrlRule().UpdateByIDWithTx(kt, txn, tgReq.ListenerRuleID, rule)
+			if err != nil {
+				logs.Errorf("fail to update rule while creating target group with rel, err: %v, rid: %s", err, kt.Rid)
+				return nil, err
+			}
 		}
 	}
 
