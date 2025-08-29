@@ -312,7 +312,7 @@ func (cli *client) createLocalTargetGroupL7(kt *kit.Kit, opt *SyncListenerOption
 			Name:            genTargetGroupNameL7(dbRule),
 			Vendor:          enumor.TCloud,
 			AccountID:       lb.AccountID,
-			BkBizID:         lb.BkBizID,
+			BkBizID:         opt.BizID,
 			Protocol:        listener.GetProtocol(),
 			Port:            cvt.PtrToVal(listener.Port),
 			TargetGroupType: enumor.LocalTargetGroupType,
