@@ -271,6 +271,7 @@ func (cli *client) createVpc(kt *kit.Kit, accountID string, addVpc []types.HuaWe
 		if one.Extension.Cidr != nil {
 			tmpCidrs := make([]cloud.HuaWeiCidr, 0, len(one.Extension.Cidr))
 			for _, cidrItem := range one.Extension.Cidr {
+
 				tmpCidrs = append(tmpCidrs, cloud.HuaWeiCidr{
 					Type: cidrItem.Type,
 					Cidr: cidrItem.Cidr,
