@@ -299,12 +299,12 @@ func (c *Controller) convResPlanDemandRespAndFilter(kt *kit.Kit, req *ptypes.Lis
 			// 计算已消耗/剩余的核心数和实例数
 			if allAppliedCpuCore, ok := planAppliedCore[demandKey]; ok {
 				demandAppliedCpuCore := min(allAppliedCpuCore, demandItem.RemainedCpuCore)
-				demandItem.AppliedCpuCore = demandAppliedCpuCore
+				demandItem.AppliedCpuCore += demandAppliedCpuCore
 				planAppliedCore[demandKey] -= demandAppliedCpuCore
 
 				deviceCpuCore := decimal.NewFromInt(deviceTypes[demandItem.DeviceType].CpuCore)
 				deviceMemory := decimal.NewFromInt(deviceTypes[demandItem.DeviceType].Memory)
-				demandItem.AppliedOS = decimal.NewFromInt(demandAppliedCpuCore).Div(deviceCpuCore)
+				demandItem.AppliedOS = decimal.NewFromInt(demandItem.AppliedCpuCore).Div(deviceCpuCore)
 				demandItem.AppliedMemory = demandItem.AppliedOS.Mul(deviceMemory).IntPart()
 			}
 			demandItem.RemainedOS = demandItem.TotalOS.Sub(demandItem.AppliedOS)
