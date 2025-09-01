@@ -21,11 +21,17 @@ import (
 
 // ModifyRecord defines a resource apply order modify record's detail information
 type ModifyRecord struct {
-	ID         uint64        `json:"id" bson:"id"`
-	SuborderID string        `json:"suborder_id" bson:"suborder_id"`
-	User       string        `json:"bk_username" bson:"bk_username"`
-	Details    *ModifyDetail `json:"details" bson:"details"`
-	CreateAt   time.Time     `json:"create_at" bson:"create_at"`
+	ID         uint64 `json:"id" bson:"id"`
+	SuborderID string `json:"suborder_id" bson:"suborder_id"`
+	// 修改人
+	User     string        `json:"bk_username" bson:"bk_username"`
+	Details  *ModifyDetail `json:"details" bson:"details"`
+	CreateAt time.Time     `json:"create_at" bson:"create_at"`
+	UpdateAt time.Time     `json:"update_at" bson:"update_at"`
+	// 变更状态(0:待审批 1:审批通过 2:审批失败 3:审批拒绝 4:审批超时)
+	Status enumor.CvmModifyRecordStatus `json:"status" bson:"status"`
+	// 审批人
+	Approver string `json:"approver" bson:"approver"`
 }
 
 // ModifyDetail apply order modify details with previous and current data

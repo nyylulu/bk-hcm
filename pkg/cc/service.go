@@ -581,6 +581,7 @@ type WoaServerSetting struct {
 	Log             LogOption  `yaml:"log"`
 	Cmdb            ApiGateway `yaml:"cmdb"`
 	BkHcmURL        string     `yaml:"bkHcmUrl"`
+	BkApigwHCMURL   string     `yaml:"bkApigwHCMUrl"`
 	MongoDB         MongoDB    `yaml:"mongodb"`
 	Watch           MongoDB    `yaml:"watch"`
 	Redis           Redis      `yaml:"redis"`
@@ -633,6 +634,10 @@ func (s WoaServerSetting) Validate() error {
 
 	if s.BkHcmURL == "" {
 		return fmt.Errorf("bkHcmUrl should not be empty")
+	}
+
+	if s.BkApigwHCMURL == "" {
+		return fmt.Errorf("bkApigwHCMUrl should not be empty")
 	}
 
 	// 开启Mongo之后才校验参数

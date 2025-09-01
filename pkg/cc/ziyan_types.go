@@ -117,24 +117,25 @@ func (r Redis) validate() error {
 
 // ClientConfig third-party api client config set
 type ClientConfig struct {
-	CvmOpt    CVMCliConf `yaml:"cvm"`
-	TjjOpt    TjjCli     `yaml:"tjj"`
-	XshipOpt  XshipCli   `yaml:"xship"`
-	TCloudOpt TCloudCli  `yaml:"tencentcloud"`
-	DvmOpt    DVMCli     `yaml:"dvm"`
-	ErpOpt    ErpCli     `yaml:"erp"`
-	TmpOpt    TmpCli     `yaml:"tmp"`
-	Xray      XrayCli    `yaml:"xray"`
-	Tcaplus   TcaplusCli `yaml:"tcaplus"`
-	TGW       TGWCli     `yaml:"tgw"`
-	L5        L5Cli      `yaml:"l5"`
-	Safety    SafetyCli  `yaml:"safety"`
-	BkChat    BkChatCli  `yaml:"bkchat"`
-	Sops      SopsCli    `yaml:"sops"`
-	ITSM      ApiGateway `yaml:"itsm"`
-	Ngate     NgateCli   `yaml:"ngate"`
-	CaiChe    CaiCheCli  `yaml:"caiche"`
-	BkDbm     ApiGateway `yaml:"bkdbm"`
+	CvmOpt        CVMCliConf `yaml:"cvm"`
+	TjjOpt        TjjCli     `yaml:"tjj"`
+	XshipOpt      XshipCli   `yaml:"xship"`
+	TCloudOpt     TCloudCli  `yaml:"tencentcloud"`
+	DvmOpt        DVMCli     `yaml:"dvm"`
+	ErpOpt        ErpCli     `yaml:"erp"`
+	TmpOpt        TmpCli     `yaml:"tmp"`
+	Xray          XrayCli    `yaml:"xray"`
+	Tcaplus       TcaplusCli `yaml:"tcaplus"`
+	TGW           TGWCli     `yaml:"tgw"`
+	L5            L5Cli      `yaml:"l5"`
+	Safety        SafetyCli  `yaml:"safety"`
+	BkChat        BkChatCli  `yaml:"bkchat"`
+	Sops          SopsCli    `yaml:"sops"`
+	ITSM          ApiGateway `yaml:"itsm"`
+	Ngate         NgateCli   `yaml:"ngate"`
+	CaiChe        CaiCheCli  `yaml:"caiche"`
+	BkDbm         ApiGateway `yaml:"bkdbm"`
+	BkBotApproval ApiGateway `yaml:"bkbotapproval"`
 }
 
 func (c ClientConfig) validate() error {
@@ -199,6 +200,10 @@ func (c ClientConfig) validate() error {
 	}
 
 	if err := c.BkDbm.validate(); err != nil {
+		return err
+	}
+
+	if err := c.BkBotApproval.validate(); err != nil {
 		return err
 	}
 

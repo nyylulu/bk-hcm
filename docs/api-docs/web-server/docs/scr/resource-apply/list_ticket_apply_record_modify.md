@@ -13,6 +13,7 @@ POST /api/v1/woa/task/find/apply/record/modify
 | 参数名称      | 参数类型       | 必选 | 描述          |
 |--------------|--------------|------|--------------|
 | suborder_id  | string	array | 是	 | 资源申请子单号 |
+| status       | int	array | 否	 | 资源变更状态（0:待审批 1:审批通过 2:审批失败 3:审批拒绝 4:审批超时） |
 
 ### 调用示例
 
@@ -20,7 +21,8 @@ POST /api/v1/woa/task/find/apply/record/modify
 
 ```json
 {
-  "suborder_id":["1001-1"]
+  "suborder_id":["1001-1"],
+  "status": [1]
 }
 ```
 
@@ -87,7 +89,8 @@ POST /api/v1/woa/task/find/apply/record/modify
             }]
           }
         },
-        "create_at":"2022-10-15 18:07:37"
+        "create_at":"2022-10-15 18:07:37",
+        "status": 1
       }
     ]
   }
@@ -118,6 +121,7 @@ POST /api/v1/woa/task/find/apply/record/modify
 | bk_username | string	  | 改单操作人      |
 | details	  | object	  | 改单详情        |
 | create_at	  | timestamp | 记录创建时间     |
+| status 	  | int       | 资源变更状态（0:待审批 1:审批通过 2:审批失败 3:审批拒绝 4:审批超时）|
 
 #### data.info.details
 | 参数名称     | 参数类型   | 描述            |

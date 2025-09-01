@@ -150,6 +150,7 @@ func bizService(h *rest.Handler, s *service) {
 	h.Add("MatchBizDevice", http.MethodPost, "/commit/apply/match", s.MatchBizDevice)
 	h.Add("MatchBizPoolDevice", http.MethodPost, "/commit/apply/pool/match", s.MatchBizPoolDevice)
 	h.Add("GetBizApplyModify", http.MethodPost, "/find/apply/record/modify", s.GetBizApplyModify)
+	h.Add("ConfirmBizApplyModify", http.MethodPost, "/confirm/apply/record/modify", s.ConfirmBizApplyModify)
 	h.Add("CreateBizRecycleOrder", http.MethodPost, "/create/recycle/order", s.CreateBizRecycleOrder)
 	h.Add("PreviewBizRecycleOrder", http.MethodPost, "/preview/recycle/order", s.PreviewBizRecycleOrder)
 	h.Add("TerminateBizRecycleOrder", http.MethodPost, "/terminate/recycle/order", s.TerminateBizRecycleOrder)

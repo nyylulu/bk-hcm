@@ -24,6 +24,7 @@ import (
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/criteria/validator"
+	"hcm/pkg/thirdparty/api-gateway/bkbotapproval"
 	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/tools/metadata"
 	"hcm/pkg/tools/querybuilder"
@@ -129,6 +130,7 @@ const (
 	ApplyStatusTerminate    ApplyStatus = "TERMINATE"
 	// ApplyStatusGracefulTerminate 比起 ApplyStatusTerminate，将不再发起重试，但是后续的流程仍会继续流转
 	ApplyStatusGracefulTerminate ApplyStatus = "GRACEFUL_TERMINATE"
+	ApplyStatusConfirming        ApplyStatus = "CONFIRMING" // 修改需求后-待用户确认
 )
 
 // GenerateRecord apply order vm generate record
@@ -480,13 +482,36 @@ type TicketStage string
 
 // TicketStage resource apply ticket stage
 const (
-	TicketStageUncommit  TicketStage = "UNCOMMIT"
-	TicketStageAudit     TicketStage = "AUDIT"
-	TicketStageTerminate TicketStage = "TERMINATE"
-	TicketStageRunning   TicketStage = "RUNNING"
-	TicketStageSuspend   TicketStage = "SUSPEND"
-	TicketStageDone      TicketStage = "DONE"
+	TicketStageUncommit   TicketStage = "UNCOMMIT"
+	TicketStageAudit      TicketStage = "AUDIT"
+	TicketStageTerminate  TicketStage = "TERMINATE"
+	TicketStageRunning    TicketStage = "RUNNING"
+	TicketStageSuspend    TicketStage = "SUSPEND"
+	TicketStageDone       TicketStage = "DONE"
+	TicketStageConfirming TicketStage = "CONFIRMING" // 修改需求后-待用户确认
 )
+
+// TicketStageEnums ticket stage enum
+var TicketStageEnums = map[TicketStage]string{
+	TicketStageUncommit:   "未提交",
+	TicketStageAudit:      "待审核",
+	TicketStageTerminate:  "终止",
+	TicketStageRunning:    "备货中",
+	TicketStageSuspend:    "备货异常",
+	TicketStageDone:       "完成",
+	TicketStageConfirming: "待确认(需求调整)",
+}
+
+// TicketStageOrder defines the order of ticket stages
+var TicketStageOrder = []TicketStage{
+	TicketStageUncommit,
+	TicketStageAudit,
+	TicketStageTerminate,
+	TicketStageRunning,
+	TicketStageSuspend,
+	TicketStageDone,
+	TicketStageConfirming,
+}
 
 // GetApplyTicketReq get apply ticket request parameter
 type GetApplyTicketReq struct {
@@ -1544,8 +1569,10 @@ type RecommendApplyRst struct {
 
 // GetApplyModifyReq get apply order modify record request
 type GetApplyModifyReq struct {
-	SuborderID []string          `json:"suborder_id"`
-	Page       metadata.BasePage `json:"page" bson:"page"`
+	ID         []uint64                       `json:"id"`
+	SuborderID []string                       `json:"suborder_id"`
+	Status     []enumor.CvmModifyRecordStatus `json:"status"`
+	Page       metadata.BasePage              `json:"page" bson:"page"`
 }
 
 // Validate whether GetApplyModifyReq is valid
@@ -1577,6 +1604,18 @@ func (param *GetApplyModifyReq) GetFilter() (map[string]interface{}, error) {
 	if len(param.SuborderID) > 0 {
 		filter["suborder_id"] = mapstr.MapStr{
 			pkg.BKDBIN: param.SuborderID,
+		}
+	}
+
+	if len(param.Status) > 0 {
+		filter["status"] = mapstr.MapStr{
+			pkg.BKDBIN: param.Status,
+		}
+	}
+
+	if len(param.ID) > 0 {
+		filter["id"] = mapstr.MapStr{
+			pkg.BKDBIN: param.ID,
 		}
 	}
 
@@ -1639,4 +1678,36 @@ type DeviceInitMsg struct {
 	JobUrl string
 	JobID  string
 	BizID  int64
+}
+
+// ConfirmApplyModifyCompare confirm apply modify compare
+type ConfirmApplyModifyCompare struct {
+	PreDeviceType string `json:"pre_device_type"`
+	PreZone       string `json:"pre_zone"`
+	PreNum        string `json:"pre_num"`
+	PreVpc        string `json:"pre_vpc"`
+	PreSubnet     string `json:"pre_subnet"`
+	CurDeviceType string `json:"cur_device_type"`
+	CurZone       string `json:"cur_zone"`
+	CurNum        string `json:"cur_num"`
+	CurVpc        string `json:"cur_vpc"`
+	CurSubnet     string `json:"cur_subnet"`
+}
+
+// ConfirmApplyModifyReq confirm apply modify request
+type ConfirmApplyModifyReq struct {
+	BkUsername                                      string `json:"bk_username" validate:"required"`
+	bkbotapproval.CvmApplyModifyConfirmCallbackData `json:",inline"`
+}
+
+// Validate validate
+func (c *ConfirmApplyModifyReq) Validate() error {
+	return validator.Validate.Struct(c)
+}
+
+// ConfirmApplyModifyResp confirm modify response
+type ConfirmApplyModifyResp struct {
+	ResponseMsg   string                    `json:"response_msg"`   // 点击按钮后回显的信息
+	ResponseColor bkbotapproval.ButtonColor `json:"response_color"` // 点击按钮后回显的颜色
+	RequestID     string                    `json:"request_id"`
 }
