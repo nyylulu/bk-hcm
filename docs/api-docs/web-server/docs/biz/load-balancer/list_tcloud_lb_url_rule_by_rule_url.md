@@ -6,7 +6,7 @@
 
 ### URL
 
-POST /api/v1/cloud/bizs/{bk_biz_id}/vendors/{vendor}/targets/by_rule_urls/list
+POST /api/v1/cloud/bizs/{bk_biz_id}/vendors/{vendor}/url_rules/by_topo/list
 
 ### 输入参数
 
