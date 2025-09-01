@@ -2,7 +2,7 @@
 // table 字段相关信息
 import { useAccountStore } from '@/store';
 import { Info, Spinner, Share } from 'bkui-vue/lib/icon';
-import { Button, Popover, Tag } from 'bkui-vue';
+import { Button, Popover, Tag, OverflowTitle } from 'bkui-vue';
 import i18n from '@/language/i18n';
 import { type Settings } from 'bkui-vue/lib/table/props';
 import { ref } from 'vue';
@@ -204,6 +204,23 @@ export default (type: string, isSimpleShow = false) => {
       label: '机型',
       field: 'spec.device_type',
       width: 140,
+      showOverflowTooltip: false,
+      render: ({ row }: any) => (
+        <div style={{ display: 'flex', width: '100%', gap: '4px' }}>
+          {row.original.spec.device_type !== row.spec.device_type && (
+            <Info
+              style={{ flex: 'none', color: '#e9a24c' }}
+              v-bk-tooltips={{ content: `原始值：${row.original.spec.device_type}` }}
+            />
+          )}
+          <OverflowTitle
+            type='tips'
+            resizeable={true}
+            style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {row.spec.device_type}
+          </OverflowTitle>
+        </div>
+      ),
     },
     {
       label: t('计费模式'),
@@ -233,7 +250,23 @@ export default (type: string, isSimpleShow = false) => {
       label: '园区',
       field: 'spec.zone',
       width: 160,
-      render: ({ row }: any) => getZoneCn(row.spec.zone),
+      showOverflowTooltip: false,
+      render: ({ row }: any) => (
+        <div style={{ display: 'flex', width: '100%', gap: '4px' }}>
+          {row.original.spec.zone !== row.spec.zone && (
+            <Info
+              style={{ flex: 'none', color: '#e9a24c' }}
+              v-bk-tooltips={{ content: `原始值：${getZoneCn(row.original.spec.zone)}` }}
+            />
+          )}
+          <OverflowTitle
+            type='tips'
+            resizeable={true}
+            style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {getZoneCn(row.spec.zone)}
+          </OverflowTitle>
+        </div>
+      ),
     },
     {
       label: '反亲和性',
@@ -251,11 +284,45 @@ export default (type: string, isSimpleShow = false) => {
       label: 'VPC',
       field: 'spec.vpc',
       width: 120,
+      showOverflowTooltip: false,
+      render: ({ row }: any) => (
+        <div style={{ display: 'flex', width: '100%', gap: '4px' }}>
+          {row.original.spec.vpc !== row.spec.vpc && (
+            <Info
+              style={{ flex: 'none', color: '#e9a24c' }}
+              v-bk-tooltips={{ content: `原始值：${row.original.spec.vpc || '--'}` }}
+            />
+          )}
+          <OverflowTitle
+            type='tips'
+            resizeable={true}
+            style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {row.spec.vpc || '--'}
+          </OverflowTitle>
+        </div>
+      ),
     },
     {
       label: '子网',
       field: 'spec.subnet',
       width: 120,
+      showOverflowTooltip: false,
+      render: ({ row }: any) => (
+        <div style={{ display: 'flex', width: '100%', gap: '4px' }}>
+          {row.original.spec.subnet !== row.spec.subnet && (
+            <Info
+              style={{ flex: 'none', color: '#e9a24c' }}
+              v-bk-tooltips={{ content: `原始值：${row.original.spec.subnet || '--'}` }}
+            />
+          )}
+          <OverflowTitle
+            type='tips'
+            resizeable={true}
+            style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {row.spec.subnet || '--'}
+          </OverflowTitle>
+        </div>
+      ),
     },
     {
       label: '系统盘',
@@ -286,7 +353,23 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '园区',
       field: 'spec.zone',
-      render: ({ row }: any) => getZoneCn(row.spec.zone),
+      showOverflowTooltip: false,
+      render: ({ row }: any) => (
+        <div style={{ display: 'flex', width: '100%', gap: '4px' }}>
+          {row.original.spec.zone !== row.spec.zone && (
+            <Info
+              style={{ flex: 'none', color: '#e9a24c' }}
+              v-bk-tooltips={{ content: `原始值：${getZoneCn(row.original.spec.zone)}` }}
+            />
+          )}
+          <OverflowTitle
+            type='tips'
+            resizeable={true}
+            style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {getZoneCn(row.spec.zone)}
+          </OverflowTitle>
+        </div>
+      ),
     },
     {
       label: '反亲和性',
