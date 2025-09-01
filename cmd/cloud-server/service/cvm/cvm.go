@@ -95,6 +95,8 @@ func InitCvmService(c *capability.Capability) {
 	h.Add("InquiryBizPriceCvm", http.MethodPost, "/bizs/{bk_biz_id}/cvms/prices/inquiry", svc.InquiryBizPriceCvm)
 	h.Add("BatchResetAsyncBizCvm", http.MethodPost, "/bizs/{bk_biz_id}/cvms/batch/reset_async",
 		svc.BatchResetAsyncBizCvm)
+	h.Add("BatchSopsAsyncResetBizCvm", http.MethodPost, "/bizs/{bk_biz_id}/cvms/sops/batch/reset_async",
+		svc.BatchSopsAsyncResetBizCvm)
 
 	h.Add("ListBizCvmOperateStatus", http.MethodPost, "/bizs/{bk_biz_id}/cvms/list/operate/status",
 		svc.ListBizCvmOperateStatus)

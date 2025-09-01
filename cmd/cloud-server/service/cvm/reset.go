@@ -46,7 +46,16 @@ import (
 
 // BatchResetAsyncCvm batch reset async cvm.
 func (svc *cvmSvc) BatchResetAsyncCvm(cts *rest.Contexts) (interface{}, error) {
-	return svc.batchResetAsyncCvm(cts, constant.UnassignedBiz, handler.ResOperateAuth)
+	req := new(cscvm.BatchResetCvmReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(true); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	return svc.batchResetAsyncCvm(cts, constant.UnassignedBiz, handler.ResOperateAuth, req, true)
 }
 
 // BatchResetAsyncBizCvm batch reset async biz cvm.
@@ -55,20 +64,21 @@ func (svc *cvmSvc) BatchResetAsyncBizCvm(cts *rest.Contexts) (interface{}, error
 	if err != nil {
 		return nil, err
 	}
-	return svc.batchResetAsyncCvm(cts, bkBizID, handler.BizOperateAuth)
-}
-
-func (svc *cvmSvc) batchResetAsyncCvm(cts *rest.Contexts, bkBizID int64, validHandler handler.ValidWithAuthHandler) (
-	any, error) {
 
 	req := new(cscvm.BatchResetCvmReq)
-	if err := cts.DecodeInto(req); err != nil {
+	if err = cts.DecodeInto(req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
 
-	if err := req.Validate(); err != nil {
+	if err = req.Validate(true); err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
+
+	return svc.batchResetAsyncCvm(cts, bkBizID, handler.BizOperateAuth, req, true)
+}
+
+func (svc *cvmSvc) batchResetAsyncCvm(cts *rest.Contexts, bkBizID int64, validHandler handler.ValidWithAuthHandler,
+	req *cscvm.BatchResetCvmReq, verifyMoa bool) (any, error) {
 
 	cvmIDs := make([]string, 0, len(req.Hosts))
 	cvmIDMap := make(map[string]cscvm.BatchCvmHostItem)
@@ -96,9 +106,12 @@ func (svc *cvmSvc) batchResetAsyncCvm(cts *rest.Contexts, bkBizID int64, validHa
 		return nil, err
 	}
 
-	if err := svc.validateMOAResult(cts.Kit, enumor.MoaSceneCVMReset, req.SessionID); err != nil {
-		logs.Errorf("validate moa result failed, err: %v, sessionID: %s, rid: %s", err, req.SessionID, cts.Kit.Rid)
-		return nil, err
+	// verify moa result
+	if verifyMoa {
+		if err = svc.validateMOAResult(cts.Kit, enumor.MoaSceneCVMReset, req.SessionID); err != nil {
+			logs.Errorf("validate moa result failed, err: %v, sessionID: %s, rid: %s", err, req.SessionID, cts.Kit.Rid)
+			return nil, err
+		}
 	}
 
 	// 创建审计记录
@@ -204,4 +217,37 @@ func calCvmResetUniqueID(kt *kit.Kit, bkBizID int64, ids []string) (string, erro
 	logs.Infof("cal cvm reset unique key, hashString: %s, bkBizID: %d, ids: %v, idsStr: %s, rid: %s",
 		hashString, bkBizID, ids, idsStr, kt.Rid)
 	return hashString, nil
+}
+
+// BatchSopsAsyncResetCvm batch reset cvm for sops.
+func (svc *cvmSvc) BatchSopsAsyncResetCvm(cts *rest.Contexts) (interface{}, error) {
+	req := new(cscvm.BatchResetCvmReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(false); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	return svc.batchResetAsyncCvm(cts, constant.UnassignedBiz, handler.ResOperateAuth, req, false)
+}
+
+// BatchSopsAsyncResetBizCvm batch reset biz cvm for sops.
+func (svc *cvmSvc) BatchSopsAsyncResetBizCvm(cts *rest.Contexts) (interface{}, error) {
+	bizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+
+	req := new(cscvm.BatchResetCvmReq)
+	if err = cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err = req.Validate(false); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	return svc.batchResetAsyncCvm(cts, bizID, handler.BizOperateAuth, req, false)
 }
