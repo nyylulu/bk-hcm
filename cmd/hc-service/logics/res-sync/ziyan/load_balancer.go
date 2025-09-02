@@ -150,6 +150,11 @@ func (cli *client) LoadBalancer(kt *kit.Kit, params *SyncBaseParams, opt *SyncLB
 }
 
 func (cli *client) updateLoadBalancerSyncTime(kt *kit.Kit, ids []string) error {
+	if len(ids) == 0 {
+		logs.Infof("[%s] no lbs need to update sync time, rid: %s", enumor.TCloudZiyan, kt.Rid)
+		return nil
+	}
+
 	var updateReq protocloud.TCloudClbBatchUpdateReq
 	syncTime := times.ConvStdTimeFormat(time.Now())
 
