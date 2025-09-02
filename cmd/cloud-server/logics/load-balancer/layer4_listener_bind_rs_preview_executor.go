@@ -243,7 +243,10 @@ func (l *Layer4ListenerBindRSPreviewExecutor) validateTarget(kt *kit.Kit,
 	}
 	tgID, ok := ruleCloudIDsToTGIDMap[detail.listenerCloudID]
 	if !ok {
-		return fmt.Errorf("target group not found for listener cloud id: %s", detail.listenerCloudID)
+		detail.ValidateResult = append(detail.ValidateResult,
+			"Listener not bound to target group, will automatically create target group and bind")
+		detail.targetGroupID = fmt.Sprintf("temp_tg_%s", detail.listenerCloudID)
+		return nil
 	}
 	detail.targetGroupID = tgID
 	target, err := getTarget(kt, l.dataServiceCli, tgID, detail.cvm.CloudID, detail.RsPort[0])

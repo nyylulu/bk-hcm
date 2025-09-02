@@ -247,11 +247,46 @@ func (c *Layer7ListenerBindRSExecutor) taskDetailsGroupByTargetGroup(details []*
 	tgToDetails := make(map[string][]*layer7ListenerBindRSTaskDetail)
 	tgToListenerCloudID := make(map[string]string)
 	tgToCloudRuleIDs := make(map[string]string)
+	listenerToDetails := make(map[string][]*layer7ListenerBindRSTaskDetail)
+
 	for _, detail := range details {
-		tgToListenerCloudID[detail.targetGroupID] = detail.listenerCloudID
-		tgToCloudRuleIDs[detail.targetGroupID] = detail.urlRuleCloudID
+		if len(detail.targetGroupID) == 0 {
+			logs.Infof("listener %s (CLB: %s, URL Rule: %s) has no target group, will auto-create target group for %d RS, rid: %s",
+				detail.listenerCloudID, detail.CloudClbID, detail.urlRuleCloudID, len(detail.RsPort), detail.taskDetailID)
+			listenerToDetails[detail.listenerCloudID] = append(listenerToDetails[detail.listenerCloudID], detail)
+			continue
+		}
+
+		listenerCloudID := detail.listenerCloudID
+		urlRuleCloudID := detail.urlRuleCloudID
+		if strings.HasPrefix(detail.targetGroupID, "temp_tg_") {
+			urlRuleCloudID = strings.TrimPrefix(detail.targetGroupID, "temp_tg_")
+		}
+
+		tgToListenerCloudID[detail.targetGroupID] = listenerCloudID
+		tgToCloudRuleIDs[detail.targetGroupID] = urlRuleCloudID
 		tgToDetails[detail.targetGroupID] = append(tgToDetails[detail.targetGroupID], detail)
 	}
+
+	totalAutoCreated := 0
+	for listenerCloudID, listenerDetails := range listenerToDetails {
+		autoTargetGroupID := fmt.Sprintf("auto_%s", listenerCloudID)
+		tgToListenerCloudID[autoTargetGroupID] = listenerCloudID
+		if len(listenerDetails) > 0 {
+			tgToCloudRuleIDs[autoTargetGroupID] = listenerDetails[0].urlRuleCloudID
+		}
+		tgToDetails[autoTargetGroupID] = listenerDetails
+		totalAutoCreated++
+
+		logs.Infof("generated auto target group ID: %s for listener %s (URL Rule: %s) with %d RS, rid: %s",
+			autoTargetGroupID, listenerCloudID, tgToCloudRuleIDs[autoTargetGroupID], len(listenerDetails), details[0].taskDetailID)
+	}
+
+	if totalAutoCreated > 0 {
+		logs.Infof("auto-created %d target groups for listeners without target groups, rid: %s",
+			totalAutoCreated, details[0].taskDetailID)
+	}
+
 	return tgToDetails, tgToListenerCloudID, tgToCloudRuleIDs, nil
 }
 
@@ -272,6 +307,85 @@ func (c *Layer7ListenerBindRSExecutor) buildFlowTask(kt *kit.Kit, lb corelb.Load
 }
 
 func (c *Layer7ListenerBindRSExecutor) buildTCloudFlowTask(kt *kit.Kit, lb corelb.LoadBalancerRaw,
+	targetGroupID string, details []*layer7ListenerBindRSTaskDetail, generator func() (cur string, prev string),
+	tgToListenerCloudIDs map[string]string, tgToCloudRuleIDs map[string]string) ([]ts.CustomFlowTask, error) {
+
+	//有目标组ID，直接绑定RS
+	if targetGroupID != "" && !strings.HasPrefix(targetGroupID, "auto_") && !strings.HasPrefix(targetGroupID, "temp_tg_") {
+		logs.Infof("using existing target group: %s, will bind RS directly, rid: %s", targetGroupID, kt.Rid)
+		return c.bindRSTask(lb, targetGroupID, details, generator, tgToListenerCloudIDs, tgToCloudRuleIDs)
+	}
+
+	//没有目标组ID，自动创建目标组并绑定RS
+	logs.Infof("listener has no target group or using temp target group, will auto-create target group and bind RS, rid: %s", kt.Rid)
+	return c.createTargetGroupTask(lb, targetGroupID, details, generator, tgToListenerCloudIDs, tgToCloudRuleIDs)
+}
+
+// createTargetGroupTask 创建目标组任务
+func (c *Layer7ListenerBindRSExecutor) createTargetGroupTask(lb corelb.LoadBalancerRaw,
+	targetGroupID string, details []*layer7ListenerBindRSTaskDetail, generator func() (cur string, prev string),
+	tgToListenerCloudIDs map[string]string, tgToCloudRuleIDs map[string]string) ([]ts.CustomFlowTask, error) {
+
+	listenerCloudID := tgToListenerCloudIDs[targetGroupID]
+	urlRuleCloudID := tgToCloudRuleIDs[targetGroupID]
+
+	if strings.HasPrefix(targetGroupID, "auto_") {
+		if len(details) > 0 && details[0].urlRuleCloudID != "" {
+			urlRuleCloudID = details[0].urlRuleCloudID
+		} else {
+			logs.Warnf("URL rule cloud ID is empty for auto-created target group, listener: %s, rid: %s",
+				listenerCloudID, details[0].taskDetailID)
+		}
+	}
+
+	targets := make([]*corelb.BaseTarget, 0, len(details))
+	managementDetailIDs := make([]string, 0, len(details))
+
+	for _, detail := range details {
+		target := &corelb.BaseTarget{
+			InstType: detail.InstType,
+			Port:     int64(detail.RsPort[0]),
+			Weight:   converter.ValToPtr(converter.PtrToVal(detail.Weight)),
+		}
+
+		if detail.InstType == enumor.EniInstType {
+			target.IP = detail.RsIp
+		} else if detail.InstType == enumor.CvmInstType {
+			if detail.cvm == nil {
+				return nil, fmt.Errorf("rs ip(%s) not found", detail.RsIp)
+			}
+			target.CloudInstID = detail.cvm.CloudID
+			target.InstName = detail.cvm.Name
+			target.PrivateIPAddress = detail.cvm.PrivateIPv4Addresses
+			target.PublicIPAddress = detail.cvm.PublicIPv4Addresses
+			target.Zone = detail.cvm.Zone
+		}
+
+		targets = append(targets, target)
+		managementDetailIDs = append(managementDetailIDs, detail.taskDetailID)
+	}
+
+	cur, prev := generator()
+	createTGTask := ts.CustomFlowTask{
+		ActionID:   action.ActIDType(cur),
+		ActionName: enumor.ActionCreateTargetGroupWithRel,
+		Params: &actionlb.CreateTargetGroupWithRelOption{
+			Vendor:              c.vendor,
+			LoadBalancerID:      lb.ID,
+			ListenerID:          listenerCloudID,
+			ListenerRuleID:      urlRuleCloudID,
+			RuleType:            enumor.Layer7RuleType,
+			Targets:             targets,
+			ManagementDetailIDs: managementDetailIDs,
+		},
+		DependOn: []action.ActIDType{action.ActIDType(prev)},
+	}
+
+	return []ts.CustomFlowTask{createTGTask}, nil
+}
+
+// bindRSTask 绑定RS任务
+func (c *Layer7ListenerBindRSExecutor) bindRSTask(lb corelb.LoadBalancerRaw,
 	targetGroupID string, details []*layer7ListenerBindRSTaskDetail, generator func() (cur string, prev string),
 	tgToListenerCloudIDs map[string]string, tgToCloudRuleIDs map[string]string) ([]ts.CustomFlowTask, error) {
 

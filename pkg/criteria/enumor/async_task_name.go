@@ -127,6 +127,9 @@ const (
 	// ActionListenerRuleAddTarget 直接将RS绑定到 监听器/规则 上
 	ActionListenerRuleAddTarget ActionName = "listener_rule_add_target"
 
+	// ActionCreateTargetGroupWithRel 创建目标组并绑定监听器/规则，同时添加RS
+	ActionCreateTargetGroupWithRel ActionName = "create_target_group_with_rel"
+
 	ActionDeleteLoadBalancer = "delete_load_balancer"
 )
 

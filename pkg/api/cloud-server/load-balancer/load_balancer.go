@@ -236,7 +236,7 @@ type DomainInfo struct {
 type TargetGroupListenerRelAssociateReq struct {
 	ListenerID     string `json:"listener_id" validate:"required"`
 	ListenerRuleID string `json:"listener_rule_id" validate:"required"`
-	TargetGroupID  string `json:"target_group_id" validate:"required"`
+	TargetGroupID  string `json:"target_group_id" validate:"omitempty"`
 }
 
 // Validate validate target group listener rel associate
@@ -258,7 +258,7 @@ func (req *TCloudTargetBatchCreateReq) Validate() error {
 
 // TCloudBatchAddTargetReq tcloud target batch operate req.
 type TCloudBatchAddTargetReq struct {
-	TargetGroupID string                 `json:"target_group_id" validate:"required"`
+	TargetGroupID string                 `json:"target_group_id" validate:"omitempty"`
 	Targets       []*cloud.TargetBaseReq `json:"targets" validate:"required,min=1,max=100,dive"`
 }
 
@@ -276,7 +276,7 @@ func (req *TCloudTargetBatchRemoveReq) Validate() error {
 
 // TCloudRemoveTargetReq tcloud remove target req.
 type TCloudRemoveTargetReq struct {
-	TargetGroupID string   `json:"target_group_id" validate:"required"`
+	TargetGroupID string   `json:"target_group_id" validate:"omitempty"`
 	TargetIDs     []string `json:"target_ids" validate:"required,min=1,max=100,dive"`
 }
 
@@ -543,7 +543,7 @@ type TargetGroupCreateReq struct {
 	Weight          int64                        `json:"weight" validate:"omitempty"`
 	HealthCheck     corelb.TCloudHealthCheckInfo `json:"health_check" validate:"omitempty"`
 	Memo            *string                      `json:"memo"`
-	RsList          []*cloud.TargetBaseReq       `json:"rs_list" validate:"omitempty,dive,required"`
+	RsList          []*cloud.TargetBaseReq       `json:"rs_list" validate:"omitempty,dive"`
 }
 
 // Validate 验证目标组创建参数

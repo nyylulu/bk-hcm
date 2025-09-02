@@ -107,6 +107,10 @@ func (svc *clbSvc) initTCloudClbService(cap *capability.Capability) {
 
 	h.Add("QueryListenerTargetsByCloudIDs", http.MethodPost,
 		"/vendors/tcloud/targets/query_by_cloud_ids", svc.QueryListenerTargetsByCloudIDs)
+
+	h.Add("CreateTargetGroupWithRel", http.MethodPost,
+		"/vendors/tcloud/target_groups/create_with_rel", svc.CreateTargetGroupWithRel)
+
 	h.Load(cap.WebService)
 }
 

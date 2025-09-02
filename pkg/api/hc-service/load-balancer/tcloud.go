@@ -421,7 +421,7 @@ func (req *DomainAttrUpdateReq) Validate() error {
 
 // TCloudBatchOperateTargetReq tcloud batch operate rs req.
 type TCloudBatchOperateTargetReq struct {
-	TargetGroupID string                 `json:"target_group_id" validate:"required"`
+	TargetGroupID string                 `json:"target_group_id" validate:"omitempty"`
 	LbID          string                 `json:"lb_id" validate:"required"`
 	RsList        []*cloud.TargetBaseReq `json:"targets" validate:"required,min=1,max=100,dive"`
 }
@@ -681,4 +681,56 @@ type TCloudDescribeClusterResourcesReq struct {
 // Validate ...
 func (r *TCloudDescribeClusterResourcesReq) Validate() error {
 	return validator.Validate.Struct(r)
+}
+
+// CreateTargetGroupWithRelReq 创建目标组并绑定监听器的请求
+type CreateTargetGroupWithRelReq struct {
+	Vendor              enumor.Vendor     `json:"vendor" validate:"required"`
+	LoadBalancerID      string            `json:"lb_id" validate:"required"`
+	ListenerID          string            `json:"listener_id" validate:"required"`
+	ListenerRuleID      string            `json:"listener_rule_id" validate:"omitempty"`
+	RuleType            enumor.RuleType   `json:"rule_type" validate:"required"`
+	Targets             []*RegisterTarget `json:"targets" validate:"required"`
+	ManagementDetailIDs []string          `json:"management_detail_ids" validate:"required"`
+}
+
+// Validate 验证请求参数
+func (req *CreateTargetGroupWithRelReq) Validate() error {
+	if err := validator.Validate.Struct(req); err != nil {
+		return err
+	}
+
+	switch req.Vendor {
+	case enumor.TCloud:
+	default:
+		return fmt.Errorf("unsupported vendor: %s", req.Vendor)
+	}
+
+	if req.RuleType == enumor.Layer4RuleType && req.ListenerRuleID != "" {
+		return fmt.Errorf("layer4 listener should not have rule ID")
+	}
+	if req.RuleType == enumor.Layer7RuleType && req.ListenerRuleID == "" {
+		return fmt.Errorf("layer7 listener must have rule ID")
+	}
+
+	if len(req.Targets) == 0 {
+		return fmt.Errorf("targets cannot be empty")
+	}
+
+	if len(req.Targets) != len(req.ManagementDetailIDs) {
+		return fmt.Errorf("targets and management_detail_ids count mismatch: %d != %d",
+			len(req.Targets), len(req.ManagementDetailIDs))
+	}
+
+	return nil
+}
+
+// CreateTargetGroupWithRelResult 创建目标组并绑定监听器的结果
+type CreateTargetGroupWithRelResult struct {
+	TargetGroupID string `json:"target_group_id"` // 创建的目标组ID
+	ListenerID    string `json:"listener_id"`     // 监听器ID
+	RuleID        string `json:"rule_id"`         // 规则ID（七层监听器）
+	TargetsCount  int    `json:"targets_count"`   // RS数量
+	Status        string `json:"status"`          // 操作状态
+	Message       string `json:"message"`         // 结果消息
 }
