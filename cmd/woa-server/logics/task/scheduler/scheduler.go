@@ -2280,19 +2280,19 @@ func getModifyApplyCompare(order *types.ApplyOrder, param *types.ModifyApplyReq)
 	modifyCompare.CurZone += "\n"
 
 	// 交付数量是否有变化
-	modifyCompare.PreNum = fmt.Sprintf("修改前待交付数量：%d", order.TotalNum-param.ProductNum)
-	modifyCompare.CurNum = fmt.Sprintf("修改后待交付数量：%d", param.TotalNum-param.ProductNum)
+	modifyCompare.PreNum = fmt.Sprintf("修改前待交付数量：%d\n", order.TotalNum-param.ProductNum)
+	modifyCompare.CurNum = fmt.Sprintf("修改后待交付数量：%d\n", param.TotalNum-param.ProductNum)
 
 	// VPC是否有变化
 	if order.Spec.Vpc != param.Spec.Vpc {
-		modifyCompare.PreVpc = fmt.Sprintf("修改前VPC：%s\n", order.Spec.DeviceType)
-		modifyCompare.CurVpc = fmt.Sprintf("修改后VPC：%s\n", param.Spec.DeviceType)
+		modifyCompare.PreVpc = fmt.Sprintf("修改前VPC：%s\n", order.Spec.Vpc)
+		modifyCompare.CurVpc = fmt.Sprintf("修改后VPC：%s\n", param.Spec.Vpc)
 	}
 
 	// 子网是否有变化
-	if order.Spec.Vpc != param.Spec.Vpc {
-		modifyCompare.PreSubnet = fmt.Sprintf("修改前子网：%s\n", order.Spec.DeviceType)
-		modifyCompare.CurSubnet = fmt.Sprintf("修改后子网：%s\n", param.Spec.DeviceType)
+	if order.Spec.Subnet != param.Spec.Subnet {
+		modifyCompare.PreSubnet = fmt.Sprintf("修改前子网：%s\n", order.Spec.Subnet)
+		modifyCompare.CurSubnet = fmt.Sprintf("修改后子网：%s\n", param.Spec.Subnet)
 	}
 	return modifyCompare
 }
