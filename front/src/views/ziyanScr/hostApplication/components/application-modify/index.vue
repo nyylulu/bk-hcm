@@ -35,6 +35,8 @@ const businessId = computed(() => Number(route.query.bk_biz_id));
 const suborderId = computed(() => route.query.suborder_id as string);
 
 const formRef = useTemplateRef<typeof Form>('adjust-form');
+const networkInfoPanelRef = useTemplateRef<typeof NetworkInfoCollapsePanel>('network-info-panel');
+
 const formModel = reactive({ zone: '', device_type: '', replicas: 0, vpc: '', subnet: '' });
 
 const details = ref<IApplyOrderItem>();
@@ -67,6 +69,16 @@ const RESOURCE_TYPE_NAME_MAP: Record<string, string> = {
   IDCPM: 'IDC物理机',
   QCLOUDDVM: '腾讯云_DockerVM',
   IDCDVM: 'IDC_DockerVM',
+};
+
+const formRules = {
+  subnet: [
+    {
+      validator: (value: string) => (formModel.vpc ? !!value : true),
+      message: '选择 VPC 后必须选择子网',
+      trigger: 'change',
+    },
+  ],
 };
 
 const baseInfoFields: ModelPropertyDisplay[] = [
@@ -129,6 +141,7 @@ const productionFields: ModelPropertyDisplay[] = [
 ];
 
 const handleZoneChange = () => {
+  formModel.subnet = '';
   formModel.device_type = '';
 };
 const selectedDevicetypeInfo = reactive({ cpu: 0, mem: 0 });
@@ -170,8 +183,18 @@ const isNeedVerify = computed(() => {
 });
 const isVerifyLoading = ref(false);
 const verifyResult = ref<IDemandVerification>();
+
+const formValidate = async () => {
+  try {
+    await formRef.value?.validate();
+  } catch (error) {
+    networkInfoPanelRef.value?.handleToggle(true);
+    return Promise.reject(error);
+  }
+};
+
 const handleVerify = async () => {
-  await formRef.value.validate();
+  await formValidate();
   const { zone, device_type, vpc, subnet, replicas } = formModel;
   const spec = Object.assign({}, details.value.spec, { zone, device_type, vpc, subnet });
   isVerifyLoading.value = true;
@@ -194,7 +217,7 @@ watch(formModel, () => {
 });
 
 const handleSubmit = async () => {
-  await formRef.value.validate();
+  await formValidate();
   const { suborder_id, bk_username } = details.value;
   const { zone, device_type, vpc, subnet, replicas } = formModel;
   const spec = Object.assign({}, details.value.spec, { zone, device_type, vpc, subnet });
@@ -247,7 +270,7 @@ const handleCvmQuickApply = (data: any) => {
     <panel class="panel" title="生产情况">
       <grid-display :fields="productionFields" :details="details" />
     </panel>
-    <bk-form ref="adjust-form" :model="formModel" form-type="vertical">
+    <bk-form ref="adjust-form" :model="formModel" form-type="vertical" :rules="formRules">
       <panel title="未生产需求调整">
         <div class="adjust-form-content">
           <bk-form-item label="园区" required property="zone">
@@ -306,6 +329,7 @@ const handleCvmQuickApply = (data: any) => {
           </bk-form-item>
         </div>
         <network-info-collapse-panel
+          ref="network-info-panel"
           v-model:vpc="formModel.vpc"
           v-model:subnet="formModel.subnet"
           vpc-property="vpc"
@@ -334,7 +358,7 @@ const handleCvmQuickApply = (data: any) => {
         v-else
         theme="primary"
         :loading="ziyanScrStore.modifyApplyOrderLoading"
-        :disabled="isNeedVerify && verifyResult.verify_result !== 'PASS'"
+        :disabled="verifyResult?.verify_result === 'FAILED'"
         @click="handleSubmit"
       >
         提交修改
