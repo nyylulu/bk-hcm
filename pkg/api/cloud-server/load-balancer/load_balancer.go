@@ -1101,6 +1101,7 @@ func (l *LbTopoReq) Validate() error {
 type CvmWithTargets struct {
 	InstID      string            `json:"inst_id"`
 	InstType    enumor.InstType   `json:"inst_type"`
+	InstName    string            `json:"inst_name"`
 	IP          string            `json:"ip"`
 	Zone        string            `json:"zone"`
 	CloudVpcIDs types.StringArray `json:"cloud_vpc_ids"`

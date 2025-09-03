@@ -41,6 +41,7 @@ type ListCvmInfoDetails struct {
 type ListCvmInfo struct {
 	InstID      string            `db:"inst_id" json:"inst_id"`
 	InstType    enumor.InstType   `db:"inst_type" json:"inst_type"`
+	InstName    string            `db:"inst_name" json:"inst_name"`
 	IP          string            `db:"ip" json:"ip"`
 	Zone        string            `db:"zone" json:"zone"`
 	CloudVpcIDs types.StringArray `db:"cloud_vpc_ids" json:"cloud_vpc_ids"`

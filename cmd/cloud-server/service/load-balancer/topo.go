@@ -344,6 +344,7 @@ func buildCvmWithTargetsInfo(kt *kit.Kit, clbTopoInfo *cslb.TargetTopoInfo, targ
 		cvmWithTargets := cslb.CvmWithTargets{
 			InstID:      cvmInfo.InstID,
 			InstType:    cvmInfo.InstType,
+			InstName:    cvmInfo.InstName,
 			IP:          cvmInfo.IP,
 			Zone:        cvmInfo.Zone,
 			CloudVpcIDs: cvmInfo.CloudVpcIDs,
