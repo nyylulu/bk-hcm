@@ -340,6 +340,14 @@ func (cli *client) listVpcFromDB(kt *kit.Kit, params *SyncBaseParams) (
 		},
 		Page: core.NewDefaultBasePage(),
 	}
+
+	if len(params.AccountID) > 0 {
+		req.Filter.Rules = append(req.Filter.Rules, &filter.AtomRule{
+			Field: "account_id",
+			Op:    filter.Equal.Factory(),
+			Value: params.AccountID,
+		})
+	}
 	result, err := cli.dbCli.Gcp.Vpc.ListVpcExt(kt, req)
 	if err != nil {
 		logs.Errorf("[%s] list vpc from db failed, err: %v, account: %s, req: %v, rid: %s", enumor.Gcp, err,

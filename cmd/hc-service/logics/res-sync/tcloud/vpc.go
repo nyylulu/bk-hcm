@@ -337,11 +337,6 @@ func (cli *client) listVpcFromDB(kt *kit.Kit, params *SyncBaseParams) (
 			Op: filter.And,
 			Rules: []filter.RuleFactory{
 				&filter.AtomRule{
-					Field: "account_id",
-					Op:    filter.Equal.Factory(),
-					Value: params.AccountID,
-				},
-				&filter.AtomRule{
 					Field: "cloud_id",
 					Op:    filter.In.Factory(),
 					Value: params.CloudIDs,
@@ -354,6 +349,14 @@ func (cli *client) listVpcFromDB(kt *kit.Kit, params *SyncBaseParams) (
 			},
 		},
 		Page: core.NewDefaultBasePage(),
+	}
+
+	if len(params.AccountID) > 0 {
+		req.Filter.Rules = append(req.Filter.Rules, &filter.AtomRule{
+			Field: "account_id",
+			Op:    filter.Equal.Factory(),
+			Value: params.AccountID,
+		})
 	}
 	result, err := cli.dbCli.TCloud.Vpc.ListVpcExt(kt.Ctx, kt.Header(), req)
 	if err != nil {
