@@ -227,7 +227,8 @@ func (c *Layer7ListenerBindRSExecutor) buildTCloudZiyanFlowTask(kt *kit.Kit, lb 
 	//没有目标组ID，自动创建目标组并绑定RS
 	logs.Infof("listener has no target group or using temp target group,"+
 		" will auto-create target group and bind RS, rid: %s", kt.Rid)
-	return c.createTCloudZiyanTargetGroupTask(lb, targetGroupID, details, generator, tgToListenerCloudIDs, tgToCloudRuleIDs)
+	return c.createTCloudZiyanTargetGroupTask(lb, targetGroupID, details,
+		generator, tgToListenerCloudIDs, tgToCloudRuleIDs)
 }
 
 // createTCloudZiyanTargetGroupTask 创建TCloudZiyan目标组任务

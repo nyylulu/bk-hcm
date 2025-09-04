@@ -90,6 +90,7 @@ func (act CreateTargetGroupWithRelAction) Name() enumor.ActionName {
 	return enumor.ActionCreateTargetGroupWithRel
 }
 
+// Run 执行创建目标组并绑定监听器，同时添加RS
 func (act CreateTargetGroupWithRelAction) Run(kt run.ExecuteKit, params any) (any, error) {
 	opt, ok := params.(*CreateTargetGroupWithRelOption)
 	if !ok {
@@ -158,7 +159,8 @@ func (act CreateTargetGroupWithRelAction) createTCloudTargetGroupWithRel(kt run.
 		RuleID:        opt.ListenerRuleID,
 		TargetsCount:  len(opt.Targets),
 		Status:        "success",
-		Message:       fmt.Sprintf("Successfully created target group %s and bound %d RS", result.TargetGroupID, len(opt.Targets)),
+		Message: fmt.Sprintf("Successfully created target group %s and bound %d RS",
+			result.TargetGroupID, len(opt.Targets)),
 	}, nil
 }
 
@@ -207,7 +209,8 @@ func (act CreateTargetGroupWithRelAction) createTCloudZiyanTargetGroupWithRel(kt
 		RuleID:        opt.ListenerRuleID,
 		TargetsCount:  len(opt.Targets),
 		Status:        "success",
-		Message:       fmt.Sprintf("Successfully created target group %s and bound %d RS", result.TargetGroupID, len(opt.Targets)),
+		Message: fmt.Sprintf("Successfully created target group %s and bound %d RS",
+			result.TargetGroupID, len(opt.Targets)),
 	}, nil
 }
 
