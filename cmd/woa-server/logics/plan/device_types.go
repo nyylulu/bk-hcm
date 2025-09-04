@@ -20,6 +20,7 @@
 package plan
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -154,9 +155,22 @@ func (c *Controller) SyncDeviceTypesFromCRP(kt *kit.Kit, deviceTypes []string) e
 		return err
 	}
 
+	// 3. (临时) 从CRP获取技术分类
+	crpTechnicalClassMap, err := c.listCvmTechnicalClassFromCrp(kt)
+	if err != nil {
+		logs.Errorf("failed to list cvm technical class from crp, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+
 	needCreate := make([]wdt.WoaDeviceTypeTable, 0)
 	needUpdate := make([]wdt.WoaDeviceTypeTable, 0)
 	for deviceType, item := range crpDeviceTypeMap {
+		techClass, ok := crpTechnicalClassMap[deviceType]
+		if !ok {
+			return fmt.Errorf("technical class not found for device type: %s", deviceType)
+		}
+		item.TechnicalClass = techClass
+
 		if localItem, ok := localDeviceTypeMap[deviceType]; ok {
 			item.ID = localItem.ID
 			needUpdate = append(needUpdate, item)
@@ -165,7 +179,7 @@ func (c *Controller) SyncDeviceTypesFromCRP(kt *kit.Kit, deviceTypes []string) e
 		needCreate = append(needCreate, item)
 	}
 
-	// 3.本地已存在时更新
+	// 4.本地已存在时更新
 	for _, batch := range slice.Split(needUpdate, constant.BatchOperationMaxLimit) {
 		updateReq := &rpproto.WoaDeviceTypeBatchUpdateReq{
 			DeviceTypes: batch,
@@ -178,7 +192,7 @@ func (c *Controller) SyncDeviceTypesFromCRP(kt *kit.Kit, deviceTypes []string) e
 		}
 	}
 
-	// 4.本地不存在时创建
+	// 5.本地不存在时创建
 	for _, batch := range slice.Split(needCreate, constant.BatchOperationMaxLimit) {
 		createReq := &rpproto.WoaDeviceTypeBatchCreateReq{
 			DeviceTypes: batch,
@@ -235,4 +249,33 @@ func (c *Controller) listCvmInstanceTypeFromCrp(kt *kit.Kit, deviceTypes []strin
 	}
 
 	return deviceTypeMap, nil
+}
+
+// listCvmTechnicalClassFromCrp 从Crp平台获取机型
+func (c *Controller) listCvmTechnicalClassFromCrp(kt *kit.Kit) (map[string]string, error) {
+
+	req := &cvmapi.QueryTechnicalClassReq{
+		ReqMeta: cvmapi.ReqMeta{
+			Id:      cvmapi.CvmId,
+			JsonRpc: cvmapi.CvmJsonRpc,
+			Method:  cvmapi.CvmQueryTechnicalClass,
+		},
+	}
+
+	resp, err := c.crpCli.QueryTechnicalClass(kt.Ctx, kt.Header(), req)
+	if err != nil {
+		logs.Errorf("query cvm technical class failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
+		return nil, err
+	}
+	if resp.Result == nil {
+		logs.Errorf("query cvm device type error, resp: %+v, rid: %s", resp, kt.Rid)
+		return nil, fmt.Errorf("query cvm device type result is nil, rid: %s", kt.Rid)
+	}
+
+	technicalClassMap := make(map[string]string)
+	for _, item := range resp.Result {
+		technicalClassMap[item.CvmInstanceModel] = item.TechnicalClass
+	}
+
+	return technicalClassMap, nil
 }

@@ -435,6 +435,7 @@ type PlanOrderData struct {
 	BaseInfo PlanOrderBaseInfo `json:"baseInfo"`
 }
 
+// PlanOrderStatus cvm and cbs plan order status
 type PlanOrderStatus int
 
 const (
@@ -779,4 +780,26 @@ type CvmApproveLogsRst struct {
 // RevokeCvmOrderResp ...
 type RevokeCvmOrderResp struct {
 	RespMeta `json:",inline"`
+}
+
+// QueryTechnicalClassResp ...
+type QueryTechnicalClassResp struct {
+	RespMeta `json:",inline"`
+	Result   []QueryTechnicalClassRst `json:"result"`
+}
+
+// QueryTechnicalClassRst ...
+type QueryTechnicalClassRst struct {
+	CvmInstanceModel string  `json:"cvmInstanceModel"`
+	CvmInstanceGroup string  `json:"cvmInstanceGroup"`
+	CvmInstanceType  string  `json:"cvmInstanceType"`
+	CpuAmount        int     `json:"cpuAmount"`
+	RamAmount        int     `json:"ramAmount"`
+	DiskBlockNum     int     `json:"diskBlockNum"`
+	DiskBlockSize    int     `json:"diskBlockSize"`
+	GpuType          string  `json:"gpuType"`
+	GpuCard          float64 `json:"gpuCard"`
+	TechnicalClass   string  `json:"technicalClass"`
+	TechnicalUnit    string  `json:"technicalUnit"`
+	TechnicalAmount  float64 `json:"technicalAmount"`
 }
