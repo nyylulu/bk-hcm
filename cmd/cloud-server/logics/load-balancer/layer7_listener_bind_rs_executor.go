@@ -251,7 +251,8 @@ func (c *Layer7ListenerBindRSExecutor) taskDetailsGroupByTargetGroup(details []*
 
 	for _, detail := range details {
 		if len(detail.targetGroupID) == 0 {
-			logs.Infof("listener %s (CLB: %s, URL Rule: %s) has no target group, will auto-create target group for %d RS, rid: %s",
+			logs.Infof("listener %s (CLB: %s, URL Rule: %s) has no target group,"+
+				" will auto-create target group for %d RS, rid: %s",
 				detail.listenerCloudID, detail.CloudClbID, detail.urlRuleCloudID, len(detail.RsPort), detail.taskDetailID)
 			listenerToDetails[detail.listenerCloudID] = append(listenerToDetails[detail.listenerCloudID], detail)
 			continue
@@ -278,8 +279,10 @@ func (c *Layer7ListenerBindRSExecutor) taskDetailsGroupByTargetGroup(details []*
 		tgToDetails[autoTargetGroupID] = listenerDetails
 		totalAutoCreated++
 
-		logs.Infof("generated auto target group ID: %s for listener %s (URL Rule: %s) with %d RS, rid: %s",
-			autoTargetGroupID, listenerCloudID, tgToCloudRuleIDs[autoTargetGroupID], len(listenerDetails), details[0].taskDetailID)
+		logs.Infof("generated auto target group ID: %s for listener %s (URL Rule: %s)"+
+			" with %d RS, rid: %s",
+			autoTargetGroupID, listenerCloudID, tgToCloudRuleIDs[autoTargetGroupID],
+			len(listenerDetails), details[0].taskDetailID)
 	}
 
 	if totalAutoCreated > 0 {
@@ -314,7 +317,8 @@ func (c *Layer7ListenerBindRSExecutor) buildTCloudFlowTask(kt *kit.Kit, lb corel
 	}
 
 	//没有目标组ID，自动创建目标组并绑定RS
-	logs.Infof("listener has no target group or using temp target group, will auto-create target group and bind RS, rid: %s", kt.Rid)
+	logs.Infof("listener has no target group or using temp target group,"+
+		" will auto-create target group and bind RS, rid: %s", kt.Rid)
 	return c.createTargetGroupTask(lb, targetGroupID, details, generator, tgToListenerCloudIDs, tgToCloudRuleIDs)
 }
 
