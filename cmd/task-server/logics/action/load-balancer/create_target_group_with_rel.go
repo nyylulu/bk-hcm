@@ -40,7 +40,7 @@ var _ action.ParameterAction = new(CreateTargetGroupWithRelAction)
 // CreateTargetGroupWithRelAction 创建目标组并绑定监听器，同时添加RS
 type CreateTargetGroupWithRelAction struct{}
 
-// CreateTargetGroupWithRelOption
+// CreateTargetGroupWithRelOption 创建目标组并绑定监听器，同时添加RS参数
 type CreateTargetGroupWithRelOption struct {
 	Vendor              enumor.Vendor        `json:"vendor" validate:"required"`
 	LoadBalancerID      string               `json:"lb_id" validate:"required"`
@@ -106,6 +106,8 @@ func (act CreateTargetGroupWithRelAction) Run(kt run.ExecuteKit, params any) (an
 	switch opt.Vendor {
 	case enumor.TCloud:
 		return act.createTCloudTargetGroupWithRel(kt, opt)
+	case enumor.TCloudZiyan:
+		return act.createTCloudZiyanTargetGroupWithRel(kt, opt)
 	default:
 		return nil, fmt.Errorf("unsupport vendor: %s", opt.Vendor)
 	}
@@ -138,6 +140,55 @@ func (act CreateTargetGroupWithRelAction) createTCloudTargetGroupWithRel(kt run.
 	result, err := actcli.GetHCService().TCloud.Clb.CreateTargetGroupWithRel(kt.Kit(), createReq)
 	if err != nil {
 		logs.Errorf("create tcloud target group with rel failed, req: %+v, err: %v, rid: %s",
+			createReq, err, kt.Kit().Rid)
+		return nil, fmt.Errorf("create target group with rel failed: %w", err)
+	}
+
+	logs.Infof("successfully created target group with rel, target group ID: %s, rid: %s",
+		result.TargetGroupID, kt.Kit().Rid)
+
+	err = act.updateTaskDetails(kt, opt.ManagementDetailIDs, result.TargetGroupID, "success")
+	if err != nil {
+		logs.Errorf("update task details failed, err: %v, rid: %s", err, kt.Kit().Rid)
+	}
+
+	return &CreateTargetGroupWithRelResult{
+		TargetGroupID: result.TargetGroupID,
+		ListenerID:    opt.ListenerID,
+		RuleID:        opt.ListenerRuleID,
+		TargetsCount:  len(opt.Targets),
+		Status:        "success",
+		Message:       fmt.Sprintf("Successfully created target group %s and bound %d RS", result.TargetGroupID, len(opt.Targets)),
+	}, nil
+}
+
+// createTCloudZiyanTargetGroupWithRel 创建TCloudZiyan目标组并绑定监听器，同时添加RS
+func (act CreateTargetGroupWithRelAction) createTCloudZiyanTargetGroupWithRel(kt run.ExecuteKit, opt *CreateTargetGroupWithRelOption) (any, error) {
+	ruleType := enumor.Layer7RuleType
+	if opt.ListenerRuleID == "" {
+		ruleType = enumor.Layer4RuleType
+		logs.Infof("detected Layer4 listener, no rule ID needed, rid: %s", kt.Kit().Rid)
+	} else {
+		logs.Infof("detected Layer7 listener with rule ID: %s, rid: %s", opt.ListenerRuleID, kt.Kit().Rid)
+	}
+
+	targets := act.convertTargetsToRegisterTargets(opt.Targets)
+	logs.Infof("converted %d targets to register targets, rid: %s", len(targets), kt.Kit().Rid)
+
+	createReq := &hclb.CreateTargetGroupWithRelReq{
+		Vendor:              opt.Vendor,
+		LoadBalancerID:      opt.LoadBalancerID,
+		ListenerID:          opt.ListenerID,
+		ListenerRuleID:      opt.ListenerRuleID,
+		RuleType:            ruleType,
+		Targets:             targets,
+		ManagementDetailIDs: opt.ManagementDetailIDs,
+	}
+
+	logs.Infof("creating target group with rel, req: %+v, rid: %s", createReq, kt.Kit().Rid)
+	result, err := actcli.GetHCService().TCloudZiyan.Clb.CreateTargetGroupWithRel(kt.Kit(), createReq)
+	if err != nil {
+		logs.Errorf("create tcloud ziyan target group with rel failed, req: %+v, err: %v, rid: %s",
 			createReq, err, kt.Kit().Rid)
 		return nil, fmt.Errorf("create target group with rel failed: %w", err)
 	}

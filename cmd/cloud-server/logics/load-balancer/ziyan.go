@@ -22,7 +22,6 @@ package lblogic
 
 import (
 	"fmt"
-
 	actionlb "hcm/cmd/task-server/logics/action/load-balancer"
 	"hcm/pkg/api/core"
 	corelb "hcm/pkg/api/core/cloud/load-balancer"
@@ -37,6 +36,7 @@ import (
 	"hcm/pkg/logs"
 	"hcm/pkg/tools/converter"
 	"hcm/pkg/tools/slice"
+	"strings"
 )
 
 func (c *CreateLayer7ListenerPreviewExecutor) getTCloudZiyanListenersByPort(kt *kit.Kit, lbCloudID string, port int) (
@@ -65,6 +65,92 @@ func (c *CreateLayer7ListenerPreviewExecutor) getTCloudZiyanListenersByPort(kt *
 }
 
 func (c *Layer4ListenerBindRSExecutor) buildTCloudZiyanFlowTask(kt *kit.Kit, lb corelb.LoadBalancerRaw,
+	targetGroupID string, details []*layer4ListenerBindRSTaskDetail,
+	generator func() (cur string, prev string), tgToListenerCloudIDs map[string]string) ([]ts.CustomFlowTask, error) {
+
+	//有目标组ID，直接绑定RS
+	if targetGroupID != "" && !strings.HasPrefix(targetGroupID, "auto_") && !strings.HasPrefix(targetGroupID, "temp_tg_") {
+		logs.Infof("using existing target group: %s, will bind RS directly, rid: %s", targetGroupID, kt.Rid)
+		return c.bindTCloudZiyanRSTask(lb, targetGroupID, details, generator, tgToListenerCloudIDs)
+	}
+
+	//没有目标组ID，自动创建目标组并绑定RS
+	logs.Infof("listener has no target group or using temp target group,"+
+		" will auto-create target group and bind RS, rid: %s", kt.Rid)
+	return c.autoCreateTCloudZiyanTargetGroupAndBindRS(lb, details, generator, tgToListenerCloudIDs)
+}
+
+// autoCreateTCloudZiyanTargetGroupAndBindRS 自动创建TCloudZiyan目标组并绑定RS
+func (c *Layer4ListenerBindRSExecutor) autoCreateTCloudZiyanTargetGroupAndBindRS(lb corelb.LoadBalancerRaw,
+	details []*layer4ListenerBindRSTaskDetail, generator func() (cur string, prev string),
+	tgToListenerCloudIDs map[string]string) ([]ts.CustomFlowTask, error) {
+
+	if len(details) == 0 {
+		return nil, fmt.Errorf("details cannot be empty for auto-create target group")
+	}
+
+	autoKey := fmt.Sprintf("auto_%s", details[0].listenerCloudID)
+	listenerCloudID, exists := tgToListenerCloudIDs[autoKey]
+	if !exists {
+		return nil, fmt.Errorf("listener cloud ID not found for auto key: %s", autoKey)
+	}
+
+	targets := make([]*corelb.BaseTarget, 0, len(details))
+	managementDetailIDs := make([]string, 0, len(details))
+
+	for _, detail := range details {
+
+		if len(detail.RsPort) == 0 {
+			return nil, fmt.Errorf("RS port cannot be empty for detail: %s", detail.taskDetailID)
+		}
+
+		target := &corelb.BaseTarget{
+			InstType: detail.InstType,
+			Port:     int64(detail.RsPort[0]),
+			Weight:   converter.ValToPtr(converter.PtrToVal(detail.Weight)),
+		}
+
+		if detail.InstType == enumor.EniInstType {
+			if detail.RsIp == "" {
+				return nil, fmt.Errorf("ENI IP cannot be empty for detail: %s", detail.taskDetailID)
+			}
+			target.IP = detail.RsIp
+		} else if detail.InstType == enumor.CvmInstType {
+			if detail.cvm == nil {
+				return nil, fmt.Errorf("CVM info not found for detail: %s", detail.taskDetailID)
+			}
+			target.CloudInstID = detail.cvm.CloudID
+			target.InstName = detail.cvm.Name
+			target.PrivateIPAddress = detail.cvm.PrivateIPv4Addresses
+			target.PublicIPAddress = detail.cvm.PublicIPv4Addresses
+			target.Zone = detail.cvm.Zone
+		}
+
+		targets = append(targets, target)
+		managementDetailIDs = append(managementDetailIDs, detail.taskDetailID)
+	}
+
+	cur, prev := generator()
+	createTGTask := ts.CustomFlowTask{
+		ActionID:   action.ActIDType(cur),
+		ActionName: enumor.ActionCreateTargetGroupWithRel,
+		Params: &actionlb.CreateTargetGroupWithRelOption{
+			Vendor:              c.vendor,
+			LoadBalancerID:      lb.ID,
+			ListenerID:          listenerCloudID,
+			ListenerRuleID:      "",
+			RuleType:            enumor.Layer4RuleType,
+			Targets:             targets,
+			ManagementDetailIDs: managementDetailIDs,
+		},
+		DependOn: []action.ActIDType{action.ActIDType(prev)},
+	}
+
+	return []ts.CustomFlowTask{createTGTask}, nil
+}
+
+// bindTCloudZiyanRSTask 绑定TCloudZiyan RS任务
+func (c *Layer4ListenerBindRSExecutor) bindTCloudZiyanRSTask(lb corelb.LoadBalancerRaw,
 	targetGroupID string, details []*layer4ListenerBindRSTaskDetail,
 	generator func() (cur string, prev string), tgToListenerCloudIDs map[string]string) ([]ts.CustomFlowTask, error) {
 
@@ -129,6 +215,86 @@ func (c *Layer4ListenerBindRSExecutor) buildTCloudZiyanFlowTask(kt *kit.Kit, lb 
 }
 
 func (c *Layer7ListenerBindRSExecutor) buildTCloudZiyanFlowTask(kt *kit.Kit, lb corelb.LoadBalancerRaw,
+	targetGroupID string, details []*layer7ListenerBindRSTaskDetail, generator func() (cur string, prev string),
+	tgToListenerCloudIDs map[string]string, tgToCloudRuleIDs map[string]string) ([]ts.CustomFlowTask, error) {
+
+	//有目标组ID，直接绑定RS
+	if targetGroupID != "" && !strings.HasPrefix(targetGroupID, "auto_") && !strings.HasPrefix(targetGroupID, "temp_tg_") {
+		logs.Infof("using existing target group: %s, will bind RS directly, rid: %s", targetGroupID, kt.Rid)
+		return c.bindTCloudZiyanRSTask(lb, targetGroupID, details, generator, tgToListenerCloudIDs, tgToCloudRuleIDs)
+	}
+
+	//没有目标组ID，自动创建目标组并绑定RS
+	logs.Infof("listener has no target group or using temp target group,"+
+		" will auto-create target group and bind RS, rid: %s", kt.Rid)
+	return c.createTCloudZiyanTargetGroupTask(lb, targetGroupID, details, generator, tgToListenerCloudIDs, tgToCloudRuleIDs)
+}
+
+// createTCloudZiyanTargetGroupTask 创建TCloudZiyan目标组任务
+func (c *Layer7ListenerBindRSExecutor) createTCloudZiyanTargetGroupTask(lb corelb.LoadBalancerRaw,
+	targetGroupID string, details []*layer7ListenerBindRSTaskDetail, generator func() (cur string, prev string),
+	tgToListenerCloudIDs map[string]string, tgToCloudRuleIDs map[string]string) ([]ts.CustomFlowTask, error) {
+
+	listenerCloudID := tgToListenerCloudIDs[targetGroupID]
+	urlRuleCloudID := tgToCloudRuleIDs[targetGroupID]
+
+	if strings.HasPrefix(targetGroupID, "auto_") {
+		if len(details) > 0 && details[0].urlRuleCloudID != "" {
+			urlRuleCloudID = details[0].urlRuleCloudID
+		} else {
+			logs.Warnf("URL rule cloud ID is empty for auto-created target group, listener: %s, rid: %s",
+				listenerCloudID, details[0].taskDetailID)
+		}
+	}
+
+	targets := make([]*corelb.BaseTarget, 0, len(details))
+	managementDetailIDs := make([]string, 0, len(details))
+
+	for _, detail := range details {
+		target := &corelb.BaseTarget{
+			InstType: detail.InstType,
+			Port:     int64(detail.RsPort[0]),
+			Weight:   converter.ValToPtr(converter.PtrToVal(detail.Weight)),
+		}
+
+		if detail.InstType == enumor.EniInstType {
+			target.IP = detail.RsIp
+		} else if detail.InstType == enumor.CvmInstType {
+			if detail.cvm == nil {
+				return nil, fmt.Errorf("rs ip(%s) not found", detail.RsIp)
+			}
+			target.CloudInstID = detail.cvm.CloudID
+			target.InstName = detail.cvm.Name
+			target.PrivateIPAddress = detail.cvm.PrivateIPv4Addresses
+			target.PublicIPAddress = detail.cvm.PublicIPv4Addresses
+			target.Zone = detail.cvm.Zone
+		}
+
+		targets = append(targets, target)
+		managementDetailIDs = append(managementDetailIDs, detail.taskDetailID)
+	}
+
+	cur, prev := generator()
+	createTGTask := ts.CustomFlowTask{
+		ActionID:   action.ActIDType(cur),
+		ActionName: enumor.ActionCreateTargetGroupWithRel,
+		Params: &actionlb.CreateTargetGroupWithRelOption{
+			Vendor:              c.vendor,
+			LoadBalancerID:      lb.ID,
+			ListenerID:          listenerCloudID,
+			ListenerRuleID:      urlRuleCloudID,
+			RuleType:            enumor.Layer7RuleType,
+			Targets:             targets,
+			ManagementDetailIDs: managementDetailIDs,
+		},
+		DependOn: []action.ActIDType{action.ActIDType(prev)},
+	}
+
+	return []ts.CustomFlowTask{createTGTask}, nil
+}
+
+// bindTCloudZiyanRSTask 绑定TCloudZiyan RS任务
+func (c *Layer7ListenerBindRSExecutor) bindTCloudZiyanRSTask(lb corelb.LoadBalancerRaw,
 	targetGroupID string, details []*layer7ListenerBindRSTaskDetail, generator func() (cur string, prev string),
 	tgToListenerCloudIDs map[string]string, tgToCloudRuleIDs map[string]string) ([]ts.CustomFlowTask, error) {
 

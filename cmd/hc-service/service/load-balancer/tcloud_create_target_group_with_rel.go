@@ -49,7 +49,7 @@ func (svc *clbSvc) CreateTargetGroupWithRel(cts *rest.Contexts) (interface{}, er
 		req.Vendor, req.LoadBalancerID, req.ListenerID, len(req.Targets), cts.Kit.Rid)
 
 	lbReq := &core.ListReq{
-		Filter: tools.EqualExpression("id", req.LoadBalancerID),
+		Filter: tools.EqualExpression("cloud_id", req.LoadBalancerID),
 		Page:   core.NewDefaultBasePage(),
 	}
 	lbResp, err := svc.dataCli.Global.LoadBalancer.ListLoadBalancer(cts.Kit, lbReq)

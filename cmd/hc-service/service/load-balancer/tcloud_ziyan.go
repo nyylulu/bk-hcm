@@ -103,5 +103,8 @@ func (svc *clbSvc) initTCloudZiyanClbService(cap *capability.Capability) {
 	h.Add("DescribeZiyanClusterResources", http.MethodPost,
 		"/vendors/tcloud-ziyan/load_balancers/cluster_resources/describe", svc.DescribeClusterResources)
 
+	h.Add("CreateZiyanTargetGroupWithRel", http.MethodPost,
+		"/vendors/tcloud-ziyan/target_groups/create_with_rel", svc.CreateZiyanTargetGroupWithRel)
+
 	h.Load(cap.WebService)
 }
