@@ -190,10 +190,9 @@ func (c *Layer4ListenerBindRSExecutor) buildFlows(kt *kit.Kit) ([]string, error)
 func (c *Layer4ListenerBindRSExecutor) buildFlow(kt *kit.Kit, lb corelb.LoadBalancerRaw,
 	details []*layer4ListenerBindRSTaskDetail) (string, error) {
 
-	// 将details根据targetGroupID进行分组，以targetGroupID的纬度创建flowTask
-	tgToDetails, tgToListenerCloudIDs, err := c.createTaskDetailsGroupByTargetGroup(details)
+	listenerToDetails, err := c.createTaskDetailsGroupByListener(details)
 	if err != nil {
-		logs.Errorf("create task details group by target group failed, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("create task details group by listener failed, err: %v, rid: %s", err, kt.Rid)
 		return "", err
 	}
 
@@ -202,8 +201,8 @@ func (c *Layer4ListenerBindRSExecutor) buildFlow(kt *kit.Kit, lb corelb.LoadBala
 		// 操作前触发同步
 		buildSyncClbFlowTask(c.vendor, lb.CloudID, c.accountID, lb.Region, actionIDGenerator),
 	}
-	for targetGroupID, detailList := range tgToDetails {
-		tmpTask, err := c.buildFlowTask(kt, lb, targetGroupID, detailList, actionIDGenerator, tgToListenerCloudIDs)
+	for _, detailList := range listenerToDetails {
+		tmpTask, err := c.buildFlowTask(kt, lb, detailList, actionIDGenerator)
 		if err != nil {
 			return "", err
 		}
@@ -217,7 +216,7 @@ func (c *Layer4ListenerBindRSExecutor) buildFlow(kt *kit.Kit, lb corelb.LoadBala
 		logs.Errorf("check resource flow relation failed, lbID: %s, err: %v, rid: %s", lb.ID, err, kt.Rid)
 		return "", err
 	}
-	flowID, err := c.createFlowTask(kt, lb.ID, converter.MapKeyToSlice(tgToDetails), flowTasks)
+	flowID, err := c.createFlowTask(kt, lb.ID, converter.MapKeyToSlice(listenerToDetails), flowTasks)
 	if err != nil {
 		return "", err
 	}
@@ -228,7 +227,7 @@ func (c *Layer4ListenerBindRSExecutor) buildFlow(kt *kit.Kit, lb corelb.LoadBala
 		return "", err
 	}
 
-	for _, taskDetails := range tgToDetails {
+	for _, taskDetails := range listenerToDetails {
 		for _, detail := range taskDetails {
 			detail.flowID = flowID
 		}
@@ -236,46 +235,20 @@ func (c *Layer4ListenerBindRSExecutor) buildFlow(kt *kit.Kit, lb corelb.LoadBala
 	return flowID, nil
 }
 
-func (c *Layer4ListenerBindRSExecutor) createTaskDetailsGroupByTargetGroup(details []*layer4ListenerBindRSTaskDetail,
-) (map[string][]*layer4ListenerBindRSTaskDetail, map[string]string, error) {
+func (c *Layer4ListenerBindRSExecutor) createTaskDetailsGroupByListener(details []*layer4ListenerBindRSTaskDetail,
+) (map[string][]*layer4ListenerBindRSTaskDetail, error) {
 
-	tgToDetails := make(map[string][]*layer4ListenerBindRSTaskDetail)
-	tgToListenerCloudID := make(map[string]string)
 	listenerToDetails := make(map[string][]*layer4ListenerBindRSTaskDetail)
 
 	for _, detail := range details {
 		if len(detail.listenerCloudID) == 0 {
-			return nil, nil, fmt.Errorf("loadbalancer(%s) listener(%v) not found",
+			return nil, fmt.Errorf("loadbalancer(%s) listener(%v) not found",
 				detail.CloudClbID, detail.listenerCloudID)
 		}
-
-		if len(detail.targetGroupID) == 0 {
-			logs.Infof("listener %s (CLB: %s) has no target group, will auto-create target group for %d RS, rid: %s",
-				detail.listenerCloudID, detail.CloudClbID, len(detail.RsPort), detail.taskDetailID)
-			listenerToDetails[detail.listenerCloudID] = append(listenerToDetails[detail.listenerCloudID], detail)
-			continue
-		}
-		tgToListenerCloudID[detail.targetGroupID] = detail.listenerCloudID
-		tgToDetails[detail.targetGroupID] = append(tgToDetails[detail.targetGroupID], detail)
+		listenerToDetails[detail.listenerCloudID] = append(listenerToDetails[detail.listenerCloudID], detail)
 	}
 
-	totalAutoCreated := 0
-	for listenerCloudID, listenerDetails := range listenerToDetails {
-		autoTargetGroupID := fmt.Sprintf("auto_%s", listenerCloudID)
-		tgToListenerCloudID[autoTargetGroupID] = listenerCloudID
-		tgToDetails[autoTargetGroupID] = listenerDetails
-		totalAutoCreated++
-
-		logs.Infof("generated auto target group ID: %s for listener %s with %d RS, rid: %s",
-			autoTargetGroupID, listenerCloudID, len(listenerDetails), details[0].taskDetailID)
-	}
-
-	if totalAutoCreated > 0 {
-		logs.Infof("auto-created %d target groups for listeners without target groups, rid: %s",
-			totalAutoCreated, details[0].taskDetailID)
-	}
-
-	return tgToDetails, tgToListenerCloudID, nil
+	return listenerToDetails, nil
 }
 
 func (c *Layer4ListenerBindRSExecutor) createFlowTask(kt *kit.Kit, lbID string, tgIDs []string,
@@ -322,36 +295,26 @@ func (c *Layer4ListenerBindRSExecutor) createFlowTask(kt *kit.Kit, lbID string, 
 }
 
 func (c *Layer4ListenerBindRSExecutor) buildFlowTask(kt *kit.Kit, lb corelb.LoadBalancerRaw,
-	targetGroupID string, details []*layer4ListenerBindRSTaskDetail, generator func() (cur string, prev string),
-	tgToListenerCloudIDs map[string]string) ([]ts.CustomFlowTask, error) {
+	details []*layer4ListenerBindRSTaskDetail, generator func() (cur string, prev string)) ([]ts.CustomFlowTask, error) {
 
 	switch c.vendor {
 	case enumor.TCloud:
-		return c.buildTCloudFlowTask(kt, lb, targetGroupID, details, generator, tgToListenerCloudIDs)
+		return c.buildTCloudFlowTask(kt, lb, details, generator)
 	default:
 		return nil, fmt.Errorf("not support vendor: %s", c.vendor)
 	}
 }
 
 func (c *Layer4ListenerBindRSExecutor) buildTCloudFlowTask(kt *kit.Kit, lb corelb.LoadBalancerRaw,
-	targetGroupID string, details []*layer4ListenerBindRSTaskDetail,
-	generator func() (cur string, prev string), tgToListenerCloudIDs map[string]string) ([]ts.CustomFlowTask, error) {
+	details []*layer4ListenerBindRSTaskDetail, generator func() (cur string, prev string)) ([]ts.CustomFlowTask, error) {
 
-	//有目标组ID，直接绑定RS
-	if targetGroupID != "" && !strings.HasPrefix(targetGroupID, "auto_") {
-		logs.Infof("using existing target group: %s, will bind RS directly, rid: %s", targetGroupID, kt.Rid)
-		return c.bindRSTask(lb, targetGroupID, details, generator, tgToListenerCloudIDs)
-	}
-
-	//没有目标组ID，自动创建目标组并绑定RS
-	logs.Infof("listener has no target group, will auto-create target group and bind RS, rid: %s", kt.Rid)
-	return c.autoCreateTargetGroupAndBindRS(lb, details, generator, tgToListenerCloudIDs)
+	logs.Infof("binding RS directly to listener, targetGroupID will be handled by cloud API and sync logic, rid: %s", kt.Rid)
+	return c.bindRSTask(lb, details, generator)
 }
 
-// bindRSTask 绑定RS到现有目标组
+// bindRSTask 直接绑定RS到监听器
 func (c *Layer4ListenerBindRSExecutor) bindRSTask(lb corelb.LoadBalancerRaw,
-	targetGroupID string, details []*layer4ListenerBindRSTaskDetail,
-	generator func() (cur string, prev string), tgToListenerCloudIDs map[string]string) ([]ts.CustomFlowTask, error) {
+	details []*layer4ListenerBindRSTaskDetail, generator func() (cur string, prev string)) ([]ts.CustomFlowTask, error) {
 
 	result := make([]ts.CustomFlowTask, 0)
 	for _, taskDetails := range slice.Split(details, constant.BatchTaskMaxLimit) {
@@ -381,8 +344,8 @@ func (c *Layer4ListenerBindRSExecutor) bindRSTask(lb corelb.LoadBalancerRaw,
 		}
 
 		req := &hclb.BatchRegisterTCloudTargetReq{
-			CloudListenerID: tgToListenerCloudIDs[targetGroupID],
-			TargetGroupID:   targetGroupID,
+			CloudListenerID: taskDetails[0].listenerCloudID,
+			TargetGroupID:   "",
 			RuleType:        enumor.Layer4RuleType,
 			Targets:         targets,
 		}
@@ -411,75 +374,6 @@ func (c *Layer4ListenerBindRSExecutor) bindRSTask(lb corelb.LoadBalancerRaw,
 	}
 
 	return result, nil
-}
-
-// autoCreateTargetGroupAndBindRS 自动创建目标组并绑定RS
-func (c *Layer4ListenerBindRSExecutor) autoCreateTargetGroupAndBindRS(lb corelb.LoadBalancerRaw,
-	details []*layer4ListenerBindRSTaskDetail, generator func() (cur string, prev string),
-	tgToListenerCloudIDs map[string]string) ([]ts.CustomFlowTask, error) {
-
-	if len(details) == 0 {
-		return nil, fmt.Errorf("details cannot be empty for auto-create target group")
-	}
-
-	autoKey := fmt.Sprintf("auto_%s", details[0].listenerCloudID)
-	listenerCloudID, exists := tgToListenerCloudIDs[autoKey]
-	if !exists {
-		return nil, fmt.Errorf("listener cloud ID not found for auto key: %s", autoKey)
-	}
-
-	targets := make([]*corelb.BaseTarget, 0, len(details))
-	managementDetailIDs := make([]string, 0, len(details))
-
-	for _, detail := range details {
-
-		if len(detail.RsPort) == 0 {
-			return nil, fmt.Errorf("RS port cannot be empty for detail: %s", detail.taskDetailID)
-		}
-
-		target := &corelb.BaseTarget{
-			InstType: detail.InstType,
-			Port:     int64(detail.RsPort[0]),
-			Weight:   converter.ValToPtr(converter.PtrToVal(detail.Weight)),
-		}
-
-		if detail.InstType == enumor.EniInstType {
-			if detail.RsIp == "" {
-				return nil, fmt.Errorf("ENI IP cannot be empty for detail: %s", detail.taskDetailID)
-			}
-			target.IP = detail.RsIp
-		} else if detail.InstType == enumor.CvmInstType {
-			if detail.cvm == nil {
-				return nil, fmt.Errorf("CVM info not found for detail: %s", detail.taskDetailID)
-			}
-			target.CloudInstID = detail.cvm.CloudID
-			target.InstName = detail.cvm.Name
-			target.PrivateIPAddress = detail.cvm.PrivateIPv4Addresses
-			target.PublicIPAddress = detail.cvm.PublicIPv4Addresses
-			target.Zone = detail.cvm.Zone
-		}
-
-		targets = append(targets, target)
-		managementDetailIDs = append(managementDetailIDs, detail.taskDetailID)
-	}
-
-	cur, prev := generator()
-	createTGTask := ts.CustomFlowTask{
-		ActionID:   action.ActIDType(cur),
-		ActionName: enumor.ActionCreateTargetGroupWithRel,
-		Params: &actionlb.CreateTargetGroupWithRelOption{
-			Vendor:              c.vendor,
-			LoadBalancerID:      lb.ID,
-			ListenerID:          listenerCloudID,
-			ListenerRuleID:      "",
-			RuleType:            enumor.Layer4RuleType,
-			Targets:             targets,
-			ManagementDetailIDs: managementDetailIDs,
-		},
-		DependOn: []action.ActIDType{action.ActIDType(prev)},
-	}
-
-	return []ts.CustomFlowTask{createTGTask}, nil
 }
 
 // buildTaskManagementAndDetails 构建任务管理和详情

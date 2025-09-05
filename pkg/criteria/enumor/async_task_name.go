@@ -122,9 +122,6 @@ const (
 	ActionListenerRuleAddTarget         ActionName = "listener_rule_add_target"
 	ActionListenerRuleUpdateHealthCheck ActionName = "listener_rule_update_health_check"
 
-	// ActionCreateTargetGroupWithRel 创建目标组并绑定监听器/规则，同时添加RS
-	ActionCreateTargetGroupWithRel ActionName = "create_target_group_with_rel"
-
 	ActionDeleteLoadBalancer = "delete_load_balancer"
 )
 

@@ -245,7 +245,7 @@ func (l *Layer4ListenerBindRSPreviewExecutor) validateTarget(kt *kit.Kit,
 	if !ok {
 		detail.ValidateResult = append(detail.ValidateResult,
 			"Listener not bound to target group, will automatically create target group and bind")
-		detail.targetGroupID = fmt.Sprintf("temp_tg_%s", detail.listenerCloudID)
+		detail.targetGroupID = ""
 		return nil
 	}
 	detail.targetGroupID = tgID
