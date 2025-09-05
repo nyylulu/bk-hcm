@@ -161,6 +161,8 @@ func (ds *DetectingState) setNextState(order *table.RecycleOrder, ev *event.Even
 			update["stage"] = table.RecycleStageTransit
 			update["status"] = table.RecycleStatusTransiting
 		}
+		// 清空之前产生的message，比如检测失败，避免影响后续流程展示
+		update["message"] = ""
 	case event.DetectFailed:
 		update["stage"] = table.RecycleStageDetect
 		update["status"] = table.RecycleStatusDetectFailed

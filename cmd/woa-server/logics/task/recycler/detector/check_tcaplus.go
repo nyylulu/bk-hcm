@@ -95,7 +95,6 @@ func (t *CheckTcaplusWorkGroup) queryWorker(kt *kit.Kit, idx int) {
 func (t *CheckTcaplusWorkGroup) check(kt *kit.Kit, steps []*StepMeta) {
 	ips := slice.Map(steps, func(step *StepMeta) string { return step.Step.IP })
 	resp, err := t.tcaplus.CheckTcaplus(kt, ips)
-	logs.Infof("DEBUG: check tcaplus resp: %+v, err: %v, rid: %s", resp, err, kt.Rid)
 	if err != nil {
 		log := fmt.Sprintf("check tcaplus failed, err: %s", err)
 		t.HandleResult(kt, steps, err, log, true)

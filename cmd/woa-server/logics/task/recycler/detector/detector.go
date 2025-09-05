@@ -138,7 +138,7 @@ func (d *Detector) CheckDetectStatus(kt *kit.Kit, subOrderId string) error {
 
 	logs.Errorf("some recycle steps failed, subOrderId: %s, failedStepNum: %d, rid: %s",
 		subOrderId, cnt, kt.Rid)
-	return fmt.Errorf("some recycle steps failed, subOrderId: %s, failedStepNum: %d", subOrderId, cnt)
+	return fmt.Errorf("some recycle detect steps failed, subOrderId: %s, failedStepNum: %d", subOrderId, cnt)
 }
 
 // getDetectTasks 查询预检任务，每个主机会有一个DetectTask
