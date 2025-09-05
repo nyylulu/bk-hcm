@@ -266,7 +266,8 @@ func (c *Layer7ListenerBindRSExecutor) buildFlowTask(kt *kit.Kit, lb corelb.Load
 func (c *Layer7ListenerBindRSExecutor) buildTCloudFlowTask(kt *kit.Kit, lb corelb.LoadBalancerRaw,
 	details []*layer7ListenerBindRSTaskDetail, generator func() (cur string, prev string)) ([]ts.CustomFlowTask, error) {
 
-	logs.Infof("binding RS directly to listener and rule, targetGroupID will be handled by cloud API and sync logic, rid: %s", kt.Rid)
+	logs.Infof("binding RS directly to listener and rule, targetGroupID will be handled by cloud API and sync logic, "+
+		"rid: %s", kt.Rid)
 	return c.bindRSTask(lb, details, generator)
 }
 

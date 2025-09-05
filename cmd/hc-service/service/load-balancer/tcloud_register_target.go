@@ -95,6 +95,5 @@ func (svc *clbSvc) RegisterTargetToListenerRule(cts *rest.Contexts) (any, error)
 	if len(failLblIds) > 0 {
 		return nil, fmt.Errorf("some listener fail to bind: %v", failLblIds)
 	}
-
 	return nil, nil
 }

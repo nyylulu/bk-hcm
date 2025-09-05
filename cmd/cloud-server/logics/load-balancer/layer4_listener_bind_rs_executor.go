@@ -308,7 +308,8 @@ func (c *Layer4ListenerBindRSExecutor) buildFlowTask(kt *kit.Kit, lb corelb.Load
 func (c *Layer4ListenerBindRSExecutor) buildTCloudFlowTask(kt *kit.Kit, lb corelb.LoadBalancerRaw,
 	details []*layer4ListenerBindRSTaskDetail, generator func() (cur string, prev string)) ([]ts.CustomFlowTask, error) {
 
-	logs.Infof("binding RS directly to listener, targetGroupID will be handled by cloud API and sync logic, rid: %s", kt.Rid)
+	logs.Infof("binding RS directly to listener, targetGroupID will be handled by cloud API and sync logic,"+
+		" rid: %s", kt.Rid)
 	return c.bindRSTask(lb, details, generator)
 }
 
