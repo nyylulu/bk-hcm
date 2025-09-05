@@ -92,8 +92,8 @@ func (d *Detector) initStepExecutor(backendKit *kit.Kit) error {
 	return nil
 }
 
-// Detect 单据预检入口，等待全部主机的所有步骤结束后返回结果，可重入
-func (d *Detector) Detect(kt *kit.Kit, order *table.RecycleOrder) error {
+// Detect 单据预检入口，等待全部主机的所有步骤结束后返回结果，可重入，如果由主机回收触发还会额外更新RecycleHost
+func (d *Detector) Detect(kt *kit.Kit, order *table.RecycleOrder, fromRecycle bool) error {
 	// 获取预检步骤配置
 	stepConfigs, err := d.getDetectStepConfigs()
 	if err != nil {
@@ -103,7 +103,7 @@ func (d *Detector) Detect(kt *kit.Kit, order *table.RecycleOrder) error {
 	}
 
 	// 初始化并获取需要处理的预检任务（主机）
-	taskMap, err := d.initAndGetDetectTaskMap(kt, order.SuborderID, len(stepConfigs))
+	taskMap, err := d.initAndGetDetectTaskMap(kt, order.SuborderID, len(stepConfigs), fromRecycle)
 	if err != nil {
 		logs.Errorf("fail to get detect task map, order: %s, err: %v, rid: %s",
 			order.SuborderID, err, kt.Rid)
@@ -132,7 +132,7 @@ func (d *Detector) Detect(kt *kit.Kit, order *table.RecycleOrder) error {
 		go runner.Run(kt, executor, toExecuteSteps, toSkipSteps)
 	}
 
-	return d.handleDetectResult(kt, order.SuborderID, runner.ReadResults, taskMap)
+	return d.handleDetectResult(kt, order.SuborderID, runner.ReadResults, taskMap, fromRecycle)
 }
 
 // Cancel 单据取消入口, 会终止当前执行中单据，并丢弃现有结果。若单据未在执行中，不会报错
@@ -159,7 +159,7 @@ func (d *Detector) Cancel(kt *kit.Kit, suborderID string) error {
 
 // handleDetectResult 收集预检步骤结果，更新预检进度
 func (d *Detector) handleDetectResult(kt *kit.Kit, suborderID string, getResults func() (result []*Result, ok bool),
-	taskMap map[int64]*table.DetectTask) error {
+	taskMap map[int64]*table.DetectTask, fromRecycle bool) error {
 
 	defer logs.Infof("suborder all detect step done, order: %s, rid: %s", suborderID, kt.Rid)
 
@@ -195,12 +195,13 @@ func (d *Detector) handleDetectResult(kt *kit.Kit, suborderID string, getResults
 					task.Status = table.DetectStatusSuccess
 				}
 			}
+			// pending = init + running，当该step执行完出结果了才不属于pending
 			task.PendingNum--
 			updatedTasks[task.HostID] = task
 		}
 		for _, task := range updatedTasks {
 			// 更新recycle task, recycle host 的状态
-			err := d.updateRecycleTaskAndHostStatus(kt, task)
+			err := d.updateRecycleTaskAndHostStatus(kt, task, fromRecycle)
 			if err != nil {
 				logs.Errorf("skip update task %s failed, order: %s, err: %v, rid: %s",
 					task.TaskID, suborderID, err, kt.Rid)
@@ -212,7 +213,7 @@ func (d *Detector) handleDetectResult(kt *kit.Kit, suborderID string, getResults
 	return nil
 }
 
-func (d *Detector) initAndGetDetectTaskMap(kt *kit.Kit, suborderID string, stepCount int) (
+func (d *Detector) initAndGetDetectTaskMap(kt *kit.Kit, suborderID string, stepCount int, fromRecycle bool) (
 	map[int64]*table.DetectTask, error) {
 
 	// (重新)初始化task状态为running
@@ -229,7 +230,7 @@ func (d *Detector) initAndGetDetectTaskMap(kt *kit.Kit, suborderID string, stepC
 	}
 
 	// 兼容存量数据没有bk host id、asset id的情况
-	taskMap, err := d.fillTaskHostIDMap(kt, taskInfos, suborderID)
+	taskMap, err := d.fillTaskHostIDMap(kt, taskInfos, suborderID, fromRecycle)
 	if err != nil {
 		logs.Errorf("failed to fill task host id map, order: %s, err: %v, rid: %s", suborderID, err, kt.Rid)
 		return nil, err
@@ -408,7 +409,6 @@ func (d *Detector) getCurrentStepMap(kt *kit.Kit, suborderID string, stepName ta
 		}
 		currentStepMap[step.HostID] = step
 	}
-
 	return currentStepMap, nil
 }
 
@@ -504,7 +504,7 @@ func (d *Detector) batchUpdateTaskStatus(kt *kit.Kit, suborderID string, status 
 }
 
 // 更新recycle task, recycle host 的状态
-func (d *Detector) updateRecycleTaskAndHostStatus(kt *kit.Kit, task *table.DetectTask) error {
+func (d *Detector) updateRecycleTaskAndHostStatus(kt *kit.Kit, task *table.DetectTask, fromRecycle bool) error {
 	filter := &mapstr.MapStr{
 		"task_id": task.TaskID,
 	}
@@ -530,9 +530,8 @@ func (d *Detector) updateRecycleTaskAndHostStatus(kt *kit.Kit, task *table.Detec
 			task.TaskID, doc, err, kt.Rid)
 		return err
 	}
-
-	// 如果结束，更新recycle host 的状态
-	if task.PendingNum == 0 && task.FailedNum != 0 {
+	// 如果结束，更新recycle host 的状态, 如果不是由主机回收触发空闲检查，则不需要更新RecycleHost
+	if fromRecycle && task.PendingNum == 0 && task.FailedNum != 0 {
 		if err := d.updateRecycleHostStatus(kt, task.SuborderID, task.AssetID, task.IP,
 			table.RecycleStatusDetectFailed); err != nil {
 			logs.Errorf("failed to update recycle host, task id: %s, host: %s, assetID: %s, err: %v, rid: %s",

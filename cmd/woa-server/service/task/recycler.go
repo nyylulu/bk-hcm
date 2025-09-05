@@ -16,6 +16,7 @@ package task
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
@@ -24,6 +25,7 @@ import (
 	"hcm/pkg/api/core"
 	corecvm "hcm/pkg/api/core/cloud/cvm"
 	dataproto "hcm/pkg/api/data-service/cloud"
+	woaserver "hcm/pkg/api/woa-server"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
@@ -404,6 +406,28 @@ func (s *service) ListDetectHost(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
+	return rst, nil
+}
+
+// ListDetectTask get detect task
+func (s *service) ListDetectTask(cts *rest.Contexts) (any, error) {
+	input := new(types.GetRecycleDetectReq)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to list recycle detection host, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	err := input.Validate()
+	if err != nil {
+		logs.Errorf("failed to list recycle detection host, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(pkg.CCErrCommParamsIsInvalid, err)
+	}
+
+	rst, err := s.logics.Recycler().GetRecycleDetect(cts.Kit, input)
+	if err != nil {
+		logs.Errorf("failed to list recycle detection host, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
 	return rst, nil
 }
 
@@ -1238,4 +1262,75 @@ func (s *service) getCVMsByBkHostIDs(kt *kit.Kit, bkHostIDs []int64, authFilter 
 	}
 
 	return cvms, nil
+}
+
+// StartIdleCheck 进行非主机回收触发的通用空闲检查
+func (s *service) StartIdleCheck(cts *rest.Contexts) (any, error) {
+	req := new(woaserver.StartIdleCheckReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, err
+	}
+	// 检查 HostIDs、AssetIDs 和 IPs 的长度是否相等，要求三者一一对应
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 为非回收的预检生成唯一单号
+	orderID, err := dao.Set().RecycleOrder().NextSequence(cts.Kit.Ctx)
+	if err != nil {
+		return nil, err
+	}
+	suborderID := fmt.Sprintf("%d-1", orderID)
+
+	now := time.Now()
+	for i, hostID := range req.HostIDs {
+		task := &table.DetectTask{
+			OrderID:    orderID,
+			SuborderID: suborderID,
+			TaskID:     fmt.Sprintf("%s-%d", suborderID, i+1),
+			HostID:     hostID,
+			AssetID:    req.AssetIDs[i],
+			IP:         req.IPs[i],
+			User:       cts.Kit.User,
+			Status:     table.DetectStatusInit,
+			Message:    "",
+			TotalNum:   0,
+			SuccessNum: 0,
+			PendingNum: 0,
+			FailedNum:  0,
+			CreateAt:   now,
+			UpdateAt:   now,
+		}
+		if err := dao.Set().DetectTask().CreateDetectTask(cts.Kit.Ctx, task); err != nil {
+			logs.Errorf("failed to create detection task for ip: %s, err: %v, rid: %s", req.IPs[i], err, cts.Kit.Rid)
+			return nil, err
+		}
+	}
+
+	// 写完db直接开始执行空闲检查
+	go func() {
+		// 构造一个假的回收单
+		order := &table.RecycleOrder{
+			SuborderID: suborderID,
+			BizID:      req.BkBizID,
+			Stage:      table.RecycleStageDone,
+			Status:     table.RecycleStatusDone,
+		}
+		kt := core.NewBackendKit()
+		err = dao.Set().RecycleOrder().CreateRecycleOrder(kt.Ctx, order)
+		if err != nil {
+			logs.Errorf("failed to create recycle order, orderID: %s, err: %v, rid: %s", orderID, err, cts.Kit.Rid)
+			return
+		}
+		// Detect是同步函数
+		err = s.logics.Recycler().GetDispatcher().GetDetector().Detect(kt, order, false)
+		if err != nil {
+			logs.Errorf("failed to detect, orderID: %s, err: %v, rid: %s", orderID, err, cts.Kit.Rid)
+		}
+		return
+	}()
+
+	return woaserver.StartIdleCheckRsp{
+		SuborderID: suborderID,
+	}, nil
 }

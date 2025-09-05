@@ -72,6 +72,7 @@ func (s *service) initRecyclerService(h *rest.Handler) {
 	h.Add("GetBizRecycleOrder", http.MethodPost, "/findmany/biz/recycle/order", s.GetBizRecycleOrder)
 	h.Add("GetRecycleDetect", http.MethodPost, "/findmany/recycle/detect", s.GetRecycleDetect)
 	h.Add("ListDetectHost", http.MethodPost, "/list/recycle/detect/host", s.ListDetectHost)
+	h.Add("ListDetectTask", http.MethodPost, "/list/detect/task", s.ListDetectTask)
 	h.Add("GetRecycleDetectStep", http.MethodPost, "/findmany/recycle/detect/step", s.GetRecycleDetectStep)
 	h.Add("StartRecycleOrder", http.MethodPost, "/start/recycle/order", s.StartRecycleOrder)
 	h.Add("StartRecycleOrderByRecycleType", http.MethodPost,
@@ -86,6 +87,7 @@ func (s *service) initRecyclerService(h *rest.Handler) {
 	h.Add("GetRecycleRecordRegion", http.MethodGet, "/find/recycle/record/region", s.GetRecycleRecordRegion)
 	h.Add("GetRecycleRecordZone", http.MethodGet, "/find/recycle/record/zone", s.GetRecycleRecordZone)
 	h.Add("GetBizHostToRecycle", http.MethodPost, "/find/recycle/biz/host", s.GetBizHostToRecycle)
+	h.Add("StartIdleCheck", http.MethodPost, "/start/cvms/idle_check", s.StartIdleCheck)
 
 	// configs related api
 	h.Add("GetRecycleStageCfg", http.MethodGet, "/find/config/recycle/stage", s.GetRecycleStageCfg)

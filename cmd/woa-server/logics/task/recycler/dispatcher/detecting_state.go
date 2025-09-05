@@ -107,7 +107,7 @@ func (ds *DetectingState) dealDetectTask(kt *kit.Kit, ctx *CommonContext) *event
 		return &event.Event{Type: event.DetectFailed, Error: err}
 	}
 	// run detection tasks
-	if err := ctx.Dispatcher.detector.Detect(kt, ctx.Order); err != nil {
+	if err := ctx.Dispatcher.detector.Detect(kt, ctx.Order, true); err != nil {
 		logs.Errorf("failed to run detection tasks, err: %v, rid: %s", err, kt.Rid)
 		return &event.Event{Type: event.DetectFailed, Error: err}
 	}

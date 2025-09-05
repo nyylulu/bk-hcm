@@ -123,6 +123,11 @@ func InitCvmService(c *capability.Capability) {
 	h.Add("BizBatchAssociateSecurityGroups", http.MethodPost,
 		"/bizs/{bk_biz_id}/cvms/{cvm_id}/security_groups/batch_associate", svc.BizBatchAssociateSecurityGroups)
 
+	h.Add("BatchIdleCheckBizCvm", http.MethodPost,
+		"/bizs/{bk_biz_id}/cvms/batch/idle_check", svc.BatchIdleCheckBizCvm)
+	h.Add("GetIdleCheckCvmResult", http.MethodPost,
+		"/bizs/{bk_biz_id}/cvms/idle_check/result/{suborder_id}", svc.GetIdleCheckCvmResult)
+
 	initCvmServiceHooks(svc, h)
 
 	h.Load(c.WebService)

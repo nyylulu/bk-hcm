@@ -259,7 +259,7 @@ func (d *Detector) updateRecycleStep(step *table.DetectStep, status table.Detect
 }
 
 func (d *Detector) fillTaskHostIDMap(kt *kit.Kit, taskList []*table.DetectTask,
-	suborderID string) (map[int64]*table.DetectTask, error) {
+	suborderID string, fromRecycle bool) (map[int64]*table.DetectTask, error) {
 
 	hostIDTaskMap := make(map[int64]*table.DetectTask, len(taskList))
 	taskIPMap := make(map[string]*table.DetectTask)
@@ -272,6 +272,10 @@ func (d *Detector) fillTaskHostIDMap(kt *kit.Kit, taskList []*table.DetectTask,
 		}
 		taskIPMap[task.IP] = task
 		ipList = append(ipList, task.IP)
+	}
+	// 非回收触发的空闲检查已经事先填充好task中的assetID、hostID、ip才写入db
+	if !fromRecycle {
+		return hostIDTaskMap, nil
 	}
 
 	page := metadata.BasePage{

@@ -220,6 +220,14 @@ const (
 	StepCheckPmOuterIP DetectStepName = "CHECK_PM_OUTERIP" // 物理机外网IP检查
 )
 
+const (
+	// DetectStepsPerTask 一个空闲检查任务包含的步骤数
+	DetectStepsPerTask = 10
+	// DetectTaskMaxPageLimit 空闲检查任务执行详情查询分页最大数量
+	// 1台待空闲检查的主机->1个detectTask->10个detectStep，因为500/10=50，所以限制查询主机数为50
+	DetectTaskMaxPageLimit = 500 / DetectStepsPerTask
+)
+
 // ReturnStatus recycle detection status
 type ReturnStatus string
 

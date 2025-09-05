@@ -10,19 +10,19 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/cvms/idle_check/result/{suborder_id}
 
 ### 输入参数
 
-| 参数名称        | 参数类型   | 必选 | 描述                      |
-|-------------|--------|----|-------------------------|
-| bk_biz_id   | int64  | 是  | 业务ID                    |
-| suborder_id | string | 是  | 待查询结果的空闲检查子单号（一单最多500台） |
-| page        | object | 是  | 分页设置                    |
+| 参数名称        | 参数类型   | 必选 | 描述            |
+|-------------|--------|----|---------------|
+| bk_biz_id   | int64  | 是  | 业务ID          |
+| suborder_id | string | 是  | 待查询结果的空闲检查子单号 |
+| page        | object | 是  | 分页设置          |
 
 #### page
 
 | 参数名称  | 参数类型   | 必选 | 描述                                                                                                                                                  |
 |-------|--------|----|-----------------------------------------------------------------------------------------------------------------------------------------------------|
-| count | bool   | 是  | 是否返回总记录条数。 如果为true，查询结果返回总记录条数 count，但查询结果详情数据 details 为空数组，此时 start 和 limit 参数将无效，且必需设置为0。如果为false，则根据 start 和 limit 参数，返回查询结果详情数据，但总记录条数 count 为0 |
+| count | bool   | 否  | 是否返回总记录条数。 如果为true，查询结果返回总记录条数 count，但查询结果详情数据 details 为空数组，此时 start 和 limit 参数将无效，且必需设置为0。如果为false，则根据 start 和 limit 参数，返回查询结果详情数据，但总记录条数 count 为0 |
 | start | uint32 | 否  | 记录开始位置，start 起始值为0（查看第start台～第start+limit台机器的空闲检查结果）                                                                                                |
-| limit | uint32 | 否  | 每次查询结果的机器数限制，不能为0，最大50台（因为每台机器空闲检查时都有10个步骤，此时响应结果长度为50，分别描述了50台机器的空闲检查结果，每一个元素中包含了这台机器空闲检查任务执行的整体情况以及长度为10的空闲检查步骤具体执行情况描述）                          |
+| limit | uint32 | 是  | 每次查询结果的机器数限制，最大50台（因为每台机器空闲检查时都有10个步骤，此时响应结果长度为50，分别描述了50台机器的空闲检查结果，每一个元素中包含了这台机器空闲检查任务执行的整体情况以及长度为10的空闲检查步骤具体执行情况描述）                               |
 
 ### 调用示例
 
@@ -47,87 +47,96 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/cvms/idle_check/result/{suborder_id}
   "result": true,
   "code": 0,
   "message": "success",
-  "data": [
-    {
-      "detect_task": {
-        "task_id": "xxx",
-        "order_id": 123,
-        "suborder_id": "xxx",
-        "bk_asset_id": "xxx",
-        "bk_host_id": 12345,
-        "ip": "10.0.0.1",
-        "bk_username": "admin",
-        "status": "SUCCESS",
-        "message": "xxx",
-        "total_num": 5,
-        "success_num": 5,
-        "pending_num": 0,
-        "failed_num": 0,
-        "create_at": "2024-08-22T10:00:00Z",
-        "update_at": "2024-08-22T10:05:00Z"
-      },
-      "detect_steps": [
-        {
-          "id": "xxx",
+  "data": {
+    "details": [
+      {
+        "detect_task": {
+          "task_id": "xxx",
           "order_id": 123,
           "suborder_id": "xxx",
-          "task_id": "xxx",
-          "step_id": 1,
-          "step_name": "xxx",
-          "step_desc": "xxx",
-          "bk_host_id": 12345,
           "bk_asset_id": "xxx",
+          "bk_host_id": 12345,
           "ip": "10.0.0.1",
           "bk_username": "admin",
-          "retry_time": 0,
           "status": "SUCCESS",
           "message": "xxx",
-          "skip": 0,
-          "log": "xxx",
-          "start_at": "2024-08-22T10:00:00Z",
-          "end_at": "2024-08-22T10:01:00Z",
+          "total_num": 5,
+          "success_num": 5,
+          "pending_num": 0,
+          "failed_num": 0,
           "create_at": "2024-08-22T10:00:00Z",
-          "update_at": "2024-08-22T10:01:00Z"
+          "update_at": "2024-08-22T10:05:00Z"
         },
-        {
-          "id": "xxx",
-          "order_id": 123,
-          "suborder_id": "xxx",
-          "task_id": "xxx",
-          "step_id": 2,
-          "step_name": "xxx",
-          "step_desc": "xxx",
-          "bk_host_id": 12345,
-          "bk_asset_id": "xxx",
-          "ip": "10.0.0.1",
-          "bk_username": "admin",
-          "retry_time": 0,
-          "status": "SUCCESS",
-          "message": "xxx",
-          "skip": 0,
-          "log": "xxx",
-          "start_at": "2024-08-22T10:01:00Z",
-          "end_at": "2024-08-22T10:02:00Z",
-          "create_at": "2024-08-22T10:01:00Z",
-          "update_at": "2024-08-22T10:02:00Z"
-        }
-      ]
-    }
-  ]
+        "detect_steps": [
+          {
+            "id": "xxx",
+            "order_id": 123,
+            "suborder_id": "xxx",
+            "task_id": "xxx",
+            "step_id": 1,
+            "step_name": "xxx",
+            "step_desc": "xxx",
+            "bk_host_id": 12345,
+            "bk_asset_id": "xxx",
+            "ip": "10.0.0.1",
+            "bk_username": "admin",
+            "retry_time": 0,
+            "status": "SUCCESS",
+            "message": "xxx",
+            "skip": 0,
+            "log": "xxx",
+            "start_at": "2024-08-22T10:00:00Z",
+            "end_at": "2024-08-22T10:01:00Z",
+            "create_at": "2024-08-22T10:00:00Z",
+            "update_at": "2024-08-22T10:01:00Z"
+          },
+          {
+            "id": "xxx",
+            "order_id": 123,
+            "suborder_id": "xxx",
+            "task_id": "xxx",
+            "step_id": 2,
+            "step_name": "xxx",
+            "step_desc": "xxx",
+            "bk_host_id": 12345,
+            "bk_asset_id": "xxx",
+            "ip": "10.0.0.1",
+            "bk_username": "admin",
+            "retry_time": 0,
+            "status": "SUCCESS",
+            "message": "xxx",
+            "skip": 0,
+            "log": "xxx",
+            "start_at": "2024-08-22T10:01:00Z",
+            "end_at": "2024-08-22T10:02:00Z",
+            "create_at": "2024-08-22T10:01:00Z",
+            "update_at": "2024-08-22T10:02:00Z"
+          }
+        ]
+      }
+    ]
+  }
 }
 ```
 
 ### 响应参数说明
 
-| 参数名称    | 参数类型         | 描述                                                              |
-|---------|--------------|-----------------------------------------------------------------|
-| result  | bool         | 请求成功与否。true:请求成功；false请求失败                                      |
-| code    | int          | 错误编码。 0表示success，>0表示失败错误                                       |
-| message | string       | 请求失败返回的错误信息                                                     |
-| data    | object array | 响应数据，长度为本次查询的机器数，小于等于limit，包含本次查询的每台机器的整体检查结果及其对应的每个检查步骤的详细执行情况 |
+| 参数名称    | 参数类型   | 描述                         |
+|---------|--------|----------------------------|
+| result  | bool   | 请求成功与否。true:请求成功；false请求失败 |
+| code    | int    | 错误编码。 0表示success，>0表示失败错误  |
+| message | string | 请求失败返回的错误信息                |
+| data    | object | 响应数据                       |
 
-#### data[i]
-##### 查询到的第i个执行空闲检查任务的机器对应的空闲检查任务整体执行信息，以及每个空闲检查步骤的执行详情
+#### data
+
+| 参数名称    | 参数类型         | 描述                                                       |
+|---------|--------------|----------------------------------------------------------|
+| details | object array | 本次查询的每台机器的整体检查结果及其对应的每个检查步骤的详细执行情况,长度为本次查询的机器数，小于等于limit |
+
+#### data.details[i]
+查询到的第i个执行空闲检查任务的机器对应的空闲检查任务整体执行信息，以及每个空闲检查步骤的执行详情
+1台待空闲检查主机->1个detect_task->10个detect_step
 
 | 参数名称         | 参数类型         | 描述                                                                |
 |--------------|--------------|-------------------------------------------------------------------|
@@ -154,7 +163,7 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/cvms/idle_check/result/{suborder_id}
 | create_at	  | string | 空闲检查任务步骤记录创建时间                               |
 | update_at	  | string | 空闲检查任务步骤记录最后更新时间                             |
 
-#### detect_steps
+#### detect_steps[i]
 | 字段名称        | 类型     | 描述                                           |
 |-------------|--------|----------------------------------------------|
 | id          | string | 步骤ID                                         |
