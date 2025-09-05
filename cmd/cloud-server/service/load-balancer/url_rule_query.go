@@ -196,6 +196,19 @@ func (svc *lbSvc) addTargetConditions(kt *kit.Kit, req *cslb.ListUrlRulesByTopol
 // queryLoadBalancerIDsByConditions 根据负载均衡器条件查询负载均衡器ID
 func (svc *lbSvc) queryLoadBalancerIDsByConditions(kt *kit.Kit, bizID int64, vendor enumor.Vendor,
 	req *cslb.ListUrlRulesByTopologyReq) ([]string, error) {
+
+	lbFilter, err := svc.buildLoadBalancerFilter(bizID, vendor, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return svc.queryLoadBalancerIDsByFilter(kt, lbFilter)
+}
+
+// buildLoadBalancerFilter 构建负载均衡器查询过滤器
+func (svc *lbSvc) buildLoadBalancerFilter(bizID int64, vendor enumor.Vendor,
+	req *cslb.ListUrlRulesByTopologyReq) (*filter.Expression, error) {
+
 	lbConditions := []*filter.AtomRule{
 		tools.RuleEqual("vendor", vendor),
 		tools.RuleEqual("account_id", req.AccountID),
@@ -205,19 +218,15 @@ func (svc *lbSvc) queryLoadBalancerIDsByConditions(kt *kit.Kit, bizID int64, ven
 	if len(req.LbRegions) > 0 {
 		lbConditions = append(lbConditions, tools.RuleIn("region", req.LbRegions))
 	}
-
 	if len(req.LbNetworkTypes) > 0 {
 		lbConditions = append(lbConditions, tools.RuleIn("network_type", req.LbNetworkTypes))
 	}
-
 	if len(req.LbIpVersions) > 0 {
 		lbConditions = append(lbConditions, tools.RuleIn("ip_version", req.LbIpVersions))
 	}
-
 	if len(req.CloudLbIds) > 0 {
 		lbConditions = append(lbConditions, tools.RuleIn("cloud_id", req.CloudLbIds))
 	}
-
 	if len(req.LbDomains) > 0 {
 		lbConditions = append(lbConditions, tools.RuleIn("domain", req.LbDomains))
 	}
@@ -230,43 +239,17 @@ func (svc *lbSvc) queryLoadBalancerIDsByConditions(kt *kit.Kit, bizID int64, ven
 			tools.RuleJsonOverlaps("public_ipv6_addresses", req.LbVips),
 		}
 		vipOrFilter := tools.ExpressionOr(vipConditions...)
-
-		lbFilter, err := tools.And(tools.ExpressionAnd(lbConditions...), vipOrFilter)
-		if err != nil {
-			return nil, err
-		}
-		lbReq := &core.ListReq{
-			Filter: lbFilter,
-			Page:   core.NewDefaultBasePage(),
-		}
-
-		lbIDs := make([]string, 0)
-		for {
-			lbResp, err := svc.client.DataService().Global.LoadBalancer.ListLoadBalancer(kt, lbReq)
-			if err != nil {
-				return nil, err
-			}
-
-			for _, lb := range lbResp.Details {
-				lbIDs = append(lbIDs, lb.ID)
-			}
-
-			if uint(len(lbResp.Details)) < core.DefaultMaxPageLimit {
-				break
-			}
-
-			lbReq.Page.Start += uint32(core.DefaultMaxPageLimit)
-		}
-
-		return lbIDs, nil
+		return tools.And(tools.ExpressionAnd(lbConditions...), vipOrFilter)
 	}
 
-	lbReq := &core.ListReq{
-		Filter: tools.ExpressionAnd(lbConditions...),
-		Page:   core.NewDefaultBasePage(),
-	}
+	return tools.ExpressionAnd(lbConditions...), nil
+}
 
+// queryLoadBalancerIDsByFilter 根据过滤器查询负载均衡器ID
+func (svc *lbSvc) queryLoadBalancerIDsByFilter(kt *kit.Kit, filter *filter.Expression) ([]string, error) {
+	lbReq := &core.ListReq{Filter: filter, Page: core.NewDefaultBasePage()}
 	lbIDs := make([]string, 0)
+
 	for {
 		lbResp, err := svc.client.DataService().Global.LoadBalancer.ListLoadBalancer(kt, lbReq)
 		if err != nil {
