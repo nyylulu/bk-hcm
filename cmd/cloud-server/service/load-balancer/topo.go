@@ -645,11 +645,11 @@ func (svc *lbSvc) listListenerByTopo(kt *kit.Kit, bizID int64, vendor enumor.Ven
 func (svc *lbSvc) buildListenerWithTopoInfo(kt *kit.Kit, vendor enumor.Vendor, info *cslb.LblTopoInfo,
 	listeners []corelb.TCloudListener) ([]cslb.ListenerWithTopo, error) {
 
-	lblIDRulesMap, lblTargetCountMap, lblNonZeroWeightTargetCountMap, err := svc.getListenerRuleAndTargetCount(
-		kt, vendor, listeners)
+	lblIDRulesMap, lblTargetCountMap, lblNonZeroWeightTargetCountMap, lblIDTgIDMap, err := svc.getListenerRelInfo(kt,
+		vendor, listeners)
 	if err != nil {
-		logs.Errorf("get listener layer7 rule and target count failed, err: %v, listeners: %+v, rid: %s", err,
-			listeners, kt.Rid)
+		logs.Errorf("get listener rule and target count failed, err: %v, listeners: %+v, rid: %s", err, listeners,
+			kt.Rid)
 		return nil, err
 	}
 
@@ -668,6 +668,7 @@ func (svc *lbSvc) buildListenerWithTopoInfo(kt *kit.Kit, vendor enumor.Vendor, i
 		ruleDomainCount, urlCount := 0, 0
 		var scheduler string
 		rules := lblIDRulesMap[lbl.ID]
+		var targetGroupID string
 		if lbl.Protocol.IsLayer7Protocol() && len(rules) != 0 {
 			domains := converter.SliceToMap(rules,
 				func(r corelb.TCloudLbUrlRule) (string, struct{}) { return r.Domain, struct{}{} })
@@ -676,6 +677,7 @@ func (svc *lbSvc) buildListenerWithTopoInfo(kt *kit.Kit, vendor enumor.Vendor, i
 		}
 		if lbl.Protocol.IsLayer4Protocol() && len(rules) != 0 {
 			scheduler = rules[0].Scheduler
+			targetGroupID = lblIDTgIDMap[lbl.ID]
 		}
 
 		detail := cslb.ListenerWithTopo{
@@ -690,6 +692,7 @@ func (svc *lbSvc) buildListenerWithTopoInfo(kt *kit.Kit, vendor enumor.Vendor, i
 			UrlCount:                 urlCount,
 			TargetCount:              lblTargetCountMap[lbl.ID],
 			NonZeroWeightTargetCount: lblNonZeroWeightTargetCountMap[lbl.ID],
+			TargetGroupID:            targetGroupID,
 		}
 		details = append(details, detail)
 	}
@@ -697,11 +700,11 @@ func (svc *lbSvc) buildListenerWithTopoInfo(kt *kit.Kit, vendor enumor.Vendor, i
 	return details, nil
 }
 
-func (svc *lbSvc) getListenerRuleAndTargetCount(kt *kit.Kit, vendor enumor.Vendor, listeners []corelb.TCloudListener) (
-	map[string][]corelb.TCloudLbUrlRule, map[string]int, map[string]int, error) {
+func (svc *lbSvc) getListenerRelInfo(kt *kit.Kit, vendor enumor.Vendor, listeners []corelb.TCloudListener) (
+	map[string][]corelb.TCloudLbUrlRule, map[string]int, map[string]int, map[string]string, error) {
 
 	if len(listeners) == 0 {
-		return nil, nil, nil, fmt.Errorf("listeners is empty")
+		return nil, nil, nil, nil, fmt.Errorf("listeners is empty")
 	}
 
 	// 查询监听器规则
@@ -714,7 +717,7 @@ func (svc *lbSvc) getListenerRuleAndTargetCount(kt *kit.Kit, vendor enumor.Vendo
 	ruleMap, err := svc.getRuleByCond(kt, vendor, ruleCond)
 	if err != nil {
 		logs.Errorf("get rule by cond failed, err: %v, req: %+v, rid: %s", err, ruleCond, kt.Rid)
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	for _, rule := range maps.Values(ruleMap) {
 		if _, ok := lblIDRulesMap[rule.LblID]; !ok {
@@ -727,26 +730,28 @@ func (svc *lbSvc) getListenerRuleAndTargetCount(kt *kit.Kit, vendor enumor.Vendo
 	tgLbRels, err := svc.getTgLbRelByCond(kt, []filter.RuleFactory{tools.RuleIn("lbl_id", lblIDs)})
 	if err != nil {
 		logs.Errorf("get tg lb rel by cond failed, err: %v, lblIDs: %+v, rid: %s", err, lblIDs, kt.Rid)
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	tgIDLblIDMap := make(map[string]string)
+	lblIDTgIDMap := make(map[string]string)
 	tgIDs := make([]string, 0)
 	for _, tgLbRel := range tgLbRels {
 		tgIDLblIDMap[tgLbRel.TargetGroupID] = tgLbRel.LblID
+		lblIDTgIDMap[tgLbRel.LblID] = tgLbRel.TargetGroupID
 		tgIDs = append(tgIDs, tgLbRel.TargetGroupID)
 	}
 	targets, err := svc.getTargetByCond(kt, []filter.RuleFactory{tools.RuleIn("target_group_id", tgIDs)})
 	if err != nil {
 		logs.Errorf("get target by cond failed, err: %v, tgIDs: %+v, rid: %s", err, tgIDs, kt.Rid)
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	lblTargetCountMap := make(map[string]int)
 	lblNonZeroWeightTargetCountMap := make(map[string]int)
 	for _, target := range targets {
 		lblID, ok := tgIDLblIDMap[target.TargetGroupID]
 		if !ok {
-			return nil, nil, nil, fmt.Errorf("target group not found, tg id: %s, target id: %s", target.TargetGroupID,
-				target.ID)
+			return nil, nil, nil, nil, fmt.Errorf("target group not found, tg id: %s, target id: %s",
+				target.TargetGroupID, target.ID)
 		}
 		lblTargetCountMap[lblID]++
 		if converter.PtrToVal(target.Weight) != 0 {
@@ -754,7 +759,7 @@ func (svc *lbSvc) getListenerRuleAndTargetCount(kt *kit.Kit, vendor enumor.Vendo
 		}
 	}
 
-	return lblIDRulesMap, lblTargetCountMap, lblNonZeroWeightTargetCountMap, nil
+	return lblIDRulesMap, lblTargetCountMap, lblNonZeroWeightTargetCountMap, lblIDTgIDMap, nil
 }
 
 func (svc *lbSvc) getLblTopoInfoByReq(kt *kit.Kit, bizID int64, vendor enumor.Vendor, req *cslb.LbTopoReq) (

@@ -1151,6 +1151,7 @@ type ListenerWithTopo struct {
 	UrlCount                 int                                 `json:"url_count"`
 	TargetCount              int                                 `json:"target_count"`
 	NonZeroWeightTargetCount int                                 `json:"non_zero_weight_target_count"`
+	TargetGroupID            string                              `json:"target_group_id"`
 }
 
 // LblTopoInfo listener topo info
