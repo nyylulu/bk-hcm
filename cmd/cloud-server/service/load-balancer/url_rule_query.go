@@ -95,7 +95,7 @@ func (svc *lbSvc) buildUrlRuleQueryFilter(kt *kit.Kit, bizID int64, vendor enumo
 		len(req.CloudLbIds) > 0 || len(req.LbVips) > 0 || len(req.LbDomains) > 0
 
 	if !hasRuleConditions && !hasListenerConditions && !hasTargetConditions && !hasLbConditions {
-		return tools.ExpressionAnd(tools.RuleEqual("id", "nonexistent")), nil
+		return &filter.Expression{}, nil
 	}
 
 	var listenerIDs []string
@@ -106,9 +106,9 @@ func (svc *lbSvc) buildUrlRuleQueryFilter(kt *kit.Kit, bizID int64, vendor enumo
 		if err != nil {
 			return nil, fmt.Errorf("query listener ids failed, err: %v", err)
 		}
-
+		// 有监听器条件但未查询到匹配的监听器，直接返回空结果
 		if len(listenerIDs) == 0 {
-			return tools.ExpressionAnd(tools.RuleEqual("id", "nonexistent")), nil
+			return &filter.Expression{}, nil
 		}
 	}
 
@@ -151,8 +151,7 @@ func (svc *lbSvc) addLoadBalancerConditions(kt *kit.Kit, bizID int64, vendor enu
 		}
 
 		if len(lbIDs) == 0 {
-			conditions = append(conditions, tools.RuleEqual("id", "nonexistent"))
-			return conditions, nil
+			return []*filter.AtomRule{}, nil
 		}
 
 		conditions = append(conditions, tools.RuleIn("lb_id", lbIDs))
@@ -201,6 +200,22 @@ func (svc *lbSvc) queryLoadBalancerIDsByConditions(kt *kit.Kit, bizID int64, ven
 		tools.RuleEqual("vendor", vendor),
 		tools.RuleEqual("account_id", req.AccountID),
 		tools.RuleEqual("bk_biz_id", bizID),
+	}
+
+	if len(req.LbRegions) > 0 {
+		lbConditions = append(lbConditions, tools.RuleIn("region", req.LbRegions))
+	}
+
+	if len(req.LbNetworkTypes) > 0 {
+		lbConditions = append(lbConditions, tools.RuleIn("network_type", req.LbNetworkTypes))
+	}
+
+	if len(req.LbIpVersions) > 0 {
+		lbConditions = append(lbConditions, tools.RuleIn("ip_version", req.LbIpVersions))
+	}
+
+	if len(req.CloudLbIds) > 0 {
+		lbConditions = append(lbConditions, tools.RuleIn("cloud_id", req.CloudLbIds))
 	}
 
 	if len(req.LbDomains) > 0 {
@@ -271,7 +286,7 @@ func (svc *lbSvc) queryLoadBalancerIDsByConditions(kt *kit.Kit, bizID int64, ven
 	return lbIDs, nil
 }
 
-// queryListenerIDsByConditions 根据条件查询监听器ID
+// queryListenerIDsByConditions 根据条件查询监听器ID,先根据条件查clb，再根据clb的id查监听器
 func (svc *lbSvc) queryListenerIDsByConditions(kt *kit.Kit, bizID int64, vendor enumor.Vendor,
 	req *cslb.ListUrlRulesByTopologyReq) ([]string, error) {
 	lbIDs, err := svc.queryLoadBalancerIDsByConditions(kt, bizID, vendor, req)
