@@ -68,10 +68,6 @@ func (svc *clbSvc) RegisterTargetToListenerRule(cts *rest.Contexts) (any, error)
 		return nil, err
 	}
 
-	logs.Infof("registering targets directly to listener/rule, cloud will handle target group creation automatically, "+
-		"listener_id: %s, rule_id: %s, targets_count: %d, rid: %s",
-		req.CloudListenerID, req.CloudRuleID, len(req.Targets), cts.Kit.Rid)
-
 	opt := &typeslb.TCloudRegisterTargetsOption{
 		Region:         lb.Region,
 		LoadBalancerId: lb.CloudID,
@@ -100,7 +96,5 @@ func (svc *clbSvc) RegisterTargetToListenerRule(cts *rest.Contexts) (any, error)
 		return nil, fmt.Errorf("some listener fail to bind: %v", failLblIds)
 	}
 
-	logs.Infof("successfully registered %d targets to listener/rule, cloud API handled target group creation, rid: %s",
-		len(req.Targets), cts.Kit.Rid)
 	return nil, nil
 }
