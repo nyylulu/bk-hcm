@@ -119,7 +119,7 @@ func (svc *lbSvc) buildUrlRuleQueryFilter(kt *kit.Kit, bizID int64, vendor enumo
 	}
 
 	if hasListenerConditions {
-		conditions = append(conditions, tools.RuleIn("lbl_id", listenerIDs))
+		conditions = append(conditions, tools.RuleIn("cloud_lbl_id", listenerIDs))
 	}
 
 	conditions, err = svc.addLoadBalancerConditions(kt, bizID, vendor, req, conditions)
@@ -311,9 +311,9 @@ func (svc *lbSvc) queryListenerIDsByConditions(kt *kit.Kit, bizID int64, vendor 
 		}
 
 		for _, listener := range listenerResp.Details {
-			listenerIDs = append(listenerIDs, listener.ID)
-			logs.Infof("queryListenerIDsByConditions: listener ID: %s, account_id: %s, bk_biz_id: %d, lb_id: %s",
-				listener.ID, listener.AccountID, listener.BkBizID, listener.LbID)
+			listenerIDs = append(listenerIDs, listener.CloudID)
+			logs.Infof("queryListenerIDsByConditions: listener ID: %s, cloud_id: %s, account_id: %s, bk_biz_id: %d, lb_id: %s",
+				listener.ID, listener.CloudID, listener.AccountID, listener.BkBizID, listener.LbID)
 		}
 
 		if uint(len(listenerResp.Details)) < core.DefaultMaxPageLimit {
