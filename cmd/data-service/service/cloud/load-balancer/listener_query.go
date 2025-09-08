@@ -20,6 +20,7 @@
 package loadbalancer
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -569,6 +570,10 @@ func (svc *lbSvc) listListenerWithTarget(kt *kit.Kit, lblReq protocloud.ListList
 	// 如果传入了RSPORT，则进行校验
 	var targetIPPortMap = make(map[string]struct{}, len(targetList))
 	if len(lblReq.ListenerQueryItem.RsPorts) > 0 {
+		// 校验传入的RSPORT和RPIP是否一一对应
+		if len(lblReq.ListenerQueryItem.RsPorts) != len(lblReq.ListenerQueryItem.RsIPs) {
+			return nil, nil, errors.New("rs_port and rs_ip num must be equal")
+		}
 		for idx, ip := range lblReq.ListenerQueryItem.RsIPs {
 			targetIPPortMap[fmt.Sprintf("%s_%s_%d", lblReq.ListenerQueryItem.InstType, ip,
 				lblReq.ListenerQueryItem.RsPorts[idx])] = struct{}{}
@@ -694,6 +699,11 @@ func (svc *lbSvc) ListListenerByCond(cts *rest.Contexts) (any, error) {
 		var lblCondList []*protocloud.ListBatchListenerResult
 		// 如果传入了RSIP、RSPort，需要查询监听器对应的目标组、目标组里的RS是否匹配
 		if len(item.RsIPs) > 0 || len(item.RsPorts) > 0 {
+			// 校验监听器查询参数
+			if err = queryReq.ListenerQueryItem.Validate(); err != nil {
+				return nil, err
+			}
+
 			lblCondList, err = svc.queryListenerWithTargets(cts.Kit, queryReq)
 		} else {
 			lblCondList, err = svc.queryListenerWithoutTargets(cts.Kit, queryReq)
