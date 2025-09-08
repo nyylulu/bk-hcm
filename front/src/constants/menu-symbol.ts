@@ -29,6 +29,7 @@ export const MENU_BUSINESS_RECYCLE_BIN_MANAGEMENT = 'menu_business_recycle_bin_m
 /**
  * 运营（服务请求）
  */
+export const MENU_SERVICE = 'menu_service';
 export const MENU_SERVICE_HOST_APPLICATION = 'menu_service_host_application';
 export const MENU_SERVICE_HOST_RECYCLE_ENTRY = 'menu_service_host_recycle_entry';
 export const MENU_SERVICE_HOST_RECYCLE = 'menu_service_host_recycle';
@@ -77,3 +78,13 @@ export const MENU_RESOURCE_DISK_APPLY = 'menu_resource_disk_apply';
 export const MENU_RESOURCE_SUBNET_APPLY = 'menu_resource_subnet_apply';
 export const MENU_RESOURCE_LOAD_BALANCER_APPLY = 'menu_resource_load_balancer_apply';
 export const MENU_RESOURCE_LOAD_BALANCER = 'menu_resource_load_balancer';
+
+/**
+ * 单据管理
+ */
+export const MENU_SERVICE_TICKET_MANAGEMENT = 'menu_service_ticket_management';
+export const MENU_SERVICE_TICKET_DETAILS = 'menu_service_ticket_details';
+export const MENU_BUSINESS_TICKET_MANAGEMENT = 'menu_business_ticket_management';
+export const MENU_BUSINESS_TICKET_DETAILS = 'menu_business_ticket_details';
+export const MENU_SERVICE_TICKET_RESOURCE_PLAN_DETAILS = 'menu_service_ticket_resource_plan_details';
+export const MENU_BUSINESS_TICKET_RESOURCE_PLAN_DETAILS = 'menu_business_ticket_resource_plan_details';

@@ -20,7 +20,7 @@ import HostApplyTipsAlert from './host-apply-tips-alert/index.vue';
 import HostApplySpringPoolTips from './spring-pool/tips.vue';
 import CvmMaxCapacity from '@/views/ziyanScr/components/cvm-max-capacity/index.vue';
 import ReqTypeValue from '@/components/display-value/req-type-value.vue';
-import { MENU_SERVICE_HOST_APPLICATION } from '@/constants/menu-symbol';
+import { MENU_SERVICE_HOST_APPLICATION, MENU_BUSINESS_TICKET_MANAGEMENT } from '@/constants/menu-symbol';
 import { useAccountStore, useUserStore } from '@/store';
 import usePlanStore from '@/store/usePlanStore';
 import useCvmChargeType from '@/views/ziyanScr/hooks/use-cvm-charge-type';
@@ -862,7 +862,7 @@ export default defineComponent({
         // 合代码之后完善跳转路由
         if (props.isbusiness) {
           router.replace({
-            name: 'ApplicationsManage',
+            name: MENU_BUSINESS_TICKET_MANAGEMENT,
             query: { [GLOBAL_BIZS_KEY]: bk_biz_id, type: 'host_apply' },
           });
         } else {

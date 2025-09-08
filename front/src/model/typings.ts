@@ -40,9 +40,9 @@ export type ModelProperty = {
   index?: number;
   apiOnly?: boolean;
 };
-
-export type PropertyColumnConfig = {
-  sort?: boolean;
+export interface PropertyColumnConfig extends TableColumn {
+  label: string | (() => string);
+  field: string | (() => string);
   align?: 'left' | 'center' | 'right';
   render?: (args: {
     cell?: any;
@@ -56,7 +56,7 @@ export type PropertyColumnConfig = {
   minWidth?: number | string;
   defaultHidden?: boolean;
   showOverflowTooltip?: boolean;
-};
+}
 
 export type PropertyFormConfig = {
   rules?: object;

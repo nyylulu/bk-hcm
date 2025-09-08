@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { h, onUnmounted, PropType, ref, VNode, watch } from 'vue';
+import { type Component, computed, h, onUnmounted, PropType, ref, VNode, watch } from 'vue';
 import type {
   IPlanTicketAudit,
   IPlanTicketAuditLog,
@@ -26,7 +26,12 @@ import TimelineTag from '@/views/ziyanScr/components/ticket-audit/children/timel
 import TimelineContent from '@/views/ziyanScr/components/ticket-audit/children/timeline-content.vue';
 import LoadingIcon from '@/views/ziyanScr/components/ticket-audit/icon/loading-icon.vue';
 import ApprovalBtn from '@/views/ziyanScr/components/ticket-audit/children/approval-btn.vue';
+import ApprovalBtnAdmin from '@/views/ziyanScr/components/ticket-audit/children/approval-btn-admin.vue';
 import { getWNameVNodeList } from '@/views/ziyanScr/components/ticket-audit/utils';
+import ExpeditingBtn from '@/views/ziyanScr/components/ticket-audit/children/expediting-btn.vue';
+import successIcon from '@/assets/image/corret-fill.png';
+import { timeFormatter } from '@/common/util';
+import { useResSubTicketStore, AdminAudit, SubTicketAudit } from '@/store/ticket/res-sub-ticket';
 
 interface Step {
   name: string;
@@ -36,14 +41,13 @@ interface Step {
 
 defineOptions({ name: 'resource-plan-ticket-audit' });
 const props = defineProps({
-  detail: Object as PropType<IPlanTicketAudit>, // audit接口数据，从外部传入
+  detail: Object as PropType<Partial<IPlanTicketAudit & SubTicketAudit>>, // audit接口数据，从外部传入
   fetchData: Function as PropType<() => Promise<void>>,
   timeoutPollAction: Object as PropType<TimeoutPollAction>,
-  isBusinessPage: Boolean,
 });
 
 const { t } = useI18n();
-const { getBusinessApiPath } = useWhereAmI();
+const { getBusinessApiPath, isBusinessPage, getBizsId } = useWhereAmI();
 const userStore = useUserStore();
 
 const crpSteps: Step[] = [
@@ -63,6 +67,7 @@ const crpSteps: Step[] = [
 ];
 
 const renderItsmAuditLogs = ref<ITimelineItem[]>([]);
+const renderAdminAuditLogs = ref<ITimelineItem[]>([]);
 const renderCrpAuditLogs = ref<ITimelineItem[]>([]);
 
 // 历史节点的tag展示：itsm没有提供name字段，直接展示message；crp正常展示name字段
@@ -71,16 +76,22 @@ const getHistoryStepTag = (log: IPlanTicketAuditLog, auditType: 'itsm' | 'crp') 
   return h(TimelineTag, null, log[key]);
 };
 // 历史节点的content展示：itsm只展示操作时间；crp展示操作人、信息、操作时间
-const getHistoryStepContent = ({ operate_at, operator, message }: IPlanTicketAuditLog, auditType: 'itsm' | 'crp') => {
+const getHistoryStepContent = (
+  { operate_at, operator, message = '' }: IPlanTicketAuditLog,
+  auditType: 'itsm' | 'crp',
+) => {
   return auditType === 'itsm'
     ? h(TimelineContent, { class: 'time-value' }, operate_at)
     : h(TimelineContent, null, [
         h('p', { class: 'message' }, [h(WName, { name: operator, class: 'mr4' }), `${message}`]),
-        h('p', { class: 'time-value' }, operate_at),
+        h('p', { class: 'time-value' }, timeFormatter(operate_at)),
       ]);
 };
 
-const getHistoryStepItems = (audit: IPlanTicketItsmAudit | IPlanTicketCrpAudit, auditType: 'itsm' | 'crp') => {
+const getHistoryStepItems = (
+  audit: IPlanTicketItsmAudit | IPlanTicketCrpAudit | AdminAudit,
+  auditType: 'itsm' | 'crp',
+) => {
   const { logs, status } = audit;
 
   // 兼容 crp init/failed 的情况
@@ -102,8 +113,9 @@ const getHistoryStepItems = (audit: IPlanTicketItsmAudit | IPlanTicketCrpAudit, 
 
 // auditing展示审批操作、failed展示审批失败原因
 const getCurrentStepItems = (
-  { current_steps, status, status_name }: IPlanTicketItsmAudit | IPlanTicketCrpAudit,
+  { current_steps, status, status_name }: IPlanTicketItsmAudit | IPlanTicketCrpAudit | AdminAudit,
   showApproval = true,
+  auditType?: string,
 ) => {
   // 兼容 crp init/failed 的情况
   if (!current_steps) return [];
@@ -116,16 +128,17 @@ const getCurrentStepItems = (
     // auditing状态，且用户为审批人时，可以进行审批处理
     const hasApprovalBtn = showApproval && isAuditing && displayProcessors.includes(userStore.username);
 
+    const comp: Component = auditType === 'admin' ? ApprovalBtnAdmin : ApprovalBtn;
     return {
       tag: h(TimelineTag, { isCurrent: true }, [
         name,
         hasApprovalBtn
           ? h(
-              ApprovalBtn,
+              comp,
               {
                 class: 'ml24',
                 loading: approvalLoading.value,
-                confirmHandler: approvalItsmAudit,
+                confirmHandler: auditType === 'admin' ? approvalAdminAudit : approvalItsmAudit,
                 onShown: () => {
                   // 当进入审批操作的时候，暂停定时刷新任务
                   props.timeoutPollAction?.reset();
@@ -139,7 +152,11 @@ const getCurrentStepItems = (
             )
           : null,
       ]),
-      content: h(TimelineContent, null, [`${status_name}，请联系 `, getWNameVNodeList(displayProcessors)]),
+      content: h(TimelineContent, null, [
+        status_name ? `${status_name}，` : '',
+        `请联系 `,
+        getWNameVNodeList(displayProcessors),
+      ]),
       nodeType: ITimelineNodeType.VNode,
       icon: isAuditing ? h(LoadingIcon) : undefined,
       type: isAuditing ? 'primary' : 'danger',
@@ -151,8 +168,12 @@ const renderItsmLogs = (audit: IPlanTicketItsmAudit) => {
   return [...getHistoryStepItems(audit, 'itsm'), ...getCurrentStepItems(audit)];
 };
 
-const getStaticCrpLogs = () =>
-  crpSteps.map<ITimelineItem>(({ name }) => ({ tag: h(TimelineTag, null, name), nodeType: ITimelineNodeType.VNode }));
+const getStaticCrpLogs = (options?: Partial<ITimelineItem>) =>
+  crpSteps.map<ITimelineItem>(({ name }) => ({
+    tag: h(TimelineTag, null, name),
+    nodeType: ITimelineNodeType.VNode,
+    ...options,
+  }));
 const renderCrpLogs = (audit: IPlanTicketCrpAudit) => {
   // 空值兼容
   if (!audit?.crp_sn) return getStaticCrpLogs();
@@ -162,6 +183,10 @@ const renderCrpLogs = (audit: IPlanTicketCrpAudit) => {
 
   // 撤销、失败、结束、拒绝，done 这五种状态，直接输出response
   if (['revoked', 'rejected', 'canceled', 'failed', 'done'].includes(status)) {
+    // 存在一种crp自动跳过的情况
+    if (status === 'done' && !logs.length && !current_steps.length) {
+      return getStaticCrpLogs({ type: 'success' });
+    }
     return [...getHistoryStepItems(audit, 'crp'), ...getCurrentStepItems(audit)];
   }
 
@@ -187,6 +212,46 @@ const renderCrpLogs = (audit: IPlanTicketCrpAudit) => {
   });
 };
 
+const renderAdminLogs = (audit: AdminAudit) => {
+  // 如果是通过/自动通过状态则不展示
+  if (['skip'].includes(audit?.status)) return;
+  if (audit?.status === 'done') {
+    audit?.logs?.forEach((log) => {
+      log.message = '已审批，审批通过';
+    });
+  }
+  renderAdminAuditLogs.value = [...getHistoryStepItems(audit, 'crp'), ...getCurrentStepItems(audit, true, 'admin')];
+};
+
+const expeditingBtnProps = computed(() => {
+  const { itsm_audit, crp_audit } = props.detail || {};
+  const { processors = [], processors_auth = {} } =
+    itsm_audit?.current_steps?.[0] || crp_audit?.current_steps?.[0] || {};
+
+  // 过滤无效审批人
+  const displayProcessors = processors.filter((processor) => processor);
+
+  const processorsWithBizAccess = displayProcessors.filter((processor) => {
+    if (!isBusinessPage) return processor; // 资源下不判断权限
+    return processors_auth[processor];
+  }); // 有权限的审批人
+  const processorsWithoutBizAccess = displayProcessors.filter((processor) => !processors_auth[processor]); // 无权限的审批人
+
+  const platform = itsm_audit?.status === 'auditing' ? 'ITSM' : 'CRP';
+  const copyText = `${t('复制')} ${platform} ${t('审批单')}`;
+  const ticketLink = itsm_audit?.status === 'auditing' ? itsm_audit?.itsm_url : crp_audit?.crp_url;
+
+  return {
+    checkPermission: platform !== 'CRP',
+    processors: displayProcessors,
+    processorsWithBizAccess,
+    processorsWithoutBizAccess,
+    copyText,
+    ticketLink,
+    defaultShow: false,
+  };
+});
+
 // 审批操作
 const approvalLoading = ref(false);
 let approvalLoadingTimer: ReturnType<typeof setTimeout> | null = null;
@@ -205,6 +270,23 @@ const approvalItsmAudit = async ({ approval, remark }: { approval: boolean; rema
     props.fetchData();
   }, 5000);
 };
+const approvalAdminAudit = async (params: { approval: boolean; use_transfer_pool: boolean }) => {
+  const store = useResSubTicketStore();
+  const { id } = props.detail;
+  const promise = isBusinessPage
+    ? store.approveAdminNodeByBiz(getBizsId(), id, params)
+    : store.approveAdminNode(id, params);
+  await promise;
+
+  Message({ theme: 'success', message: t('请求已提交，5s后自动刷新') });
+  // 5s后刷新itsm审批流信息
+  approvalLoading.value = true;
+  approvalLoadingTimer = setTimeout(async () => {
+    approvalLoading.value = false;
+    await props.fetchData();
+    renderAdminLogs(props?.detail?.admin_audit); // 重新渲染timeline
+  }, 5000);
+};
 
 watch(
   () => props.detail,
@@ -212,19 +294,44 @@ watch(
     if (!detail) {
       renderItsmAuditLogs.value = [];
       renderCrpAuditLogs.value = [];
+      renderAdminAuditLogs.value = [];
       return;
     }
 
-    const { itsm_audit, crp_audit } = detail;
-    if (!itsm_audit || !crp_audit) return Message({ theme: 'error', message: t('单据信息异常') });
+    const { itsm_audit, crp_audit, admin_audit } = detail;
+    if (admin_audit) {
+      renderAdminLogs(admin_audit);
+      // if (!crp_audit) return Message({ theme: 'error', message: t('CRP单据信息异常') });
+      if (admin_audit?.status === 'done' || admin_audit?.status === 'skip') {
+        if (!crp_audit) {
+          renderCrpAuditLogs.value = getStaticCrpLogs();
+        } else {
+          renderCrpAuditLogs.value = renderCrpLogs(crp_audit);
+        }
+      } else if (admin_audit?.status === 'auditing') renderCrpAuditLogs.value = getStaticCrpLogs();
+      return;
+    }
+
+    if (!itsm_audit) return Message({ theme: 'error', message: t('ITSM单据信息异常') });
     renderItsmAuditLogs.value = renderItsmLogs(itsm_audit);
 
+    // crp_audit 可能为空, 为空则不展示crp审批信息
+    if (!crp_audit) return (renderCrpAuditLogs.value = []);
     if (itsm_audit?.status === 'done') renderCrpAuditLogs.value = renderCrpLogs(crp_audit);
     // 如果itsm处于审批中状态，crp审批信息展示静态数据
     else if (itsm_audit?.status === 'auditing') renderCrpAuditLogs.value = getStaticCrpLogs();
   },
   { immediate: true, deep: true },
 );
+
+const hasAuditAuth = (type: 'itsm_audit' | 'crp_audit') => {
+  return (
+    isBusinessPage &&
+    props.detail?.[type]?.status === 'auditing' &&
+    props.detail?.[type]?.current_steps?.[0]?.processors.includes(userStore.username) &&
+    !props.detail?.[type]?.current_steps?.[0]?.processors_auth[userStore.username]
+  );
+};
 
 onUnmounted(() => {
   clearTimeout(approvalLoadingTimer);
@@ -233,24 +340,26 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <panel v-if="renderItsmAuditLogs.length" class="panel" :title="t('审批信息')">
-    <div class="step-wrap">
-      <h3 class="label">{{ t('一级审批') }}：</h3>
+  <panel v-if="renderItsmAuditLogs.length || detail?.admin_audit" class="panel" :title="t('审批信息')">
+    <div class="step-wrap" v-if="renderItsmAuditLogs.length">
+      <h3 class="label">{{ t('业务审批') }}：</h3>
       <ticket-audit
         class="content"
-        :title="t('ITSM 平台审批')"
         :ticket-link="detail?.itsm_audit?.itsm_url"
         :logs="renderItsmAuditLogs"
         :copy-text="t('复制ITSM审批单')"
       >
+        <template #title>
+          <div class="aduit-title">
+            <p>
+              <img v-if="detail?.itsm_audit?.status === 'done'" width="17" height="17" :src="successIcon" alt="" />
+              {{ t('ITSM 平台审批') }}
+            </p>
+          </div>
+        </template>
         <template #tools>
           <bk-popover
-            v-if="
-              isBusinessPage &&
-              detail?.itsm_audit?.status === 'auditing' &&
-              detail.itsm_audit.current_steps?.[0]?.processors.includes(userStore.username) &&
-              !detail.itsm_audit.current_steps?.[0]?.processors_auth[userStore.username]
-            "
+            v-if="hasAuditAuth('itsm_audit')"
             max-width="270"
             placement="top"
             :content="t('当前审批人无「业务访问」权限，请复制ITSM链接，在企业微信联系审批人进行催单')"
@@ -258,31 +367,68 @@ onUnmounted(() => {
             <exclamation-circle-shape class="ml12" width="18" height="18" fill="#EA3636" style="cursor: pointer" />
           </bk-popover>
         </template>
+        <template #toolkit>
+          <ExpeditingBtn v-if="detail?.itsm_audit?.status === 'auditing'" v-bind="expeditingBtnProps" />
+        </template>
       </ticket-audit>
     </div>
+
+    <!-- admin_audit比较特殊 只有一个节点 -->
+    <div class="step-wrap" v-if="detail?.admin_audit">
+      <h3 class="label">{{ t('部门审批') }}：</h3>
+      <ticket-audit class="content" :logs="renderAdminAuditLogs">
+        <template #title>
+          <div class="aduit-title">
+            <p v-if="detail?.admin_audit?.status === 'done'">
+              <img width="17" height="17" :src="successIcon" alt="" />
+              管理员审批通过
+            </p>
+            <p v-else-if="detail?.admin_audit?.status === 'skip'">
+              <img width="17" height="17" :src="successIcon" alt="" />
+              管理员审批自动通过
+            </p>
+            <p v-else>管理员审批</p>
+          </div>
+        </template>
+        <template #toolkit>
+          <ExpeditingBtn
+            v-if="detail?.admin_audit?.status === 'auditing'"
+            :processors="detail.admin_audit?.current_steps?.[0]?.processors"
+            :default-show="false"
+            :check-permission="false"
+          />
+        </template>
+      </ticket-audit>
+    </div>
+
     <div class="step-wrap" v-if="renderCrpAuditLogs.length">
-      <h3 class="label">{{ t('二级审批') }}：</h3>
+      <h3 class="label">{{ t('公司审批') }}：</h3>
       <ticket-audit
         class="content"
-        :title="t('CRP 平台审批')"
         :ticket-link="detail?.crp_audit?.crp_url"
         :logs="renderCrpAuditLogs"
         :copy-text="t('复制CRP审批单')"
       >
+        <template #title>
+          <div class="aduit-title">
+            <p>
+              <img v-if="detail?.crp_audit?.status === 'done'" width="17" height="17" :src="successIcon" alt="" />
+              {{ t('CRP 平台审批') }}
+            </p>
+          </div>
+        </template>
         <template #tools>
           <bk-popover
-            v-if="
-              isBusinessPage &&
-              detail?.crp_audit?.status === 'auditing' &&
-              detail.crp_audit.current_steps?.[0]?.processors.includes(userStore.username) &&
-              !detail.crp_audit.current_steps?.[0]?.processors_auth[userStore.username]
-            "
+            v-if="hasAuditAuth('crp_audit')"
             max-width="270"
             placement="top"
             :content="t('当前审批人无「业务访问」权限，请复制CRP链接，在企业微信联系审批人进行催单')"
           >
             <exclamation-circle-shape class="ml12" width="18" height="18" fill="#EA3636" style="cursor: pointer" />
           </bk-popover>
+        </template>
+        <template #toolkit>
+          <ExpeditingBtn v-if="detail?.crp_audit?.status === 'auditing'" v-bind="expeditingBtnProps" />
         </template>
       </ticket-audit>
     </div>
@@ -295,7 +441,7 @@ onUnmounted(() => {
 
   .step-wrap {
     display: flex;
-    padding: 0 72px;
+    padding: 0 60px 0 36px;
 
     .label {
       flex-shrink: 0;
@@ -311,6 +457,20 @@ onUnmounted(() => {
     &:not(:last-of-type) {
       margin-bottom: 16px;
     }
+  }
+}
+
+.aduit-title {
+  color: $font-deep-color;
+  font-weight: 700;
+
+  p {
+    display: flex;
+    align-items: center;
+  }
+
+  img {
+    margin-right: 9px;
   }
 }
 </style>

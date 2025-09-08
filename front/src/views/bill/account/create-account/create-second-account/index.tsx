@@ -16,6 +16,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { PluginHandlerMailbox } from '@pluginHandler/create-account-mail-suffix';
 import EmailInput from './create-section-email';
 import { useOperationProducts } from '@/hooks/useOperationProducts';
+import { MENU_SERVICE_TICKET_DETAILS } from '@/constants/menu-symbol';
 const { FormItem } = Form;
 export default defineComponent({
   setup() {
@@ -105,7 +106,7 @@ export default defineComponent({
           theme: 'success',
         });
         router.push({
-          path: '/service/ticket/detail',
+          name: MENU_SERVICE_TICKET_DETAILS,
           query: {
             ...route.query,
             id: data.id,

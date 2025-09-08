@@ -5,7 +5,12 @@ import {
   createWebHashHistory,
   RouteLocationNormalized,
 } from 'vue-router';
-import { MENU_BUSINESS, MENU_PLATFORM_MANAGEMENT, MENU_ROLLING_SERVER_MANAGEMENT } from '@/constants/menu-symbol';
+import {
+  MENU_BUSINESS,
+  MENU_PLATFORM_MANAGEMENT,
+  MENU_ROLLING_SERVER_MANAGEMENT,
+  MENU_SERVICE,
+} from '@/constants/menu-symbol';
 import { businessViews, serviceViews, platformManagementViews } from '@/views';
 import common from './module/common';
 import resource from './module/resource';
@@ -55,7 +60,7 @@ const routes: RouteRecordRaw[] = [
     children: businessViews,
   },
   {
-    name: 'menu_service',
+    name: MENU_SERVICE,
     path: '/service',
     children: serviceViews,
   },

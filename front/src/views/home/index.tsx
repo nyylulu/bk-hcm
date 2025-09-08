@@ -31,9 +31,11 @@ import {
   MENU_BUSINESS_TASK_MANAGEMENT,
   MENU_ROLLING_SERVER_MANAGEMENT,
   MENU_GREEN_CHANNEL_MANAGEMENT,
+  MENU_BUSINESS_TICKET_DETAILS,
 } from '@/constants/menu-symbol';
 import { jsonp } from '@/http';
 import i18n from '@/language/i18n';
+import routerAction from '@/router/utils/action';
 
 const { DropdownMenu, DropdownItem } = Dropdown;
 const { VERSION, BK_COMPONENT_API_URL, BK_DOMAIN, ENABLE_CLOUD_SELECTION, ENABLE_ACCOUNT_BILL } = window.PROJECT_CONFIG;
@@ -342,7 +344,7 @@ export default defineComponent({
             default: () => (
               <>
                 {whereAmI.value === Senarios.resource ? null : <Breadcrumb></Breadcrumb>}
-                <div class={['/service/my-apply'].includes(curPath.value) ? 'view-warp no-padding' : 'view-warp'}>
+                <div class={['/service/ticket'].includes(curPath.value) ? 'view-warp no-padding' : 'view-warp'}>
                   {isRouterAlive.value ? renderRouterView() : null}
                 </div>
               </>
@@ -355,8 +357,15 @@ export default defineComponent({
           title='结果确认'
           confirmText='查看审批流程'
           onConfirm={() => {
-            const url = `/#/business/ticket/detail?bizs=${accountStore.bizs}&type=security_group&id=${accountStore.securityConfirmMessage}&source=bpaas`;
-            window.open(url, '_blank');
+            routerAction.open({
+              name: MENU_BUSINESS_TICKET_DETAILS,
+              query: {
+                bizs: accountStore.bizs,
+                type: 'security_group',
+                id: accountStore.securityConfirmMessage,
+                source: 'bpaas',
+              },
+            });
             accountStore.updateSecurityConfirmMessage('');
           }}
           onClosed={() => accountStore.updateSecurityConfirmMessage('')}

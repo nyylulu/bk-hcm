@@ -22,8 +22,7 @@ import {
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 
-export const useResourcePlanStore = defineStore({
-  id: 'resourcePlanStore',
+export const useResourcePlanStore = defineStore('resourcePlanStore', {
   state: () => ({}),
   actions: {
     getDiskTypes() {

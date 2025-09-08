@@ -8,7 +8,7 @@ import Header from '@/components/resource-plan/applications/detail/header';
 import Approval from '@/components/resource-plan/applications/detail/approval';
 import ResourcePlanTicketAudit from '@/components/resource-plan/applications/detail/ticket-audit/index.vue';
 import Basic from '@/components/resource-plan/applications/detail/basic';
-import List from '@/components/resource-plan/applications/detail/list';
+import List from '@/components/resource-plan/applications/detail/list/index.vue';
 
 import type { IPlanTicketAudit, TicketByIdResult } from '@/typings/resourcePlan';
 

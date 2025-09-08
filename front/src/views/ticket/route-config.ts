@@ -1,5 +1,14 @@
 import type { RouteRecordRaw } from 'vue-router';
 import i18n from '@/language/i18n';
+import Meta from '@/router/meta';
+import {
+  MENU_SERVICE_TICKET_DETAILS,
+  MENU_BUSINESS_TICKET_DETAILS,
+  MENU_SERVICE_TICKET_MANAGEMENT,
+  MENU_BUSINESS_TICKET_MANAGEMENT,
+  MENU_SERVICE_TICKET_RESOURCE_PLAN_DETAILS,
+  MENU_BUSINESS_TICKET_RESOURCE_PLAN_DETAILS,
+} from '@/constants/menu-symbol';
 
 const { t } = i18n.global;
 
@@ -8,38 +17,47 @@ export const ticketRoutes: RouteRecordRaw[] = [
   {
     path: '/service/my-apply',
     redirect: '/service/ticket',
-    // meta是必要的，如果不想在侧边栏显示，需要设置notMenu为true
-    meta: {
-      notMenu: true,
-    },
+    meta: { ...new Meta({ notMenu: true }) },
   },
   {
     path: '/service/my-apply/detail',
     redirect: '/service/ticket/detail',
-    // meta是必要的，如果不想在侧边栏显示，需要设置notMenu为true
-    meta: {
-      notMenu: true,
-    },
+    meta: { ...new Meta({ notMenu: true }) },
   },
   {
     path: 'ticket',
-    name: 'menu_ticket_manage',
+    name: MENU_SERVICE_TICKET_MANAGEMENT,
     component: () => import('@/views/ticket/entry-srv.vue'),
     meta: {
-      activeKey: 'menu_ticket_manage',
-      title: t('单据管理'),
-      // breadcrumb: [t('服务'), t('我的申请')],
-      isShowBreadcrumb: true,
-      icon: 'hcm-icon bkhcm-icon-my-apply',
+      ...new Meta({
+        activeKey: MENU_SERVICE_TICKET_MANAGEMENT,
+        title: t('单据管理'),
+        isShowBreadcrumb: true,
+        icon: 'hcm-icon bkhcm-icon-my-apply',
+      }),
     },
   },
   {
     path: 'ticket/detail',
-    name: 'menu_ticket_detail',
+    name: MENU_SERVICE_TICKET_DETAILS,
     component: () => import('@/views/ticket/children/apply-detail'),
     meta: {
-      activeKey: 'menu_ticket_manage',
-      notMenu: true,
+      ...new Meta({
+        activeKey: MENU_SERVICE_TICKET_MANAGEMENT,
+        notMenu: true,
+      }),
+    },
+  },
+  // 服务请求下 单据管理 tab 资源预测详情
+  {
+    path: 'ticket/resource-plan/detail',
+    name: MENU_SERVICE_TICKET_RESOURCE_PLAN_DETAILS,
+    component: () => import('@/views/ticket/children/resource-plan/detail/index.vue'),
+    meta: {
+      ...new Meta({
+        activeKey: MENU_SERVICE_TICKET_MANAGEMENT,
+        notMenu: true,
+      }),
     },
   },
 ];
@@ -49,48 +67,47 @@ export const ticketRoutesBiz: RouteRecordRaw[] = [
   {
     path: '/business/applications/detail',
     redirect: '/business/ticket/detail',
-    // meta是必要的，如果不想在侧边栏显示，需要设置notMenu为true
-    meta: {
-      notMenu: true,
-    },
+    meta: { ...new Meta({ notMenu: true }) },
   },
   {
     path: '/business/applications/resource-plan/detail',
     redirect: '/business/ticket/resource-plan/detail',
-    // meta是必要的，如果不想在侧边栏显示，需要设置notMenu为true
-    meta: {
-      notMenu: true,
-    },
+    meta: { ...new Meta({ notMenu: true }) },
   },
   {
     path: 'ticket',
-    name: 'ApplicationsManage',
+    name: MENU_BUSINESS_TICKET_MANAGEMENT,
     component: () => import('@/views/ticket/entry-biz.vue'),
     meta: {
-      activeKey: 'applications',
-      title: t('单据管理'),
-      isShowBreadcrumb: true,
-      icon: 'hcm-icon bkhcm-icon-my-apply',
-      // notMenu: true,
+      ...new Meta({
+        activeKey: MENU_BUSINESS_TICKET_MANAGEMENT,
+        title: t('单据管理'),
+        isShowBreadcrumb: true,
+        icon: 'hcm-icon bkhcm-icon-my-apply',
+      }),
     },
   },
   {
     path: 'ticket/detail',
-    name: '申请单据详情',
+    name: MENU_BUSINESS_TICKET_DETAILS,
     component: () => import('@/views/ticket/children/apply-detail'),
     meta: {
-      activeKey: 'applications',
-      notMenu: true,
+      ...new Meta({
+        activeKey: MENU_BUSINESS_TICKET_DETAILS,
+        notMenu: true,
+      }),
     },
   },
   // 资源管理下 单据管理 tab 资源预测详情
   {
     path: 'ticket/resource-plan/detail',
-    name: 'BizInvoiceResourceDetail',
-    component: () => import('@/views/ticket/children/resource-plan/detail'),
+    name: MENU_BUSINESS_TICKET_RESOURCE_PLAN_DETAILS,
+    component: () => import('@/views/ticket/children/resource-plan/detail/index.vue'),
     meta: {
-      activeKey: 'applications',
-      notMenu: true,
+      ...new Meta({
+        activeKey: MENU_BUSINESS_TICKET_RESOURCE_PLAN_DETAILS,
+        notMenu: true,
+      }),
     },
   },
 ];

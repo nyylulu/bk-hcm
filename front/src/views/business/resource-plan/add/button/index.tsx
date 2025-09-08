@@ -6,6 +6,7 @@ import { useResourcePlanStore } from '@/store';
 import cssModule from './index.module.scss';
 import { GLOBAL_BIZS_KEY } from '@/common/constant';
 import type { IPlanTicket } from '@/typings/resourcePlan';
+import { MENU_BUSINESS_TICKET_RESOURCE_PLAN_DETAILS } from '@/constants/menu-symbol';
 
 export default defineComponent({
   props: {
@@ -27,7 +28,7 @@ export default defineComponent({
         await validate();
         const data = await resourcePlanStore.createBizPlan(props.modelValue, props.modelValue.bk_biz_id);
         router.push({
-          path: '/business/ticket/resource-plan/detail',
+          name: MENU_BUSINESS_TICKET_RESOURCE_PLAN_DETAILS,
           query: {
             id: data.data.id,
             [GLOBAL_BIZS_KEY]: props.modelValue.bk_biz_id,

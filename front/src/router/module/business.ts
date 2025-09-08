@@ -1,7 +1,7 @@
 // import { CogShape } from 'bkui-vue/lib/icon';
 import { LBRouteName } from '@/constants';
 import type { RouteRecordRaw } from 'vue-router';
-import { MENU_BUSINESS_ROLLING_SERVER } from '@/constants/menu-symbol';
+import { MENU_BUSINESS_ROLLING_SERVER, MENU_BUSINESS_TICKET_MANAGEMENT } from '@/constants/menu-symbol';
 import { operationLogBiz as operationLogBizRouteConfig } from '@/views/operation-log/route-config';
 import taskRouteConfig from '@/views/task/route-config';
 import { ticketRoutesBiz } from '@/views/ticket/route-config';
@@ -548,7 +548,7 @@ const businessMenus: RouteRecordRaw[] = [
               ...new Meta({
                 activeKey: 'applications',
                 notMenu: true,
-                menu: { relative: 'ApplicationsManage' },
+                menu: { relative: MENU_BUSINESS_TICKET_MANAGEMENT },
               }),
             },
           },
@@ -580,11 +580,11 @@ const businessMenus: RouteRecordRaw[] = [
             },
           },
         ],
-        // meta: {
-        //   title: '单据管理',
-        //   activeKey: 'applications',
-        //   icon: 'hcm-icon bkhcm-icon-my-apply',
-        // },
+        meta: {
+          ...new Meta({
+            notMenu: true,
+          }),
+        },
       },
     ],
     meta: {

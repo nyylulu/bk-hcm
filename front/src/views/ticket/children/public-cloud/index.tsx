@@ -8,6 +8,7 @@ import { useTable } from '@/hooks/useTable/useTable';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import { searchData } from '../../constants';
 import { RulesItem } from '@/typings';
+import { MENU_BUSINESS_TICKET_DETAILS } from '@/constants/menu-symbol';
 
 export default defineComponent({
   props: {
@@ -36,7 +37,7 @@ export default defineComponent({
                 theme='primary'
                 onClick={() => {
                   router.push({
-                    path: '/business/ticket/detail',
+                    name: MENU_BUSINESS_TICKET_DETAILS,
                     query: { ...route.query, id: data.id, source: data.source },
                   });
                 }}>

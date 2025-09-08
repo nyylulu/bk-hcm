@@ -13,6 +13,7 @@ import detailHeader from '@/views/resource/resource-manage/common/header/detail-
 import gridContainer from '@/components/layout/grid-container/grid-container.vue';
 import gridItem from '@/components/layout/grid-container/grid-item.vue';
 import status from './components/status.vue';
+import { MENU_BUSINESS_TICKET_MANAGEMENT } from '@/constants/menu-symbol';
 
 const props = defineProps<{ applicationDetail: IApplicationDetail; loading: boolean }>();
 const DISPLAY_CLB_SPECS_MAP: Record<string, string> = {
@@ -80,7 +81,7 @@ const paramInfoFields: ModelProperty[] = [
 
 // 跳转至业务-单据列表
 const navigateTo: RouteLocationRaw = reactive({
-  name: 'ApplicationsManage',
+  name: MENU_BUSINESS_TICKET_MANAGEMENT,
   query: computed(() => ({ type: 'load_balancer', [GLOBAL_BIZS_KEY]: clbDetail.value.bk_biz_id })),
 });
 </script>

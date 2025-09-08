@@ -207,7 +207,7 @@ export default defineComponent({
         });
         // router.go(-1);
         router.push({
-          path: '/service/my-apply', // 返回审批列表
+          path: 'name: MENU_SERVICE_TICKET_MANAGEMENT', // 返回审批列表
         });
       } catch (error: any) {
         console.error(error);

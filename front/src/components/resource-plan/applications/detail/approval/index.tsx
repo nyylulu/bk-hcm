@@ -1,24 +1,21 @@
 import { defineComponent, VNode, type PropType } from 'vue';
 import StatusUnknown from '@/assets/image/Status-unknown.png';
-
 import { useI18n } from 'vue-i18n';
-
 import Panel from '@/components/panel';
-import ExpeditingBtn from '@/views/ziyanScr/components/ticket-audit/children/expediting-btn.vue';
-
 import cssModule from './index.module.scss';
+// import ExpeditingBtn from '@/views/ziyanScr/components/ticket-audit/children/expediting-btn.vue';
 
 import type { IPlanTicketAudit, TicketByIdResult } from '@/typings/resourcePlan';
+import { SubTicketAudit, SubTicketDetail } from '@/store/ticket/res-sub-ticket';
 
 export default defineComponent({
   props: {
-    statusInfo: Object as PropType<TicketByIdResult['status_info']>,
-    isBiz: {
-      type: Boolean,
-      required: true,
-    },
+    statusInfo: Object as PropType<Partial<TicketByIdResult['status_info'] & SubTicketDetail['status_info']>>,
     errorMessage: String,
-    ticketAuditDetail: Object as PropType<IPlanTicketAudit>,
+    ticketAuditDetail: {
+      type: Object as PropType<IPlanTicketAudit & SubTicketAudit>,
+      default: () => ({}),
+    },
   },
   setup(props) {
     const { t } = useI18n();
@@ -41,49 +38,24 @@ export default defineComponent({
     };
 
     const renderAuditStatus = (): VNode => {
-      const { itsm_audit, crp_audit } = props.ticketAuditDetail || {};
-      if (!(itsm_audit?.status === 'auditing' || crp_audit?.status === 'auditing')) return null;
+      const { itsm_audit, crp_audit, admin_audit } = props?.ticketAuditDetail || {};
+      const isAuditing =
+        itsm_audit?.status === 'auditing' || crp_audit?.status === 'auditing' || admin_audit?.status === 'auditing';
+      if (!isAuditing) return null;
 
-      if (itsm_audit?.status === 'auditing' || crp_audit?.status === 'auditing') {
-        const { processors = [], processors_auth = {} } =
-          itsm_audit?.current_steps?.[0] || crp_audit?.current_steps?.[0] || {};
-
-        // 过滤无效审批人
-        const displayProcessors = processors.filter((processor) => processor);
-
-        const processorsWithBizAccess = displayProcessors.filter((processor) => {
-          if (!props.isBiz) return processor; // 资源下不判断权限
-          return processors_auth[processor];
-        }); // 有权限的审批人
-        const processorsWithoutBizAccess = displayProcessors.filter((processor) => !processors_auth[processor]); // 无权限的审批人
-
-        const platform = itsm_audit?.status === 'auditing' ? 'ITSM' : 'CRP';
-        const tagText = `${platform}${t('平台')}`;
-        const copyText = `${t('复制')} ${platform} ${t('审批单')}`;
-        const ticketLink = itsm_audit?.status === 'auditing' ? itsm_audit?.itsm_url : crp_audit?.crp_url;
-
-        return (
-          <div class='flex-row align-items-center'>
-            <span class={cssModule['audit-status']}>
-              {t('当前处于')}
-              <bk-tag theme='success' class='ml4 mr4'>
-                {tagText}
-              </bk-tag>
-              {t('审批环节')}
-            </span>
-            <ExpeditingBtn
-              checkPermission={platform !== 'CRP'}
-              processors={displayProcessors}
-              processorsWithBizAccess={processorsWithBizAccess}
-              processorsWithoutBizAccess={processorsWithoutBizAccess}
-              copyText={copyText}
-              ticketLink={ticketLink}
-              defaultShow={crp_audit?.status === 'auditing'} // 处于CRP审批环境时，默认显示催单弹框
-            />
-          </div>
-        );
-      }
-      return null;
+      const tagText = admin_audit?.status === 'auditing' ? '管理员审批' : itsm_audit?.status_name;
+      if (!tagText) return null;
+      return (
+        <div class='flex-row align-items-center'>
+          <span class={cssModule['audit-status']}>
+            {t('当前处于')}
+            <bk-tag theme='info' class='ml4 mr4'>
+              {tagText}
+            </bk-tag>
+            {t('节点')}
+          </span>
+        </div>
+      );
     };
 
     return () => (

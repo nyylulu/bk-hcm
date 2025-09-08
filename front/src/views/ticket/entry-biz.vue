@@ -31,7 +31,7 @@ const { t } = useI18n();
 const applyType = ref(route.query?.type || 'all');
 
 const saveActiveType = (val: string) => {
-  router.replace({ query: { type: val } });
+  router.replace({ query: { ...route.query, type: val } });
 };
 const tabList = ref<ApplicationsType[]>([
   {

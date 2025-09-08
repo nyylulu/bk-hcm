@@ -43,6 +43,8 @@ export interface IProp {
     reviewData?: Array<Record<string, any>>;
     // 其他 table 属性/自定义事件, 比如 settings, onSelectionChange...
     extra?: any;
+    // 是否展示分页器
+    showPagination?: boolean;
   };
   // 请求相关字段
   requestOption?: {
@@ -93,6 +95,7 @@ export interface IProp {
 export const useTable = (props: IProp) => {
   defaults(props, { requestOption: {} });
   defaults(props.requestOption, { dataPath: 'data.details', immediate: true });
+  defaults(props.tableOptions.showPagination, true);
 
   const { conditionFormatterMapper, valueFormatterMapper } = props.searchOptions || {};
 
@@ -148,7 +151,7 @@ export const useTable = (props: IProp) => {
       isInvidual,
       differenceFields,
     });
-    // 预览
+
     if (props.tableOptions.reviewData) {
       dataList.value = props.tableOptions.reviewData;
       return;
@@ -156,7 +159,7 @@ export const useTable = (props: IProp) => {
     isLoading.value = true;
 
     try {
-      // 判断是业务下, 还是资源下
+      // 判断是业务下, 还是资源下, 还是bill下
       let api = whereAmI.value === Senarios.business ? businessStore.list : resourceStore.list;
       if (whereAmI.value === Senarios.bill) api = useBillStore().list;
 
@@ -268,7 +271,7 @@ export const useTable = (props: IProp) => {
               data={dataList.value}
               rowKey='id'
               columns={props.tableOptions.columns}
-              pagination={pagination}
+              pagination={props.tableOptions.showPagination ? pagination : false}
               remotePagination={!props.requestOption.full}
               showOverflowTooltip
               {...(props.tableOptions.extra || {})}

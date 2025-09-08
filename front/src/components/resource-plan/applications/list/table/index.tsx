@@ -12,6 +12,10 @@ import { useWhereAmI } from '@/hooks/useWhereAmI';
 import type { IBizResourcesTicketsParam, IOpResourcesTicketsParam, IResourcesTicketItem } from '@/typings/resourcePlan';
 import type { IPageQuery } from '@/typings';
 import { GLOBAL_BIZS_KEY } from '@/common/constant';
+import {
+  MENU_SERVICE_TICKET_RESOURCE_PLAN_DETAILS,
+  MENU_BUSINESS_TICKET_RESOURCE_PLAN_DETAILS,
+} from '@/constants/menu-symbol';
 
 export default defineComponent({
   props: {
@@ -94,12 +98,12 @@ export default defineComponent({
     const handleToDetail = (data: IResourcesTicketItem) => {
       if (props.isBiz) {
         router.push({
-          path: '/business/ticket/resource-plan/detail',
+          name: MENU_BUSINESS_TICKET_RESOURCE_PLAN_DETAILS,
           query: { id: data.id, bizs: route.query[GLOBAL_BIZS_KEY] },
         });
       } else {
         router.push({
-          path: '/service/my-apply/resource-plan/detail',
+          name: MENU_SERVICE_TICKET_RESOURCE_PLAN_DETAILS,
           query: { id: data.id },
         });
       }

@@ -14,38 +14,15 @@ const serviceMenus: RouteRecordRaw[] = [
     path: '/service',
     children: [
       ...ticketRoutes,
-      {
-        path: '/service/service-apply',
-        name: 'serviceApply',
-        component: () => import('@/views/service/service-apply/index.vue'),
-        meta: {
-          title: t('服务申请'),
-          activeKey: 'serviceApply',
-          // breadcrumb: [t('服务'), t('服务申请')],
-          notMenu: true,
-          isShowBreadcrumb: true,
-        },
-      },
-      {
-        path: '/service/my-approval',
-        name: t('我的审批'),
-        component: () => import('@/views/service/my-approval/page'),
-        meta: {
-          // breadcrumb: [t('服务'), t('我的审批')],
-          isShowBreadcrumb: true,
-          notMenu: true,
-        },
-      },
       // 单据管理 tab 资源预测详情
       {
         path: '/service/my-apply/resource-plan/detail',
-        name: 'OpInvoiceResourceDetail',
-        component: () => import('@/views/service/resource-plan/applications/detail/index'),
+        redirect: '/service/ticket/resource-plan/detail',
         meta: {
-          activeKey: 'myApply',
           notMenu: true,
         },
       },
+
       {
         path: '/service/dissolve',
         component: () => import('@/views/ziyanScr/recycle-server-room'),
