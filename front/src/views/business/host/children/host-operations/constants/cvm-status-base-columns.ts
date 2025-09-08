@@ -4,8 +4,12 @@ import { ModelPropertyColumn } from '@/model/typings';
 import { CLOUD_HOST_STATUS } from '@/common/constant';
 import { h, withDirectives } from 'vue';
 import { bkTooltips, Tag } from 'bkui-vue';
+import { useHostOperationsStore } from '@/store/host-operations';
+import { OperationActions } from '../internal';
 
 const { t } = i18n.global;
+
+const store = useHostOperationsStore();
 
 export default [
   { id: 'bk_asset_id', name: t('设备固资号'), type: 'string' },
@@ -21,10 +25,11 @@ export default [
     name: t('所属模块'),
     type: 'string',
     render: ({ row }: any) => {
-      const isIdle = row.operate_status !== 2;
-      const theme = !isIdle ? 'danger' : '';
-      if (isIdle) return h(Tag, t('空闲机'));
-      return withDirectives(h(Tag, { theme }, t('业务模块')), [[bkTooltips, { content: row.topo_module }]]);
+      if (store.operationType === OperationActions.RESET && row.operate_status !== 2) {
+        return h(Tag, t('空闲机'));
+      }
+
+      return withDirectives(h(Tag, { theme: 'danger' }, t('业务模块')), [[bkTooltips, { content: row.topo_module }]]);
     },
   },
   {

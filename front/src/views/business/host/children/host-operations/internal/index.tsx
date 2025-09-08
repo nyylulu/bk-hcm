@@ -1,4 +1,4 @@
-import { PropType, defineComponent, ref, toRefs, useTemplateRef, withDirectives } from 'vue';
+import { PropType, defineComponent, ref, toRefs, useTemplateRef, watch, withDirectives } from 'vue';
 import { useRouter } from 'vue-router';
 import cssModule from '../index.module.scss';
 
@@ -23,6 +23,7 @@ import { MoaRequestScene } from '@/components/moa-verify/typings';
 
 import { useVerify } from '@/hooks';
 import { useGlobalPermissionDialog } from '@/store/useGlobalPermissionDialog';
+import { useHostOperationsStore } from '@/store/host-operations';
 
 export enum OperationActions {
   NONE = 'none',
@@ -110,6 +111,10 @@ export default defineComponent({
     } = useBatchOperation({
       selections,
       onFinished: props.onFinished,
+    });
+
+    watch(operationType, (type) => {
+      useHostOperationsStore().setOperationType(type);
     });
 
     const getOperationConfig = (type: OperationActions) => {
