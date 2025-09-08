@@ -21,13 +21,10 @@ package cslb
 
 import (
 	"hcm/pkg/api/core"
-	"hcm/pkg/criteria/enumor"
 )
 
 // ListUrlRulesByTopologyReq list url rules by topology.
 type ListUrlRulesByTopologyReq struct {
-	Vendor enumor.Vendor `json:"vendor" validate:"required"`
-
 	AccountID string `json:"account_id" validate:"required"`
 
 	LbRegions []string `json:"lb_regions" validate:"omitempty,max=500"`
@@ -73,14 +70,4 @@ type UrlRuleDetail struct {
 	RuleDomain   string `json:"rule_domain"`
 	TargetCount  int    `json:"target_count"`
 	ListenerID   string `json:"listener_id"`
-}
-
-// TargetDetail target detail.
-type TargetDetail struct {
-	ID      string `json:"id"`
-	CloudID string `json:"cloud_id"`
-	IP      string `json:"ip"`
-	Port    int    `json:"port"`
-	Weight  int    `json:"weight"`
-	Status  string `json:"status"`
 }
