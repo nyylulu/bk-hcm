@@ -270,8 +270,8 @@ func (c *Layer7ListenerBindRSExecutor) buildTCloudFlowTask(kt *kit.Kit, lb corel
 	for _, taskDetails := range slice.Split(details, constant.BatchTaskMaxLimit) {
 		cur, prev := generator()
 
-		logs.Infof("processing batch RS binding to listener and rule, targetGroupID will be handled by cloud API and sync logic, "+
-			"batch size: %d, rid: %s", len(taskDetails), kt.Rid)
+		logs.Infof("processing batch RS binding to listener and rule, "+
+			"targetGroupID will be handled by cloud API and sync logic batch size: %d, rid: %s", len(taskDetails), kt.Rid)
 
 		targets := make([]*hclb.RegisterTarget, 0, len(taskDetails))
 		for _, detail := range taskDetails {
