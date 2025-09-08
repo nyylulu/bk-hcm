@@ -1,4 +1,4 @@
-import { computed, defineComponent, type PropType, ref, watch, watchEffect } from 'vue';
+import { computed, defineComponent, type PropType, ref, watch } from 'vue';
 import { useResourcePlanStore } from '@/store';
 import CommonSideslider from '@/components/common-sideslider';
 import Basic from './basic';
@@ -138,11 +138,9 @@ export default defineComponent({
       clearValidate();
     };
 
-    watchEffect(() => {
-      if (props.isShow) {
-        initData();
-      }
-    });
+    // 单独监听 props.initDemand 和 props.initAddParams 的变化，用于初始化数据
+    watch(() => [props.initDemand, props.initAddParams], initData, { deep: true });
+    watch(() => props.isShow, initData);
 
     watch(() => resourceType.value, clearValidate);
 
