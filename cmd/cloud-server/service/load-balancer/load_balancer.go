@@ -99,12 +99,10 @@ func bizService(h *rest.Handler, svc *lbSvc) {
 	// 目标组
 	h.Add("ListBizTargetsByTGID", http.MethodPost,
 		"/target_groups/{target_group_id}/targets/list", svc.ListBizTargetsByTGID)
-
 	h.Add("StatBizTargetWeight", http.MethodPost,
 		"/target_groups/targets/weight_stat", svc.StatBizTargetWeight)
 	h.Add("AssociateBizTargetGroupListenerRel", http.MethodPost,
 		"/listeners/associate/target_group", svc.AssociateBizTargetGroupListenerRel)
-
 	h.Add("CreateBizTargetGroup", http.MethodPost, "/target_groups/create", svc.CreateBizTargetGroup)
 	h.Add("UpdateBizTargetGroup", http.MethodPatch, "/target_groups/{id}", svc.UpdateBizTargetGroup)
 	h.Add("UpdateBizTargetGroupHealth", http.MethodPatch,
@@ -119,23 +117,19 @@ func bizService(h *rest.Handler, svc *lbSvc) {
 		http.MethodPatch, "/target_groups/{target_group_id}/targets/port", svc.BatchModifyBizTargetsPort)
 	h.Add("BatchModifyBizTargetsWeight", http.MethodPatch,
 		"/targets/weight", svc.BatchModifyBizTargetsWeight)
-
 	h.Add("CancelFlow", http.MethodPost, "/load_balancers/{lb_id}/async_flows/terminate", svc.BizTerminateFlow)
 	h.Add("RetryTask", http.MethodPost, "/load_balancers/{lb_id}/async_tasks/retry", svc.BizRetryTask)
 	h.Add("CloneFlow", http.MethodPost, "/load_balancers/{lb_id}/async_flows/clone", svc.BizCloneFlow)
 	h.Add("GetResultAfterTerminate", http.MethodPost,
 		"/load_balancers/{lb_id}/async_flows/result_after_terminate", svc.BizGetResultAfterTerminate)
-
 	h.Add("ListBizTargetsHealthByTGID", http.MethodPost,
 		"/target_groups/{target_group_id}/targets/health", svc.ListBizTargetsHealthByTGID)
-
 	// 监听器
 	h.Add("CreateBizListener", http.MethodPost, "/load_balancers/{lb_id}/listeners/create", svc.CreateBizListener)
 	h.Add("UpdateBizListener", http.MethodPatch, "/listeners/{id}", svc.UpdateBizListener)
 	h.Add("DeleteBizListener", http.MethodDelete, "/listeners/batch", svc.DeleteBizListener)
 	h.Add("UpdateBizDomainAttr", http.MethodPatch, "/listeners/{lbl_id}/domains", svc.UpdateBizDomainAttr)
 	h.Add("ListBizListenerWithTargets", http.MethodPost, "/listeners/with/targets/list", svc.ListBizListenerWithTargets)
-
 	h.Add("ListBizListenerTargetWeightStat", http.MethodPost, "/listeners/rs_weight_stat",
 		svc.ListBizListenerTargetWeightStat)
 
