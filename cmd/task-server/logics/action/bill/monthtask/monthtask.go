@@ -407,13 +407,27 @@ func (act MonthTaskAction) runMainAccountSummary(kt *kit.Kit, codes []string, ta
 	return nil
 }
 
+var excludedSummaryProductCode = map[string]struct{}{
+	constant.GcpAIDeductProductCodeReverse: {},
+}
+
 func (act MonthTaskAction) runSummary(kt *kit.Kit, runner MonthTaskRunner, opt *MonthTaskActionOption) error {
 	task, err := getMonthTask(kt, opt)
 	if err != nil {
 		return err
 	}
 
-	if err := act.runMainAccountSummary(kt, runner.GetHcProductCodes(), task, task.SummaryDetail); err != nil {
+	// 排除在月度任务中会产生条目，但是在summary计算中不参加的类型，如：AIDeductReverse类型，在赠金的月度任务中产生，
+	// 但是不算到赠金的月度任务中。
+	codes := runner.GetHcProductCodes()
+	finalCodes := make([]string, 0)
+	for _, code := range codes {
+		if _, ok := excludedSummaryProductCode[code]; !ok {
+			finalCodes = append(finalCodes, code)
+		}
+	}
+
+	if err := act.runMainAccountSummary(kt, finalCodes, task, task.SummaryDetail); err != nil {
 		return err
 	}
 
