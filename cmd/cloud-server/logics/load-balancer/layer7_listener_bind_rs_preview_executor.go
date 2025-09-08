@@ -239,9 +239,9 @@ func (l *Layer7ListenerBindRSPreviewExecutor) validateDetailsTarget(kt *kit.Kit)
 func (l *Layer7ListenerBindRSPreviewExecutor) validateTarget(kt *kit.Kit,
 	detail *Layer7ListenerBindRSDetail, ruleCloudIDsToTGIDMap map[string]string) error {
 
-	if detail.urlRuleCloudID == "" || detail.cvm == nil {
+	if detail.urlRuleCloudID == "" {
 		detail.Status.SetNotExecutable()
-		detail.ValidateResult = append(detail.ValidateResult, "url rule not found or rs not found")
+		detail.ValidateResult = append(detail.ValidateResult, "url rule not found")
 		return nil
 	}
 	tgID, ok := ruleCloudIDsToTGIDMap[detail.urlRuleCloudID]
@@ -249,7 +249,13 @@ func (l *Layer7ListenerBindRSPreviewExecutor) validateTarget(kt *kit.Kit,
 		detail.ValidateResult = append(detail.ValidateResult,
 			"Listener rule not bound to target group, will automatically create target group and bind")
 		return nil
+    
 	}
+	detail.targetGroupID = tgID
+	if detail.cvm == nil {
+		// rsType 为 ENI，会导致cvm为空
+		return nil
+  }
 	target, err := getTarget(kt, l.dataServiceCli, tgID, detail.cvm.CloudID, detail.RsPort[0])
 	if err != nil {
 		return err
@@ -273,6 +279,10 @@ func (l *Layer7ListenerBindRSPreviewExecutor) validateTarget(kt *kit.Kit,
 func (l *Layer7ListenerBindRSPreviewExecutor) validateRS(kt *kit.Kit, curDetail *Layer7ListenerBindRSDetail,
 	lb corelb.LoadBalancerRaw) error {
 
+	if curDetail.InstType == enumor.EniInstType {
+		// ENI 不做校验
+		return nil
+	}
 	isCrossRegionV1, isCrossRegionV2, targetCloudVpcID, lbTargetRegion, err := parseSnapInfoTCloudLBExtension(kt,
 		lb.Extension)
 	if err != nil {
@@ -394,8 +404,12 @@ type Layer7ListenerBindRSDetail struct {
 	// urlRuleCloudID 在 validateURLRule 阶段填充, 后续submit阶段会重复使用到,
 	// 如果为空, 那就意味着当前detail的条件无法匹配到对应的URL rule, 可以认为url rule not found
 	urlRuleCloudID string
-	// cvm 在 validateRS 阶段填充, 在validateTarget和submit阶段会使用,
-	// 如果为空, 代表了rs not found
+	// targetGroupID 在 validateTarget 阶段填充, 后续submit阶段会重复使用到,
+	// 如果为空, 那就意味着当前detail的条件无法匹配到对应的targetGroup, 可以认为targetGroup not found
+	targetGroupID string
+	// cvm字段在validateRS阶段填充，在validateTarget和submit阶段使用。
+	// 当RSType为ENI时，该值为空
+	// 当RSType为CVM时，为空表示rs not found。
 	cvm *cvmInfo
 }
 
