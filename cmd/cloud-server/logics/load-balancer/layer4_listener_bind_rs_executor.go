@@ -216,7 +216,7 @@ func (c *Layer4ListenerBindRSExecutor) buildFlow(kt *kit.Kit, lb corelb.LoadBala
 		logs.Errorf("check resource flow relation failed, lbID: %s, err: %v, rid: %s", lb.ID, err, kt.Rid)
 		return "", err
 	}
-	flowID, err := c.createFlowTask(kt, lb.ID, converter.MapKeyToSlice(listenerToDetails), flowTasks)
+	flowID, err := c.createFlowTask(kt, lb.ID, flowTasks)
 	if err != nil {
 		return "", err
 	}
@@ -251,7 +251,7 @@ func (c *Layer4ListenerBindRSExecutor) createTaskDetailsGroupByListener(details 
 	return listenerToDetails, nil
 }
 
-func (c *Layer4ListenerBindRSExecutor) createFlowTask(kt *kit.Kit, lbID string, tgIDs []string,
+func (c *Layer4ListenerBindRSExecutor) createFlowTask(kt *kit.Kit, lbID string,
 	flowTasks []ts.CustomFlowTask) (string, error) {
 
 	addReq := &ts.AddCustomFlowReq{
@@ -275,12 +275,10 @@ func (c *Layer4ListenerBindRSExecutor) createFlowTask(kt *kit.Kit, lbID string, 
 		Tasks: []ts.TemplateFlowTask{{
 			ActionID: "1",
 			Params: &actionflow.LoadBalancerOperateWatchOption{
-				FlowID:     flowID,
-				ResID:      lbID,
-				ResType:    enumor.LoadBalancerCloudResType,
-				SubResIDs:  tgIDs,
-				SubResType: enumor.TargetGroupCloudResType,
-				TaskType:   enumor.AddRSTaskType,
+				FlowID:   flowID,
+				ResID:    lbID,
+				ResType:  enumor.LoadBalancerCloudResType,
+				TaskType: enumor.AddRSTaskType,
 			},
 		}},
 	}
@@ -308,18 +306,12 @@ func (c *Layer4ListenerBindRSExecutor) buildFlowTask(kt *kit.Kit, lb corelb.Load
 func (c *Layer4ListenerBindRSExecutor) buildTCloudFlowTask(kt *kit.Kit, lb corelb.LoadBalancerRaw,
 	details []*layer4ListenerBindRSTaskDetail, generator func() (cur string, prev string)) ([]ts.CustomFlowTask, error) {
 
-	logs.Infof("binding RS directly to listener, targetGroupID will be handled by cloud API and sync logic,"+
-		" rid: %s", kt.Rid)
-	return c.bindRSTask(lb, details, generator)
-}
-
-// bindRSTask 直接绑定RS到监听器
-func (c *Layer4ListenerBindRSExecutor) bindRSTask(lb corelb.LoadBalancerRaw,
-	details []*layer4ListenerBindRSTaskDetail, generator func() (cur string, prev string)) ([]ts.CustomFlowTask, error) {
-
 	result := make([]ts.CustomFlowTask, 0)
 	for _, taskDetails := range slice.Split(details, constant.BatchTaskMaxLimit) {
 		cur, prev := generator()
+
+		logs.Infof("processing batch RS binding to listener, targetGroupID will be handled by cloud API and sync logic,"+
+			" batch size: %d, rid: %s", len(taskDetails), kt.Rid)
 
 		targets := make([]*hclb.RegisterTarget, 0, len(taskDetails))
 		for _, detail := range taskDetails {
@@ -346,7 +338,6 @@ func (c *Layer4ListenerBindRSExecutor) bindRSTask(lb corelb.LoadBalancerRaw,
 
 		req := &hclb.BatchRegisterTCloudTargetReq{
 			CloudListenerID: taskDetails[0].listenerCloudID,
-			TargetGroupID:   "",
 			RuleType:        enumor.Layer4RuleType,
 			Targets:         targets,
 		}

@@ -245,10 +245,8 @@ func (l *Layer4ListenerBindRSPreviewExecutor) validateTarget(kt *kit.Kit,
 	if !ok {
 		detail.ValidateResult = append(detail.ValidateResult,
 			"Listener not bound to target group, will automatically create target group and bind")
-		detail.targetGroupID = ""
 		return nil
 	}
-	detail.targetGroupID = tgID
 	target, err := getTarget(kt, l.dataServiceCli, tgID, detail.cvm.CloudID, detail.RsPort[0])
 	if err != nil {
 		return err
@@ -334,10 +332,6 @@ type Layer4ListenerBindRSDetail struct {
 	ValidateResult []string     `json:"validate_result"`
 
 	RegionID string `json:"region_id"`
-
-	// targetGroupID 在 validateTarget 阶段填充, 后续submit阶段会重复使用到,
-	// 如果为空, 那就意味着当前detail的条件无法匹配到对应的targetGroup, 可以认为targetGroup not found
-	targetGroupID string
 
 	// listenerCloudID 在 validateListener 阶段填充, 后续submit阶段会重复使用到,
 	// 如果为空, 那就意味着当前detail的条件无法匹配到对应的listener, 可以认为listener not found
