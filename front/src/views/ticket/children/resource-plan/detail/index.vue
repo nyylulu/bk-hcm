@@ -2,10 +2,10 @@
 import { ref, onBeforeMount, computed, useTemplateRef } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useResourcePlanStore } from '@/store';
+import { useI18n } from 'vue-i18n';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
 import useTimeoutPoll from '@/hooks/use-timeout-poll';
-
-import Header from '@/components/resource-plan/applications/detail/header';
+import useBreadcrumb from '@/hooks/use-breadcrumb';
 import Approval from '@/components/resource-plan/applications/detail/approval';
 import ResourcePlanTicketAudit from '@/components/resource-plan/applications/detail/ticket-audit/index.vue';
 import Basic from '@/components/resource-plan/applications/detail/basic/index.vue';
@@ -17,8 +17,11 @@ import { SubTicketAudit } from '@/store/ticket/res-sub-ticket';
 // 路由、状态管理、工具函数
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 const resourcePlanStore = useResourcePlanStore();
 const { getBizsId, isBusinessPage } = useWhereAmI();
+const { setTitle } = useBreadcrumb();
+
 // 响应式数据
 const ticketDetail = ref<TicketByIdResult>();
 const ticketAuditDetail = ref<SubTicketAudit>();
@@ -67,6 +70,9 @@ const getResultData = async () => {
     // 获取子单列表数据
     subticketListRef.value && subticketListRef.value?.getData();
 
+    // 设置面包屑标题
+    setTitle(`${t('申请单详情')} - ${ticketDetail.value?.id}`);
+
     // 轮询逻辑：init 或 auditing 状态时自动刷新
     if (ticketRes?.data?.status_info?.status === 'init' || ticketRes?.data?.status_info?.status === 'auditing') {
       autoFlushTask.resume();
@@ -98,13 +104,12 @@ const autoFlushTask = useTimeoutPoll(() => {
 onBeforeMount(() => {
   getResultData();
   active.value = (route.query?.tab as string) || 'approval';
+  setTitle(`${t('申请单详情')}`);
 });
 </script>
 
 <template>
   <bk-loading :loading="isLoading">
-    <Header :id="ticketDetail?.id" :is-biz="isBusinessPage" />
-
     <section class="home">
       <!-- 当前审批节点信息 -->
       <Approval

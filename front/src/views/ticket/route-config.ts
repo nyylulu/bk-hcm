@@ -57,6 +57,11 @@ export const ticketRoutes: RouteRecordRaw[] = [
       ...new Meta({
         activeKey: MENU_SERVICE_TICKET_MANAGEMENT,
         notMenu: true,
+        layout: {
+          breadcrumbs: {
+            show: true,
+          },
+        },
       }),
     },
   },
@@ -107,6 +112,11 @@ export const ticketRoutesBiz: RouteRecordRaw[] = [
       ...new Meta({
         activeKey: MENU_BUSINESS_TICKET_RESOURCE_PLAN_DETAILS,
         notMenu: true,
+        layout: {
+          breadcrumbs: {
+            show: true,
+          },
+        },
       }),
     },
   },

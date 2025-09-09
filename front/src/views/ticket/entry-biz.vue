@@ -22,7 +22,7 @@ import { QueryRuleOPEnum } from '@/typings';
 import HostApply from './children/host-apply';
 import PublicCloud from './children/public-cloud';
 import HostRecycle from './children/host-recycle';
-import ResourcePlanList from './children/resource-plan/list';
+import ResourcePlanList from './children/resource-plan/list/list-biz.vue';
 
 const router = useRouter();
 const route = useRoute();
@@ -89,7 +89,6 @@ const tabList = ref<ApplicationsType[]>([
     name: 'resource_plan',
     Component: ResourcePlanList,
     rules: [],
-    props: { isBiz: true },
   },
 ]);
 </script>
@@ -98,14 +97,5 @@ const tabList = ref<ApplicationsType[]>([
 .tab-container {
   height: 100%;
   padding: 24px;
-}
-
-:global(.bk-tab) {
-  height: 100%;
-
-  :global(.bk-tab-content) {
-    height: calc(100% - 40px);
-    padding: 0;
-  }
 }
 </style>

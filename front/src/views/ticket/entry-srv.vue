@@ -2,12 +2,7 @@
   <div class="tab-container">
     <bk-tab type="card-grid" v-model:active="applyType" class="header-tab" @update:active="saveActiveType">
       <bk-tab-panel v-for="(item, index) in tabList" :name="item.name" :label="item.label" :key="index">
-        <component
-          v-if="item.name === applyType"
-          :is="item.Component"
-          :rules="item.rules"
-          v-bind="item.props"
-        ></component>
+        <component v-if="item.name === applyType" :is="item.Component" :rules="item.rules"></component>
       </bk-tab-panel>
     </bk-tab>
   </div>
@@ -19,7 +14,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { ApplicationsType } from './typings';
 import CommonTable from './children/common-table.vue';
-import ResourcePlanList from './children/resource-plan/list';
+import ResourcePlanList from './children/resource-plan/list/list-srv.vue';
 import { QueryRuleOPEnum } from '@/typings';
 
 const router = useRouter();
@@ -68,7 +63,6 @@ const tabList = ref<ApplicationsType[]>([
     name: 'resource_plan',
     rules: [],
     Component: ResourcePlanList,
-    props: { isBiz: false },
   },
   // {
   //   label: t('硬盘'),
@@ -134,14 +128,5 @@ const tabList = ref<ApplicationsType[]>([
 .tab-container {
   height: 100%;
   padding: 24px;
-}
-
-:global(.bk-tab) {
-  height: 100%;
-
-  :global(.bk-tab-content) {
-    height: calc(100% - 40px);
-    padding: 0;
-  }
 }
 </style>
