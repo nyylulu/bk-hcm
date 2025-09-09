@@ -27,33 +27,20 @@ import (
 
 // ListUrlRulesByTopologyReq list url rules by topology.
 type ListUrlRulesByTopologyReq struct {
-	AccountID string `json:"account_id" validate:"required"`
-
-	LbRegions []string `json:"lb_regions" validate:"omitempty,max=500"`
-
-	LbNetworkTypes []string `json:"lb_network_types" validate:"omitempty"`
-
-	LbIpVersions []string `json:"lb_ip_versions" validate:"omitempty"`
-
-	CloudLbIds []string `json:"cloud_lb_ids" validate:"omitempty,max=500"`
-
-	LbVips []string `json:"lb_vips" validate:"omitempty,max=500"`
-
-	LbDomains []string `json:"lb_domains" validate:"omitempty,max=500"`
-
-	LblProtocols []string `json:"lbl_protocols" validate:"omitempty"`
-
-	LblPorts []int `json:"lbl_ports" validate:"omitempty,max=1000"`
-
-	RuleDomains []string `json:"rule_domains" validate:"omitempty,max=500"`
-
-	RuleUrls []string `json:"rule_urls" validate:"omitempty,max=500"`
-
-	TargetIps []string `json:"target_ips" validate:"omitempty,max=5000"`
-
-	TargetPorts []int `json:"target_ports" validate:"omitempty,max=500"`
-
-	Page *core.BasePage `json:"page" validate:"required"`
+	AccountID      string         `json:"account_id" validate:"required"`
+	LbRegions      []string       `json:"lb_regions" validate:"omitempty,max=500"`
+	LbNetworkTypes []string       `json:"lb_network_types" validate:"omitempty"`
+	LbIpVersions   []string       `json:"lb_ip_versions" validate:"omitempty"`
+	CloudLbIds     []string       `json:"cloud_lb_ids" validate:"omitempty,max=500"`
+	LbVips         []string       `json:"lb_vips" validate:"omitempty,max=500"`
+	LbDomains      []string       `json:"lb_domains" validate:"omitempty,max=500"`
+	LblProtocols   []string       `json:"lbl_protocols" validate:"omitempty"`
+	LblPorts       []int          `json:"lbl_ports" validate:"omitempty,max=1000"`
+	RuleDomains    []string       `json:"rule_domains" validate:"omitempty,max=500"`
+	RuleUrls       []string       `json:"rule_urls" validate:"omitempty,max=500"`
+	TargetIps      []string       `json:"target_ips" validate:"omitempty,max=5000"`
+	TargetPorts    []int          `json:"target_ports" validate:"omitempty,max=500"`
+	Page           *core.BasePage `json:"page" validate:"required"`
 }
 
 // ListUrlRulesByTopologyResp list url rules by topology resp.
