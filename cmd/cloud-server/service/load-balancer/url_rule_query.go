@@ -23,7 +23,6 @@ import (
 	"fmt"
 
 	lblogic "hcm/cmd/cloud-server/logics/load-balancer"
-
 	cslb "hcm/pkg/api/cloud-server/load-balancer"
 	"hcm/pkg/api/core"
 	corelb "hcm/pkg/api/core/cloud/load-balancer"
@@ -36,37 +35,39 @@ import (
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 	"hcm/pkg/runtime/filter"
+	"hcm/pkg/tools/hooks/handler"
+	"hcm/pkg/tools/maps"
+	"hcm/pkg/tools/slice"
 )
 
-// ListUrlRulesByTop 查询URL规则信息
-func (svc *lbSvc) ListUrlRulesByTop(cts *rest.Contexts) (any, error) {
-	bizID, err := cts.PathParameter("bk_biz_id").Int64()
-	if err != nil {
-		return nil, errf.New(errf.InvalidParameter, "bk_biz_id is required")
-	}
-
+// ListUrlRulesByTopo 查询URL规则信息
+func (svc *lbSvc) ListUrlRulesByTopo(cts *rest.Contexts) (any, error) {
 	vendor := enumor.Vendor(cts.PathParameter("vendor").String())
-	if err = vendor.Validate(); err != nil {
-		return nil, errf.New(errf.InvalidParameter, "vendor is required")
+	if err := vendor.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
 	req := new(cslb.ListUrlRulesByTopologyReq)
-	if err = cts.DecodeInto(req); err != nil {
+	if err := cts.DecodeInto(req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
-
-	// 业务权限校验
-	err = svc.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
-		Basic: &meta.Basic{
-			Type:   meta.LoadBalancer,
-			Action: meta.Find,
-		},
-		BizID: bizID,
-	})
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+	_, noPermFlag, err := handler.ListBizAuthRes(cts, &handler.ListAuthResOption{Authorizer: svc.authorizer,
+		ResType: meta.LoadBalancer, Action: meta.Find})
+	if err != nil {
+		logs.Errorf("list url rules by topo failed, noPermFlag: %v, err: %v, rid: %s", noPermFlag, err, cts.Kit.Rid)
+		return nil, err
+	}
+	if noPermFlag {
+		logs.Errorf("list url rules by topo no auth, req: %+v, rid: %s", noPermFlag, req, cts.Kit.Rid)
+		return &cslb.ListUrlRulesByTopologyResp{Count: 0, Details: make([]cslb.UrlRuleDetail, 0)}, nil
+	}
+	bizID, err := cts.PathParameter("bk_biz_id").Int64()
 	if err != nil {
 		return nil, err
 	}
-
 	filters, err := svc.buildUrlRuleQueryFilter(cts.Kit, bizID, vendor, req)
 	if err != nil {
 		return nil, err
@@ -89,161 +90,70 @@ func (svc *lbSvc) ListUrlRulesByTop(cts *rest.Contexts) (any, error) {
 func (svc *lbSvc) buildUrlRuleQueryFilter(kt *kit.Kit, bizID int64, vendor enumor.Vendor,
 	req *cslb.ListUrlRulesByTopologyReq) (*filter.Expression, error) {
 
-	hasRuleConditions := len(req.RuleDomains) > 0 || len(req.RuleUrls) > 0
-	hasListenerConditions := len(req.LblProtocols) > 0 || len(req.LblPorts) > 0
-	hasTargetConditions := len(req.TargetIps) > 0 || len(req.TargetPorts) > 0
-	hasLbConditions := len(req.LbRegions) > 0 || len(req.LbNetworkTypes) > 0 || len(req.LbIpVersions) > 0 ||
-		len(req.CloudLbIds) > 0 || len(req.LbVips) > 0 || len(req.LbDomains) > 0
-
-	if !hasRuleConditions && !hasListenerConditions && !hasTargetConditions && !hasLbConditions {
-		return &filter.Expression{}, nil
+	conditions := req.BuildUrlRuleBaseConditions(bizID)
+	lbIDs, err := svc.queryLoadBalancerIDsByConditions(kt, bizID, vendor, req)
+	if err != nil {
+		logs.Errorf("query load balancer ids by conditions failed, bizID: %d, vendor: %s, err: %v, rid: %s",
+			bizID, vendor, err, kt.Rid)
+		return nil, fmt.Errorf("query load balancer ids failed, err: %v", err)
 	}
 
-	var listenerIDs []string
-	var err error
+	if len(lbIDs) == 0 {
+		return &filter.Expression{
+			Op:    filter.And,
+			Rules: []filter.RuleFactory{},
+		}, nil
+	}
+	conditions = append(conditions, tools.RuleIn("lb_id", lbIDs))
 
-	if hasListenerConditions {
-		listenerIDs, err = svc.queryListenerIDsByConditions(kt, bizID, vendor, req)
+	if !req.HasListenerConditions() && !req.HasRuleConditions() && !req.HasTargetConditions() {
+		return tools.ExpressionAnd(conditions...), nil
+	}
+
+	if req.HasListenerConditions() {
+		listenerCloudIDs, err := svc.queryListenerCloudIDsByConditions(kt, bizID, vendor, req, lbIDs)
 		if err != nil {
-			return nil, fmt.Errorf("query listener ids failed, err: %v", err)
+			logs.Errorf("query listener cloud ids by conditions failed, bizID: %d, vendor: %s, err: %v, rid: %s",
+				bizID, vendor, err, kt.Rid)
+			return nil, fmt.Errorf("query listener cloud ids failed, err: %v", err)
 		}
-		// 有监听器条件但未查询到匹配的监听器，直接返回空结果
-		if len(listenerIDs) == 0 {
-			return &filter.Expression{}, nil
+		if len(listenerCloudIDs) == 0 {
+			return &filter.Expression{
+				Op:    filter.And,
+				Rules: []filter.RuleFactory{tools.RuleEqual("id", "never_match")},
+			}, nil
 		}
+		conditions = append(conditions, tools.RuleIn("cloud_lbl_id", listenerCloudIDs))
 	}
 
-	conditions := []*filter.AtomRule{
-		tools.RuleIn("rule_type", []string{string(enumor.Layer4RuleType), string(enumor.Layer7RuleType)}),
-		tools.RuleEqual("bk_biz_id", bizID),
+	if ruleConditions := req.BuildRuleFilter(); ruleConditions != nil {
+		conditions = append(conditions, ruleConditions...)
 	}
-
-	if hasListenerConditions {
-		conditions = append(conditions, tools.RuleIn("cloud_lbl_id", listenerIDs))
-	}
-
-	conditions, err = svc.addLoadBalancerConditions(kt, bizID, vendor, req, conditions)
-	if err != nil {
-		return nil, err
-	}
-
-	conditions = svc.addRuleConditions(req, conditions)
-
-	conditions, err = svc.addTargetConditions(kt, req, conditions)
-	if err != nil {
-		return nil, err
-	}
-
-	return tools.ExpressionAnd(conditions...), nil
-}
-
-// addLoadBalancerConditions 添加负载均衡器相关条件
-func (svc *lbSvc) addLoadBalancerConditions(kt *kit.Kit, bizID int64, vendor enumor.Vendor,
-	req *cslb.ListUrlRulesByTopologyReq, conditions []*filter.AtomRule) ([]*filter.AtomRule, error) {
-
-	hasLbConditions := len(req.LbRegions) > 0 || len(req.LbNetworkTypes) > 0 || len(req.LbIpVersions) > 0 ||
-		len(req.CloudLbIds) > 0 || len(req.LbVips) > 0 || len(req.LbDomains) > 0
-
-	if hasLbConditions {
-
-		lbIDs, err := svc.queryLoadBalancerIDsByConditions(kt, bizID, vendor, req)
+	if req.HasTargetConditions() {
+		targetGroupIDs, err := svc.queryTargetGroupIDsByTargetConditions(kt, bizID, vendor, req)
 		if err != nil {
-			return nil, fmt.Errorf("query load balancer ids failed, err: %v", err)
+			logs.Errorf("query target group ids by target conditions failed, bizID: %d, vendor: %s, err: %v, rid: %s",
+				bizID, vendor, err, kt.Rid)
+			return nil, fmt.Errorf("query target group ids failed, err: %v", err)
 		}
-
-		if len(lbIDs) == 0 {
-			return []*filter.AtomRule{}, nil
+		if len(targetGroupIDs) == 0 {
+			return &filter.Expression{
+				Op:    filter.And,
+				Rules: []filter.RuleFactory{tools.RuleEqual("id", "never_match")},
+			}, nil
 		}
-
-		conditions = append(conditions, tools.RuleIn("lb_id", lbIDs))
-	}
-
-	return conditions, nil
-}
-
-// addRuleConditions 添加规则相关条件
-func (svc *lbSvc) addRuleConditions(req *cslb.ListUrlRulesByTopologyReq,
-	conditions []*filter.AtomRule) []*filter.AtomRule {
-	if len(req.RuleDomains) > 0 {
-		conditions = append(conditions, tools.RuleIn("domain", req.RuleDomains))
-	}
-
-	if len(req.RuleUrls) > 0 {
-		conditions = append(conditions, tools.RuleIn("url", req.RuleUrls))
-	}
-
-	return conditions
-}
-
-// addTargetConditions 添加目标相关条件，需要查询目标表
-func (svc *lbSvc) addTargetConditions(kt *kit.Kit, req *cslb.ListUrlRulesByTopologyReq,
-	conditions []*filter.AtomRule) ([]*filter.AtomRule, error) {
-	if len(req.TargetIps) == 0 && len(req.TargetPorts) == 0 {
-		return conditions, nil
-	}
-
-	targetGroupIDs, err := svc.queryTargetGroupIDsByTargetConditions(kt, req)
-	if err != nil {
-		return nil, fmt.Errorf("query target group ids failed, err: %v", err)
-	}
-
-	if len(targetGroupIDs) > 0 {
 		conditions = append(conditions, tools.RuleIn("target_group_id", targetGroupIDs))
 	}
 
-	return conditions, nil
+	return tools.ExpressionAnd(conditions...), nil
 }
 
 // queryLoadBalancerIDsByConditions 根据负载均衡器条件查询负载均衡器ID
 func (svc *lbSvc) queryLoadBalancerIDsByConditions(kt *kit.Kit, bizID int64, vendor enumor.Vendor,
 	req *cslb.ListUrlRulesByTopologyReq) ([]string, error) {
 
-	lbFilter, err := svc.buildLoadBalancerFilter(bizID, vendor, req)
-	if err != nil {
-		return nil, err
-	}
-
+	lbFilter := req.BuildLoadBalancerFilter(bizID, string(vendor))
 	return svc.queryLoadBalancerIDsByFilter(kt, lbFilter)
-}
-
-// buildLoadBalancerFilter 构建负载均衡器查询过滤器
-func (svc *lbSvc) buildLoadBalancerFilter(bizID int64, vendor enumor.Vendor,
-	req *cslb.ListUrlRulesByTopologyReq) (*filter.Expression, error) {
-
-	lbConditions := []*filter.AtomRule{
-		tools.RuleEqual("vendor", vendor),
-		tools.RuleEqual("account_id", req.AccountID),
-		tools.RuleEqual("bk_biz_id", bizID),
-	}
-
-	if len(req.LbRegions) > 0 {
-		lbConditions = append(lbConditions, tools.RuleIn("region", req.LbRegions))
-	}
-	if len(req.LbNetworkTypes) > 0 {
-		lbConditions = append(lbConditions, tools.RuleIn("network_type", req.LbNetworkTypes))
-	}
-	if len(req.LbIpVersions) > 0 {
-		lbConditions = append(lbConditions, tools.RuleIn("ip_version", req.LbIpVersions))
-	}
-	if len(req.CloudLbIds) > 0 {
-		lbConditions = append(lbConditions, tools.RuleIn("cloud_id", req.CloudLbIds))
-	}
-	if len(req.LbDomains) > 0 {
-		lbConditions = append(lbConditions, tools.RuleIn("domain", req.LbDomains))
-	}
-
-	if len(req.LbVips) > 0 {
-		vipConditions := []*filter.AtomRule{
-			tools.RuleJsonOverlaps("private_ipv4_addresses", req.LbVips),
-			tools.RuleJsonOverlaps("private_ipv6_addresses", req.LbVips),
-			tools.RuleJsonOverlaps("public_ipv4_addresses", req.LbVips),
-			tools.RuleJsonOverlaps("public_ipv6_addresses", req.LbVips),
-		}
-		vipOrFilter := tools.ExpressionOr(vipConditions...)
-		return tools.And(tools.ExpressionAnd(lbConditions...), vipOrFilter)
-	}
-
-	return tools.ExpressionAnd(lbConditions...), nil
 }
 
 // queryLoadBalancerIDsByFilter 根据过滤器查询负载均衡器ID
@@ -254,6 +164,8 @@ func (svc *lbSvc) queryLoadBalancerIDsByFilter(kt *kit.Kit, filter *filter.Expre
 	for {
 		lbResp, err := svc.client.DataService().Global.LoadBalancer.ListLoadBalancer(kt, lbReq)
 		if err != nil {
+			logs.Errorf("list load balancers failed, filter: %+v, err: %v, rid: %s",
+				lbReq.Filter, err, kt.Rid)
 			return nil, err
 		}
 
@@ -261,136 +173,182 @@ func (svc *lbSvc) queryLoadBalancerIDsByFilter(kt *kit.Kit, filter *filter.Expre
 			lbIDs = append(lbIDs, lb.ID)
 		}
 
-		if uint(len(lbResp.Details)) < core.DefaultMaxPageLimit {
+		if uint(len(lbResp.Details)) < lbReq.Page.Limit {
 			break
 		}
-		lbReq.Page.Start += uint32(core.DefaultMaxPageLimit)
+		lbReq.Page.Start += uint32(lbReq.Page.Limit)
 	}
 
 	return lbIDs, nil
 }
 
-// queryListenerIDsByConditions 根据条件查询监听器ID,先根据条件查clb，再根据clb的id查监听器
-func (svc *lbSvc) queryListenerIDsByConditions(kt *kit.Kit, bizID int64, vendor enumor.Vendor,
-	req *cslb.ListUrlRulesByTopologyReq) ([]string, error) {
-	lbIDs, err := svc.queryLoadBalancerIDsByConditions(kt, bizID, vendor, req)
-	if err != nil {
-		return nil, fmt.Errorf("query load balancer ids failed, err: %v", err)
-	}
+// queryListenerCloudIDsByConditions 根据条件查询监听器云上ID，使用CLB ID作为条件减少数据量
+func (svc *lbSvc) queryListenerCloudIDsByConditions(kt *kit.Kit, bizID int64, vendor enumor.Vendor,
+	req *cslb.ListUrlRulesByTopologyReq, lbIDs []string) ([]string, error) {
 
 	if len(lbIDs) == 0 {
 		return []string{}, nil
 	}
 
-	listenerConditions := []*filter.AtomRule{
-		tools.RuleEqual("vendor", vendor),
-		tools.RuleEqual("account_id", req.AccountID),
-		tools.RuleIn("lb_id", lbIDs),
+	listenerFilter := req.BuildListenerFilter(bizID, string(vendor), lbIDs)
+	if listenerFilter == nil {
+		return []string{}, nil
 	}
-
-	if len(req.LblProtocols) > 0 {
-		listenerConditions = append(listenerConditions, tools.RuleIn("protocol", req.LblProtocols))
-	}
-
-	if len(req.LblPorts) > 0 {
-		listenerConditions = append(listenerConditions, tools.RuleIn("port", req.LblPorts))
-	}
-
-	listenerFilter := tools.ExpressionAnd(listenerConditions...)
 
 	listenerReq := &core.ListReq{
 		Filter: listenerFilter,
 		Page:   core.NewDefaultBasePage(),
 	}
 
-	listenerIDs := make([]string, 0)
+	listenerCloudIDs := make([]string, 0)
 	for {
 		listenerResp, err := svc.client.DataService().Global.LoadBalancer.ListListener(kt, listenerReq)
 		if err != nil {
+			logs.Errorf("list listeners failed, bizID: %d, vendor: %s, lbIDs: %v, err: %v, rid: %s",
+				bizID, vendor, lbIDs, err, kt.Rid)
 			return nil, err
 		}
 
 		for _, listener := range listenerResp.Details {
-			listenerIDs = append(listenerIDs, listener.CloudID)
-			logs.Infof("queryListenerIDsByConditions: listener ID: %s, cloud_id: %s, account_id: %s, bk_biz_id: %d, lb_id: %s",
-				listener.ID, listener.CloudID, listener.AccountID, listener.BkBizID, listener.LbID)
+			listenerCloudIDs = append(listenerCloudIDs, listener.CloudID)
 		}
 
-		if uint(len(listenerResp.Details)) < core.DefaultMaxPageLimit {
+		if uint(len(listenerResp.Details)) < listenerReq.Page.Limit {
 			break
 		}
 
-		listenerReq.Page.Start += uint32(core.DefaultMaxPageLimit)
+		listenerReq.Page.Start += uint32(listenerReq.Page.Limit)
 	}
 
-	return listenerIDs, nil
+	return listenerCloudIDs, nil
 }
 
 // queryTargetGroupIDsByTargetConditions 根据目标条件查询目标组ID
-func (svc *lbSvc) queryTargetGroupIDsByTargetConditions(kt *kit.Kit,
+func (svc *lbSvc) queryTargetGroupIDsByTargetConditions(kt *kit.Kit, bizID int64, vendor enumor.Vendor,
 	req *cslb.ListUrlRulesByTopologyReq) ([]string, error) {
 
-	targetConditions := []*filter.AtomRule{
-		tools.RuleEqual("account_id", req.AccountID),
+	targetGroupFilter := req.BuildTargetGroupFilter(bizID, string(vendor))
+	if targetGroupFilter == nil {
+		return []string{}, nil
 	}
 
-	if len(req.TargetIps) > 0 {
-		targetConditions = append(targetConditions, tools.RuleIn("ip", req.TargetIps))
+	targetGroupReq := &core.ListReq{
+		Filter: targetGroupFilter,
+		Page:   core.NewDefaultBasePage(),
 	}
 
-	if len(req.TargetPorts) > 0 {
-		targetConditions = append(targetConditions, tools.RuleIn("port", req.TargetPorts))
+	targetGroupIDs := make([]string, 0)
+	for {
+		targetGroupResp, err := svc.client.DataService().Global.LoadBalancer.ListTargetGroup(kt, targetGroupReq)
+		if err != nil {
+			logs.Errorf("list target groups failed, filter: %+v, err: %v, rid: %s",
+				targetGroupReq.Filter, err, kt.Rid)
+			return nil, err
+		}
+
+		for _, targetGroup := range targetGroupResp.Details {
+			targetGroupIDs = append(targetGroupIDs, targetGroup.ID)
+		}
+
+		if uint(len(targetGroupResp.Details)) < targetGroupReq.Page.Limit {
+			break
+		}
+		targetGroupReq.Page.Start += uint32(targetGroupReq.Page.Limit)
 	}
 
-	targetFilter := tools.ExpressionAnd(targetConditions...)
+	if len(targetGroupIDs) == 0 {
+		return []string{}, nil
+	}
+
+	targetFilter := req.BuildTargetFilter(targetGroupIDs)
+	if targetFilter == nil {
+		return targetGroupIDs, nil
+	}
+
 	targetReq := &core.ListReq{
 		Filter: targetFilter,
 		Page:   core.NewDefaultBasePage(),
 	}
 
-	targetGroupIDMap := make(map[string]struct{})
+	finalTargetGroupIDMap := make(map[string]struct{})
 	for {
 		targetResp, err := svc.client.DataService().Global.LoadBalancer.ListTarget(kt, targetReq)
 		if err != nil {
+			logs.Errorf("list targets failed, filter: %+v, err: %v, rid: %s",
+				targetReq.Filter, err, kt.Rid)
 			return nil, err
 		}
 
 		for _, target := range targetResp.Details {
 			if target.TargetGroupID != "" {
-				targetGroupIDMap[target.TargetGroupID] = struct{}{}
+				finalTargetGroupIDMap[target.TargetGroupID] = struct{}{}
 			}
 		}
 
-		if uint(len(targetResp.Details)) < core.DefaultMaxPageLimit {
+		if uint(len(targetResp.Details)) < targetReq.Page.Limit {
 			break
 		}
-		targetReq.Page.Start += uint32(core.DefaultMaxPageLimit)
+		targetReq.Page.Start += uint32(targetReq.Page.Limit)
 	}
 
-	targetGroupIDs := make([]string, 0, len(targetGroupIDMap))
-	for targetGroupID := range targetGroupIDMap {
-		targetGroupIDs = append(targetGroupIDs, targetGroupID)
-	}
+	finalTargetGroupIDs := maps.Keys(finalTargetGroupIDMap)
 
-	return targetGroupIDs, nil
+	return finalTargetGroupIDs, nil
 }
 
 // queryUrlRulesByFilter 根据条件查询URL规则
 func (svc *lbSvc) queryUrlRulesByFilter(kt *kit.Kit, vendor enumor.Vendor,
 	filter *filter.Expression, page *core.BasePage) (*dataproto.TCloudURLRuleListResult, error) {
 
-	req := &core.ListReq{
-		Filter: filter,
-		Page:   page,
+	enhancedPage := &core.BasePage{
+		Start: page.Start,
+		Limit: page.Limit,
 	}
 
-	switch vendor {
-	case enumor.TCloud:
-		return svc.client.DataService().TCloud.LoadBalancer.ListUrlRule(kt, req)
-	default:
-		return nil, fmt.Errorf("vendor: %s not support", vendor)
+	if enhancedPage.Limit <= core.DefaultMaxPageLimit {
+		enhancedPage.Limit = core.DefaultMaxPageLimit
 	}
+
+	result := &dataproto.TCloudURLRuleListResult{
+		Count:   0,
+		Details: make([]corelb.TCloudLbUrlRule, 0),
+	}
+
+	req := &core.ListReq{
+		Filter: filter,
+		Page:   enhancedPage,
+	}
+
+	for {
+		var resp *dataproto.TCloudURLRuleListResult
+		var err error
+
+		switch vendor {
+		case enumor.TCloud:
+			resp, err = svc.client.DataService().TCloud.LoadBalancer.ListUrlRule(kt, req)
+			if err != nil {
+				logs.Errorf("list url rules failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
+				return nil, err
+			}
+		default:
+			logs.Errorf("unsupported vendor: %s, rid: %s", vendor, kt.Rid)
+			return nil, fmt.Errorf("vendor: %s not support", vendor)
+		}
+
+		result.Count += resp.Count
+		result.Details = append(result.Details, resp.Details...)
+
+		if uint(len(resp.Details)) < req.Page.Limit {
+			break
+		}
+
+		req.Page.Start += uint32(req.Page.Limit)
+	}
+
+	return result, nil
 }
+
+// buildUrlRuleResponse 构建URL规则响应
 func (svc *lbSvc) buildUrlRuleResponse(kt *kit.Kit,
 	urlRuleList *dataproto.TCloudURLRuleListResult) (*cslb.ListUrlRulesByTopologyResp, error) {
 
@@ -456,29 +414,25 @@ func (svc *lbSvc) buildUrlRuleDetail(rule corelb.TCloudLbUrlRule,
 
 	if lb, exists := lbMap[rule.LbID]; exists {
 		detail.Ip = svc.getLoadBalancerVip(lb)
+		detail.LbID = lb.ID
 	}
 
 	if listener, exists := listenerMap[rule.LblID]; exists {
 		detail.LblProtocols = string(listener.Protocol)
 		detail.LblPort = int(listener.Port)
-		detail.ListenerID = listener.ID
+		detail.ListenerID = listener.CloudID
 	}
 
 	if _, exists := targetGroupMap[rule.TargetGroupID]; exists {
 
 		if targetCount, exists := targetCountMap[rule.TargetGroupID]; exists {
 			detail.TargetCount = targetCount
-		} else {
-			detail.TargetCount = 0
 		}
 	}
 
 	if rule.RuleType == enumor.Layer7RuleType {
 		detail.RuleUrl = rule.URL
 		detail.RuleDomain = rule.Domain
-	} else {
-		detail.RuleUrl = ""
-		detail.RuleDomain = ""
 	}
 
 	return detail
@@ -518,6 +472,8 @@ func (svc *lbSvc) batchGetListenerInfo(kt *kit.Kit, listenerIDs []string) (map[s
 	for {
 		resp, err := svc.client.DataService().Global.LoadBalancer.ListListener(kt, req)
 		if err != nil {
+			logs.Errorf("batch get listener info failed, listenerIDs: %v, err: %v, rid: %s",
+				listenerIDs, err, kt.Rid)
 			return nil, err
 		}
 
@@ -525,10 +481,10 @@ func (svc *lbSvc) batchGetListenerInfo(kt *kit.Kit, listenerIDs []string) (map[s
 			listenerMap[listener.ID] = &listener
 		}
 
-		if uint(len(resp.Details)) < core.DefaultMaxPageLimit {
+		if uint(len(resp.Details)) < req.Page.Limit {
 			break
 		}
-		req.Page.Start += uint32(core.DefaultMaxPageLimit)
+		req.Page.Start += uint32(req.Page.Limit)
 	}
 
 	return listenerMap, nil
@@ -550,6 +506,8 @@ func (svc *lbSvc) batchGetTargetGroupInfo(kt *kit.Kit,
 	for {
 		resp, err := svc.client.DataService().Global.LoadBalancer.ListTargetGroup(kt, req)
 		if err != nil {
+			logs.Errorf("batch get target group info failed, targetGroupIDs: %v, err: %v, rid: %s",
+				targetGroupIDs, err, kt.Rid)
 			return nil, err
 		}
 
@@ -557,10 +515,10 @@ func (svc *lbSvc) batchGetTargetGroupInfo(kt *kit.Kit,
 			targetGroupMap[targetGroup.ID] = &targetGroup
 		}
 
-		if uint(len(resp.Details)) < core.DefaultMaxPageLimit {
+		if uint(len(resp.Details)) < req.Page.Limit {
 			break
 		}
-		req.Page.Start += uint32(core.DefaultMaxPageLimit)
+		req.Page.Start += uint32(req.Page.Limit)
 	}
 
 	return targetGroupMap, nil
@@ -597,9 +555,11 @@ func (svc *lbSvc) batchGetTargetCountByTargetGroupIDs(kt *kit.Kit, targetGroupID
 		return make(map[string]int), nil
 	}
 
-	uniqueTargetGroupIDs := removeDuplicates(targetGroupIDs)
+	uniqueTargetGroupIDs := slice.Unique(targetGroupIDs)
 	targets, err := svc.getTargetByTGIDs(kt, uniqueTargetGroupIDs)
 	if err != nil {
+		logs.Errorf("batch query targets by target group ids failed, targetGroupIDs: %v, err: %v, rid: %s",
+			uniqueTargetGroupIDs, err, kt.Rid)
 		return nil, fmt.Errorf("batch query targets failed, err: %v", err)
 	}
 
@@ -611,20 +571,4 @@ func (svc *lbSvc) batchGetTargetCountByTargetGroupIDs(kt *kit.Kit, targetGroupID
 	}
 
 	return targetCountMap, nil
-}
-
-// removeDuplicates 去除字符串切片中的重复元素
-func removeDuplicates(items []string) []string {
-	if len(items) == 0 {
-		return nil
-	}
-	seen := make(map[string]struct{})
-	result := make([]string, 0, len(items))
-	for _, item := range items {
-		if _, exists := seen[item]; !exists {
-			seen[item] = struct{}{}
-			result = append(result, item)
-		}
-	}
-	return result
 }
