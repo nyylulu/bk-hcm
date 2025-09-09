@@ -76,6 +76,7 @@ type ResPlanDemandCreateReq struct {
 	RegionName      string               `json:"region_name" validate:"required"`
 	ZoneID          string               `json:"zone_id" validate:"omitempty"`
 	ZoneName        string               `json:"zone_name" validate:"omitempty"`
+	TechnicalClass  string               `json:"technical_class" validate:"required"`
 	DeviceFamily    string               `json:"device_family" validate:"required"`
 	DeviceClass     string               `json:"device_class" validate:"required"`
 	DeviceType      string               `json:"device_type" validate:"required"`
@@ -139,6 +140,7 @@ type ResPlanDemandUpdateReq struct {
 	Memory          *int64           `json:"memory"`
 	DiskSize        *int64           `json:"disk_size"`
 	Reviser         string           `json:"reviser"`
+	TechnicalClass  string           `json:"technical_class"`
 }
 
 // Validate validate

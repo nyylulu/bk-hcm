@@ -109,6 +109,10 @@ func (svc *service) batchUpdateResPlanDemandWithTx(kt *kit.Kit, txn *sqlx.Tx,
 		if updateReq.Reviser != "" {
 			record.Reviser = updateReq.Reviser
 		}
+		// 技术分类
+		if updateReq.TechnicalClass != "" {
+			record.TechnicalClass = updateReq.TechnicalClass
+		}
 
 		if err := svc.dao.ResPlanDemand().UpdateWithTx(kt, txn,
 			tools.EqualExpression("id", updateReq.ID), record); err != nil {

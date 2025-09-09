@@ -25,6 +25,7 @@ import (
 
 	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/api/core"
+	rpproto "hcm/pkg/api/data-service/resource-plan"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/tools"
@@ -333,6 +334,34 @@ func (s *service) RepairResPlanDemand(cts *rest.Contexts) (interface{}, error) {
 	if err != nil {
 		logs.Errorf("failed to repair res plan demand from ticket, err: %v, req: %+v, rid: %s", err, *req,
 			cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.Aborted, err)
+	}
+
+	return nil, nil
+}
+
+// BatchUpdateResPlanDemand 批量更新资源预测数据.
+func (s *service) BatchUpdateResPlanDemand(cts *rest.Contexts) (interface{}, error) {
+	req := new(rpproto.ResPlanDemandBatchUpdateReq)
+	if err := cts.DecodeInto(req); err != nil {
+		logs.Errorf("failed to update res plan demand, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		logs.Errorf("failed to validate update res plan demand parameter, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 权限校验
+	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.ZiYanResPlan, Action: meta.Update}}
+	if err := s.authorizer.AuthorizeWithPerm(cts.Kit, authRes); err != nil {
+		return nil, err
+	}
+
+	err := s.client.DataService().Global.ResourcePlan.BatchUpdateResPlanDemand(cts.Kit, req)
+	if err != nil {
+		logs.Errorf("failed to update res plan demand from ticket, err: %v, req: %+v, rid: %s", err, *req, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.Aborted, err)
 	}
 

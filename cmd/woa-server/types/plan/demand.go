@@ -247,6 +247,7 @@ type ListResPlanDemandItem struct {
 	ZoneName         string               `json:"zone_name"`
 	PlanType         enumor.PlanType      `json:"plan_type"`
 	ObsProject       enumor.ObsProject    `json:"obs_project"`
+	TechnicalClass   string               `json:"technical_class"`
 	DeviceFamily     string               `json:"device_family"`
 	CoreType         enumor.CoreType      `json:"core_type"`
 	DiskType         enumor.DiskType      `json:"disk_type"`

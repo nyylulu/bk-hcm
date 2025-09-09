@@ -445,6 +445,7 @@ func convListResPlanDemandItemByTable(table rpd.ResPlanDemandTable, expectTime s
 		ZoneName:         table.ZoneName,
 		PlanType:         table.PlanType.Name(),
 		ObsProject:       table.ObsProject,
+		TechnicalClass:   table.TechnicalClass,
 		DeviceFamily:     table.DeviceFamily,
 		CoreType:         table.CoreType,
 		DiskType:         table.DiskType,

@@ -97,6 +97,12 @@ func (c *Controller) IsDeviceMatched(kt *kit.Kit, deviceTypeSlice []string, devi
 		return nil, err
 	}
 
+	crpTechnicalClassMap, err := c.listCvmTechnicalClassFromCrp(kt)
+	if err != nil {
+		logs.Errorf("failed to list cvm technical class from crp, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
 	result := make([]bool, len(deviceTypeSlice))
 	for idx, ele := range deviceTypeSlice {
 		// if ele and device type are equal, then they are matched.
@@ -112,10 +118,9 @@ func (c *Controller) IsDeviceMatched(kt *kit.Kit, deviceTypeSlice []string, devi
 			continue
 		}
 
-		// if device family and core type of ele and device type are equal, then they are matched.
-		if deviceTypeMap[ele].DeviceFamily == deviceTypeMap[deviceType].DeviceFamily &&
+		// if technical_class of ele and core type are equal, then they are matched.
+		if deviceTypeMap[ele].TechnicalClass == crpTechnicalClassMap[deviceType] &&
 			deviceTypeMap[ele].CoreType == deviceTypeMap[deviceType].CoreType {
-
 			result[idx] = true
 		}
 	}
