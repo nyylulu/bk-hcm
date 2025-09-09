@@ -190,7 +190,7 @@ func (c *Layer4ListenerBindRSExecutor) buildFlows(kt *kit.Kit) ([]string, error)
 func (c *Layer4ListenerBindRSExecutor) buildFlow(kt *kit.Kit, lb corelb.LoadBalancerRaw,
 	details []*layer4ListenerBindRSTaskDetail) (string, error) {
 
-	listenerToDetails, err := c.createTaskDetailsGroupByListener(details)
+	listenerToDetails, err := c.getTaskDetailsGroupByListener(details)
 	if err != nil {
 		logs.Errorf("create task details group by listener failed, err: %v, rid: %s", err, kt.Rid)
 		return "", err
@@ -235,7 +235,7 @@ func (c *Layer4ListenerBindRSExecutor) buildFlow(kt *kit.Kit, lb corelb.LoadBala
 	return flowID, nil
 }
 
-func (c *Layer4ListenerBindRSExecutor) createTaskDetailsGroupByListener(details []*layer4ListenerBindRSTaskDetail,
+func (c *Layer4ListenerBindRSExecutor) getTaskDetailsGroupByListener(details []*layer4ListenerBindRSTaskDetail,
 ) (map[string][]*layer4ListenerBindRSTaskDetail, error) {
 
 	listenerToDetails := make(map[string][]*layer4ListenerBindRSTaskDetail)
@@ -310,9 +310,6 @@ func (c *Layer4ListenerBindRSExecutor) buildTCloudFlowTask(kt *kit.Kit, lb corel
 	for _, taskDetails := range slice.Split(details, constant.BatchTaskMaxLimit) {
 		cur, prev := generator()
 
-		logs.Infof("processing batch RS binding to listener, targetGroupID will be handled by cloud API and sync logic,"+
-			" batch size: %d, rid: %s", len(taskDetails), kt.Rid)
-
 		targets := make([]*hclb.RegisterTarget, 0, len(taskDetails))
 		for _, detail := range taskDetails {
 			target := &hclb.RegisterTarget{
@@ -336,8 +333,13 @@ func (c *Layer4ListenerBindRSExecutor) buildTCloudFlowTask(kt *kit.Kit, lb corel
 			targets = append(targets, target)
 		}
 
+		if len(taskDetails) == 0 {
+			logs.Errorf("taskDetails is empty, skip this batch, rid: %s", kt.Rid)
+			continue
+		}
+		firstDetail := taskDetails[0]
 		req := &hclb.BatchRegisterTCloudTargetReq{
-			CloudListenerID: taskDetails[0].listenerCloudID,
+			CloudListenerID: firstDetail.listenerCloudID,
 			RuleType:        enumor.Layer4RuleType,
 			Targets:         targets,
 		}

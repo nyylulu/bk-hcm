@@ -191,7 +191,7 @@ func (c *Layer7ListenerBindRSExecutor) buildFlows(kt *kit.Kit) ([]string, error)
 func (c *Layer7ListenerBindRSExecutor) buildFlow(kt *kit.Kit, lb corelb.LoadBalancerRaw,
 	details []*layer7ListenerBindRSTaskDetail) (string, error) {
 
-	listenerRuleToDetails, err := c.taskDetailsGroupByListenerAndRule(details)
+	listenerRuleToDetails, err := c.getTaskDetailsGroupByListenerAndRule(details)
 	if err != nil {
 		logs.Errorf("create task details group by listener and rule failed, err: %v, rid: %s", err, kt.Rid)
 		return "", err
@@ -238,8 +238,8 @@ func (c *Layer7ListenerBindRSExecutor) buildFlow(kt *kit.Kit, lb corelb.LoadBala
 	return flowID, nil
 }
 
-// taskDetailsGroupByListenerAndRule 将taskDetails根据监听器和规则进行分组
-func (c *Layer7ListenerBindRSExecutor) taskDetailsGroupByListenerAndRule(details []*layer7ListenerBindRSTaskDetail) (
+// getTaskDetailsGroupByListenerAndRule 将taskDetails根据监听器和规则进行分组
+func (c *Layer7ListenerBindRSExecutor) getTaskDetailsGroupByListenerAndRule(details []*layer7ListenerBindRSTaskDetail) (
 	map[string][]*layer7ListenerBindRSTaskDetail, error) {
 
 	listenerRuleToDetails := make(map[string][]*layer7ListenerBindRSTaskDetail)
@@ -270,9 +270,6 @@ func (c *Layer7ListenerBindRSExecutor) buildTCloudFlowTask(kt *kit.Kit, lb corel
 	for _, taskDetails := range slice.Split(details, constant.BatchTaskMaxLimit) {
 		cur, prev := generator()
 
-		logs.Infof("processing batch RS binding to listener and rule, "+
-			"targetGroupID will be handled by cloud API and sync logic batch size: %d, rid: %s", len(taskDetails), kt.Rid)
-
 		targets := make([]*hclb.RegisterTarget, 0, len(taskDetails))
 		for _, detail := range taskDetails {
 			target := &hclb.RegisterTarget{
@@ -296,9 +293,14 @@ func (c *Layer7ListenerBindRSExecutor) buildTCloudFlowTask(kt *kit.Kit, lb corel
 			targets = append(targets, target)
 		}
 
+		if len(taskDetails) == 0 {
+			logs.Errorf("taskDetails is empty, skip this batch, rid: %s", kt.Rid)
+			continue
+		}
+		firstDetail := taskDetails[0]
 		req := &hclb.BatchRegisterTCloudTargetReq{
-			CloudListenerID: taskDetails[0].listenerCloudID,
-			CloudRuleID:     taskDetails[0].urlRuleCloudID,
+			CloudListenerID: firstDetail.listenerCloudID,
+			CloudRuleID:     firstDetail.urlRuleCloudID,
 			RuleType:        enumor.Layer7RuleType,
 			Targets:         targets,
 		}
@@ -456,6 +458,7 @@ func (c *Layer7ListenerBindRSExecutor) updateTaskDetails(kt *kit.Kit) error {
 	for key, details := range classifySlice {
 		split := strings.Split(key, "/")
 		if len(split) != 2 {
+			logs.Errorf("invalid key: %s, rid: %s", key, kt.Rid)
 			return fmt.Errorf("invalid key: %s", key)
 		}
 		flowID, actionID := split[0], split[1]
