@@ -247,8 +247,6 @@ func (l *Layer4ListenerBindRSPreviewExecutor) validateTarget(kt *kit.Kit,
 			"Listener not bound to target group, will automatically create target group and bind")
 		return nil
 	}
-
-	detail.targetGroupID = tgID
 	if detail.cvm == nil {
 		// rsType 为 ENI，会导致cvm为空
 		return nil
@@ -347,10 +345,6 @@ type Layer4ListenerBindRSDetail struct {
 	// listenerCloudID 在 validateListener 阶段填充, 后续submit阶段会重复使用到,
 	// 如果为空, 那就意味着当前detail的条件无法匹配到对应的listener, 可以认为listener not found
 	listenerCloudID string
-
-	// targetGroupID 在 validateTarget 阶段填充, 后续submit阶段会重复使用到,
-	// 如果为空, 那就意味着当前detail的条件无法匹配到对应的targetGroup, 可以认为targetGroup not found
-	targetGroupID string
 
 	// cvm字段在validateRS阶段填充，在validateTarget和submit阶段使用。
 	// 当RSType为ENI时，该值为空
