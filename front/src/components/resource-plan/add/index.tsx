@@ -139,8 +139,8 @@ export default defineComponent({
     };
 
     // 单独监听 props.initDemand 和 props.initAddParams 的变化，用于初始化数据
-    watch(() => [props.initDemand, props.initAddParams], initData, { deep: true });
-    watch(() => props.isShow, initData);
+    watch(() => [props.initDemand, props.initAddParams], initData, { immediate: true, deep: true });
+    watch(() => props.isShow, initData, { immediate: true });
 
     watch(() => resourceType.value, clearValidate);
 
