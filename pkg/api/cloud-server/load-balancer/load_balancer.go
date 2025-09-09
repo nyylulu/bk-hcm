@@ -1097,8 +1097,8 @@ func (l *LbTopoReq) Validate() error {
 	return validator.Validate.Struct(l)
 }
 
-// CvmWithTargets cvm with targets
-type CvmWithTargets struct {
+// InstWithTargets instance with targets
+type InstWithTargets struct {
 	InstID      string            `json:"inst_id"`
 	InstType    enumor.InstType   `json:"inst_type"`
 	InstName    string            `json:"inst_name"`

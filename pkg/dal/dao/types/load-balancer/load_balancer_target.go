@@ -31,14 +31,14 @@ type ListLoadBalancerTargetDetails struct {
 	Details []tablelb.LoadBalancerTargetTable `json:"details,omitempty"`
 }
 
-// ListCvmInfoDetails list cvm info details.
-type ListCvmInfoDetails struct {
-	Count   uint64        `json:"count,omitempty"`
-	Details []ListCvmInfo `json:"details,omitempty"`
+// ListInstInfoDetails list instance info details.
+type ListInstInfoDetails struct {
+	Count   uint64         `json:"count,omitempty"`
+	Details []ListInstInfo `json:"details,omitempty"`
 }
 
-// ListCvmInfo list cvm info.
-type ListCvmInfo struct {
+// ListInstInfo list instance info.
+type ListInstInfo struct {
 	InstID      string            `db:"inst_id" json:"inst_id"`
 	InstType    enumor.InstType   `db:"inst_type" json:"inst_type"`
 	InstName    string            `db:"inst_name" json:"inst_name"`

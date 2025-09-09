@@ -244,8 +244,10 @@ func (cli *LoadBalancerClient) ListListenerByCond(kt *kit.Kit,
 		rest.POST, kt, req, "/load_balancers/listeners/list_by_cond")
 }
 
-// ListTargetCvmInfo list target cvm info.
-func (cli *LoadBalancerClient) ListTargetCvmInfo(kt *kit.Kit, req *core.ListReq) (*typeslb.ListCvmInfoDetails, error) {
-	return common.Request[core.ListReq, typeslb.ListCvmInfoDetails](
-		cli.client, rest.POST, kt, req, "/load_balancers/targets/cvm_info/list")
+// ListTargetInstInfo list target instance info.
+func (cli *LoadBalancerClient) ListTargetInstInfo(kt *kit.Kit, req *core.ListReq) (
+	*typeslb.ListInstInfoDetails, error) {
+
+	return common.Request[core.ListReq, typeslb.ListInstInfoDetails](
+		cli.client, rest.POST, kt, req, "/load_balancers/targets/inst_info/list")
 }

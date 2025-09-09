@@ -64,8 +64,8 @@ func (svc *lbSvc) ListTargetByTopo(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 	if noPermFlag {
-		logs.Errorf("list target by topo no auth, req: %+v, rid: %s", noPermFlag, req, cts.Kit.Rid)
-		return &core.ListResult{Count: 0, Details: make([]interface{}, 0)}, nil
+		logs.Errorf("list target by topo no auth, req: %+v, rid: %s", req, cts.Kit.Rid)
+		return nil, errf.New(errf.PermissionDenied, "no permission for list target by topo")
 	}
 	bizID, err := cts.PathParameter("bk_biz_id").Int64()
 	if err != nil {
@@ -97,8 +97,8 @@ func (svc *lbSvc) CountTargetByTopo(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 	if noPermFlag {
-		logs.Errorf("count target by topo no auth, req: %+v, rid: %s", noPermFlag, req, cts.Kit.Rid)
-		return &core.ListResult{Count: 0}, nil
+		logs.Errorf("count target by topo no auth, req: %+v, rid: %s", req, cts.Kit.Rid)
+		return nil, errf.New(errf.PermissionDenied, "no permission for count target by topo")
 	}
 	bizID, err := cts.PathParameter("bk_biz_id").Int64()
 	if err != nil {
@@ -139,35 +139,35 @@ func (svc *lbSvc) listTargetByTopo(kt *kit.Kit, bizID int64, vendor enumor.Vendo
 		return nil, err
 	}
 	if !info.Match {
-		return core.ListResultT[cslb.CvmWithTargets]{Details: make([]cslb.CvmWithTargets, 0)}, nil
+		return core.ListResultT[cslb.InstWithTargets]{Details: make([]cslb.InstWithTargets, 0)}, nil
 	}
 
-	// 根据条件查询对应的cvm信息
-	targetCvmCond := make([]filter.RuleFactory, 0)
+	// 根据条件查询对应的instance信息
+	targetInstCond := make([]filter.RuleFactory, 0)
 	tgIDs := maps.Keys(info.TgMap)
-	targetCvmCond = append(targetCvmCond, tools.RuleIn("target_group_id", tgIDs))
-	targetCvmCond = append(targetCvmCond, req.GetTargetCond()...)
-	cvmInfoReq := core.ListReq{
-		Filter: &filter.Expression{Op: filter.And, Rules: targetCvmCond},
+	targetInstCond = append(targetInstCond, tools.RuleIn("target_group_id", tgIDs))
+	targetInstCond = append(targetInstCond, req.GetTargetCond()...)
+	instInfoReq := core.ListReq{
+		Filter: &filter.Expression{Op: filter.And, Rules: targetInstCond},
 		Page:   req.Page,
 	}
-	cvmInfoResp, err := svc.client.DataService().Global.LoadBalancer.ListTargetCvmInfo(kt, &cvmInfoReq)
+	instInfoResp, err := svc.client.DataService().Global.LoadBalancer.ListTargetInstInfo(kt, &instInfoReq)
 	if err != nil {
-		logs.Errorf("get cvm info failed, err: %v, cvmInfoReq: %+v, rid: %s", err, cvmInfoReq, kt.Rid)
+		logs.Errorf("get instance info failed, err: %v, instInfoReq: %+v, rid: %s", err, instInfoReq, kt.Rid)
 		return nil, err
 	}
 	if req.Page.Count {
-		return core.ListResultT[cslb.CvmWithTargets]{Count: cvmInfoResp.Count}, nil
+		return core.ListResultT[cslb.InstWithTargets]{Count: instInfoResp.Count}, nil
 	}
-	if len(cvmInfoResp.Details) == 0 {
-		return core.ListResultT[cslb.CvmWithTargets]{Details: make([]cslb.CvmWithTargets, 0)}, nil
+	if len(instInfoResp.Details) == 0 {
+		return core.ListResultT[cslb.InstWithTargets]{Details: make([]cslb.InstWithTargets, 0)}, nil
 	}
 
 	// 根据条件查询RS信息
 	targetCond := make([]filter.RuleFactory, 0)
 	targetCond = append(targetCond, tools.RuleIn("target_group_id", tgIDs))
 	ips := make([]string, 0)
-	for _, cvmInfo := range cvmInfoResp.Details {
+	for _, cvmInfo := range instInfoResp.Details {
 		ips = append(ips, cvmInfo.IP)
 	}
 	targetCond = append(targetCond, tools.RuleIn("ip", ips))
@@ -181,13 +181,13 @@ func (svc *lbSvc) listTargetByTopo(kt *kit.Kit, bizID int64, vendor enumor.Vendo
 	}
 
 	// 组装数据进行返回
-	details, err := buildCvmWithTargetsInfo(kt, info, targets, cvmInfoResp.Details)
+	details, err := buildInstWithTargetsInfo(kt, info, targets, instInfoResp.Details)
 	if err != nil {
 		logs.Errorf("build cvm with targets info failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
-	return core.ListResultT[cslb.CvmWithTargets]{Details: details}, nil
+	return core.ListResultT[cslb.InstWithTargets]{Details: details}, nil
 }
 
 func (svc *lbSvc) getTargetTopoInfoByReq(kt *kit.Kit, bizID int64, vendor enumor.Vendor, req *cslb.LbTopoCond) (
@@ -197,7 +197,6 @@ func (svc *lbSvc) getTargetTopoInfoByReq(kt *kit.Kit, bizID int64, vendor enumor
 	commonCond = append(commonCond, tools.RuleEqual("bk_biz_id", bizID))
 	commonCond = append(commonCond, tools.RuleEqual("vendor", vendor))
 	commonCond = append(commonCond, tools.RuleEqual("account_id", req.AccountID))
-
 	// 根据条件查询clb信息
 	lbCond := make([]filter.RuleFactory, 0)
 	lbCond = append(lbCond, commonCond...)
@@ -241,7 +240,8 @@ func (svc *lbSvc) getTargetTopoInfoByReq(kt *kit.Kit, bizID int64, vendor enumor
 
 	// 根据条件查询clb和目标组关系
 	ruleIDs := maps.Keys(ruleMap)
-	tgLbRelCond := []filter.RuleFactory{tools.RuleIn("listener_rule_id", ruleIDs), tools.RuleEqual("vendor", vendor)}
+	tgLbRelCond := []filter.RuleFactory{tools.RuleIn("listener_rule_id", ruleIDs), tools.RuleEqual("vendor", vendor),
+		tools.RuleEqual("binding_status", enumor.SuccessBindingStatus)}
 	tgLbRels, err := svc.getTgLbRelByCond(kt, tgLbRelCond)
 	if err != nil {
 		logs.Errorf("get tg lb rel failed, err: %v, tgLbRelCond: %v, rid: %s", err, tgLbRelCond, kt.Rid)
@@ -272,11 +272,11 @@ func (svc *lbSvc) getTargetTopoInfoByReq(kt *kit.Kit, bizID int64, vendor enumor
 	}, nil
 }
 
-func buildCvmWithTargetsInfo(kt *kit.Kit, clbTopoInfo *cslb.TargetTopoInfo, targets []corelb.BaseTarget,
-	cvmInfos []daotypeslb.ListCvmInfo) ([]cslb.CvmWithTargets, error) {
+func buildInstWithTargetsInfo(kt *kit.Kit, clbTopoInfo *cslb.TargetTopoInfo, targets []corelb.BaseTarget,
+	instInfos []daotypeslb.ListInstInfo) ([]cslb.InstWithTargets, error) {
 
-	if clbTopoInfo == nil || len(targets) == 0 || len(cvmInfos) == 0 {
-		return make([]cslb.CvmWithTargets, 0), nil
+	if clbTopoInfo == nil || len(targets) == 0 || len(instInfos) == 0 {
+		return make([]cslb.InstWithTargets, 0), nil
 	}
 
 	tgIDRelMap := make(map[string]corelb.BaseTargetListenerRuleRel)
@@ -339,21 +339,21 @@ func buildCvmWithTargetsInfo(kt *kit.Kit, clbTopoInfo *cslb.TargetTopoInfo, targ
 		ipTargetsMap[target.IP] = append(ipTargetsMap[target.IP], targetWithTopo)
 	}
 
-	details := make([]cslb.CvmWithTargets, 0)
-	for _, cvmInfo := range cvmInfos {
-		cvmWithTargets := cslb.CvmWithTargets{
-			InstID:      cvmInfo.InstID,
-			InstType:    cvmInfo.InstType,
-			InstName:    cvmInfo.InstName,
-			IP:          cvmInfo.IP,
-			Zone:        cvmInfo.Zone,
-			CloudVpcIDs: cvmInfo.CloudVpcIDs,
+	details := make([]cslb.InstWithTargets, 0)
+	for _, instInfo := range instInfos {
+		instWithTargets := cslb.InstWithTargets{
+			InstID:      instInfo.InstID,
+			InstType:    instInfo.InstType,
+			InstName:    instInfo.InstName,
+			IP:          instInfo.IP,
+			Zone:        instInfo.Zone,
+			CloudVpcIDs: instInfo.CloudVpcIDs,
 		}
-		targetWithTopos, ok := ipTargetsMap[cvmInfo.IP]
+		targetWithTopos, ok := ipTargetsMap[instInfo.IP]
 		if ok {
-			cvmWithTargets.Targets = targetWithTopos
+			instWithTargets.Targets = targetWithTopos
 		}
-		details = append(details, cvmWithTargets)
+		details = append(details, instWithTargets)
 	}
 
 	return details, nil
@@ -587,8 +587,8 @@ func (svc *lbSvc) ListListenerByTopo(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 	if noPermFlag {
-		logs.Errorf("list listener by topo no auth, req: %+v, rid: %s", noPermFlag, req, cts.Kit.Rid)
-		return &core.ListResult{Count: 0, Details: make([]interface{}, 0)}, nil
+		logs.Errorf("list listener by topo no auth, req: %+v, rid: %s", req, cts.Kit.Rid)
+		return nil, errf.New(errf.PermissionDenied, "no permission for list listener by topo")
 	}
 	bizID, err := cts.PathParameter("bk_biz_id").Int64()
 	if err != nil {
@@ -735,10 +735,12 @@ func (svc *lbSvc) getListenerRelInfo(kt *kit.Kit, vendor enumor.Vendor, listener
 	tgIDLblIDMap := make(map[string]string)
 	lblIDTgIDMap := make(map[string]string)
 	tgIDs := make([]string, 0)
+	tgIDBindStatusMap := make(map[string]enumor.BindingStatus)
 	for _, tgLbRel := range tgLbRels {
 		tgIDLblIDMap[tgLbRel.TargetGroupID] = tgLbRel.LblID
 		lblIDTgIDMap[tgLbRel.LblID] = tgLbRel.TargetGroupID
 		tgIDs = append(tgIDs, tgLbRel.TargetGroupID)
+		tgIDBindStatusMap[tgLbRel.TargetGroupID] = tgLbRel.BindingStatus
 	}
 	targets, err := svc.getTargetByCond(kt, []filter.RuleFactory{tools.RuleIn("target_group_id", tgIDs)})
 	if err != nil {
@@ -753,6 +755,10 @@ func (svc *lbSvc) getListenerRelInfo(kt *kit.Kit, vendor enumor.Vendor, listener
 			return nil, nil, nil, nil, fmt.Errorf("target group not found, tg id: %s, target id: %s",
 				target.TargetGroupID, target.ID)
 		}
+		if tgIDBindStatusMap[target.TargetGroupID] != enumor.SuccessBindingStatus {
+			continue
+		}
+
 		lblTargetCountMap[lblID]++
 		if converter.PtrToVal(target.Weight) != 0 {
 			lblNonZeroWeightTargetCountMap[lblID]++
@@ -792,7 +798,8 @@ func (svc *lbSvc) getLblTopoInfoByReq(kt *kit.Kit, bizID int64, vendor enumor.Ve
 		return &cslb.LblTopoInfo{Match: true, LbMap: lbMap, LblCond: lblCond}, nil
 	}
 
-	tgLbRelCond := []filter.RuleFactory{tools.RuleIn("lb_id", lbIDs), tools.RuleEqual("vendor", vendor)}
+	tgLbRelCond := []filter.RuleFactory{tools.RuleIn("lb_id", lbIDs), tools.RuleEqual("vendor", vendor),
+		tools.RuleEqual("binding_status", enumor.SuccessBindingStatus)}
 
 	// 如果请求中存在规则条件，那么需要根据条件查询规则，进一步得到匹配的监听器条件
 	if len(reqRuleCond) != 0 {
@@ -820,7 +827,7 @@ func (svc *lbSvc) getLblTopoInfoByReq(kt *kit.Kit, bizID int64, vendor enumor.Ve
 		}
 
 		tgLbRelCond = []filter.RuleFactory{tools.RuleIn("listener_rule_id", maps.Keys(ruleMap)),
-			tools.RuleEqual("vendor", vendor)}
+			tools.RuleEqual("vendor", vendor), tools.RuleEqual("binding_status", enumor.SuccessBindingStatus)}
 	}
 
 	// 根据RS条件查询，得到监听器条件

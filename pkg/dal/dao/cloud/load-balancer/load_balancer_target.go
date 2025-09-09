@@ -49,7 +49,7 @@ type TargetInterface interface {
 	UpdateByIDWithTx(kt *kit.Kit, tx *sqlx.Tx, id string, model *tablelb.LoadBalancerTargetTable) error
 	List(kt *kit.Kit, opt *types.ListOption) (*typeslb.ListLoadBalancerTargetDetails, error)
 	DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression) error
-	ListCvmInfo(kt *kit.Kit, opt *types.ListOption) (*typeslb.ListCvmInfoDetails, error)
+	ListInstInfo(kt *kit.Kit, opt *types.ListOption) (*typeslb.ListInstInfoDetails, error)
 }
 
 var _ TargetInterface = new(TargetDao)
@@ -227,8 +227,8 @@ func (dao TargetDao) DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Express
 	return nil
 }
 
-// ListCvmInfo list cvm info.
-func (dao TargetDao) ListCvmInfo(kt *kit.Kit, opt *types.ListOption) (*typeslb.ListCvmInfoDetails, error) {
+// ListInstInfo list instance info.
+func (dao TargetDao) ListInstInfo(kt *kit.Kit, opt *types.ListOption) (*typeslb.ListInstInfoDetails, error) {
 	if opt == nil {
 		return nil, errf.New(errf.InvalidParameter, "list options is nil")
 	}
@@ -249,12 +249,12 @@ func (dao TargetDao) ListCvmInfo(kt *kit.Kit, opt *types.ListOption) (*typeslb.L
 
 		count, err := dao.Orm.Do().Count(kt.Ctx, sql, whereValue)
 		if err != nil {
-			logs.Errorf("count load balancer target cvm info failed, err: %v, filter: %s, rid: %s", err, opt.Filter,
+			logs.Errorf("count load balancer target inst info failed, err: %v, filter: %s, rid: %s", err, opt.Filter,
 				kt.Rid)
 			return nil, err
 		}
 
-		return &typeslb.ListCvmInfoDetails{Count: count}, nil
+		return &typeslb.ListInstInfoDetails{Count: count}, nil
 	}
 
 	if opt.Page.Sort == "" {
@@ -268,10 +268,10 @@ func (dao TargetDao) ListCvmInfo(kt *kit.Kit, opt *types.ListOption) (*typeslb.L
 
 	sql := fmt.Sprintf(`SELECT ip,inst_id,inst_type,inst_name,zone,cloud_vpc_ids FROM %s %s group by ip,inst_id,
 inst_type,inst_name,zone,cloud_vpc_ids %s`, table.LoadBalancerTargetTable, whereExpr, pageExpr)
-	details := make([]typeslb.ListCvmInfo, 0)
+	details := make([]typeslb.ListInstInfo, 0)
 	if err = dao.Orm.Do().Select(kt.Ctx, &details, sql, whereValue); err != nil {
 		return nil, err
 	}
 
-	return &typeslb.ListCvmInfoDetails{Details: details}, nil
+	return &typeslb.ListInstInfoDetails{Details: details}, nil
 }
