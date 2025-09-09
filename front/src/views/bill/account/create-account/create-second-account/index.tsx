@@ -32,7 +32,7 @@ export default defineComponent({
     const formInstance = ref();
     const { formModel } = useFormModel({
       name: '', // 名字
-      vendor: VendorEnum.AZURE, // 云厂商
+      vendor: VendorEnum.GCP, // 云厂商
       email: '', // 邮箱
       managers: [], // 负责人数组
       bak_managers: [], // 备份负责人数组
@@ -150,7 +150,7 @@ export default defineComponent({
                       <FormItem label='云厂商' required property='vendor'>
                         <div class={'account-vendor-selector'}>
                           {MAIN_ACCOUNT_VENDORS.map(({ vendor, name, icon }) =>
-                            vendor !== VendorEnum.TCLOUD ? (
+                            [VendorEnum.GCP, VendorEnum.HUAWEI, VendorEnum.AWS].includes(vendor) ? (
                               <div
                                 class={`account-vendor-option ${
                                   vendor === formModel.vendor ? 'account-vendor-option-active' : ''
@@ -166,10 +166,9 @@ export default defineComponent({
                                 v-bk-tooltips={{
                                   content: (
                                     <span>
-                                      腾讯云账号需要到云梯申请，请参考{' '}
-                                      <Button text theme='primary'>
-                                        腾讯云账号申请指引
-                                      </Button>
+                                      {vendor === VendorEnum.TCLOUD
+                                        ? '腾讯云账号申请请咨询ICR助手/C2000助手'
+                                        : '该云厂商的账号创建暂不支持，如需申请，请咨询ICR助手'}
                                     </span>
                                   ),
                                 }}>
