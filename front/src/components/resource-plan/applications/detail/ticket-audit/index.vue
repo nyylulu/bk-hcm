@@ -32,6 +32,8 @@ import ExpeditingBtn from '@/views/ziyanScr/components/ticket-audit/children/exp
 import successIcon from '@/assets/image/corret-fill.png';
 import { timeFormatter } from '@/common/util';
 import { useResSubTicketStore, AdminAudit, SubTicketAudit } from '@/store/ticket/res-sub-ticket';
+import { useRoute } from 'vue-router';
+import { GLOBAL_BIZS_KEY } from '@/common/constant';
 
 interface Step {
   name: string;
@@ -47,8 +49,10 @@ const props = defineProps({
 });
 
 const { t } = useI18n();
-const { getBusinessApiPath, isBusinessPage, getBizsId } = useWhereAmI();
+const { getBusinessApiPath, isBusinessPage } = useWhereAmI();
 const userStore = useUserStore();
+const route = useRoute();
+const bizId = computed(() => Number(route.query[GLOBAL_BIZS_KEY]));
 
 const crpSteps: Step[] = [
   {
@@ -273,10 +277,7 @@ const approvalItsmAudit = async ({ approval, remark }: { approval: boolean; rema
 const approvalAdminAudit = async (params: { approval: boolean; use_transfer_pool: boolean }) => {
   const store = useResSubTicketStore();
   const { id } = props.detail;
-  const promise = isBusinessPage
-    ? store.approveAdminNodeByBiz(getBizsId(), id, params)
-    : store.approveAdminNode(id, params);
-  await promise;
+  await store.approveAdminNode(id, params, bizId.value);
 
   Message({ theme: 'success', message: t('请求已提交，5s后自动刷新') });
   // 5s后刷新itsm审批流信息

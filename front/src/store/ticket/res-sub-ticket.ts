@@ -2,72 +2,43 @@ import http from '@/http';
 import { IPageQuery, IQueryResData } from '@/typings';
 import { IPlanTicketAudit, IPlanTicketCrpAudit } from '@/typings/resourcePlan';
 import { getEntirePath } from '@/utils';
+import { resolveBizApiPath } from '@/utils/search';
 import { defineStore } from 'pinia';
 
 export const useResSubTicketStore = defineStore('resSubTicketStore', () => {
-  // 业务接口
-  const getListByBiz = (bk_biz_id: number, params: SubTicketParam): Promise<SubTicketsResult> => {
-    return http.post(getEntirePath(`bizs/${bk_biz_id}/plans/resources/sub_tickets/list`), params);
+  const getList = (params: SubTicketParam, bizId?: number): Promise<SubTicketsResult> => {
+    return http.post(`/api/v1/woa/${resolveBizApiPath(bizId)}plans/resources/sub_tickets/list`, params);
   };
-  const getAuditByBiz = (bk_biz_id: number, sub_ticket_id: string): Promise<SubTicketAuditResult> => {
-    return http.get(getEntirePath(`bizs/${bk_biz_id}/plans/resources/sub_tickets/${sub_ticket_id}/audit`));
+  const getAudit = (subTicketId: string, bizId?: number): Promise<SubTicketAuditResult> => {
+    return http.get(`/api/v1/woa/${resolveBizApiPath(bizId)}plans/resources/sub_tickets/${subTicketId}/audit`);
   };
-  const getDetailByBiz = (bk_biz_id: number, sub_ticket_id: string): Promise<SubTicketDetailResult> => {
-    return http.get(getEntirePath(`bizs/${bk_biz_id}/plans/resources/sub_tickets/${sub_ticket_id}`));
+  const getDetail = (subTicketId: string, bizId?: number): Promise<SubTicketDetailResult> => {
+    return http.get(`/api/v1/woa/${resolveBizApiPath(bizId)}plans/resources/sub_tickets/${subTicketId}`);
   };
-  const retryTicketsByBiz = (bk_biz_id: number, ticket_id: string): Promise<ActionResult> => {
-    return http.post(getEntirePath(`bizs/${bk_biz_id}/plans/resources/tickets/${ticket_id}/retry`));
+  const retryTickets = (ticketId: string, bizId?: number): Promise<ActionResult> => {
+    return http.post(`/api/v1/woa/${resolveBizApiPath(bizId)}plans/resources/tickets/${ticketId}/retry`);
   };
-  const approveAdminNodeByBiz = (
-    bk_biz_id: number,
-    sub_ticket_id: string,
+  const approveAdminNode = (
+    subTicketId: string,
     params: ApproveAdminNodeParams,
+    bizId?: number,
   ): Promise<ActionResult> => {
     return http.post(
-      getEntirePath(`bizs/${bk_biz_id}/plans/resources/sub_tickets/${sub_ticket_id}/approve_admin_node`),
+      `/api/v1/woa/${resolveBizApiPath(bizId)}plans/resources/sub_tickets/${subTicketId}/approve_admin_node`,
       params,
     );
-  };
-
-  // 管理员接口
-  const getList = (params: SubTicketParam): Promise<SubTicketsResult> => {
-    return http.post(getEntirePath(`plans/resources/sub_tickets/list`), params);
-  };
-  const getAudit = (sub_ticket_id: string): Promise<SubTicketAuditResult> => {
-    return http.get(getEntirePath(`plans/resources/sub_tickets/${sub_ticket_id}/audit`));
-  };
-  const getDetail = (sub_ticket_id: string): Promise<SubTicketDetailResult> => {
-    return http.get(getEntirePath(`plans/resources/sub_tickets/${sub_ticket_id}`));
-  };
-  const retryTickets = (ticket_id: string): Promise<ActionResult> => {
-    return http.post(getEntirePath(`plans/resources/tickets/${ticket_id}/retry`));
-  };
-  const approveAdminNode = (sub_ticket_id: string, params: ApproveAdminNodeParams): Promise<ActionResult> => {
-    return http.post(getEntirePath(`plans/resources/sub_tickets/${sub_ticket_id}/approve_admin_node`), params);
   };
 
   // 获取审批额度
   const getTransferQuotaConfigs = (): Promise<TransferQuotasConfigsResult> => {
     return http.get(getEntirePath(`plans/resources/transfer_quotas/configs`));
   };
-  // 获取业务下剩余额度
-  const getTransferQuotaSummaryByBiz = (
-    bk_biz_id: number,
-    params: TransferQuotasParams,
-  ): Promise<TransferQuotasResult> => {
-    return http.post(getEntirePath(`bizs/${bk_biz_id}/plans/resources/transfer_quotas/summary`), params);
-  };
-  // 获取资源哎剩余额度
-  const getTransferQuotaSummary = (params: TransferQuotasParams): Promise<TransferQuotasResult> => {
-    return http.post(getEntirePath(`plans/resources/transfer_quotas/summary`), params);
+  // 获取剩余额度
+  const getTransferQuotaSummary = (params: TransferQuotasParams, bizId?: number): Promise<TransferQuotasResult> => {
+    return http.post(`/api/v1/woa/${resolveBizApiPath(bizId)}plans/resources/transfer_quotas/summary`, params);
   };
 
   return {
-    getListByBiz,
-    getAuditByBiz,
-    getDetailByBiz,
-    retryTicketsByBiz,
-    approveAdminNodeByBiz,
     getTransferQuotaSummary,
     getList,
     getAudit,
@@ -75,7 +46,6 @@ export const useResSubTicketStore = defineStore('resSubTicketStore', () => {
     retryTickets,
     approveAdminNode,
     getTransferQuotaConfigs,
-    getTransferQuotaSummaryByBiz,
   };
 });
 

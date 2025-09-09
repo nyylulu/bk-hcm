@@ -13,7 +13,7 @@ export default defineComponent({
     statusInfo: Object as PropType<Partial<TicketByIdResult['status_info'] & SubTicketDetail['status_info']>>,
     errorMessage: String,
     ticketAuditDetail: {
-      type: Object as PropType<IPlanTicketAudit & SubTicketAudit>,
+      type: Object as PropType<Partial<IPlanTicketAudit & SubTicketAudit>>,
       default: () => ({}),
     },
   },
@@ -29,6 +29,7 @@ export default defineComponent({
         case 'done':
           return <i class='hcm-icon bkhcm-icon-7chenggong-01'></i>;
         case 'failed':
+        case 'partial_failed':
           return <i class='hcm-icon bkhcm-icon-close-circle-fill'></i>;
         case 'revoked':
           return <img src={StatusUnknown} style={{ width: '22px', marginRight: '10px' }} />;

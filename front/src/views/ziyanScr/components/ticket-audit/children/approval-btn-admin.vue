@@ -2,8 +2,9 @@
 import { computed, inject, onMounted, Ref, ref, useAttrs } from 'vue';
 import { useI18n } from 'vue-i18n';
 import useFormModel from '@/hooks/useFormModel';
-import { useWhereAmI } from '@/hooks/useWhereAmI';
 import { useResSubTicketStore, SubTicketItem, SubTicketDetail } from '@/store/ticket/res-sub-ticket';
+import { useRoute } from 'vue-router';
+import { GLOBAL_BIZS_KEY } from '@/common/constant';
 
 interface IProps {
   loading?: boolean;
@@ -21,7 +22,8 @@ const emit = defineEmits<(e: 'shown' | 'hidden') => void>();
 const attrs = useAttrs();
 const store = useResSubTicketStore();
 const { t } = useI18n();
-const { getBizsId, isBusinessPage } = useWhereAmI();
+const route = useRoute();
+const bizId = computed(() => Number(route.query[GLOBAL_BIZS_KEY]));
 
 const ticketDetail = inject<Ref<SubTicketDetail>>('ticketDetail');
 const ticketListData = inject<Ref<SubTicketItem>>('ticketListData');
@@ -61,21 +63,16 @@ const remainCore = ref(0);
 const approvalCore = ref(0);
 const getSummaryData = async () => {
   // 获取剩余额度
-  const params = {
+  const params: any = {
     obs_project: ticketDetail.value.demands.map((it) => it?.updated_info?.obs_project),
     technical_class: ticketDetail.value.demands.map((it) => it?.updated_info?.cvm?.technical_class),
     year: new Date().getFullYear(),
   };
-  const promise = isBusinessPage
-    ? store.getTransferQuotaSummaryByBiz(getBizsId(), {
-        ...params,
-        bk_biz_id: [getBizsId()],
-      })
-    : store.getTransferQuotaSummary(params);
-  const remainRes = await promise;
-
-  // 获取审批额度
-  const approvalRes = await store.getTransferQuotaConfigs();
+  if (bizId.value) {
+    params.bk_biz_id = [bizId.value];
+  }
+  const remainRes = await store.getTransferQuotaSummary(params, bizId.value); // 获取剩余额度
+  const approvalRes = await store.getTransferQuotaConfigs(); // 获取审批额度
 
   remainCore.value = remainRes.data?.remain_quota || 0;
   approvalCore.value = approvalRes.data?.audit_quota || 0;

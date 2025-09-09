@@ -12,18 +12,18 @@ import StatusSuccess from '@/assets/image/success-account.png';
 import StatusFailure from '@/assets/image/failed-account.png';
 import ResultDefault from '@/assets/image/result-default.svg';
 import CopyToClipboard from '@/components/copy-to-clipboard/index.vue';
-import { useWhereAmI } from '@/hooks/useWhereAmI';
 import { IPageQuery } from '@/typings';
 import Stage from './stage.vue';
 import SubTicketDetail from './sub-ticket-detail.vue';
 import { useResSubTicketStore, SubTicketItem, STATUS_ENUM, STAGE_ENUM } from '@/store/ticket/res-sub-ticket';
+import { GLOBAL_BIZS_KEY } from '@/common/constant';
 
-const { getBizsId, isBusinessPage } = useWhereAmI();
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const store = useResSubTicketStore();
 const detailRef = useTemplateRef('detailRef');
+const bizId = computed(() => Number(route.query[GLOBAL_BIZS_KEY]));
 
 // 表格
 const hoverIndex = ref(-1);
@@ -104,7 +104,8 @@ const columns: any[] = [
     render: ({ data }: { cell: number; data: SubTicketItem }) => {
       const updatedCore = Number(data.updated_info.cvm.cpu_core) || 0;
       const originalCore = Number(data.original_info.cvm.cpu_core) || 0;
-      const value = updatedCore - originalCore;
+      const compare = updatedCore - originalCore;
+      let value = 0;
       let prefix = '';
       let color = '';
 
@@ -113,14 +114,17 @@ const columns: any[] = [
         case 'transfer':
           prefix = '+';
           color = '#00B545'; // 绿色
+          value = originalCore;
           break;
         case 'cancel':
           prefix = '-';
           color = '#EA3636'; // 红色
+          value = originalCore;
           break;
         case 'adjust':
-          prefix = value > 0 ? '+' : '-';
-          color = value > 0 ? '#00B545' : '#EA3636';
+          prefix = compare >= 0 ? '+' : '-';
+          color = '#EA3636'; // 红色
+          value = Math.abs(compare);
           break;
       }
 
@@ -143,17 +147,13 @@ const columns: any[] = [
   },
 ];
 const getData = (page: IPageQuery) => {
-  if (isBusinessPage) {
-    return store.getListByBiz(getBizsId(), {
+  return store.getList(
+    {
       page,
       ticket_id: route.query?.id as string,
-    });
-  }
-
-  return store.getList({
-    page,
-    ticket_id: route.query?.id as string,
-  });
+    },
+    bizId.value,
+  );
 };
 const { tableData, pagination, isLoading, handlePageChange, handlePageSizeChange, handleSort, triggerApi } =
   useTable(getData);
@@ -175,10 +175,8 @@ const hasFailedTicket = computed(() => {
 });
 // 方法
 const handelFailedTicket = () => {
-  const promise = isBusinessPage
-    ? store.retryTicketsByBiz(getBizsId(), route.query?.id as string)
-    : store.retryTickets(route.query?.id as string);
-  promise
+  store
+    .retryTickets(route.query?.id as string, bizId.value)
     .then(() => {
       Message({ theme: 'success', message: '重试成功' });
     })

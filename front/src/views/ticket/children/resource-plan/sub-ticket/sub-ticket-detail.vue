@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed, provide } from 'vue';
-import { useWhereAmI } from '@/hooks/useWhereAmI';
 import useTimeoutPoll from '@/hooks/use-timeout-poll';
 
 import Approval from '@/components/resource-plan/applications/detail/approval';
@@ -10,10 +9,10 @@ import ResourcePlanList from '@/components/resource-plan/applications/detail/lis
 import { timeFormatter } from '@/common/util';
 import { useRoute, useRouter } from 'vue-router';
 import { useResSubTicketStore, SubTicketItem } from '@/store/ticket/res-sub-ticket';
+import { GLOBAL_BIZS_KEY } from '@/common/constant';
 
 // 路由、状态管理、工具函数
 const store = useResSubTicketStore();
-const { getBizsId, isBusinessPage } = useWhereAmI();
 const route = useRoute();
 const router = useRouter();
 
@@ -25,6 +24,7 @@ const ticketAuditDetail = ref();
 const isLoading = ref(false);
 const errorMessage = ref<string>();
 const ticketListData = ref();
+const bizId = computed(() => Number(route.query[GLOBAL_BIZS_KEY]));
 provide('ticketListData', ticketListData);
 provide('ticketDetail', ticketDetail);
 
@@ -49,19 +49,10 @@ const getResultData = async () => {
   clear();
   try {
     isLoading.value = true;
-    let promise = null;
-    if (isBusinessPage) {
-      // 业务页面
-      promise = Promise.all([
-        store.getDetailByBiz(getBizsId(), ticketId.value),
-        store.getAuditByBiz(getBizsId(), ticketId.value),
-      ]);
-    } else {
-      // 服务页面
-      promise = Promise.all([store.getDetail(ticketId.value), store.getAudit(ticketId.value)]);
-    }
-
-    const [ticketRes, ticketAuditRes] = await promise;
+    const [ticketRes, ticketAuditRes] = await Promise.all([
+      store.getDetail(ticketId.value, bizId.value),
+      store.getAudit(ticketId.value, bizId.value),
+    ]);
 
     // 错误信息处理
     if (ticketRes.data?.status_info?.status === 'failed') {

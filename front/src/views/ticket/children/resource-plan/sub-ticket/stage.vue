@@ -6,6 +6,8 @@ import { computed, onBeforeMount, ref } from 'vue';
 import ExpeditingBtn from '@/views/ziyanScr/components/ticket-audit/children/expediting-btn.vue';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
 import { useResSubTicketStore, SubTicketItem, SubTicketAudit } from '@/store/ticket/res-sub-ticket';
+import { GLOBAL_BIZS_KEY } from '@/common/constant';
+import { useRoute } from 'vue-router';
 
 interface Props {
   text?: string;
@@ -18,15 +20,14 @@ const props = withDefaults(defineProps<Props>(), {
   showActions: false,
 });
 const store = useResSubTicketStore();
-const { getBizsId, isBusinessPage } = useWhereAmI();
+const { isBusinessPage } = useWhereAmI();
+const route = useRoute();
+const bizId = computed(() => Number(route.query[GLOBAL_BIZS_KEY]));
 
 // 请求查询审批流接口
 const auidtData = ref<SubTicketAudit>();
 const getAduitData = async () => {
-  const promise = isBusinessPage
-    ? store.getAuditByBiz(getBizsId(), props.ticketData.id)
-    : store.getAudit(props.ticketData.id);
-  const { data } = await promise;
+  const { data } = await store.getAudit(props.ticketData.id, bizId.value);
   auidtData.value = data;
 };
 

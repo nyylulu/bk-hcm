@@ -28,7 +28,7 @@ const ticketAuditDetail = ref<SubTicketAudit>();
 const isLoading = ref(false);
 const errorMessage = ref<string>();
 const active = ref('approval');
-const subticketListRef = useTemplateRef('subticketList');
+const subTicketListRef = useTemplateRef('subTicketList');
 
 // 计算属性：是否显示审批详情组件
 const isTicketAuditDetailShow = computed(() => {
@@ -68,7 +68,7 @@ const getResultData = async () => {
     ticketAuditDetail.value = ticketAuditRes?.data as SubTicketAudit;
 
     // 获取子单列表数据
-    subticketListRef.value && subticketListRef.value?.getData();
+    subTicketListRef.value && subTicketListRef.value?.getData();
 
     // 设置面包屑标题
     setTitle(`${t('申请单详情')} - ${ticketDetail.value?.id}`);
@@ -135,7 +135,7 @@ onBeforeMount(() => {
             <bk-divider color="#dcdee5"></bk-divider>
           </div>
           <!-- 子单信息列表 -->
-          <SubTicketList ref="subticketList" />
+          <SubTicketList ref="subTicketList" />
         </bk-tab-panel>
         <bk-tab-panel render-directive="if" name="application" label="申请单信息">
           <!-- 基本信息 -->
