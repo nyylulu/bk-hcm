@@ -97,6 +97,13 @@ type Logics interface {
 	GetAllDeviceTypeMap(kt *kit.Kit) (map[string]wdt.WoaDeviceTypeTable, error)
 	// SyncDeviceTypesFromCRP sync device types from crp.
 	SyncDeviceTypesFromCRP(kt *kit.Kit, deviceTypes []string) error
+	// QueryCrpDemandsQuota 查询crp预测额度
+	QueryCrpDemandsQuota(kt *kit.Kit, obsProject []enumor.ObsProject, technicalClasses []string) (
+		[]*cvmapi.CvmCbsPlanQueryItem, error)
+	// GetPlanTransferQuotaConfigs 获取预测转移额度配置
+	GetPlanTransferQuotaConfigs(kt *kit.Kit) (ptypes.TransferQuotaConfig, error)
+	// UpdatePlanTransferQuotaConfigs 更新预测转移额度配置
+	UpdatePlanTransferQuotaConfigs(kt *kit.Kit, req *ptypes.UpdatePlanTransferQuotaConfigsReq) error
 }
 
 // Controller motivates the resource plan ticket status flow.

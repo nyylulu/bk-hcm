@@ -165,6 +165,7 @@ type Set interface {
 	ResPlanWeek() resplan.ResPlanWeekInterface
 	WoaZone() resplan.WoaZoneInterface
 	WoaDeviceType() resplan.WoaDeviceTypeInterface
+	ResPlanTransferAppliedRecord() resplan.TransferAppliedRecordInterface
 
 	RecycleModule() module.RecycleModule
 	RecycleHost() host.RecycleHost
@@ -929,6 +930,15 @@ func (s *set) WoaZone() resplan.WoaZoneInterface {
 // WoaDeviceType woa device type dao.
 func (s *set) WoaDeviceType() resplan.WoaDeviceTypeInterface {
 	return &resplan.WoaDeviceTypeDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
+// ResPlanTransferAppliedRecord resource plan transfer record dao.
+func (s *set) ResPlanTransferAppliedRecord() resplan.TransferAppliedRecordInterface {
+	return &resplan.TransferAppliedRecordDao{
 		Orm:   s.orm,
 		IDGen: s.idGen,
 		Audit: s.audit,

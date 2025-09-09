@@ -121,4 +121,17 @@ func (s *service) initPlanService(h *rest.Handler) {
 	h.Add("UpdateDeviceType", http.MethodPatch, "/plans/device_types/batch", s.UpdateDeviceType)
 	h.Add("DeleteDeviceType", http.MethodDelete, "/plans/device_types/batch", s.DeleteDeviceType)
 	h.Add("SyncDeviceType", http.MethodPost, "/plans/device_types/sync", s.SyncDeviceType)
+
+	// resource plan transfer quota
+	h.Add("GetTransferQuotaConfigs", http.MethodGet,
+		"/plans/resources/transfer_quotas/configs", s.GetTransferQuotaConfigs)
+	h.Add("ListResPlanTransferQuotaSummary", http.MethodPost,
+		"/plans/resources/transfer_quotas/summary", s.ListResPlanTransferQuotaSummary)
+	h.Add("ListBizResPlanTransferQuotaSummary", http.MethodPost,
+		"/bizs/{bk_biz_id}/plans/resources/transfer_quotas/summary", s.ListBizResPlanTransferQuotaSummary)
+	// resource plan transfer applied record
+	h.Add("ListResPlanTransferAppliedRecord", http.MethodPost,
+		"/plans/resources/transfer_applied_records/list", s.ListResPlanTransferAppliedRecord)
+	h.Add("ListBizResPlanTransferAppliedRecord", http.MethodPost,
+		"/bizs/{bk_biz_id}/plans/resources/transfer_applied_records/list", s.ListBizResPlanTransferAppliedRecord)
 }

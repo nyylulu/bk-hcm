@@ -925,6 +925,11 @@ func (c *Controller) QueryIEGDemands(kt *kit.Kit, req *QueryIEGDemandsReq) ([]*c
 		queryReq.Params.ZoneName = req.ZoneNames
 	}
 
+	// 技术分类
+	if len(req.TechnicalClasses) > 0 {
+		queryReq.Params.TechnicalClass = req.TechnicalClasses
+	}
+
 	// query all demands.
 	result := make([]*cvmapi.CvmCbsPlanQueryItem, 0)
 	for start := 0; ; start += int(core.DefaultMaxPageLimit) {

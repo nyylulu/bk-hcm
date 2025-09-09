@@ -237,6 +237,7 @@ type CvmCbsPlanQueryParam struct {
 	ProjectName     []string `json:"projectName,omitempty"`
 	CityName        []string `json:"cityName,omitempty"`
 	ZoneName        []string `json:"zoneName,omitempty"`
+	TechnicalClass  []string `json:"technicalClass,omitempty"`
 	NotNeedWeekType bool     `json:"notNeedWeekType,omitempty"`
 	UserName        string   `json:"userName,omitempty"`
 }

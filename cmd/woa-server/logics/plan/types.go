@@ -134,15 +134,16 @@ func (r *CreateResPlanTicketReq) Validate() error {
 
 // QueryIEGDemandsReq query IEG demands request.
 type QueryIEGDemandsReq struct {
-	ExpectTimeRange *times.DateRange `json:"expect_time_range" validate:"omitempty"`
-	CrpDemandIDs    []int64          `json:"crp_demand_ids" validate:"omitempty"`
-	CrpSns          []string         `json:"crp_sns" validate:"omitempty"`
-	DeviceClasses   []string         `json:"device_classes" validate:"omitempty"`
-	PlanProdNames   []string         `json:"plan_prod_names" validate:"omitempty"`
-	OpProdNames     []string         `json:"op_prod_names" validate:"omitempty"`
-	ObsProjects     []string         `json:"obs_projects" validate:"omitempty"`
-	RegionNames     []string         `json:"region_names" validate:"omitempty"`
-	ZoneNames       []string         `json:"zone_names" validate:"omitempty"`
+	ExpectTimeRange  *times.DateRange `json:"expect_time_range" validate:"omitempty"`
+	CrpDemandIDs     []int64          `json:"crp_demand_ids" validate:"omitempty"`
+	CrpSns           []string         `json:"crp_sns" validate:"omitempty"`
+	DeviceClasses    []string         `json:"device_classes" validate:"omitempty"`
+	PlanProdNames    []string         `json:"plan_prod_names" validate:"omitempty"`
+	OpProdNames      []string         `json:"op_prod_names" validate:"omitempty"`
+	ObsProjects      []string         `json:"obs_projects" validate:"omitempty"`
+	RegionNames      []string         `json:"region_names" validate:"omitempty"`
+	ZoneNames        []string         `json:"zone_names" validate:"omitempty"`
+	TechnicalClasses []string         `json:"technical_classes" validate:"omitempty"`
 }
 
 // Validate whether QueryIEGDemandsReq is valid.

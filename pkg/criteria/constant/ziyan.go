@@ -65,6 +65,8 @@ const (
 	GlobalConfigTypeRegionDefaultVpc = "region_default_vpc"
 	// GlobalConfigTypeRegionDefaultSecGroup 地域默认安全组
 	GlobalConfigTypeRegionDefaultSecGroup = "region_default_security_group"
+	// DefaultTechnicalClass 预测转移额度-默认的技术类型
+	DefaultTechnicalClass = "DEFAULT"
 )
 
 const (
@@ -79,3 +81,14 @@ const (
 // 原理TGW包含了TGW，伪7层TGW（定制了tgw_forward），伪7层已经2年多不维护2020年全面下线，可以使用STGW替代接入（TGW+nginx+加解密）；
 // CLB：负载均衡（Cloud Load Balancer，CLB），是腾讯云产品化的名称，CLB 4层就对应自研的TGW， CLB 7层对应自研的STGW；
 const TgwGroupNameZiyan = "ziyan"
+
+const (
+	// ResourcePlanTransferKey this is the config type for resource plan transfer.
+	ResourcePlanTransferKey = "resource_plan_transfer"
+	// TransferQuotaKey this is the config key for transfer quota.
+	TransferQuotaKey = "quota"
+	// TransferAuditQuotaKey this is the config key for transfer audit quota.
+	TransferAuditQuotaKey = "audit_quota"
+	// IEGResPlanServiceProductName CRP预测
+	IEGResPlanServiceProductName = "IEG资源预测服务"
+)

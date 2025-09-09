@@ -17,23 +17,20 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package resourceplan ...
-package resourceplan
+package resplan
 
 import (
-	"hcm/cmd/data-service/service/capability"
-	resplandemand "hcm/cmd/data-service/service/resource-plan/res-plan-demand"
-	demandchangelog "hcm/cmd/data-service/service/resource-plan/res-plan-demand-changelog"
-	demandpenaltybase "hcm/cmd/data-service/service/resource-plan/res-plan-demand-penalty-base"
-	transferappliedrecord "hcm/cmd/data-service/service/resource-plan/res-plan-transfer-applied-record"
-	resplanweek "hcm/cmd/data-service/service/resource-plan/res-plan-week"
+	rptar "hcm/pkg/dal/table/resource-plan/res-plan-transfer-applied-record"
 )
 
-// InitService initial the resource plan service.
-func InitService(cap *capability.Capability) {
-	resplandemand.InitService(cap)
-	demandpenaltybase.InitService(cap)
-	demandchangelog.InitService(cap)
-	resplanweek.InitService(cap)
-	transferappliedrecord.InitService(cap)
+// ResPlanTransferAppliedRecordListResult list resource plan transfer applied record result.
+type ResPlanTransferAppliedRecordListResult struct {
+	Count   uint64                                    `json:"count"`
+	Details []rptar.ResPlanTransferAppliedRecordTable `json:"details"`
+}
+
+// SumTransferAppliedRecord ...
+type SumTransferAppliedRecord struct {
+	SumExpectedCore int64 `db:"sum_expected_core"`
+	SumAppliedCore  int64 `db:"sum_applied_core"`
 }

@@ -197,6 +197,8 @@ const (
 	ResPlanDemandChangelogTable = "res_plan_demand_changelog"
 	// ResPlanWeekTable is res_plan_week table's name.
 	ResPlanWeekTable = "res_plan_week"
+	// ResPlanTransferAppliedRecordTable is res_plan_transfer_applied_record table's name.
+	ResPlanTransferAppliedRecordTable = "res_plan_transfer_applied_record"
 
 	// MainAccountTable is main_account table's name
 	MainAccountTable Name = "main_account"
@@ -385,16 +387,17 @@ var TableMap = map[Name]TableConfig{
 	ResourceFlowLockTable:           {},
 
 	// TODO 内部版独有的表，有待梳理是否启用多租户
-	ResPlanTicketTable:            {},
-	ResPlanDemandTable:            {},
-	ResPlanTicketStatusTable:      {},
-	WoaZoneTable:                  {},
-	WoaDeviceTypeTable:            {},
-	ResPlanCrpDemandTable:         {},
-	ResPlanPenaltyTable:           {},
-	ResPlanDemandPenaltyBaseTable: {},
-	ResPlanDemandChangelogTable:   {},
-	ResPlanWeekTable:              {},
+	ResPlanTicketTable:                {},
+	ResPlanDemandTable:                {},
+	ResPlanTicketStatusTable:          {},
+	WoaZoneTable:                      {},
+	WoaDeviceTypeTable:                {},
+	ResPlanCrpDemandTable:             {},
+	ResPlanPenaltyTable:               {},
+	ResPlanDemandPenaltyBaseTable:     {},
+	ResPlanDemandChangelogTable:       {},
+	ResPlanWeekTable:                  {},
+	ResPlanTransferAppliedRecordTable: {},
 
 	MainAccountTable: {EnableTenant: true},
 	RootAccountTable: {EnableTenant: true},

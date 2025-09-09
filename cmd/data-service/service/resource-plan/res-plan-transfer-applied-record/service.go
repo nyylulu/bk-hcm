@@ -17,23 +17,37 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package resourceplan ...
-package resourceplan
+// Package transferappliedrecord ...
+package transferappliedrecord
 
 import (
+	"net/http"
+
 	"hcm/cmd/data-service/service/capability"
-	resplandemand "hcm/cmd/data-service/service/resource-plan/res-plan-demand"
-	demandchangelog "hcm/cmd/data-service/service/resource-plan/res-plan-demand-changelog"
-	demandpenaltybase "hcm/cmd/data-service/service/resource-plan/res-plan-demand-penalty-base"
-	transferappliedrecord "hcm/cmd/data-service/service/resource-plan/res-plan-transfer-applied-record"
-	resplanweek "hcm/cmd/data-service/service/resource-plan/res-plan-week"
+	"hcm/pkg/dal/dao"
+	"hcm/pkg/rest"
 )
 
-// InitService initial the resource plan service.
+// InitService initialize the res plan transfer quota service
 func InitService(cap *capability.Capability) {
-	resplandemand.InitService(cap)
-	demandpenaltybase.InitService(cap)
-	demandchangelog.InitService(cap)
-	resplanweek.InitService(cap)
-	transferappliedrecord.InitService(cap)
+	svc := &service{
+		dao: cap.Dao,
+	}
+	h := rest.NewHandler()
+	h.Add("BatchCreateTransferAppliedRecord", http.MethodPost,
+		"/res_plans/transfer_applied_records/batch/create", svc.BatchCreateTransferAppliedRecord)
+	h.Add("BatchUpdateTransferAppliedRecord", http.MethodPatch,
+		"/res_plans/transfer_applied_records/batch", svc.BatchUpdateTransferAppliedRecord)
+	h.Add("DeleteResPlanTransferAppliedRecord", http.MethodDelete,
+		"/res_plans/transfer_applied_records/batch", svc.DeleteResPlanTransferAppliedRecord)
+	h.Add("ListResPlanTransferAppliedRecord", http.MethodPost,
+		"/res_plans/transfer_applied_records/list", svc.ListResPlanTransferAppliedRecord)
+	h.Add("SumUsedTransferAppliedRecord", http.MethodPost,
+		"/res_plans/transfer_applied_records/sum", svc.SumUsedTransferQuota)
+
+	h.Load(cap.WebService)
+}
+
+type service struct {
+	dao dao.Set
 }
