@@ -17,11 +17,16 @@ import Stage from './stage.vue';
 import SubTicketDetail from './sub-ticket-detail.vue';
 import { useResSubTicketStore, SubTicketItem, STATUS_ENUM, STAGE_ENUM } from '@/store/ticket/res-sub-ticket';
 import { GLOBAL_BIZS_KEY } from '@/common/constant';
+import { debounce } from 'lodash';
 
+// 补全类型泛型
+const emits = defineEmits<{
+  retryTicket: [];
+}>();
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
-const store = useResSubTicketStore();
+const subTicketStore = useResSubTicketStore();
 const detailRef = useTemplateRef('detailRef');
 const bizId = computed(() => Number(route.query[GLOBAL_BIZS_KEY]));
 
@@ -31,25 +36,25 @@ const columns: any[] = [
   {
     label: '子单号',
     field: 'id',
-    render: ({ data }: { data: SubTicketItem }) => {
+    render: ({ row }: { row?: SubTicketItem }) => {
       return h(
         Button,
         {
           text: true,
           theme: 'primary',
           onClick: () => {
-            router.replace({ query: { ...route.query, subId: data.id } });
-            detailRef.value.open(data);
+            router.replace({ query: { ...route.query, subId: row.id } });
+            detailRef.value.open(row);
           },
         },
-        data.id,
+        row.id,
       );
     },
   },
   {
     label: '子单状态',
     field: 'status',
-    render({ cell }: { cell: string }) {
+    render({ cell }: { cell?: string }) {
       let icon = ResultDefault;
       const txt = STATUS_ENUM[cell] || '---';
       switch (cell) {
@@ -81,12 +86,12 @@ const columns: any[] = [
   {
     label: '审批步骤',
     field: 'stage',
-    render({ cell, data, index }: { cell: string; index: number; data: SubTicketItem }) {
+    render({ cell, row, index }: { cell?: string; index?: number; row?: SubTicketItem }) {
       if (cell === 'crp_audit') {
         return h(Stage, {
-          showExpeditingBtn: data.status === 'auditing' || data.status === 'init',
+          showExpeditingBtn: row.status === 'auditing' || row.status === 'init',
           text: STAGE_ENUM[cell],
-          ticketData: data,
+          ticketData: row,
           showActions: hoverIndex.value === index,
         });
       }
@@ -101,34 +106,33 @@ const columns: any[] = [
     label: 'CPU核数',
     field: 'updated_info.cvm.cpu_core',
     isDefaultShow: true,
-    render: ({ data }: { cell: number; data: SubTicketItem }) => {
-      const updatedCore = Number(data.updated_info.cvm.cpu_core) || 0;
-      const originalCore = Number(data.original_info.cvm.cpu_core) || 0;
-      const compare = updatedCore - originalCore;
-      let value = 0;
-      let prefix = '';
+    render: ({ row }: { row?: SubTicketItem }) => {
+      const type = row.sub_ticket_type;
+      const value = row.updated_info.cvm.cpu_core - row.original_info.cvm.cpu_core;
       let color = '';
 
-      switch (data.sub_ticket_type) {
+      switch (type) {
         case 'add':
-        case 'transfer':
-          prefix = '+';
-          color = '#00B545'; // 绿色
-          value = originalCore;
+          color = '#299e56'; // 绿色
           break;
         case 'cancel':
-          prefix = '-';
-          color = '#EA3636'; // 红色
-          value = originalCore;
-          break;
         case 'adjust':
-          prefix = compare >= 0 ? '+' : '-';
-          color = '#EA3636'; // 红色
-          value = Math.abs(compare);
+          color = '#ea3636'; // 红色
           break;
+        case 'transfer':
+          color = value >= 0 ? '#299e56' : '#ea3636'; // 绿色
+          break;
+        default:
+          color = '#ea3636'; // 红色
       }
-
-      return h('span', { style: { color } }, isNaN(value) ? '--' : `${prefix}${value}`);
+      if (isNaN(value)) {
+        return '--';
+      }
+      let prefix = value > 0 ? '+' : '';
+      if (value === 0) {
+        prefix = type === 'cancel' ? '-' : '+';
+      }
+      return h('span', { style: { color } }, `${prefix}${value}`);
     },
   },
   {
@@ -147,7 +151,7 @@ const columns: any[] = [
   },
 ];
 const getData = (page: IPageQuery) => {
-  return store.getList(
+  return subTicketStore.getList(
     {
       page,
       ticket_id: route.query?.id as string,
@@ -158,6 +162,7 @@ const getData = (page: IPageQuery) => {
 const { tableData, pagination, isLoading, handlePageChange, handlePageSizeChange, handleSort, triggerApi } =
   useTable(getData);
 pagination.value.limit = 500; // 不分页，设置limit为最大值
+const retryBtnLoading = ref(false);
 
 // 数据
 const ticketLinkArr = computed(() => {
@@ -174,8 +179,9 @@ const hasFailedTicket = computed(() => {
   return tableData.value.some((item) => item.status === 'failed');
 });
 // 方法
-const handelFailedTicket = () => {
-  store
+const handleFailedTicket = () => {
+  retryBtnLoading.value = true;
+  subTicketStore
     .retryTickets(route.query?.id as string, bizId.value)
     .then(() => {
       Message({ theme: 'success', message: '重试成功' });
@@ -184,9 +190,12 @@ const handelFailedTicket = () => {
       Message({ theme: 'error', message: `重试失败` });
     })
     .finally(() => {
-      triggerApi();
+      retryBtnLoading.value = false;
+      emits('retryTicket');
     });
 };
+// 防抖 handleFailedTicket
+const handleFailedTicketDebounce = debounce(handleFailedTicket, 500);
 
 const handleMouseEnter = (e: any, row: any, index: number) => {
   hoverIndex.value = index;
@@ -219,7 +228,12 @@ defineExpose({
 <template>
   <Panel class="panel" :title="t('子单信息')">
     <template #title-extra>
-      <bk-button :disabled="!hasFailedTicket" style="margin-left: 21px" @click="handelFailedTicket">
+      <bk-button
+        :disabled="!hasFailedTicket"
+        style="margin-left: 21px"
+        :loading="retryBtnLoading"
+        @click="handleFailedTicketDebounce"
+      >
         失败单据处理
       </bk-button>
       <copy-to-clipboard :content="ticketLinkArr.join('\n')" :success-msg="successMsg">

@@ -188,8 +188,8 @@ watchEffect(() => {
     >
       <template v-for="column in columns" :key="column.label">
         <bk-table-column v-bind="column">
-          <template #default="{ data }">
-            <ChangedText :col-data="data" :field="(column.field as string)" :ticket-type="ticketType" />
+          <template #default="{ row }">
+            <ChangedText :col-data="row" :field="(column.field as string)" :ticket-type="ticketType" />
           </template>
         </bk-table-column>
       </template>

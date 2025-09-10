@@ -134,7 +134,7 @@ onBeforeMount(() => {
             <bk-divider color="#dcdee5"></bk-divider>
           </div>
           <!-- 子单信息列表 -->
-          <SubTicketList ref="subTicketList" />
+          <SubTicketList ref="subTicketList" @retry-ticket="getResultData" />
         </bk-tab-panel>
         <bk-tab-panel render-directive="if" name="application" label="申请单信息">
           <!-- 基本信息 -->

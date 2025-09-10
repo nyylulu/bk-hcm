@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Info } from 'bkui-vue/lib/icon';
-import { Popover } from 'bkui-vue';
+// import { Popover } from 'bkui-vue';
 import { getValueByKey } from '@/common/util';
 import { computed } from 'vue';
 
@@ -13,6 +13,7 @@ const props = withDefaults(defineProps<Props>(), {
   field: '',
   colData: () => ({}),
 });
+const specialType = ['transfer', 'delete', 'cancel'];
 
 const purefieldKey = computed(() => {
   return props.field.replaceAll('updated_info.', '').replaceAll('original_info.', '');
@@ -26,7 +27,14 @@ const updatedVal = computed(() => {
   return getValueByKey(props.colData?.updated_info, purefieldKey.value);
 });
 
+const isSpecialType = computed(() => {
+  return specialType.includes(props.ticketType);
+});
+
 const isChanged = computed(() => {
+  if (isSpecialType.value) {
+    return false;
+  }
   return originalVal.value !== updatedVal.value && !!props.colData?.original_info;
 });
 
@@ -35,21 +43,24 @@ const content = computed(() => {
 });
 
 const text = computed(() => {
-  if (props.ticketType === 'delete') {
-    return originalVal.value;
+  if (isSpecialType.value) {
+    return originalVal.value || updatedVal.value;
   }
   return updatedVal.value;
 });
 </script>
 
 <template>
-  <Popover v-if="ticketType !== 'delete'" :content="content">
-    <div class="resource-plan-detail-cell">
-      <Info v-if="isChanged" class="resource-plan-detail-info resource-plan-detail-text" />
-      <span :class="{ 'resource-plan-detail-text': isChanged }">{{ text }}</span>
-    </div>
-  </Popover>
-  <span v-else>{{ text }}</span>
+  <div
+    class="resource-plan-detail-cell"
+    v-bk-tooltips="{
+      content: content,
+      disabled: isSpecialType,
+    }"
+  >
+    <Info v-if="isChanged" class="resource-plan-detail-info resource-plan-detail-text" />
+    <span :class="{ 'resource-plan-detail-text': isChanged }">{{ text || '--' }}</span>
+  </div>
 </template>
 
 <style lang="scss" scoped>
