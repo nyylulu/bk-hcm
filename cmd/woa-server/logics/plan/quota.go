@@ -24,70 +24,20 @@ import (
 	"errors"
 
 	plantypes "hcm/cmd/woa-server/types/plan"
-	"hcm/pkg/api/core"
 	cgconf "hcm/pkg/api/core/global-config"
 	datagconf "hcm/pkg/api/data-service/global_config"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
-	"hcm/pkg/dal/dao/tools"
 	tablegconf "hcm/pkg/dal/table/global-config"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/cvmapi"
 	cvt "hcm/pkg/tools/converter"
-	"hcm/pkg/tools/util"
 )
 
 // GetPlanTransferQuotaConfigs 获取预测转移额度配置
 func (c *Controller) GetPlanTransferQuotaConfigs(kt *kit.Kit) (plantypes.TransferQuotaConfig, error) {
-	dbConfigs, err := c.getConfigsFromData(kt, constant.ResourcePlanTransferKey)
-	if err != nil {
-		logs.Errorf("failed to get plan transfer quota configs from db, err: %v, rid: %s", err, kt.Rid)
-		return plantypes.TransferQuotaConfig{}, err
-	}
-
-	configMap := cvt.SliceToMap(dbConfigs, func(t tablegconf.GlobalConfigTable) (string, interface{}) {
-		return t.ConfigKey, t.ConfigValue
-	})
-
-	config := plantypes.TransferQuotaConfig{
-		Quota:      c.resPlanCfg.RefreshTransferQuota.Quota,      // 预测转移额度
-		AuditQuota: c.resPlanCfg.RefreshTransferQuota.AuditQuota, // 预测转移审批额度
-	}
-	if v, ok := configMap[constant.TransferQuotaKey]; ok {
-		config.Quota, err = util.GetInt64ByInterface(v)
-		if err != nil {
-			logs.Warnf("failed to convert biz quota, err: %v, rid: %s, value: %v", err, kt.Rid, v)
-			return plantypes.TransferQuotaConfig{}, err
-		}
-	}
-
-	if v, ok := configMap[constant.TransferAuditQuotaKey]; ok {
-		config.AuditQuota, err = util.GetInt64ByInterface(v)
-		if err != nil {
-			logs.Warnf("failed to convert ieg quota, err: %v, rid: %s, value: %v", err, kt.Rid, v)
-			return plantypes.TransferQuotaConfig{}, err
-		}
-	}
-
-	return config, nil
-}
-
-// getConfigMap ...
-func (c *Controller) getConfigsFromData(kt *kit.Kit, configType string) ([]tablegconf.GlobalConfigTable, error) {
-	filter := tools.ExpressionAnd(tools.RuleEqual("config_type", configType))
-
-	dataReq := &core.ListReq{
-		Filter: filter,
-		Page:   core.NewDefaultBasePage(),
-	}
-	dataResp, err := c.client.DataService().Global.GlobalConfig.List(kt, dataReq)
-	if err != nil {
-		logs.Errorf("failed to list global config, err: %v, req: %+v, rid: %s", err, *dataReq, kt.Rid)
-		return nil, err
-	}
-
-	return dataResp.Details, nil
+	return c.resFetcher.GetPlanTransferQuotaConfigs(kt)
 }
 
 // UpdatePlanTransferQuotaConfigs 更新预测转移额度配置
@@ -99,7 +49,7 @@ func (c *Controller) UpdatePlanTransferQuotaConfigs(kt *kit.Kit,
 		return err
 	}
 
-	dbConfigs, err := c.getConfigsFromData(kt, constant.ResourcePlanTransferKey)
+	dbConfigs, err := c.resFetcher.GetConfigsFromData(kt, constant.ResourcePlanTransferKey)
 	if err != nil {
 		logs.Errorf("failed to get resplan transfer configs from db, err: %v, rid: %s", err, kt.Rid)
 		return err

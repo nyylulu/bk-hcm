@@ -17,9 +17,10 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package plan
+package dispatcher
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -31,13 +32,12 @@ import (
 	rpproto "hcm/pkg/api/data-service/resource-plan"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
-	"hcm/pkg/dal/dao/tools"
-	dmtypes "hcm/pkg/dal/dao/types/meta"
+	rtypes "hcm/pkg/dal/dao/types/resource-plan"
 	rpd "hcm/pkg/dal/table/resource-plan/res-plan-demand"
+	rpt "hcm/pkg/dal/table/resource-plan/res-plan-ticket"
 	wdt "hcm/pkg/dal/table/resource-plan/woa-device-type"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
-	"hcm/pkg/runtime/filter"
 	"hcm/pkg/thirdparty/cvmapi"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/maps"
@@ -47,16 +47,16 @@ import (
 )
 
 // applyResPlanDemandChange apply res plan demand change.
-func (c *Controller) applyResPlanDemandChange(kt *kit.Kit, ticket *TicketInfo) error {
+func (d *Dispatcher) applyResPlanDemandChange(kt *kit.Kit, ticket *ptypes.TicketInfo) error {
 	// call crp api to get plan order change info.
-	changeDemandsOri, err := c.QueryCrpOrderChangeInfo(kt, ticket.CrpSn)
+	changeDemandsOri, err := d.QueryCrpOrderChangeInfo(kt, ticket.CrpSn)
 	if err != nil {
 		logs.Errorf("failed to query crp order change info, err: %v, crp_sn: %s, rid: %s", err, ticket.CrpSn,
 			kt.Rid)
 		return err
 	}
 	// 需要先把key相同的预测数据聚合，避免过大的扣减在数据库中不存在
-	changeDemandsMap, err := c.aggregateDemandChangeInfo(kt, changeDemandsOri, ticket)
+	changeDemandsMap, err := d.aggregateDemandChangeInfo(kt, changeDemandsOri, ticket)
 	if err != nil {
 		logs.Errorf("failed to aggregate demand change info, err: %v, crp_sn: %s, rid: %s", err, ticket.CrpSn,
 			kt.Rid)
@@ -67,7 +67,7 @@ func (c *Controller) applyResPlanDemandChange(kt *kit.Kit, ticket *TicketInfo) e
 		ticket.ID, ticket.CrpSn, cvt.PtrToSlice(maps.Values(changeDemandsMap)), kt.Rid)
 
 	// changeDemand可能会在扣减时模糊匹配到同一个需求，因此需要在扣减操作生效前记录扣减量，最后统一执行
-	upsertReq, updatedIDs, createLogReq, updateLogReq, err := c.prepareResPlanDemandChangeReq(kt, ticket,
+	upsertReq, updatedIDs, createLogReq, updateLogReq, err := d.prepareResPlanDemandChangeReq(kt, ticket,
 		changeDemandsMap)
 	if err != nil {
 		logs.Errorf("failed to prepare res plan demand change req, err: %v, ticket: %s, rid: %s", err,
@@ -75,7 +75,7 @@ func (c *Controller) applyResPlanDemandChange(kt *kit.Kit, ticket *TicketInfo) e
 		return err
 	}
 
-	createdIDs, err := c.BatchUpsertResPlanDemand(kt, upsertReq, updatedIDs)
+	createdIDs, err := d.BatchUpsertResPlanDemand(kt, upsertReq, updatedIDs)
 	if err != nil {
 		logs.Errorf("failed to batch upsert res plan demand, err: %v, ticket: %s, rid: %s", err, ticket.ID,
 			kt.Rid)
@@ -83,21 +83,21 @@ func (c *Controller) applyResPlanDemandChange(kt *kit.Kit, ticket *TicketInfo) e
 	}
 
 	// 单据关联的原始预测也需要解锁，避免部分预测死锁
-	unlockErr := c.unlockTicketOriginalDemands(kt, ticket)
+	unlockErr := d.unlockTicketOriginalDemands(kt, ticket)
 	if unlockErr != nil {
 		logs.Warnf("failed to unlock ticket original demands, err: %v, id: %s, rid: %s", unlockErr,
 			ticket.ID, kt.Rid)
 	}
 
 	// 创建预测的日志
-	err = c.CreateResPlanChangelog(kt, createLogReq, createdIDs)
+	err = d.CreateResPlanChangelog(kt, createLogReq, createdIDs)
 	if err != nil {
 		// 变更记录创建失败不阻断整个预测的更新流程（且此时预测数据已变更，上游不应感知到error），因此此处仅记录warning，不返回error
 		logs.Warnf("failed to create res plan demand changelog, err: %v, created demands: %v, rid: %s", err,
 			createdIDs, kt.Rid)
 	}
 	// 更新预测的日志
-	err = c.CreateResPlanChangelog(kt, updateLogReq, []string{})
+	err = d.CreateResPlanChangelog(kt, updateLogReq, []string{})
 	if err != nil {
 		// 变更记录创建失败不阻断整个预测的更新流程（且此时预测数据已变更，上游不应感知到error），因此此处仅记录warning，不返回error
 		logs.Warnf("failed to create res plan demand changelog, err: %v, updated demands: %v, rid: %s", err,
@@ -112,7 +112,7 @@ func (c *Controller) applyResPlanDemandChange(kt *kit.Kit, ticket *TicketInfo) e
 
 // CreateResPlanChangelog create resource plan demand changelog.
 // If demandIDs is provided, will reset the changelog's demand id.
-func (c *Controller) CreateResPlanChangelog(kt *kit.Kit, changelogReqs []rpproto.DemandChangelogCreate,
+func (d *Dispatcher) CreateResPlanChangelog(kt *kit.Kit, changelogReqs []rpproto.DemandChangelogCreate,
 	demandIDs []string) error {
 	if len(changelogReqs) == 0 {
 		return nil
@@ -136,7 +136,7 @@ func (c *Controller) CreateResPlanChangelog(kt *kit.Kit, changelogReqs []rpproto
 		Changelogs: changelogReqs,
 	}
 
-	_, err := c.client.DataService().Global.ResourcePlan.BatchCreateDemandChangelog(kt, changelogReq)
+	_, err := d.client.DataService().Global.ResourcePlan.BatchCreateDemandChangelog(kt, changelogReq)
 	if err != nil {
 		logs.Errorf("failed to create plan demand changelog, demand ids: %v, err: %v, rid: %s", createDemandIDs,
 			err, kt.Rid)
@@ -149,7 +149,7 @@ func (c *Controller) CreateResPlanChangelog(kt *kit.Kit, changelogReqs []rpproto
 // prepareResPlanDemandChangeReq 准备更新资源预测表的参数
 // 返回值：更新参数，被更新的资源ID，新增预测的变更日志，修改预测的变更日志
 // 因新增预测的变更日志需要在更新完成后追加预测ID，因此需要和修改的变更日志分开返回
-func (c *Controller) prepareResPlanDemandChangeReq(kt *kit.Kit, ticket *TicketInfo,
+func (d *Dispatcher) prepareResPlanDemandChangeReq(kt *kit.Kit, ticket *ptypes.TicketInfo,
 	changeDemandsMap map[ptypes.ResPlanDemandAggregateKey]*ptypes.CrpOrderChangeInfo) (
 	*rpproto.ResPlanDemandBatchUpsertReq, []string, []rpproto.DemandChangelogCreate, []rpproto.DemandChangelogCreate,
 	error) {
@@ -160,7 +160,7 @@ func (c *Controller) prepareResPlanDemandChangeReq(kt *kit.Kit, ticket *TicketIn
 	demandUpdatedResource := make(map[string]*ptypes.DemandResource)
 
 	// 从 woa_zone 获取城市/地区的中英文对照
-	deviceTypeMap, err := c.GetAllDeviceTypeMap(kt)
+	deviceTypeMap, err := d.getAllDeviceTypeMap(kt)
 	if err != nil {
 		logs.Errorf("get all device type maps failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, nil, nil, nil, err
@@ -178,7 +178,7 @@ func (c *Controller) prepareResPlanDemandChangeReq(kt *kit.Kit, ticket *TicketIn
 	for _, aggregateKey := range changeDemandsSlice {
 		changeDemand := changeDemandsMap[aggregateKey]
 
-		localDemands, err := c.ListResPlanDemandByAggregateKey(kt, aggregateKey)
+		localDemands, err := d.resFetcher.ListResPlanDemandByAggregateKey(kt, aggregateKey)
 		if err != nil {
 			logs.Errorf("failed to get local res plan demands, err: %v, aggregate key: %+v, change demand: %+v, "+
 				"rid: %s", err, aggregateKey, *changeDemand, kt.Rid)
@@ -186,7 +186,7 @@ func (c *Controller) prepareResPlanDemandChangeReq(kt *kit.Kit, ticket *TicketIn
 		}
 
 		// 根据匹配情况决定如何调整数据库中的现有预测需求
-		createReq, createLogReq, err := c.applyResPlanDemandChangeAggregate(kt, ticket, localDemands,
+		createReq, createLogReq, err := d.applyResPlanDemandChangeAggregate(kt, ticket, localDemands,
 			changeDemand, needUpdateDemands, demandUpdatedResource)
 		if err != nil {
 			logs.Errorf("failed to apply res plan demand change aggregate, err: %v, change demand: %+v, rid: %s",
@@ -216,9 +216,10 @@ func (c *Controller) prepareResPlanDemandChangeReq(kt *kit.Kit, ticket *TicketIn
 	return upsertReq, updatedIDs, batchCreateLogReq, updateChangelogReqs, nil
 }
 
-func convUpdateResPlanDemandReqs(kt *kit.Kit, ticket *TicketInfo, updateDemands map[string]*rpd.ResPlanDemandTable,
-	demandChangelog map[string]*ptypes.DemandResource, deviceTypeMap map[string]wdt.WoaDeviceTypeTable) (
-	[]string, []rpproto.ResPlanDemandUpdateReq, []rpproto.DemandChangelogCreate, error) {
+func convUpdateResPlanDemandReqs(kt *kit.Kit, ticket *ptypes.TicketInfo,
+	updateDemands map[string]*rpd.ResPlanDemandTable, demandChangelog map[string]*ptypes.DemandResource,
+	deviceTypeMap map[string]wdt.WoaDeviceTypeTable) ([]string, []rpproto.ResPlanDemandUpdateReq,
+	[]rpproto.DemandChangelogCreate, error) {
 
 	updatedDemandIDs := make([]string, 0)
 	batchUpdateReq := make([]rpproto.ResPlanDemandUpdateReq, 0)
@@ -293,18 +294,19 @@ func convUpdateResPlanDemandReqs(kt *kit.Kit, ticket *TicketInfo, updateDemands 
 	return updatedDemandIDs, batchUpdateReq, batchCreateChangelogReq, nil
 }
 
-func (c *Controller) aggregateDemandChangeInfo(kt *kit.Kit, changeDemands []*ptypes.CrpOrderChangeInfo,
-	ticket *TicketInfo) (map[ptypes.ResPlanDemandAggregateKey]*ptypes.CrpOrderChangeInfo, error) {
+// aggregateDemandChangeInfo 聚合预测变更信息
+func (d *Dispatcher) aggregateDemandChangeInfo(kt *kit.Kit, changeDemands []*ptypes.CrpOrderChangeInfo,
+	ticket *ptypes.TicketInfo) (map[ptypes.ResPlanDemandAggregateKey]*ptypes.CrpOrderChangeInfo, error) {
 
 	// 从 woa_zone 获取城市/地区的中英文对照
-	zoneMap, regionAreaMap, _, err := c.getMetaMaps(kt)
+	zoneMap, regionAreaMap, _, err := d.resFetcher.GetMetaMaps(kt)
 	if err != nil {
 		logs.Errorf("get meta maps failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
-	zoneNameMap, regionNameMap := getMetaNameMapsFromIDMap(zoneMap, regionAreaMap)
+	zoneNameMap, regionNameMap := d.resFetcher.GetMetaNameMapsFromIDMap(zoneMap, regionAreaMap)
 
-	deviceTypeMap, err := c.GetAllDeviceTypeMap(kt)
+	deviceTypeMap, err := d.getAllDeviceTypeMap(kt)
 	if err != nil {
 		logs.Errorf("get all device type maps failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -326,7 +328,7 @@ func (c *Controller) aggregateDemandChangeInfo(kt *kit.Kit, changeDemands []*pty
 				kt.Rid)
 			return nil, err
 		}
-		expectTimeRange, err := c.demandTime.GetDemandDateRangeInMonth(kt, expectTimeT)
+		expectTimeRange, err := d.demandTime.GetDemandDateRangeInMonth(kt, expectTimeT)
 		if err != nil {
 			logs.Errorf("failed to get demand date range in month, err: %v, change demand: %+v, rid: %s", err,
 				*changeDemand, kt.Rid)
@@ -364,36 +366,9 @@ func (c *Controller) aggregateDemandChangeInfo(kt *kit.Kit, changeDemands []*pty
 	return changeDemandMap, nil
 }
 
-// BatchUpsertResPlanDemand batch upsert res plan demand and unlock res plans.
-func (c *Controller) BatchUpsertResPlanDemand(kt *kit.Kit, upsertReq *rpproto.ResPlanDemandBatchUpsertReq,
-	updatedIDs []string) ([]string, error) {
-
-	unlockDemandIDs := make([]string, 0)
-	// 批量创建和更新预测
-	createdRst, err := c.client.DataService().Global.ResourcePlan.BatchUpsertResPlanDemand(kt, upsertReq)
-	if err != nil {
-		logs.Errorf("failed to batch upsert res plan demand, err: %v, rid: %s", err, kt.Rid)
-		return nil, err
-	}
-
-	unlockDemandIDs = append(unlockDemandIDs, createdRst.IDs...)
-	unlockDemandIDs = append(unlockDemandIDs, updatedIDs...)
-	if len(unlockDemandIDs) == 0 {
-		return createdRst.IDs, nil
-	}
-
-	// unlock all crp demands.
-	unlockReq := rpproto.NewResPlanDemandLockOpReqBatch(unlockDemandIDs, 0)
-	if err := c.client.DataService().Global.ResourcePlan.UnlockResPlanDemand(kt, unlockReq); err != nil {
-		logs.Warnf("failed to unlock all resource plan demand, err: %v, rid: %s", err, kt.Rid)
-	}
-
-	return createdRst.IDs, nil
-}
-
 // applyResPlanDemandChangeAggregate apply changes according to aggregation rules.
 // return the requests to create, and the needUpdateDemands map to update with a transaction.
-func (c *Controller) applyResPlanDemandChangeAggregate(kt *kit.Kit, ticket *TicketInfo,
+func (d *Dispatcher) applyResPlanDemandChangeAggregate(kt *kit.Kit, ticket *ptypes.TicketInfo,
 	localDemands []rpd.ResPlanDemandTable, changeDemand *ptypes.CrpOrderChangeInfo,
 	needUpdateDemands map[string]*rpd.ResPlanDemandTable, demandUpdateRes map[string]*ptypes.DemandResource) (
 	*rpproto.ResPlanDemandCreateReq, *rpproto.DemandChangelogCreate, error) {
@@ -439,7 +414,7 @@ func (c *Controller) applyResPlanDemandChangeAggregate(kt *kit.Kit, ticket *Tick
 	}
 
 	// 调减预测，在范围内随机模糊调减，优先调减加锁的
-	err := c.DeductResPlanDemandAggregate(kt, localDemands, needUpdateDemands, demandUpdateRes, changeDemand)
+	err := d.DeductResPlanDemandAggregate(kt, localDemands, needUpdateDemands, demandUpdateRes, changeDemand)
 	if err != nil {
 		logs.Errorf("failed to update res plan demand aggregate, err: %v, bk_biz_id: %d, changeDemand: %+v, rid: %s",
 			err, ticket.BkBizID, changeDemand, kt.Rid)
@@ -450,7 +425,7 @@ func (c *Controller) applyResPlanDemandChangeAggregate(kt *kit.Kit, ticket *Tick
 }
 
 // QueryCrpOrderChangeInfo query crp order change info.
-func (c *Controller) QueryCrpOrderChangeInfo(kt *kit.Kit, orderID string) ([]*ptypes.CrpOrderChangeInfo,
+func (d *Dispatcher) QueryCrpOrderChangeInfo(kt *kit.Kit, orderID string) ([]*ptypes.CrpOrderChangeInfo,
 	error) {
 
 	// init request parameter.
@@ -474,7 +449,7 @@ func (c *Controller) QueryCrpOrderChangeInfo(kt *kit.Kit, orderID string) ([]*pt
 	result := make([]*ptypes.CrpOrderChangeInfo, 0)
 	for start := 0; ; start += int(core.DefaultMaxPageLimit) {
 		queryReq.Params.Page.Start = start
-		rst, err := c.crpCli.QueryPlanOrderChange(kt.Ctx, kt.Header(), queryReq)
+		rst, err := d.crpCli.QueryPlanOrderChange(kt.Ctx, kt.Header(), queryReq)
 		if err != nil {
 			logs.Errorf("failed to query crp order change info, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
@@ -541,6 +516,7 @@ func convOrderChangeInfoFromCrpRespItem(kt *kit.Kit, orderID string, item *cvmap
 
 	return &ptypes.CrpOrderChangeInfo{
 		OrderID:        orderID,
+		OpProductName:  item.ProductName,
 		ExpectTime:     item.UseTime,
 		ObsProject:     item.ProjectName,
 		DemandResType:  resType,
@@ -548,6 +524,7 @@ func convOrderChangeInfoFromCrpRespItem(kt *kit.Kit, orderID string, item *cvmap
 		PlanType:       item.PlanType.GetCode(),
 		RegionName:     item.CityName,
 		ZoneName:       item.ZoneName,
+		TechnicalClass: item.TechnicalClass,
 		DeviceFamily:   item.InstanceFamily,
 		DeviceClass:    item.InstanceType,
 		DeviceType:     item.InstanceModel,
@@ -560,114 +537,6 @@ func convOrderChangeInfoFromCrpRespItem(kt *kit.Kit, orderID string, item *cvmap
 		ChangeMemory:   item.ChangeRamAmount,
 		ChangeDiskSize: item.ChangedDiskAmount,
 	}, nil
-}
-
-// getMetaMaps get create resource plan demand needed zoneMap, regionAreaMap and deviceTypeMap.
-func (c *Controller) getMetaMaps(kt *kit.Kit) (map[string]string, map[string]dmtypes.RegionArea,
-	map[string]wdt.WoaDeviceTypeTable, error) {
-
-	// get zone id name mapping.
-	zoneMap, err := c.dao.WoaZone().GetZoneMap(kt)
-	if err != nil {
-		logs.Errorf("get zone map failed, err: %v, rid: %s", err, kt.Rid)
-		return nil, nil, nil, err
-	}
-
-	// get region area mapping.
-	regionAreaMap, err := c.dao.WoaZone().GetRegionAreaMap(kt)
-	if err != nil {
-		logs.Errorf("get region area map failed, err: %v, rid: %s", err, kt.Rid)
-		return nil, nil, nil, err
-	}
-
-	// get device type mapping.
-	deviceTypeMap, err := c.deviceTypesMap.GetDeviceTypes(kt)
-	if err != nil {
-		logs.Errorf("get device type map failed, err: %v, rid: %s", err, kt.Rid)
-		return nil, nil, nil, err
-	}
-
-	return zoneMap, regionAreaMap, deviceTypeMap, nil
-}
-
-func getMetaNameMapsFromIDMap(zoneMap map[string]string, regionAreaMap map[string]dmtypes.RegionArea) (
-	map[string]string, map[string]dmtypes.RegionArea) {
-
-	zoneNameMap := make(map[string]string)
-	for id, name := range zoneMap {
-		zoneNameMap[name] = id
-	}
-	regionNameMap := make(map[string]dmtypes.RegionArea)
-	for _, item := range regionAreaMap {
-		regionNameMap[item.RegionName] = item
-	}
-	return zoneNameMap, regionNameMap
-}
-
-// ListResPlanDemandByAggregateKey list res plan demand by key.
-func (c *Controller) ListResPlanDemandByAggregateKey(kt *kit.Kit, demandKey ptypes.ResPlanDemandAggregateKey) (
-	[]rpd.ResPlanDemandTable, error) {
-
-	listRules := make([]*filter.AtomRule, 0)
-
-	startExpTime, err := times.ConvStrTimeToInt(demandKey.ExpectTimeRange.Start, constant.DateLayout)
-	if err != nil {
-		logs.Errorf("failed to parse month range, err: %v, month_range: %v, rid: %s", err,
-			demandKey.ExpectTimeRange, kt.Rid)
-		return nil, err
-	}
-	endExpTime, err := times.ConvStrTimeToInt(demandKey.ExpectTimeRange.End, constant.DateLayout)
-	if err != nil {
-		logs.Errorf("failed to parse month range, err: %v, month_range: %v, rid: %s", err,
-			demandKey.ExpectTimeRange, kt.Rid)
-		return nil, err
-	}
-
-	listRules = append(listRules, tools.RuleEqual("bk_biz_id", demandKey.BkBizID))
-	listRules = append(listRules, tools.RuleEqual("plan_type", demandKey.PlanType))
-	listRules = append(listRules, tools.RuleEqual("obs_project", demandKey.ObsProject))
-
-	listRules = append(listRules, tools.RuleGreaterThanEqual("expect_time", startExpTime))
-	listRules = append(listRules, tools.RuleLessThanEqual("expect_time", endExpTime))
-
-	listRules = append(listRules, tools.RuleEqual("region_id", demandKey.RegionID))
-	listRules = append(listRules, tools.RuleEqual("device_family", demandKey.DeviceFamily))
-	listRules = append(listRules, tools.RuleEqual("core_type", demandKey.CoreType))
-	listRules = append(listRules, tools.RuleEqual("demand_res_type", demandKey.ResType))
-	// DiskType == DiskUnknown 时，允许匹配任何磁盘类型
-	if demandKey.DiskType != enumor.DiskUnknown {
-		listRules = append(listRules, tools.RuleEqual("disk_type", demandKey.DiskType))
-	}
-
-	listFilter := tools.ExpressionAnd(listRules...)
-
-	listReq := &rpproto.ResPlanDemandListReq{
-		ListReq: core.ListReq{
-			Filter: listFilter,
-			Page: &core.BasePage{
-				Start: 0,
-				Limit: core.DefaultMaxPageLimit,
-			},
-		},
-	}
-
-	result := make([]rpd.ResPlanDemandTable, 0)
-	for {
-		rst, err := c.client.DataService().Global.ResourcePlan.ListResPlanDemand(kt, listReq)
-		if err != nil {
-			logs.Errorf("failed to list local res plan demand, err: %v, rid: %s", err, kt.Rid)
-			return nil, err
-		}
-
-		result = append(result, rst.Details...)
-
-		if len(rst.Details) < int(listReq.Page.Limit) {
-			break
-		}
-		listReq.Page.Start += uint32(listReq.Page.Limit)
-	}
-
-	return result, nil
 }
 
 // matchDemandTableByDemandKey match demand table by demand key. expect only one.
@@ -712,7 +581,7 @@ func matchDemandTableByDemandKey(kt *kit.Kit, demands []rpd.ResPlanDemandTable,
 // DeductResPlanDemandAggregate 根据聚合Key筛选一组res plan demand调减
 // 只有 demandChange.ChangeCpuCore <= 0 时才可以使用这个函数，> 0 时直接走新增
 // 不考虑demand key完全一致，优先选择加锁的
-func (c *Controller) DeductResPlanDemandAggregate(kt *kit.Kit, aggregateDemands []rpd.ResPlanDemandTable,
+func (d *Dispatcher) DeductResPlanDemandAggregate(kt *kit.Kit, aggregateDemands []rpd.ResPlanDemandTable,
 	needUpdateDemands map[string]*rpd.ResPlanDemandTable, demandUpdateRes map[string]*ptypes.DemandResource,
 	demandChange *ptypes.CrpOrderChangeInfo) error {
 
@@ -787,4 +656,135 @@ func prepareDeductResPlanDemand(updateDemand rpd.ResPlanDemandTable, changeCpuCo
 	demandUpdateRes[updateDemand.ID].CpuCore -= deductCpuNum
 
 	return deductCpuNum
+}
+
+func convCreateResPlanDemandReqs(kt *kit.Kit, ticket *ptypes.TicketInfo, demand *ptypes.CrpOrderChangeInfo) (
+	rpproto.ResPlanDemandCreateReq, rpproto.DemandChangelogCreate, error) {
+
+	expectTimeFormat, err := time.Parse(constant.DateLayout, demand.ExpectTime)
+	if err != nil {
+		logs.Errorf("failed to parse expect time, err: %v, expect_time: %s, rid: %s", err, demand.ExpectTime,
+			kt.Rid)
+		return rpproto.ResPlanDemandCreateReq{}, rpproto.DemandChangelogCreate{}, err
+	}
+
+	osChange := demand.ChangeOs
+	cpuCoreChange := demand.ChangeCpuCore
+	memoryChange := demand.ChangeMemory
+	diskSizeChange := demand.ChangeDiskSize
+	createReq := rpproto.ResPlanDemandCreateReq{
+		BkBizID:         ticket.BkBizID,
+		BkBizName:       ticket.BkBizName,
+		OpProductID:     ticket.OpProductID,
+		OpProductName:   ticket.OpProductName,
+		PlanProductID:   ticket.PlanProductID,
+		PlanProductName: ticket.PlanProductName,
+		VirtualDeptID:   ticket.VirtualDeptID,
+		VirtualDeptName: ticket.VirtualDeptName,
+		DemandClass:     ticket.DemandClass,
+		DemandResType:   demand.DemandResType,
+		ResMode:         demand.ResMode,
+		ObsProject:      demand.ObsProject,
+		ExpectTime:      expectTimeFormat.Format(constant.DateLayout),
+		PlanType:        demand.PlanType,
+		AreaID:          demand.AreaID,
+		AreaName:        demand.AreaName,
+		RegionID:        demand.RegionID,
+		RegionName:      demand.RegionName,
+		ZoneID:          demand.ZoneID,
+		ZoneName:        demand.ZoneName,
+		DeviceFamily:    demand.DeviceFamily,
+		DeviceClass:     demand.DeviceClass,
+		DeviceType:      demand.DeviceType,
+		CoreType:        demand.CoreType,
+		DiskType:        demand.DiskType,
+		DiskTypeName:    demand.DiskTypeName,
+		OS:              &osChange,
+		CpuCore:         &cpuCoreChange,
+		Memory:          &memoryChange,
+		DiskSize:        &diskSizeChange,
+		DiskIO:          demand.DiskIO,
+	}
+	if kt.User == constant.BackendOperationUserKey {
+		createReq.Creator = ticket.Applicant
+	}
+
+	// 更新日志
+	logCreateReq := rpproto.DemandChangelogCreate{
+		// DemandID 需要在demand创建后补充
+		DemandID:       "",
+		TicketID:       ticket.ID,
+		CrpOrderID:     ticket.CrpSn,
+		SuborderID:     "",
+		Type:           enumor.DemandChangelogTypeAppend,
+		ExpectTime:     expectTimeFormat.Format(constant.DateLayout),
+		ObsProject:     demand.ObsProject,
+		RegionName:     demand.RegionName,
+		ZoneName:       demand.ZoneName,
+		DeviceType:     demand.DeviceType,
+		OSChange:       &osChange,
+		CpuCoreChange:  &cpuCoreChange,
+		MemoryChange:   &memoryChange,
+		DiskSizeChange: &diskSizeChange,
+		Remark:         ticket.Remark,
+	}
+
+	return createReq, logCreateReq, nil
+}
+
+// ApplyResPlanDemandChangeFromRPTickets 从给定的预测单据中将CRP的预测变更生效，用于从历史单据批量修复历史数据
+func (d *Dispatcher) ApplyResPlanDemandChangeFromRPTickets(kt *kit.Kit, tickets []rtypes.RPTicketWithStatus) error {
+	for _, ticket := range tickets {
+		// 只看已通过的订单
+		if ticket.Status != enumor.RPTicketStatusDone {
+			continue
+		}
+
+		var demands rpt.ResPlanDemands
+		if err := json.Unmarshal([]byte(ticket.Demands), &demands); err != nil {
+			logs.Errorf("failed to unmarshal demands, err: %v, rid: %s", err, kt.Rid)
+			return err
+
+		}
+
+		ticketInfo := &ptypes.TicketInfo{
+			ID:               ticket.ID,
+			Type:             ticket.Type,
+			Applicant:        ticket.Applicant,
+			BkBizID:          ticket.BkBizID,
+			BkBizName:        ticket.BkBizName,
+			OpProductID:      ticket.OpProductID,
+			OpProductName:    ticket.OpProductName,
+			PlanProductID:    ticket.PlanProductID,
+			PlanProductName:  ticket.PlanProductName,
+			VirtualDeptID:    ticket.VirtualDeptID,
+			VirtualDeptName:  ticket.VirtualDeptName,
+			DemandClass:      ticket.DemandClass,
+			OriginalCpuCore:  ticket.OriginalCpuCore,
+			OriginalMemory:   ticket.OriginalMemory,
+			OriginalDiskSize: ticket.OriginalDiskSize,
+			UpdatedCpuCore:   ticket.UpdatedCpuCore,
+			UpdatedMemory:    ticket.UpdatedMemory,
+			UpdatedDiskSize:  ticket.UpdatedDiskSize,
+			Remark:           ticket.Remark,
+			Demands:          demands,
+			SubmittedAt:      ticket.SubmittedAt,
+			Status:           ticket.Status,
+			ItsmSn:           ticket.ItsmSn,
+			ItsmUrl:          ticket.ItsmSn,
+			CrpSn:            ticket.CrpSn,
+			CrpUrl:           ticket.CrpSn,
+		}
+
+		if err := d.applyResPlanDemandChange(kt, ticketInfo); err != nil {
+			logs.Errorf("failed to apply res plan demand change, err: %v, ticket_info: %+v, rid: %s", err,
+				*ticketInfo, kt.Rid)
+			return err
+		}
+
+		logs.Infof("apply res plan demand change from ticket, bk_biz_id: %d, ticket_id: %s, rid: %s",
+			ticket.BkBizID, ticket.ID, kt.Rid)
+	}
+
+	return nil
 }

@@ -51,7 +51,7 @@ type Capability struct {
 	Client         *client.ClientSet
 	Dao            dao.Set
 	WebService     *restful.WebService
-	PlanController *plan.Controller
+	PlanController plan.Logics
 	CmdbCli        cmdb.Client
 	ItsmClient     itsm.Client
 	ThirdCli       *thirdparty.Client

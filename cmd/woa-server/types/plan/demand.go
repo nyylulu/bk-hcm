@@ -684,25 +684,27 @@ type DemandResource struct {
 
 // CrpOrderChangeInfo is response of crp order change info.
 type CrpOrderChangeInfo struct {
-	OrderID       string               `json:"order_id"`
-	ExpectTime    string               `json:"expect_time"`
-	ObsProject    enumor.ObsProject    `json:"obs_project"`
-	DemandResType enumor.DemandResType `json:"demand_res_type"`
-	ResMode       enumor.ResModeCode   `json:"res_mode"`
-	PlanType      enumor.PlanTypeCode  `json:"plan_type"`
-	AreaID        string               `json:"area_id"`
-	AreaName      string               `json:"area_name"`
-	RegionID      string               `json:"region_id"`
-	RegionName    string               `json:"region_name"`
-	ZoneID        string               `json:"zone_id"`
-	ZoneName      string               `json:"zone_name"`
-	DeviceFamily  string               `json:"device_family"`
-	DeviceClass   string               `json:"device_class"`
-	DeviceType    string               `json:"device_type"`
-	CoreType      string               `json:"core_type"`
-	DiskType      enumor.DiskType      `json:"disk_type"`
-	DiskTypeName  string               `json:"disk_type_name"`
-	DiskIO        int64                `json:"disk_io"`
+	OrderID        string               `json:"order_id"`
+	OpProductName  string               `json:"op_product_name"`
+	ExpectTime     string               `json:"expect_time"`
+	ObsProject     enumor.ObsProject    `json:"obs_project"`
+	DemandResType  enumor.DemandResType `json:"demand_res_type"`
+	ResMode        enumor.ResModeCode   `json:"res_mode"`
+	PlanType       enumor.PlanTypeCode  `json:"plan_type"`
+	AreaID         string               `json:"area_id"`
+	AreaName       string               `json:"area_name"`
+	RegionID       string               `json:"region_id"`
+	RegionName     string               `json:"region_name"`
+	ZoneID         string               `json:"zone_id"`
+	ZoneName       string               `json:"zone_name"`
+	TechnicalClass string               `json:"technical_class"`
+	DeviceFamily   string               `json:"device_family"`
+	DeviceClass    string               `json:"device_class"`
+	DeviceType     string               `json:"device_type"`
+	CoreType       string               `json:"core_type"`
+	DiskType       enumor.DiskType      `json:"disk_type"`
+	DiskTypeName   string               `json:"disk_type_name"`
+	DiskIO         int64                `json:"disk_io"`
 
 	ChangeOs       decimal.Decimal `json:"change_os"`
 	ChangeCpuCore  int64           `json:"change_cpu_core"`

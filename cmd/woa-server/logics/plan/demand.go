@@ -20,7 +20,6 @@
 package plan
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -39,9 +38,7 @@ import (
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
-	rtypes "hcm/pkg/dal/dao/types/resource-plan"
 	rpd "hcm/pkg/dal/table/resource-plan/res-plan-demand"
-	rpt "hcm/pkg/dal/table/resource-plan/res-plan-ticket"
 	wdt "hcm/pkg/dal/table/resource-plan/woa-device-type"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -459,72 +456,7 @@ func convListResPlanDemandItemByTable(table rpd.ResPlanDemandTable, expectTime s
 // GetResPlanDemandDetail get demand detail
 func (c *Controller) GetResPlanDemandDetail(kt *kit.Kit, demandID string, bkBizIDs []int64) (
 	*ptypes.GetPlanDemandDetailResp, error) {
-
-	listRules := make([]*filter.AtomRule, 0)
-	listRules = append(listRules, tools.RuleEqual("id", demandID))
-	if len(bkBizIDs) > 0 {
-		listRules = append(listRules, tools.RuleIn("bk_biz_id", bkBizIDs))
-	}
-
-	listReq := &rpproto.ResPlanDemandListReq{
-		ListReq: core.ListReq{
-			Filter: tools.ExpressionAnd(listRules...),
-			Page:   core.NewDefaultBasePage(),
-		},
-	}
-
-	rst, err := c.client.DataService().Global.ResourcePlan.ListResPlanDemand(kt, listReq)
-	if err != nil {
-		logs.Errorf("failed to list res plan demand, err: %v, rid: %s", err, kt.Rid)
-		return nil, err
-	}
-
-	if len(rst.Details) == 0 {
-		return nil, fmt.Errorf("demand %s not found in bk_biz_id: %v", demandID, bkBizIDs)
-	}
-	detail := rst.Details[0]
-
-	expectDateStr, err := times.TransTimeStrWithLayout(strconv.Itoa(detail.ExpectTime), constant.DateLayoutCompact,
-		constant.DateLayout)
-	if err != nil {
-		logs.Errorf("failed to parse demand expect time, err: %v, expect_time: %d, rid: %s", err,
-			detail.ExpectTime, kt.Rid)
-		return nil, err
-	}
-
-	result := &ptypes.GetPlanDemandDetailResp{
-		DemandID:        detail.ID,
-		ExpectTime:      expectDateStr,
-		BkBizID:         detail.BkBizID,
-		BkBizName:       detail.BkBizName,
-		DeptID:          detail.VirtualDeptID,
-		DeptName:        detail.VirtualDeptName,
-		PlanProductID:   detail.PlanProductID,
-		PlanProductName: detail.PlanProductName,
-		OpProductID:     detail.OpProductID,
-		OpProductName:   detail.OpProductName,
-		ObsProject:      detail.ObsProject,
-		AreaID:          detail.AreaID,
-		AreaName:        detail.AreaName,
-		RegionID:        detail.RegionID,
-		RegionName:      detail.RegionName,
-		ZoneID:          detail.ZoneID,
-		ZoneName:        detail.ZoneName,
-		PlanType:        detail.PlanType.Name(),
-		CoreType:        detail.CoreType,
-		DeviceFamily:    detail.DeviceFamily,
-		DeviceClass:     detail.DeviceClass,
-		DeviceType:      detail.DeviceType,
-		OS:              detail.OS.Decimal,
-		Memory:          cvt.PtrToVal(detail.Memory),
-		CpuCore:         cvt.PtrToVal(detail.CpuCore),
-		DiskSize:        cvt.PtrToVal(detail.DiskSize),
-		DiskIO:          detail.DiskIO,
-		DiskType:        detail.DiskType,
-		DiskTypeName:    detail.DiskType.Name(),
-		ResMode:         detail.ResMode.Name(),
-	}
-	return result, nil
+	return c.resFetcher.GetResPlanDemandDetail(kt, demandID, bkBizIDs)
 }
 
 func (c *Controller) convListResPlanDemandTimeFilter(kt *kit.Kit, expiringOnly bool, expectTimeRange *times.DateRange) (
@@ -681,80 +613,6 @@ func (c *Controller) listAllResPlanDemand(kt *kit.Kit, req *ptypes.ListResPlanDe
 	return result, 0, nil
 }
 
-func convCreateResPlanDemandReqs(kt *kit.Kit, ticket *TicketInfo, demand *ptypes.CrpOrderChangeInfo) (
-	rpproto.ResPlanDemandCreateReq, rpproto.DemandChangelogCreate, error) {
-
-	expectTimeFormat, err := time.Parse(constant.DateLayout, demand.ExpectTime)
-	if err != nil {
-		logs.Errorf("failed to parse expect time, err: %v, expect_time: %s, rid: %s", err, demand.ExpectTime,
-			kt.Rid)
-		return rpproto.ResPlanDemandCreateReq{}, rpproto.DemandChangelogCreate{}, err
-	}
-
-	osChange := demand.ChangeOs
-	cpuCoreChange := demand.ChangeCpuCore
-	memoryChange := demand.ChangeMemory
-	diskSizeChange := demand.ChangeDiskSize
-	createReq := rpproto.ResPlanDemandCreateReq{
-		BkBizID:         ticket.BkBizID,
-		BkBizName:       ticket.BkBizName,
-		OpProductID:     ticket.OpProductID,
-		OpProductName:   ticket.OpProductName,
-		PlanProductID:   ticket.PlanProductID,
-		PlanProductName: ticket.PlanProductName,
-		VirtualDeptID:   ticket.VirtualDeptID,
-		VirtualDeptName: ticket.VirtualDeptName,
-		DemandClass:     ticket.DemandClass,
-		DemandResType:   demand.DemandResType,
-		ResMode:         demand.ResMode,
-		ObsProject:      demand.ObsProject,
-		ExpectTime:      expectTimeFormat.Format(constant.DateLayout),
-		PlanType:        demand.PlanType,
-		AreaID:          demand.AreaID,
-		AreaName:        demand.AreaName,
-		RegionID:        demand.RegionID,
-		RegionName:      demand.RegionName,
-		ZoneID:          demand.ZoneID,
-		ZoneName:        demand.ZoneName,
-		DeviceFamily:    demand.DeviceFamily,
-		DeviceClass:     demand.DeviceClass,
-		DeviceType:      demand.DeviceType,
-		CoreType:        demand.CoreType,
-		DiskType:        demand.DiskType,
-		DiskTypeName:    demand.DiskTypeName,
-		OS:              &osChange,
-		CpuCore:         &cpuCoreChange,
-		Memory:          &memoryChange,
-		DiskSize:        &diskSizeChange,
-		DiskIO:          demand.DiskIO,
-	}
-	if kt.User == constant.BackendOperationUserKey {
-		createReq.Creator = ticket.Applicant
-	}
-
-	// 更新日志
-	logCreateReq := rpproto.DemandChangelogCreate{
-		// DemandID 需要在demand创建后补充
-		DemandID:       "",
-		TicketID:       ticket.ID,
-		CrpOrderID:     ticket.CrpSn,
-		SuborderID:     "",
-		Type:           enumor.DemandChangelogTypeAppend,
-		ExpectTime:     expectTimeFormat.Format(constant.DateLayout),
-		ObsProject:     demand.ObsProject,
-		RegionName:     demand.RegionName,
-		ZoneName:       demand.ZoneName,
-		DeviceType:     demand.DeviceType,
-		OSChange:       &osChange,
-		CpuCoreChange:  &cpuCoreChange,
-		MemoryChange:   &memoryChange,
-		DiskSizeChange: &diskSizeChange,
-		Remark:         ticket.Remark,
-	}
-
-	return createReq, logCreateReq, nil
-}
-
 // RepairResPlanDemandFromTicket 给定时间范围，从范围内的历史单据还原预测
 func (c *Controller) RepairResPlanDemandFromTicket(kt *kit.Kit, bkBizIDs []int64,
 	ticketTimeRange times.DateRange) error {
@@ -785,14 +643,14 @@ func (c *Controller) RepairResPlanDemandFromTicket(kt *kit.Kit, bkBizIDs []int64
 		return err
 	}
 
-	allTickets, err := c.listAllResPlanTicket(kt, listTicketFilter)
+	allTickets, err := c.resFetcher.ListAllResPlanTicket(kt, listTicketFilter)
 	if err != nil {
 		logs.Errorf("failed to list all res plan ticket, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
 	// 从订单还原预测变更信息
-	if err := c.applyResPlanDemandChangeFromRPTickets(kt, allTickets); err != nil {
+	if err := c.dispatcher.ApplyResPlanDemandChangeFromRPTickets(kt, allTickets); err != nil {
 		logs.Errorf("failed to apply res plan demand change from res plan ticket, err: %v, bk_biz_ids: %v, "+
 			"rangeStart: %s, rangeEnd: %s, rid: %s", err, bkBizIDs, ticketTimeRange.Start, ticketTimeRange.End, kt.Rid)
 		return err
@@ -802,62 +660,6 @@ func (c *Controller) RepairResPlanDemandFromTicket(kt *kit.Kit, bkBizIDs []int64
 	logs.Infof("end repair res plan demand from ticket, bk_biz_ids: %v, rangeStart: %s, rangeEnd: %s, time: %v, "+
 		"cost: %ds, rid: %s", bkBizIDs, ticketTimeRange.Start, ticketTimeRange.End, end, end.Sub(start).Seconds(),
 		kt.Rid)
-	return nil
-}
-
-func (c *Controller) applyResPlanDemandChangeFromRPTickets(kt *kit.Kit, tickets []rtypes.RPTicketWithStatus) error {
-	for _, ticket := range tickets {
-		// 只看已通过的订单
-		if ticket.Status != enumor.RPTicketStatusDone {
-			continue
-		}
-
-		var demands rpt.ResPlanDemands
-		if err := json.Unmarshal([]byte(ticket.Demands), &demands); err != nil {
-			logs.Errorf("failed to unmarshal demands, err: %v, rid: %s", err, kt.Rid)
-			return err
-
-		}
-
-		ticketInfo := &TicketInfo{
-			ID:               ticket.ID,
-			Type:             ticket.Type,
-			Applicant:        ticket.Applicant,
-			BkBizID:          ticket.BkBizID,
-			BkBizName:        ticket.BkBizName,
-			OpProductID:      ticket.OpProductID,
-			OpProductName:    ticket.OpProductName,
-			PlanProductID:    ticket.PlanProductID,
-			PlanProductName:  ticket.PlanProductName,
-			VirtualDeptID:    ticket.VirtualDeptID,
-			VirtualDeptName:  ticket.VirtualDeptName,
-			DemandClass:      ticket.DemandClass,
-			OriginalCpuCore:  ticket.OriginalCpuCore,
-			OriginalMemory:   ticket.OriginalMemory,
-			OriginalDiskSize: ticket.OriginalDiskSize,
-			UpdatedCpuCore:   ticket.UpdatedCpuCore,
-			UpdatedMemory:    ticket.UpdatedMemory,
-			UpdatedDiskSize:  ticket.UpdatedDiskSize,
-			Remark:           ticket.Remark,
-			Demands:          demands,
-			SubmittedAt:      ticket.SubmittedAt,
-			Status:           ticket.Status,
-			ItsmSn:           ticket.ItsmSn,
-			ItsmUrl:          ticket.ItsmSn,
-			CrpSn:            ticket.CrpSn,
-			CrpUrl:           ticket.CrpSn,
-		}
-
-		if err := c.applyResPlanDemandChange(kt, ticketInfo); err != nil {
-			logs.Errorf("failed to apply res plan demand change, err: %v, ticket_info: %+v, rid: %s", err,
-				*ticketInfo, kt.Rid)
-			return err
-		}
-
-		logs.Infof("apply res plan demand change from ticket, bk_biz_id: %d, ticket_id: %s, rid: %s",
-			ticket.BkBizID, ticket.ID, kt.Rid)
-	}
-
 	return nil
 }
 
@@ -998,12 +800,12 @@ func (c *Controller) GetProdResPlanPool(kt *kit.Kit, prodID int64) (ResPlanPool,
 			PlanType:      enumor.PlanType(demand.InPlan).ToAnotherPlanType(),
 			AvailableTime: NewAvailableTime(demand.Year, time.Month(demand.Month)),
 			DeviceType:    deviceType,
-			ObsProject:    enumor.ObsProject(demand.ProjectName),
+			ObsProject:    demand.ProjectName,
 			RegionName:    demand.CityName,
 			ZoneName:      demand.ZoneName,
 		}
 
-		pool[key] += int64(demand.PlanCoreAmount)
+		pool[key] += demand.PlanCoreAmount
 	}
 
 	return pool, nil
@@ -1145,7 +947,7 @@ func (c *Controller) getApplyOrderConsumePoolMap(kt *kit.Kit, demands []*cvmapi.
 				PlanType:      enumor.PlanType(demand.InPlan).ToAnotherPlanType(),
 				AvailableTime: NewAvailableTime(demand.Year, time.Month(demand.Month)),
 				DeviceType:    demand.InstanceModel,
-				ObsProject:    enumor.ObsProject(demand.ProjectName),
+				ObsProject:    demand.ProjectName,
 				RegionName:    demand.CityName,
 				ZoneName:      demand.ZoneName,
 			}

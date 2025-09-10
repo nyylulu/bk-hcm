@@ -17,48 +17,21 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package types
+package dispatcher
 
 import (
-	"database/sql/driver"
-	"fmt"
-
-	"github.com/shopspring/decimal"
+	wdt "hcm/pkg/dal/table/resource-plan/woa-device-type"
+	"hcm/pkg/kit"
+	"hcm/pkg/logs"
 )
 
-// Decimal is wrapper for
-type Decimal struct {
-	decimal.Decimal
-}
-
-// Scan is used to decode raw message which is read from db into
-func (d *Decimal) Scan(raw interface{}) error {
-	if raw == nil {
-		return nil
-	}
-	data := ""
-	switch v := raw.(type) {
-	case []byte:
-		data = string(v)
-	case string:
-		data = v
-	default:
-		return fmt.Errorf("unsupported decimal raw type: %T", v)
-	}
-	internalDecimal, err := decimal.NewFromString(data)
+// getAllDeviceTypeMap get all device type map.
+func (d *Dispatcher) getAllDeviceTypeMap(kt *kit.Kit) (map[string]wdt.WoaDeviceTypeTable, error) {
+	// get all device type maps.
+	deviceTypeMap, err := d.deviceTypesMap.GetDeviceTypes(kt)
 	if err != nil {
-		return fmt.Errorf("parse decimal %s failed, err %s", data, err.Error())
+		logs.Errorf("get all device type map failed, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
 	}
-	d.Decimal = internalDecimal
-	return nil
-}
-
-// Value encode the Decimal to a json raw, so that it can be stored to db with json raw.
-func (d Decimal) Value() (driver.Value, error) {
-	return d.Decimal.String(), nil
-}
-
-// Copy the decimal
-func (d Decimal) Copy() Decimal {
-	return Decimal{d.Decimal.Copy()}
+	return deviceTypeMap, nil
 }

@@ -21,6 +21,19 @@ package enumor
 
 import "fmt"
 
+const (
+	// TicketSvcNameResPlan 资源预测在ITSM的服务
+	TicketSvcNameResPlan = "res_plan"
+	// TicketNodeNameCrpAudit 资源预测在ITSM流程中的CRP审批节点
+	TicketNodeNameCrpAudit = "crp_audit"
+	// TicketOperatorNameCrpAudit 资源预测在ITSM流程中的CRP审批节点操作人
+	TicketOperatorNameCrpAudit = "icr"
+	// AuditFlowTimeoutDay 审批流超时时间，单位天
+	AuditFlowTimeoutDay int = 28
+	// PendingTicketTraceDay 带处理的单据历史追溯时间，单位天
+	PendingTicketTraceDay int = 42
+)
+
 // RPTicketType is resource plan ticket type.
 type RPTicketType string
 
@@ -97,6 +110,17 @@ func (s RPTicketStatus) Validate() error {
 	}
 
 	return nil
+}
+
+// IsUnfinished returns whether the status is unfinished.
+func (s RPTicketStatus) IsUnfinished() bool {
+	switch s {
+	case RPTicketStatusInit:
+	case RPTicketStatusAuditing:
+	default:
+		return false
+	}
+	return true
 }
 
 // rdTicketStatusNameMap records RPTicketStatus's name.
@@ -683,4 +707,25 @@ func GetCRPDiskTypeFromCRPName(name string) (CRPDiskType, error) {
 	}
 
 	return 0, fmt.Errorf("unsupported crp disk type name: %s", name)
+}
+
+// ResPlanReviewStatus is res plan review status.
+type ResPlanReviewStatus string
+
+const (
+	// ResPlanReviewStatusPass 已评审
+	ResPlanReviewStatusPass ResPlanReviewStatus = "已评审"
+	// ResPlanReviewStatusPending 待评审
+	ResPlanReviewStatusPending ResPlanReviewStatus = "待评审"
+)
+
+// Validate ResPlanReviewStatus.
+func (r ResPlanReviewStatus) Validate() error {
+	switch r {
+	case ResPlanReviewStatusPass:
+	case ResPlanReviewStatusPending:
+	default:
+		return fmt.Errorf("unsupported res plan review status: %s", r)
+	}
+	return nil
 }

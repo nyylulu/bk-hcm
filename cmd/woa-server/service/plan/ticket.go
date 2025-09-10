@@ -34,7 +34,6 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
-	"hcm/pkg/runtime/filter"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 	cvt "hcm/pkg/tools/converter"
 )
@@ -71,12 +70,7 @@ func (s *service) ListResPlanTicket(cts *rest.Contexts) (interface{}, error) {
 		opt.Filter.Rules = append(opt.Filter.Rules, tools.RuleEqual("applicant", cts.Kit.User))
 	}
 
-	rst, err := s.dao.ResPlanTicket().ListWithStatusAndRes(cts.Kit, opt)
-	if err != nil {
-		logs.Errorf("failed to list resource plan ticket with status, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.NewFromErr(errf.Aborted, err)
-	}
-	return rst, nil
+	return s.planController.ListResPlanTicketWithRes(cts.Kit, opt)
 }
 
 // ListBizResPlanTicket list biz resource plan ticket.
@@ -120,13 +114,7 @@ func (s *service) ListBizResPlanTicket(cts *rest.Contexts) (interface{}, error) 
 		return nil, errf.NewFromErr(errf.Aborted, err)
 	}
 
-	rst, err := s.dao.ResPlanTicket().ListWithStatusAndRes(cts.Kit, opt)
-	if err != nil {
-		logs.Errorf("failed to list biz resource plan ticket with status, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.NewFromErr(errf.Aborted, err)
-	}
-
-	return rst, nil
+	return s.planController.ListResPlanTicketWithRes(cts.Kit, opt)
 }
 
 // CreateBizResPlanTicket create biz resource plan ticket.
@@ -345,7 +333,7 @@ func (s *service) GetResPlanTicket(cts *rest.Contexts) (interface{}, error) {
 	}
 
 	// get status info.
-	statusInfo, err := s.getRPTicketStatusInfo(cts.Kit, ticketID)
+	statusInfo, err := s.planController.GetResPlanTicketStatusInfo(cts.Kit, ticketID)
 	if err != nil {
 		logs.Errorf("get resource plan ticket status info failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.Aborted, err)
@@ -411,38 +399,6 @@ func (s *service) getRPTicketBaseInfoAndDemands(kt *kit.Kit, ticketID string) (*
 	return baseInfo, demands, nil
 }
 
-// getRPTicketStatusInfo get resource plan ticket status information.
-func (s *service) getRPTicketStatusInfo(kt *kit.Kit, ticketID string) (*ptypes.GetRPTicketStatusInfo, error) {
-	// search resource plan ticket status table.
-	opt := &types.ListOption{
-		Filter: tools.EqualExpression("ticket_id", ticketID),
-		Page:   core.NewDefaultBasePage(),
-	}
-	rst, err := s.dao.ResPlanTicketStatus().List(kt, opt)
-	if err != nil {
-		logs.Errorf("failed to list resource plan ticket status, err: %v, rid: %s", err, kt.Rid)
-		return nil, err
-	}
-
-	if len(rst.Details) != 1 {
-		logs.Errorf("list resource plan ticket status, but len details != 1, rid: %s", kt.Rid)
-		return nil, errors.New("list resource plan ticket status, but len details != 1")
-	}
-
-	detail := rst.Details[0]
-	result := &ptypes.GetRPTicketStatusInfo{
-		Status:     detail.Status,
-		StatusName: detail.Status.Name(),
-		ItsmSn:     detail.ItsmSn,
-		ItsmUrl:    detail.ItsmUrl,
-		CrpSn:      detail.CrpSn,
-		CrpUrl:     detail.CrpUrl,
-		Message:    detail.Message,
-	}
-
-	return result, nil
-}
-
 // GetBizResPlanTicket get biz resource plan ticket detail.
 func (s *service) GetBizResPlanTicket(cts *rest.Contexts) (interface{}, error) {
 	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
@@ -480,7 +436,7 @@ func (s *service) GetBizResPlanTicket(cts *rest.Contexts) (interface{}, error) {
 	}
 
 	// get status info.
-	statusInfo, err := s.getRPTicketStatusInfo(cts.Kit, ticketID)
+	statusInfo, err := s.planController.GetResPlanTicketStatusInfo(cts.Kit, ticketID)
 	if err != nil {
 		logs.Errorf("get resource plan ticket status info failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.Aborted, err)
@@ -503,7 +459,7 @@ func (s *service) GetResPlanTicketAudit(cts *rest.Contexts) (interface{}, error)
 		return nil, err
 	}
 
-	return s.getResPlanTicketAudit(cts.Kit, ticketID, constant.UnassignedBiz)
+	return s.planController.GetResPlanTicketAudit(cts.Kit, ticketID, constant.AttachedAllBiz)
 }
 
 // GetBizResPlanTicketAudit get biz resource plan ticket audit.
@@ -524,32 +480,7 @@ func (s *service) GetBizResPlanTicketAudit(cts *rest.Contexts) (interface{}, err
 		return nil, err
 	}
 
-	return s.getResPlanTicketAudit(cts.Kit, ticketID, bkBizID)
-}
-
-func (s *service) getResPlanTicketAudit(kt *kit.Kit, ticketID string, bkBizID int64) (
-	*ptypes.GetResPlanTicketAuditResp, error) {
-
-	resp := new(ptypes.GetResPlanTicketAuditResp)
-	resp.TicketID = ticketID
-
-	// 查询Itsm单号和Crp单号
-	statusInfo, err := s.getRPTicketStatusInfo(kt, ticketID)
-	if err != nil {
-		logs.Errorf("get resource plan ticket status info failed, err: %v, rid: %s", err, kt.Rid)
-		return nil, errf.NewFromErr(errf.Aborted, err)
-	}
-
-	itsmAudit, crpAudit, err := s.planController.GetItsmAndCrpAuditStatus(kt, bkBizID, statusInfo)
-	if err != nil {
-		logs.Errorf("get itsm and crp audit status failed, err: %v, rid: %s", err, kt.Rid)
-		return nil, errf.NewFromErr(errf.Aborted, err)
-	}
-
-	resp.ItsmAudit = itsmAudit
-	resp.CrpAudit = crpAudit
-
-	return resp, nil
+	return s.planController.GetResPlanTicketAudit(cts.Kit, ticketID, bkBizID)
 }
 
 // ApproveBizResPlanTicketITSMNode 业务下 审批预测单对应itsm单据
@@ -602,14 +533,14 @@ func (s *service) ApproveResPlanTicketITSMNode(cts *rest.Contexts) (any, error) 
 		return nil, err
 	}
 
-	return s.approveResPlanTicketITSMByBiz(cts.Kit, ticketID, constant.UnassignedBiz, req)
+	return s.approveResPlanTicketITSMByBiz(cts.Kit, ticketID, constant.AttachedAllBiz, req)
 }
 
 func (s *service) approveResPlanTicketITSMByBiz(kt *kit.Kit, ticketID string, bizID int64,
 	req *ptypes.AuditResPlanTicketITSMReq) (any, error) {
 
 	// 查询数据
-	status, err := s.getResPlanTicketStatusByBiz(kt, ticketID, bizID)
+	status, err := s.planController.GetResPlanTicketStatusByBiz(kt, ticketID, bizID)
 	if err != nil {
 		logs.Errorf("failed to get resource plan ticket status info, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -634,59 +565,4 @@ func (s *service) approveResPlanTicketITSMByBiz(kt *kit.Kit, ticketID string, bi
 		return nil, err
 	}
 	return nil, nil
-}
-
-// 会先检查ticket是否存在，并校验业务id是否正确， bizID 为-1 表示不限制业务条件
-func (s *service) getResPlanTicketStatusByBiz(kt *kit.Kit, ticketID string, bizID int64) (
-	*ptypes.GetRPTicketStatusInfo, error) {
-
-	// 1. 检查ticket是否存在以及业务是否匹配
-	rules := []*filter.AtomRule{tools.RuleEqual("id", ticketID)}
-	if bizID != constant.UnassignedBiz {
-		rules = append(rules, tools.RuleEqual("bk_biz_id", bizID))
-	}
-	opt := &types.ListOption{
-		Filter: tools.ExpressionAnd(rules...),
-		Page:   core.NewCountPage(),
-	}
-
-	ticketRst, err := s.dao.ResPlanTicket().List(kt, opt)
-	if err != nil {
-		logs.Errorf("failed to list resource plan ticket(%s,%d), err: %v, rid: %s", ticketID, bizID, err, kt.Rid)
-		return nil, err
-	}
-
-	if ticketRst.Count < 1 {
-		logs.Errorf("list resource plan ticket got %d != 1, rid: %s", ticketRst.Count, kt.Rid)
-		return nil, fmt.Errorf("list resource plan ticket %s by biz %d failed", ticketID, bizID)
-	}
-
-	// 2. 查询对应状态单号
-	statusOpt := &types.ListOption{
-		Filter: tools.EqualExpression("ticket_id", ticketID),
-		Page:   core.NewDefaultBasePage(),
-	}
-	statusRst, err := s.dao.ResPlanTicketStatus().List(kt, statusOpt)
-	if err != nil {
-		logs.Errorf("failed to list status of resource plan ticket(%s), err: %v, rid: %s", ticketID, err, kt.Rid)
-		return nil, err
-	}
-
-	if len(statusRst.Details) != 1 {
-		logs.Errorf("list status of resource plan ticket got %d != 1, rid: %s", len(statusRst.Details), kt.Rid)
-		return nil, errors.New("list status of resource plan ticket, but len != 1")
-	}
-
-	detail := statusRst.Details[0]
-	result := &ptypes.GetRPTicketStatusInfo{
-		Status:     detail.Status,
-		StatusName: detail.Status.Name(),
-		ItsmSn:     detail.ItsmSn,
-		ItsmUrl:    detail.ItsmUrl,
-		CrpSn:      detail.CrpSn,
-		CrpUrl:     detail.CrpUrl,
-		Message:    detail.Message,
-	}
-
-	return result, nil
 }

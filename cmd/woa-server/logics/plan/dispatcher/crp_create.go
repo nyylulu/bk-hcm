@@ -17,80 +17,21 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package plan
+package dispatcher
 
 import (
 	"errors"
 	"fmt"
-	"strings"
 
-	rpproto "hcm/pkg/api/data-service/resource-plan"
-	"hcm/pkg/criteria/constant"
+	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/criteria/enumor"
-	rpts "hcm/pkg/dal/table/resource-plan/res-plan-ticket-status"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/cvmapi"
 )
 
-// createCrpTicket create crp ticket.
-func (c *Controller) createCrpTicket(kt *kit.Kit, ticket *TicketInfo) error {
-	if ticket == nil {
-		logs.Errorf("failed to create crp ticket, ticket is nil, rid: %s", kt.Rid)
-		return errors.New("ticket is nil")
-	}
-
-	// call crp api to create crp ticket.
-	var sn string
-	var err error
-	switch ticket.Type {
-	case enumor.RPTicketTypeAdd:
-		sn, err = c.createAddCrpTicket(kt, ticket)
-	case enumor.RPTicketTypeAdjust, enumor.RPTicketTypeDelete:
-		adjustCreator := NewCrpAdjustTicketCreator(c, c.crpCli)
-		sn, err = adjustCreator.CreateCRPTicket(kt, ticket)
-		// sn, err = c.createAdjustCrpTicket(kt, ticket)
-	default:
-		logs.Errorf("failed to create crp ticket, unsupported ticket type: %s, ticket_id: %s, rid: %s", ticket.Type,
-			ticket.ID, kt.Rid)
-		return errors.New("unsupported ticket type")
-	}
-	if err != nil {
-		// 因CRP单据修改冲突导致的提单失败，不返回报错，记录日志后返回队列继续等待
-		if strings.Contains(err.Error(), constant.CRPResPlanDemandIsInProcessing) {
-			logs.Warnf("failed to create crp ticket, as crp res plan demand is in processing, err: %v, "+
-				"ticket_id: %s, rid: %s", err, ticket.ID, kt.Rid)
-			return nil
-		}
-
-		// 这里主要返回的error是crp ticket创建失败，且ticket状态更新失败的日志在函数内已打印，这里可以忽略该错误
-		_ = c.updateTicketStatusFailed(kt, ticket, err.Error())
-		logs.Errorf("failed to create crp ticket with different ticket type, err: %v, ticket_id: %s, rid: %s", err,
-			ticket.ID, kt.Rid)
-		return err
-	}
-
-	// save crp sn and crp url to resource plan ticket status table.
-	update := &rpts.ResPlanTicketStatusTable{
-		TicketID: ticket.ID,
-		Status:   enumor.RPTicketStatusAuditing,
-		ItsmSn:   ticket.ItsmSn,
-		ItsmUrl:  ticket.ItsmUrl,
-		CrpSn:    sn,
-		CrpUrl:   cvmapi.CvmPlanLinkPrefix + sn,
-	}
-
-	if err = c.updateTicketStatus(kt, update); err != nil {
-		logs.Errorf("failed to update resource plan ticket status, err: %v, ticket_id: %s, rid: %s", err, ticket.ID,
-			kt.Rid)
-		return err
-	}
-
-	return nil
-}
-
 // createAddCrpTicket create add crp ticket.
-func (c *Controller) createAddCrpTicket(kt *kit.Kit, ticket *TicketInfo) (string, error) {
+func (c *CrpTicketCreator) createAddCrpTicket(kt *kit.Kit, ticket *ptypes.TicketInfo) (string, error) {
 	addReq, err := c.constructAddReq(kt, ticket)
 	if err != nil {
 		logs.Errorf("failed to construct add cvm & cbs plan order request, err: %v, ticket_id: %s, rid: %s", err,
@@ -122,46 +63,8 @@ func (c *Controller) createAddCrpTicket(kt *kit.Kit, ticket *TicketInfo) (string
 	return sn, nil
 }
 
-// updateTicketStatusFailed update ticket status to failed.
-func (c *Controller) updateTicketStatusFailed(kt *kit.Kit, ticket *TicketInfo, msg string) error {
-	update := &rpts.ResPlanTicketStatusTable{
-		TicketID: ticket.ID,
-		Status:   enumor.RPTicketStatusFailed,
-		ItsmSn:   ticket.ItsmSn,
-		ItsmUrl:  ticket.ItsmUrl,
-		CrpSn:    ticket.CrpSn,
-		CrpUrl:   ticket.CrpUrl,
-		Message:  msg,
-	}
-
-	if len(msg) > 255 {
-		logs.Warnf("failure message is truncated to 255, origin message: %s, rid: %s", msg, kt.Rid)
-		update.Message = msg[:255]
-	}
-
-	if err := c.updateTicketStatus(kt, update); err != nil {
-		logs.Errorf("failed to update resource plan ticket status, err: %v, rid: %s", err, kt.Rid)
-		return err
-	}
-
-	// 失败需要释放资源
-	allDemandIDs := make([]string, 0)
-	for _, demand := range ticket.Demands {
-		if demand.Original != nil {
-			allDemandIDs = append(allDemandIDs, (*demand.Original).DemandID)
-		}
-	}
-	unlockReq := rpproto.NewResPlanDemandLockOpReqBatch(allDemandIDs, 0)
-	if err := c.client.DataService().Global.ResourcePlan.UnlockResPlanDemand(kt, unlockReq); err != nil {
-		logs.Errorf("failed to unlock all resource plan demand, err: %v, rid: %s", err, kt.Rid)
-		return err
-	}
-
-	return nil
-}
-
 // constructAddReq construct cvm cbs plan add request.
-func (c *Controller) constructAddReq(kt *kit.Kit, ticket *TicketInfo) (*cvmapi.AddCvmCbsPlanReq, error) {
+func (c *CrpTicketCreator) constructAddReq(kt *kit.Kit, ticket *ptypes.TicketInfo) (*cvmapi.AddCvmCbsPlanReq, error) {
 	addReq := &cvmapi.AddCvmCbsPlanReq{
 		ReqMeta: cvmapi.ReqMeta{
 			Id:      cvmapi.CvmId,

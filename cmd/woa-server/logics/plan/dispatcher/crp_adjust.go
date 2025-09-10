@@ -17,19 +17,20 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package plan
+package dispatcher
 
 import (
 	"errors"
 	"fmt"
 
+	"hcm/cmd/woa-server/logics/plan/fetcher"
 	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/criteria/enumor"
 	rpt "hcm/pkg/dal/table/resource-plan/res-plan-ticket"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/cvmapi"
-	"hcm/pkg/tools/converter"
+	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/math"
 )
 
@@ -38,14 +39,15 @@ type AdjustAbleRemainObj struct {
 	OriginDemand *cvmapi.CvmCbsPlanQueryItem
 	AdjustType   enumor.CrpAdjustType
 	// expectTime 当 adjustType 为 CrpAdjustTypeDelay 时，记录最新的期望交付时间
-	ExpectTime  string
+	ExpectTime string
+	// WillConsume 记录CRP中预测在本次调整的量
 	WillConsume int64
 }
 
-// CrpAdjustTicketCreator crp adjust ticket creator
+// CrpTicketCreator crp ticket creator
 // CRP预测修改请求分为两部分：对CRP原有预测的调减，对用户更新内容的追加
-type CrpAdjustTicketCreator struct {
-	planLogics Logics
+type CrpTicketCreator struct {
+	resFetcher fetcher.Fetcher
 	crpCli     cvmapi.CVMClientInterface
 
 	// adjCRPDemandsRst 记录对CRP中可修改的原有预测，将要产生调减的内容
@@ -56,10 +58,10 @@ type CrpAdjustTicketCreator struct {
 	adjustAbleDemands map[string][]*cvmapi.CvmCbsPlanQueryItem
 }
 
-// NewCrpAdjustTicketCreator new CrpAdjustTicketCreator
-func NewCrpAdjustTicketCreator(planLogics Logics, crpCli cvmapi.CVMClientInterface) *CrpAdjustTicketCreator {
-	return &CrpAdjustTicketCreator{
-		planLogics:         planLogics,
+// NewCrpTicketCreator new CrpTicketCreator
+func NewCrpTicketCreator(fetch fetcher.Fetcher, crpCli cvmapi.CVMClientInterface) *CrpTicketCreator {
+	return &CrpTicketCreator{
+		resFetcher:         fetch,
 		crpCli:             crpCli,
 		adjCRPDemandsRst:   make(map[string]*AdjustAbleRemainObj),
 		appendUpdateDemand: make([]*cvmapi.AdjustUpdatedData, 0),
@@ -68,8 +70,13 @@ func NewCrpAdjustTicketCreator(planLogics Logics, crpCli cvmapi.CVMClientInterfa
 }
 
 // CreateCRPTicket create crp adjust ticket
-func (c *CrpAdjustTicketCreator) CreateCRPTicket(kt *kit.Kit, ticket *TicketInfo) (string, error) {
-	// 1. 生成调整请求
+func (c *CrpTicketCreator) CreateCRPTicket(kt *kit.Kit, ticket *ptypes.TicketInfo) (string, error) {
+	// 1. 新增单走新增流程
+	if ticket.Type == enumor.RPTicketTypeAdd {
+		return c.createAddCrpTicket(kt, ticket)
+	}
+
+	// 2. 生成调整请求
 	srcData, updateData, err := c.constructCrpAdjustReqParams(kt, ticket)
 	if err != nil {
 		logs.Errorf("failed to construct adjust crp plan order request params, ticketID: %s, err: %v, rid: %s",
@@ -105,7 +112,7 @@ func (c *CrpAdjustTicketCreator) CreateCRPTicket(kt *kit.Kit, ticket *TicketInfo
 		logs.Warnf("failed to construct adjust desc, unsupported demand class: %s, rid: %s", ticket.DemandClass, kt.Rid)
 	}
 
-	// 2. 发起提单
+	// 3. 发起提单
 	resp, err := c.crpCli.AdjustCvmCbsPlans(kt.Ctx, kt.Header(), adjustReq)
 	if err != nil {
 		logs.Errorf("failed to adjust cvm & cbs plan order, ticketID: %s, err: %v, rid: %s", ticket.ID, err, kt.Rid)
@@ -114,7 +121,7 @@ func (c *CrpAdjustTicketCreator) CreateCRPTicket(kt *kit.Kit, ticket *TicketInfo
 
 	if resp.Error.Code != 0 {
 		logs.Errorf("failed to adjust cvm & cbs plan order, ticketID: %s, code: %d, msg: %s, req: %v, crp_trace: %s, "+
-			"rid: %s", ticket.ID, resp.Error.Code, resp.Error.Message, converter.PtrToVal(adjustReq),
+			"rid: %s", ticket.ID, resp.Error.Code, resp.Error.Message, cvt.PtrToVal(adjustReq),
 			resp.TraceId, kt.Rid)
 		return "", fmt.Errorf("failed to create crp ticket, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
 	}
@@ -130,7 +137,7 @@ func (c *CrpAdjustTicketCreator) CreateCRPTicket(kt *kit.Kit, ticket *TicketInfo
 }
 
 // constructCrpAdjustReq construct cvm cbs plan adjust request.
-func (c *CrpAdjustTicketCreator) constructCrpAdjustReqParams(kt *kit.Kit, ticket *TicketInfo) ([]*cvmapi.AdjustSrcData,
+func (c *CrpTicketCreator) constructCrpAdjustReqParams(kt *kit.Kit, ticket *ptypes.TicketInfo) ([]*cvmapi.AdjustSrcData,
 	[]*cvmapi.AdjustUpdatedData, error) {
 
 	// 1. 通过通配的方式，查询可修改的CRP原有预测
@@ -204,7 +211,7 @@ func (c *CrpAdjustTicketCreator) constructCrpAdjustReqParams(kt *kit.Kit, ticket
 }
 
 // getCRPAdjustAbleDemandsForAdjustDemands get all adjustable demands from CRP based on the request's adjust demands.
-func (c *CrpAdjustTicketCreator) getAllCRPAdjustAbleDemands(kt *kit.Kit, demands rpt.ResPlanDemands,
+func (c *CrpTicketCreator) getAllCRPAdjustAbleDemands(kt *kit.Kit, demands rpt.ResPlanDemands,
 	planProductName string, opProductName string) error {
 
 	for _, demand := range demands {
@@ -238,50 +245,10 @@ func (c *CrpAdjustTicketCreator) getAllCRPAdjustAbleDemands(kt *kit.Kit, demands
 	return nil
 }
 
-// queryAdjustAbleDemands query demands that can be adjusted.
-func (c *CrpAdjustTicketCreator) queryAdjustAbleDemands(kt *kit.Kit, req *ptypes.AdjustAbleDemandsReq) (
-	[]*cvmapi.CvmCbsPlanQueryItem, error) {
-
-	if err := req.Validate(); err != nil {
-		return nil, err
-	}
-
-	// init request parameter.
-	queryReq := &cvmapi.CvmCbsAdjustAblePlanQueryReq{
-		ReqMeta: cvmapi.ReqMeta{
-			Id:      cvmapi.CvmId,
-			JsonRpc: cvmapi.CvmJsonRpc,
-			Method:  cvmapi.CvmCbsAdjustAblePlanQueryMethod,
-		},
-		Params: convAdjustAbleQueryParam(req),
-	}
-
-	rst, err := c.crpCli.QueryAdjustAbleDemand(kt.Ctx, kt.Header(), queryReq)
-	if err != nil {
-		logs.Errorf("failed to query adjust able demands, err: %s, req: %+v, rid: %s", err, *queryReq.Params,
-			kt.Rid)
-		return nil, err
-	}
-
-	if rst.Error.Code != 0 {
-		logs.Errorf("failed to query adjust able demands, err: %s, crp_trace: %s, rid: %s", rst.Error.Message,
-			rst.TraceId, kt.Rid)
-		return nil, errors.New(rst.Error.Message)
-	}
-
-	if rst.Result == nil || len(rst.Result.Data) == 0 {
-		logs.Errorf("failed to query adjust able demands, return is empty, crp_trace: %s, rid: %s",
-			rst.TraceId, kt.Rid)
-		return nil, errors.New("no demands can be adjusted in CRP")
-	}
-
-	return rst.Result.Data, nil
-}
-
 // constructAdjustDemandDetails 构造调整预测请求参数
 // 因crp不支持部分调整，这里通过将crp中的预测（可能有多条）调减调整的原始量，再在crp中追加一条调整的目标量，来间接实现部分调整。
 // 在 prePrepareAdjustAbleData 中计算并记录crp中原始预测的调减量，将追加的目标量暂存在 appendUpdateDemand 中
-func (c *CrpAdjustTicketCreator) constructAdjustDemandDetails(kt *kit.Kit, ticket *TicketInfo,
+func (c *CrpTicketCreator) constructAdjustDemandDetails(kt *kit.Kit, ticket *ptypes.TicketInfo,
 	demand rpt.ResPlanDemand) error {
 
 	var adjustType enumor.CrpAdjustType
@@ -325,7 +292,7 @@ func (c *CrpAdjustTicketCreator) constructAdjustDemandDetails(kt *kit.Kit, ticke
 
 // prePrepareAdjustAbleData 预处理可调减的数据.
 // 适用于多个子订单会重复调整到同一条预测数据的场景，先将所有可能的影响汇总到 adjCRPDemandsRst 中
-func (c *CrpAdjustTicketCreator) prePrepareAdjustAbleData(kt *kit.Kit, adjustType enumor.CrpAdjustType,
+func (c *CrpTicketCreator) prePrepareAdjustAbleData(kt *kit.Kit, adjustType enumor.CrpAdjustType,
 	demand rpt.ResPlanDemand) error {
 
 	adjustAbleDemands, ok := c.adjustAbleDemands[demand.Original.DemandID]
@@ -335,7 +302,7 @@ func (c *CrpAdjustTicketCreator) prePrepareAdjustAbleData(kt *kit.Kit, adjustTyp
 	}
 
 	// 查询原始预测的预测内外情况
-	demandDetail, err := c.planLogics.GetResPlanDemandDetail(kt, demand.Original.DemandID, []int64{})
+	demandDetail, err := c.resFetcher.GetResPlanDemandDetail(kt, demand.Original.DemandID, []int64{})
 	if err != nil {
 		logs.Errorf("failed to get res plan demand detail, err: %v, demand_id: %s, rid: %s", err,
 			demand.Original.DemandID, kt.Rid)
@@ -359,7 +326,7 @@ func (c *CrpAdjustTicketCreator) prePrepareAdjustAbleData(kt *kit.Kit, adjustTyp
 			updateExpectTime)
 		if err != nil {
 			logs.Warnf("adjust type is delay, but updated is nil, need adjust: %+v, slice: %s, rid: %s",
-				converter.PtrToVal(demand.Original), adjustAbleD.SliceId, kt.Rid)
+				cvt.PtrToVal(demand.Original), adjustAbleD.SliceId, kt.Rid)
 			continue
 		}
 
@@ -378,7 +345,7 @@ func (c *CrpAdjustTicketCreator) prePrepareAdjustAbleData(kt *kit.Kit, adjustTyp
 
 // calcAdjustAbleDCanConsumeCPU 计算单个可调整的crp预测，有多少CPU可以被用在demand的调整中
 // 并将结果暂存在 adjCRPDemandsRst 中
-func (c *CrpAdjustTicketCreator) calcAdjustAbleDCanConsumeCPU(kt *kit.Kit, adjustAbleD *cvmapi.CvmCbsPlanQueryItem,
+func (c *CrpTicketCreator) calcAdjustAbleDCanConsumeCPU(kt *kit.Kit, adjustAbleD *cvmapi.CvmCbsPlanQueryItem,
 	adjustType enumor.CrpAdjustType, needCpuCores int64, demandDetail *ptypes.GetPlanDemandDetailResp,
 	updateExpectTime string) (int64, error) {
 
@@ -445,7 +412,7 @@ func (c *CrpAdjustTicketCreator) calcAdjustAbleDCanConsumeCPU(kt *kit.Kit, adjus
 }
 
 // constructAdjustAppendData construct adjust append data.
-func (c *CrpAdjustTicketCreator) constructAdjustAppendData(kt *kit.Kit, ticket *TicketInfo, demand rpt.ResPlanDemand) (
+func (c *CrpTicketCreator) constructAdjustAppendData(kt *kit.Kit, ticket *ptypes.TicketInfo, demand rpt.ResPlanDemand) (
 	*cvmapi.AdjustUpdatedData, error) {
 
 	// 根据HCM的diskType，生成CRP的diskType和diskName
@@ -457,7 +424,7 @@ func (c *CrpAdjustTicketCreator) constructAdjustAppendData(kt *kit.Kit, ticket *
 
 	demandItem := &cvmapi.CvmCbsPlanQueryItem{
 		SliceId:         demand.Original.DemandID,
-		ProjectName:     string(demand.Updated.ObsProject),
+		ProjectName:     demand.Updated.ObsProject,
 		PlanProductId:   int(ticket.PlanProductID),
 		PlanProductName: ticket.PlanProductName,
 		ProductId:       int(ticket.OpProductID),

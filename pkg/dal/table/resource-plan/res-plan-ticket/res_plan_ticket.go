@@ -95,19 +95,19 @@ type ResPlanTicketTable struct {
 	// OriginalOS 原始OS数，单位：台
 	OriginalOS float64 `db:"original_os" json:"original_os"`
 	// OriginalCpuCore 原始CPU核心数，单位：台
-	OriginalCpuCore float64 `db:"original_cpu_core" json:"original_cpu_core"`
+	OriginalCpuCore int64 `db:"original_cpu_core" json:"original_cpu_core"`
 	// OriginalMemory 原始内存大小，单位：GB
-	OriginalMemory float64 `db:"original_memory" json:"original_memory"`
+	OriginalMemory int64 `db:"original_memory" json:"original_memory"`
 	// OriginalDiskSize 原始云盘大小，单位：GB
-	OriginalDiskSize float64 `db:"original_disk_size" json:"original_disk_size"`
+	OriginalDiskSize int64 `db:"original_disk_size" json:"original_disk_size"`
 	// UpdatedOS 更新OS数，单位：台
 	UpdatedOS float64 `db:"updated_os" json:"updated_os"`
 	// UpdatedCpuCore 更新CPU核心数，单位：台
-	UpdatedCpuCore float64 `db:"updated_cpu_core" json:"updated_cpu_core"`
+	UpdatedCpuCore int64 `db:"updated_cpu_core" json:"updated_cpu_core"`
 	// UpdatedMemory 更新内存大小，单位：GB
-	UpdatedMemory float64 `db:"updated_memory" json:"updated_memory"`
+	UpdatedMemory int64 `db:"updated_memory" json:"updated_memory"`
 	// UpdatedDiskSize 更新云盘大小，单位：GB
-	UpdatedDiskSize float64 `db:"updated_disk_size" json:"updated_disk_size"`
+	UpdatedDiskSize int64 `db:"updated_disk_size" json:"updated_disk_size"`
 	// Remark 预测说明，最短20，最长1024
 	Remark string `db:"remark" json:"remark" validate:"lte=1024"`
 	// Creator 创建者
@@ -158,6 +158,24 @@ func (d *ResPlanDemand) Validate() error {
 	}
 
 	return nil
+}
+
+// Clone return a clone ResPlanDemand.
+func (d *ResPlanDemand) Clone() *ResPlanDemand {
+	newD := &ResPlanDemand{
+		DemandClass: d.DemandClass,
+		Original:    nil,
+		Updated:     nil,
+	}
+
+	if d.Original != nil {
+		newD.Original = d.Original.Clone()
+	}
+	if d.Updated != nil {
+		newD.Updated = d.Updated.Clone()
+	}
+
+	return newD
 }
 
 // OriginalRPDemandItem is original resource plan demand item.
@@ -237,6 +255,25 @@ func (i *OriginalRPDemandItem) Validate() error {
 	return nil
 }
 
+// Clone return a clone OriginalRPDemandItem.
+func (i *OriginalRPDemandItem) Clone() *OriginalRPDemandItem {
+	return &OriginalRPDemandItem{
+		DemandID:    i.DemandID,
+		CrpDemandID: i.CrpDemandID,
+		ObsProject:  i.ObsProject,
+		ExpectTime:  i.ExpectTime,
+		ZoneID:      i.ZoneID,
+		ZoneName:    i.ZoneName,
+		RegionID:    i.RegionID,
+		RegionName:  i.RegionName,
+		AreaID:      i.AreaID,
+		AreaName:    i.AreaName,
+		Remark:      i.Remark,
+		Cvm:         i.Cvm,
+		Cbs:         i.Cbs,
+	}
+}
+
 // UpdatedRPDemandItem is updated resource plan demand item.
 type UpdatedRPDemandItem struct {
 	// ObsProject OBS项目类型
@@ -306,6 +343,24 @@ func (i *UpdatedRPDemandItem) Validate() error {
 	}
 
 	return nil
+}
+
+// Clone return a clone UpdatedRPDemandItem.
+func (i *UpdatedRPDemandItem) Clone() *UpdatedRPDemandItem {
+	return &UpdatedRPDemandItem{
+		ObsProject:   i.ObsProject,
+		ExpectTime:   i.ExpectTime,
+		ZoneID:       i.ZoneID,
+		ZoneName:     i.ZoneName,
+		RegionID:     i.RegionID,
+		RegionName:   i.RegionName,
+		AreaID:       i.AreaID,
+		AreaName:     i.AreaName,
+		DemandSource: i.DemandSource,
+		Remark:       i.Remark,
+		Cvm:          i.Cvm,
+		Cbs:          i.Cbs,
+	}
 }
 
 // Cvm is struct of ResPlanDemandTable's Cvm.

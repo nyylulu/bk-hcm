@@ -38,7 +38,6 @@ import (
 	"hcm/pkg/dal/table/types"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
-	"hcm/pkg/thirdparty/cvmapi"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/maps"
 	"hcm/pkg/tools/slice"
@@ -46,49 +45,6 @@ import (
 
 	"github.com/shopspring/decimal"
 )
-
-func convAdjustAbleQueryParam(req *ptypes.AdjustAbleDemandsReq) *cvmapi.CvmCbsAdjustAblePlanQueryParam {
-	reqParams := new(cvmapi.CvmCbsAdjustAblePlanQueryParam)
-
-	if len(req.RegionName) > 0 {
-		reqParams.CityName = req.RegionName
-	}
-
-	if len(req.DeviceFamily) > 0 {
-		reqParams.InstanceFamily = req.DeviceFamily
-	}
-
-	if len(req.DeviceType) > 0 {
-		reqParams.InstanceModel = req.DeviceType
-	}
-
-	if len(req.ExpectTime) > 0 {
-		reqParams.UseTime = req.ExpectTime
-	}
-
-	if len(req.PlanProductName) > 0 {
-		reqParams.PlanProductName = req.PlanProductName
-	}
-
-	if len(req.OpProductName) > 0 {
-		reqParams.ProductName = req.OpProductName
-	}
-
-	if len(req.ObsProject) > 0 {
-		reqParams.ProjectName = string(req.ObsProject)
-	}
-
-	if len(req.DiskType) > 0 {
-		// TODO 因CRP会在拆单时改变云盘的类型，且云盘不会参与模糊匹配，因此查询时暂时不考虑diskType参数.
-		// reqParams.DiskTypeName = req.DiskType.Name()
-	}
-
-	if len(req.ResMode) > 0 {
-		reqParams.ResourceMode = string(req.ResMode)
-	}
-
-	return reqParams
-}
 
 // AdjustBizResPlanDemand adjust biz res plan demand.
 func (c *Controller) AdjustBizResPlanDemand(kt *kit.Kit, req *ptypes.AdjustRPDemandReq, bkBizID int64,
@@ -414,7 +370,7 @@ func (c *Controller) constructUpdateDemands(kt *kit.Kit, updates []ptypes.Adjust
 	}
 
 	// get create resource plan ticket needed zoneMap, regionAreaMap and deviceTypeMap.
-	zoneMap, regionAreaMap, deviceTypeMap, err := c.getMetaMaps(kt)
+	zoneMap, regionAreaMap, deviceTypeMap, err := c.resFetcher.GetMetaMaps(kt)
 	if err != nil {
 		logs.Errorf("failed to get meta maps, err: %v, rid: %s", err, kt.Rid)
 		return nil, err

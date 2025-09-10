@@ -49,7 +49,7 @@ func InitService(c *capability.Capability) {
 
 type service struct {
 	dao            dao.Set
-	planController *plan.Controller
+	planController plan.Logics
 	authorizer     auth.Authorizer
 	bizLogics      biz.Logics
 	client         *client.ClientSet
