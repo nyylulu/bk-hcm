@@ -552,7 +552,7 @@ type TargetGroupCreateReq struct {
 	Weight          int64                        `json:"weight" validate:"omitempty"`
 	HealthCheck     corelb.TCloudHealthCheckInfo `json:"health_check" validate:"omitempty"`
 	Memo            *string                      `json:"memo"`
-	RsList          []*cloud.TargetBaseReq       `json:"rs_list" validate:"omitempty,dive,required"`
+	RsList          []*cloud.TargetBaseReq       `json:"rs_list" validate:"omitempty"`
 }
 
 // Validate 验证目标组创建参数

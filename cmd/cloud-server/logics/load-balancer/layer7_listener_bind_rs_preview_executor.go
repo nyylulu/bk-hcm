@@ -246,9 +246,8 @@ func (l *Layer7ListenerBindRSPreviewExecutor) validateTarget(kt *kit.Kit,
 	}
 	tgID, ok := ruleCloudIDsToTGIDMap[detail.urlRuleCloudID]
 	if !ok {
-		detail.Status.SetNotExecutable()
 		detail.ValidateResult = append(detail.ValidateResult,
-			fmt.Sprintf("target group not found for url rule cloud id: %s", detail.urlRuleCloudID))
+			"Listener rule not bound to target group, will automatically create target group and bind")
 		return nil
 	}
 	detail.targetGroupID = tgID

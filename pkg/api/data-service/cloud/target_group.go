@@ -442,9 +442,6 @@ func (req *TargetBatchCreateReq) Validate() error {
 			if len(item.AccountID) == 0 {
 				return errf.Newf(errf.InvalidParameter, "account_id is required")
 			}
-			if len(item.TargetGroupID) == 0 {
-				return errf.Newf(errf.InvalidParameter, "target_group_id is required")
-			}
 			if len(item.TargetGroupRegion) == 0 {
 				return errf.Newf(errf.InvalidParameter, "target group region is required")
 			}

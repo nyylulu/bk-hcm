@@ -420,7 +420,7 @@ func (req *DomainAttrUpdateReq) Validate() error {
 
 // TCloudBatchOperateTargetReq tcloud batch operate rs req.
 type TCloudBatchOperateTargetReq struct {
-	TargetGroupID string                 `json:"target_group_id" validate:"required"`
+	TargetGroupID string                 `json:"target_group_id" validate:"omitempty"`
 	LbID          string                 `json:"lb_id" validate:"required"`
 	RsList        []*cloud.TargetBaseReq `json:"targets" validate:"required,min=1,max=100,dive"`
 }

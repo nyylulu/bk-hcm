@@ -57,9 +57,9 @@ type LoadBalancerOperateWatchOption struct {
 	// 资源类型
 	ResType enumor.CloudResourceType `json:"res_type" validate:"required"`
 	// 子资源ID数组，比如目标组ID
-	SubResIDs []string `json:"sub_res_ids" validate:"required"`
+	SubResIDs []string `json:"sub_res_ids" validate:"omitempty"`
 	// 子资源类型
-	SubResType enumor.CloudResourceType `json:"sub_res_type" validate:"required"`
+	SubResType enumor.CloudResourceType `json:"sub_res_type" validate:"omitempty"`
 	// 任务类型
 	TaskType enumor.TaskType `json:"task_type" validate:"required"`
 }
