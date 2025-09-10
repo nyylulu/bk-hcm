@@ -156,11 +156,11 @@ func (lm Limiter) validate() error {
 // trySetDefault try set the default value of limiter
 func (lm *Limiter) trySetDefault() {
 	if lm.QPS == 0 {
-		lm.QPS = 500
+		lm.QPS = 1500
 	}
 
 	if lm.Burst == 0 {
-		lm.Burst = 500
+		lm.Burst = 2000
 	}
 }
 
@@ -1148,4 +1148,15 @@ func (r *SyncConcurrentRule) Validate() error {
 // TenantConfig tenant config
 type TenantConfig struct {
 	Enabled bool `yaml:"enabled"`
+}
+
+// ConcurrentConfig CLB import config
+type ConcurrentConfig struct {
+	CLBImportCount int `yaml:"clbImportCount"`
+}
+
+func (c *ConcurrentConfig) trySetDefault() {
+	if c.CLBImportCount == 0 {
+		c.CLBImportCount = 10
+	}
 }
