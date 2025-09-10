@@ -1,12 +1,20 @@
 ### 描述
 
-- 该接口提供版本：v1.7.0.0+。
-- 该接口所需权限：平台-单据管理。
-- 该接口功能描述：查询资源预测单据的审批流，包括审批状态、当前审批阶段等。
+- 该接口提供版本：v9.9.9+。
+- 该接口所需权限：业务访问。
+- 该接口功能描述：查询资源预测子单的审批流，包括审批状态、当前审批阶段等。
 
 ### URL
 
-GET /api/v1/woa/plans/resources/tickets/{ticket_id}/audit
+GET /api/v1/woa/bizs/{bk_biz_id}/plans/resources/sub_tickets/{sub_ticket_id}/audit
+
+### 输入参数
+
+无
+
+### 调用示例
+
+无
 
 ### 响应示例
 
@@ -15,35 +23,27 @@ GET /api/v1/woa/plans/resources/tickets/{ticket_id}/audit
   "code": 0,
   "message": "success",
   "data": {
-    "ticket_id": "0000000001",
-    "itsm_audit": {
-      "itsm_sn": "REQ000001",
-      "itsm_url": "http://itsm/ticket/REQ000001",
+    "id": "00000001",
+    "admin_audit": {
       "status": "auditing",
-      "status_name": "审批中",
-      "message": "",
       "current_steps": [
         {
-          "state_id": 4,
-          "name": "总监审批",
+          "name": "管理员审批",
           "processors": [
-            "zhangsan"
+            "zhangsan",
+            "lisi"
           ],
           "processors_auth": {
-            "zhangsan": true
+            "zhangsan": true,
+            "lisi": true
           }
         }
       ],
       "logs": [
         {
-          "operator": "xxx",
-          "operate_at": "2024-11-06 12:00:01",
-          "message": "流程开始"
-        },
-        {
-          "operator": "xxxx",
-          "operate_at": "2024-11-06 12:03:12",
-          "message": "xxxx(xxxx) 处理节点【提单】(提交)"
+          "name": "管理员审批",
+          "operator": "lisi",
+          "operate_at": "2024-11-06 12:03:12"
         }
       ]
     },
@@ -90,23 +90,19 @@ GET /api/v1/woa/plans/resources/tickets/{ticket_id}/audit
 
 #### data
 
-| 参数名称       | 参数类型   | 描述         |
-|------------|--------|------------|
-| ticket_id  | string | 资源预测需求单据ID |
-| itsm_audit | object | itsm审批信息   |
-| crp_audit  | object | crp审批信息    |
+| 参数名称        | 参数类型   | 描述                      |
+|-------------|--------|-------------------------|
+| id          | string | 资源预测需求子单ID              |
+| admin_audit | object | 部门审批信息                  |
+| crp_audit   | object | crp审批信息，没有CRP审批阶段时为null |
 
-#### data.itsm_audit
+#### data.admin_audit
 
-| 参数名称          | 参数类型         | 描述                                                        |
-|---------------|--------------|-----------------------------------------------------------|
-| itsm_sn       | string       | ITSM流程单号                                                  |
-| itsm_url      | string       | ITSM流程单链接                                                 |
-| status        | string       | 审批状态（枚举值：init, auditing, rejected, done, failed, revoked） |
-| status_name   | string       | 审批状态名称                                                    |
-| message       | string       | 审批失败原因                                                    |
-| current_steps | object array | 当前审批阶段                                                    |
-| logs          | object array | 审批历史列表                                                    |
+| 参数名称            | 参数类型         | 描述                                                        |
+|-----------------|--------------|-----------------------------------------------------------|
+| status          | string       | 审批状态（枚举值：init, auditing, rejected, done, failed, revoked） |
+| current_steps   | object array | 当前审批阶段                                                    |
+| logs            | object array | 审批历史列表                                                    |
 
 #### data.crp_audit
 
@@ -120,30 +116,29 @@ GET /api/v1/woa/plans/resources/tickets/{ticket_id}/audit
 | current_steps | object array | 当前审批阶段                                                    |
 | logs          | object array | 审批历史列表                                                    |
 
-#### data.itsm_audit.current_steps[n]
+#### data.admin_audit.current_steps[n]
 
-| 参数名称         | 参数类型       | 描述           |
-|-----------------|--------------|----------------|
-| state_id        | int          | 步骤ID         |
-| name            | string       | 步骤名称        |
-| processors      | string array | 审批人列表      |
+| 参数名称            | 参数类型         | 描述       |
+|-----------------|--------------|----------|
+| name            | string       | 步骤名称     |
+| processors      | string array | 审批人列表    |
 | processors_auth | object       | 审批人是否有权限 |
 
-#### data.itsm_audit.logs[n]
+#### data.admin_audit.logs[n]
 
 | 参数名称       | 参数类型   | 描述     |
 |------------|--------|--------|
 | operator   | string | 审批人    |
 | operate_at | string | 处理时间   |
-| message    | string | 审批结果信息 |
+| name       | string | 步骤名称   |
 
 #### data.crp_audit.current_steps[n]
 
-| 参数名称          | 参数类型      | 描述          |
-|-----------------|--------------|---------------|
-| state_id        | string       | 步骤ID         |
-| name            | string       | 步骤名称        |
-| processors      | string array | 审批人列表      |
+| 参数名称            | 参数类型         | 描述       |
+|-----------------|--------------|----------|
+| state_id        | string       | 步骤ID     |
+| name            | string       | 步骤名称     |
+| processors      | string array | 审批人列表    |
 | processors_auth | object       | 审批人是否有权限 |
 
 #### data.crp_audit.logs[n]

@@ -1,20 +1,19 @@
 ### 描述
 
-- 该接口提供版本：v1.7.2+。
-- 该接口所需权限：平台管理-单据管理。
-- 该接口功能描述：资源预测申请单据ITSM审核。
+- 该接口提供版本：v9.9.9+。
+- 该接口所需权限：业务访问。
+- 该接口功能描述：资源预测申请单据审核-部门审批阶段。
 
 ### URL
 
-POST /api/v1/woa/plans/resources/tickets/{ticket_id}/approve_itsm_node
+POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/sub_tickets/{sub_ticket_id}/approve_admin_node
 
 ### 输入参数
 
-| 参数名称      | 参数类型   | 必选 | 描述           |
-|-----------|--------|----|--------------|
-| state_id  | int	   | 是  | ITSM流程单据节点ID |
-| approval	 | bool   | 是  | 是否通过         |
-| remark	   | string | 否  | 审核意见         |
+| 参数名称               | 参数类型 | 必选 | 描述        |
+|--------------------|------|----|-----------|
+| approval	          | bool | 是  | 是否通过      |
+| use_transfer_pool	 | bool | 是  | 是否使用中转池额度 |
 
 ### 调用示例
 
@@ -22,9 +21,8 @@ POST /api/v1/woa/plans/resources/tickets/{ticket_id}/approve_itsm_node
 
 ```json
 {
-  "state_id": 1957,
   "approval": true,
-  "remark": "同意"
+  "use_transfer_pool": false
 }
 ```
 
