@@ -104,7 +104,6 @@ const autoFlushTask = useTimeoutPoll(() => {
 onBeforeMount(() => {
   getResultData();
   active.value = (route.query?.tab as string) || 'approval';
-  setTitle(`${t('申请单详情')}`);
 });
 </script>
 
