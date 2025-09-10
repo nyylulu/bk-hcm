@@ -36,8 +36,8 @@ type ListUrlRulesByTopologyReq struct {
 	LbDomains      []string `json:"lb_domains"`
 
 	// 监听器相关条件
-	LblProtocols []string `json:"lbl_protocols"`
-	LblPorts     []int    `json:"lbl_ports"`
+	LblProtocol []string `json:"lbl_protocol"`
+	LblPorts    []int    `json:"lbl_ports"`
 
 	// 目标相关条件
 	TargetIps   []string `json:"target_ips"`
@@ -77,7 +77,7 @@ func (req *ListUrlRulesByTopologyReq) HasLbConditions() bool {
 
 // HasListenerConditions 是否有监听器相关条件
 func (req *ListUrlRulesByTopologyReq) HasListenerConditions() bool {
-	return len(req.LblProtocols) > 0 || len(req.LblPorts) > 0
+	return len(req.LblProtocol) > 0 || len(req.LblPorts) > 0
 }
 
 // HasRuleConditions 是否有规则相关条件

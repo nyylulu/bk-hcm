@@ -36,6 +36,7 @@ import (
 	"hcm/pkg/rest"
 	"hcm/pkg/runtime/filter"
 	"hcm/pkg/tools/hooks/handler"
+	"hcm/pkg/tools/slice"
 )
 
 // ListUrlRulesByTopo 查询URL规则信息
@@ -60,8 +61,8 @@ func (svc *lbSvc) ListUrlRulesByTopo(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 	if noPermFlag {
-		logs.Errorf("list url rules by topo no auth, req: %+v, rid: %s", noPermFlag, req, cts.Kit.Rid)
-		return &cslb.ListUrlRulesByTopologyResp{Count: 0, Details: make([]cslb.UrlRuleDetail, 0)}, nil
+		logs.Errorf("list url rules by topo no auth, req: %+v, rid: %s", req, cts.Kit.Rid)
+		return nil, errf.New(errf.PermissionDenied, "no permission for list URL rules by topology")
 	}
 	bizID, err := cts.PathParameter("bk_biz_id").Int64()
 	if err != nil {
@@ -96,22 +97,17 @@ func (svc *lbSvc) buildUrlRuleQueryFilter(kt *kit.Kit, bizID int64, vendor enumo
 	}
 
 	if len(lbIDs) == 0 && req.HasLbConditions() {
-		return &filter.Expression{
-			Op: filter.And,
-			Rules: []filter.RuleFactory{
-				tools.RuleEqual("id", "never_match_condition"),
-			},
-		}, nil
+		// 即使没有匹配的负载均衡器，也继续执行URL规则查询
 	}
 
-	var listenerIDs []string
+	var ListenerIDs []string
 	if req.HasListenerConditions() {
-		listenerIDs, err = svc.queryListenerIDsByLbIDs(kt, vendor, req, lbIDs)
+		ListenerIDs, err = svc.queryListenerIDsByLbIDs(kt, vendor, req, lbIDs)
 		if err != nil {
 			return nil, fmt.Errorf("query listener ids by lb ids failed, err: %v", err)
 		}
 
-		if len(listenerIDs) == 0 {
+		if len(ListenerIDs) == 0 {
 			return &filter.Expression{
 				Op: filter.And,
 				Rules: []filter.RuleFactory{
@@ -122,25 +118,75 @@ func (svc *lbSvc) buildUrlRuleQueryFilter(kt *kit.Kit, bizID int64, vendor enumo
 	}
 
 	conditions := []*filter.AtomRule{
-		tools.RuleIn("rule_type", []string{string(enumor.Layer4RuleType), string(enumor.Layer7RuleType)}),
-	}
-
-	if len(lbIDs) > 0 {
-		conditions = append(conditions, tools.RuleIn("lb_id", lbIDs))
-	}
-
-	if len(listenerIDs) > 0 {
-		conditions = append(conditions, tools.RuleIn("cloud_lbl_id", listenerIDs))
+		tools.RuleEqual("rule_type", enumor.Layer7RuleType),
 	}
 
 	conditions = svc.addRuleConditions(req, conditions)
 
-	conditions, err = svc.addTargetConditions(kt, req, conditions)
+	conditions, targetGroupIDs, err := svc.addTargetConditions(kt, req, conditions)
 	if err != nil {
 		return nil, err
 	}
-	finalFilter := tools.ExpressionAnd(conditions...)
-	return finalFilter, nil
+
+	baseFilter := tools.ExpressionAnd(conditions...)
+	filters := []*filter.Expression{baseFilter}
+
+	if len(targetGroupIDs) > 0 {
+		if len(targetGroupIDs) > int(core.DefaultMaxPageLimit) {
+			batches := slice.Split(targetGroupIDs, int(core.DefaultMaxPageLimit))
+			batchConditions := make([]*filter.AtomRule, 0, len(batches))
+			for _, batch := range batches {
+				batchConditions = append(batchConditions, tools.RuleIn("target_group_id", batch))
+			}
+			batchOrFilter := tools.ExpressionOr(batchConditions...)
+			filters = append(filters, batchOrFilter)
+		} else {
+			targetFilter := tools.ExpressionAnd(tools.RuleIn("target_group_id", targetGroupIDs))
+			filters = append(filters, targetFilter)
+		}
+	}
+
+	if len(lbIDs) > 0 {
+		if len(lbIDs) > int(core.DefaultMaxPageLimit) {
+			batches := slice.Split(lbIDs, int(core.DefaultMaxPageLimit))
+			batchConditions := make([]*filter.AtomRule, 0, len(batches))
+			for _, batch := range batches {
+				batchConditions = append(batchConditions, tools.RuleIn("lb_id", batch))
+			}
+			batchOrFilter := tools.ExpressionOr(batchConditions...)
+			filters = append(filters, batchOrFilter)
+		} else {
+			lbFilter := tools.ExpressionAnd(tools.RuleIn("lb_id", lbIDs))
+			filters = append(filters, lbFilter)
+		}
+	}
+
+	if len(ListenerIDs) > 0 {
+		if len(ListenerIDs) > int(core.DefaultMaxPageLimit) {
+			batches := slice.Split(ListenerIDs, int(core.DefaultMaxPageLimit))
+			batchConditions := make([]*filter.AtomRule, 0, len(batches))
+			for _, batch := range batches {
+				batchConditions = append(batchConditions, tools.RuleIn("lbl_id", batch))
+			}
+			batchOrFilter := tools.ExpressionOr(batchConditions...)
+			filters = append(filters, batchOrFilter)
+		} else {
+			listenerFilter := tools.ExpressionAnd(tools.RuleIn("lbl_id", ListenerIDs))
+			filters = append(filters, listenerFilter)
+		}
+	}
+
+	if len(filters) > 1 {
+		combinedFilter := &filter.Expression{
+			Op:    filter.And,
+			Rules: make([]filter.RuleFactory, 0, len(filters)),
+		}
+		for _, f := range filters {
+			combinedFilter.Rules = append(combinedFilter.Rules, f)
+		}
+		return combinedFilter, nil
+	}
+	return baseFilter, nil
 }
 
 // addLoadBalancerConditions 添加负载均衡器相关条件
@@ -185,21 +231,25 @@ func (svc *lbSvc) addRuleConditions(req *cslb.ListUrlRulesByTopologyReq,
 
 // addTargetConditions 添加目标相关条件，需要查询目标表
 func (svc *lbSvc) addTargetConditions(kt *kit.Kit, req *cslb.ListUrlRulesByTopologyReq,
-	conditions []*filter.AtomRule) ([]*filter.AtomRule, error) {
+	conditions []*filter.AtomRule) ([]*filter.AtomRule, []string, error) {
 	if !req.HasTargetConditions() {
-		return conditions, nil
+		return conditions, nil, nil
 	}
 
 	targetGroupIDs, err := svc.queryTargetGroupIDsByTargetConditions(kt, req)
 	if err != nil {
-		return nil, fmt.Errorf("query target group ids failed, err: %v", err)
+		return nil, nil, fmt.Errorf("query target group ids failed, err: %v", err)
 	}
 
 	if len(targetGroupIDs) > 0 {
-		conditions = append(conditions, tools.RuleIn("target_group_id", targetGroupIDs))
+		if len(targetGroupIDs) > int(core.DefaultMaxPageLimit) {
+			return conditions, targetGroupIDs, nil
+		} else {
+			conditions = append(conditions, tools.RuleIn("target_group_id", targetGroupIDs))
+		}
 	}
 
-	return conditions, nil
+	return conditions, nil, nil
 }
 
 // queryLoadBalancerIDsByUserConditions 根据用户输入的负载均衡器条件查询负载均衡器ID
@@ -223,6 +273,10 @@ func (svc *lbSvc) queryLoadBalancerIDsByConditions(kt *kit.Kit, bizID int64, ven
 		tools.RuleEqual("bk_biz_id", bizID),
 	}
 
+	if len(req.LbNetworkTypes) > 0 {
+		lbConditions = append(lbConditions, tools.RuleIn("lb_type", req.LbNetworkTypes))
+	}
+
 	lbFilter := tools.ExpressionAnd(lbConditions...)
 	return svc.queryLoadBalancerIDsByFilter(kt, lbFilter)
 }
@@ -238,8 +292,8 @@ func (svc *lbSvc) queryListenerIDsByLbIDs(kt *kit.Kit, vendor enumor.Vendor, req
 		listenerConditions = append(listenerConditions, tools.RuleIn("lb_id", lbIDs))
 	}
 
-	if len(req.LblProtocols) > 0 {
-		listenerConditions = append(listenerConditions, tools.RuleIn("protocol", req.LblProtocols))
+	if len(req.LblProtocol) > 0 {
+		listenerConditions = append(listenerConditions, tools.RuleIn("protocol", req.LblProtocol))
 	}
 
 	if len(req.LblPorts) > 0 {
@@ -259,15 +313,12 @@ func (svc *lbSvc) queryListenerIDsByLbIDs(kt *kit.Kit, vendor enumor.Vendor, req
 		if err != nil {
 			return nil, err
 		}
-
 		for _, listener := range listenerResp.Details {
-			listenerIDs = append(listenerIDs, listener.CloudID)
+			listenerIDs = append(listenerIDs, listener.ID)
 		}
-
 		if uint(len(listenerResp.Details)) < core.DefaultMaxPageLimit {
 			break
 		}
-
 		listenerReq.Page.Start += uint32(core.DefaultMaxPageLimit)
 	}
 
@@ -289,23 +340,6 @@ func (svc *lbSvc) buildLoadBalancerFilter(bizID int64, vendor enumor.Vendor,
 			lbConditions = append(lbConditions, tools.RuleIn("region", req.LbRegions))
 		}
 	}
-	var networkTypeFilter *filter.Expression
-	if len(req.LbNetworkTypes) > 0 {
-		var networkTypeConditions []*filter.AtomRule
-		for _, networkType := range req.LbNetworkTypes {
-			switch networkType {
-			case "OPEN":
-				networkTypeConditions = append(networkTypeConditions,
-					tools.RuleGreaterThan("extension.internet_max_bandwidth_out", 0))
-			case "INTERNAL":
-				networkTypeConditions = append(networkTypeConditions,
-					tools.RuleEqual("extension.internet_max_bandwidth_out", 0))
-			}
-		}
-		if len(networkTypeConditions) > 0 {
-			networkTypeFilter = tools.ExpressionOr(networkTypeConditions...)
-		}
-	}
 	if len(req.LbIpVersions) > 0 {
 		lbConditions = append(lbConditions, tools.RuleIn("ip_version", req.LbIpVersions))
 	}
@@ -316,13 +350,13 @@ func (svc *lbSvc) buildLoadBalancerFilter(bizID int64, vendor enumor.Vendor,
 		lbConditions = append(lbConditions, tools.RuleIn("domain", req.LbDomains))
 	}
 
+	if len(req.LbNetworkTypes) > 0 {
+		lbConditions = append(lbConditions, tools.RuleIn("lb_type", req.LbNetworkTypes))
+	}
+
 	baseFilter := tools.ExpressionAnd(lbConditions...)
 
 	filters := []*filter.Expression{baseFilter}
-
-	if networkTypeFilter != nil {
-		filters = append(filters, networkTypeFilter)
-	}
 
 	if len(req.LbVips) > 0 {
 		vipConditions := []*filter.AtomRule{
@@ -463,21 +497,25 @@ func (svc *lbSvc) buildUrlRuleResponse(kt *kit.Kit,
 	lbMap, err := svc.batchGetLoadBalancerInfo(kt, lbIDs)
 	if err != nil {
 		logs.Errorf("batch get load balancer info failed, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
 	}
 
 	listenerMap, err := svc.batchGetListenerInfo(kt, listenerIDs)
 	if err != nil {
 		logs.Errorf("batch get listener info failed, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
 	}
 
 	targetGroupMap, err := svc.batchGetTargetGroupInfo(kt, targetGroupIDs)
 	if err != nil {
 		logs.Errorf("batch get target group info failed, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
 	}
 
 	targetCountMap, err := svc.batchGetTargetCountByTargetGroupIDs(kt, targetGroupIDs)
 	if err != nil {
 		logs.Errorf("batch get target count failed, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
 	}
 
 	for _, rule := range urlRuleList.Details {
@@ -514,19 +552,10 @@ func (svc *lbSvc) buildUrlRuleDetail(rule corelb.TCloudLbUrlRule,
 
 		if targetCount, exists := targetCountMap[rule.TargetGroupID]; exists {
 			detail.TargetCount = targetCount
-		} else {
-			detail.TargetCount = 0
 		}
 	}
-
-	if rule.RuleType == enumor.Layer7RuleType {
-		detail.RuleUrl = rule.URL
-		detail.RuleDomain = rule.Domain
-	} else {
-		detail.RuleUrl = ""
-		detail.RuleDomain = ""
-	}
-
+	detail.RuleUrl = rule.URL
+	detail.RuleDomain = rule.Domain
 	return detail
 }
 
@@ -596,6 +625,7 @@ func (svc *lbSvc) batchGetTargetGroupInfo(kt *kit.Kit,
 	for {
 		resp, err := svc.client.DataService().Global.LoadBalancer.ListTargetGroup(kt, req)
 		if err != nil {
+			logs.Errorf("batch get target group info failed, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
 		}
 
@@ -614,22 +644,48 @@ func (svc *lbSvc) batchGetTargetGroupInfo(kt *kit.Kit,
 
 // getLoadBalancerVip 获取负载均衡器VIP
 func (svc *lbSvc) getLoadBalancerVip(lb *corelb.BaseLoadBalancer) string {
-	if len(lb.PublicIPv4Addresses) > 0 {
-		return lb.PublicIPv4Addresses[0]
+
+	isPublic := lb.LoadBalancerType == "OPEN" || lb.LoadBalancerType == "公网"
+
+	isIPv4 := lb.IPVersion == enumor.Ipv4
+
+	if isPublic {
+		if isIPv4 {
+			if len(lb.PublicIPv4Addresses) > 0 {
+				return lb.PublicIPv4Addresses[0]
+			}
+		} else {
+			if len(lb.PublicIPv6Addresses) > 0 {
+				return lb.PublicIPv6Addresses[0]
+			}
+		}
+	} else {
+		if isIPv4 {
+			if len(lb.PrivateIPv4Addresses) > 0 {
+				return lb.PrivateIPv4Addresses[0]
+			}
+		} else {
+			if len(lb.PrivateIPv6Addresses) > 0 {
+				return lb.PrivateIPv6Addresses[0]
+			}
+		}
 	}
 
-	if len(lb.PublicIPv6Addresses) > 0 {
-		return lb.PublicIPv6Addresses[0]
+	if isIPv4 {
+		if len(lb.PublicIPv4Addresses) > 0 {
+			return lb.PublicIPv4Addresses[0]
+		}
+		if len(lb.PrivateIPv4Addresses) > 0 {
+			return lb.PrivateIPv4Addresses[0]
+		}
+	} else {
+		if len(lb.PublicIPv6Addresses) > 0 {
+			return lb.PublicIPv6Addresses[0]
+		}
+		if len(lb.PrivateIPv6Addresses) > 0 {
+			return lb.PrivateIPv6Addresses[0]
+		}
 	}
-
-	if len(lb.PrivateIPv4Addresses) > 0 {
-		return lb.PrivateIPv4Addresses[0]
-	}
-
-	if len(lb.PrivateIPv6Addresses) > 0 {
-		return lb.PrivateIPv6Addresses[0]
-	}
-
 	if lb.Domain != "" {
 		return lb.Domain
 	}
@@ -642,35 +698,16 @@ func (svc *lbSvc) batchGetTargetCountByTargetGroupIDs(kt *kit.Kit, targetGroupID
 	if len(targetGroupIDs) == 0 {
 		return make(map[string]int), nil
 	}
-
-	uniqueTargetGroupIDs := removeDuplicates(targetGroupIDs)
+	uniqueTargetGroupIDs := slice.Unique(targetGroupIDs)
 	targets, err := svc.getTargetByTGIDs(kt, uniqueTargetGroupIDs)
 	if err != nil {
 		return nil, fmt.Errorf("batch query targets failed, err: %v", err)
 	}
-
 	targetCountMap := make(map[string]int)
 	for _, target := range targets {
 		if target.TargetGroupID != "" {
 			targetCountMap[target.TargetGroupID]++
 		}
 	}
-
 	return targetCountMap, nil
-}
-
-// removeDuplicates 去除字符串切片中的重复元素
-func removeDuplicates(items []string) []string {
-	if len(items) == 0 {
-		return nil
-	}
-	seen := make(map[string]struct{})
-	result := make([]string, 0, len(items))
-	for _, item := range items {
-		if _, exists := seen[item]; !exists {
-			seen[item] = struct{}{}
-			result = append(result, item)
-		}
-	}
-	return result
 }
