@@ -12,7 +12,7 @@ import {
 const loadBalancerBiz: RouteRecordRaw[] = [
   {
     name: MENU_BUSINESS_LOAD_BALANCER,
-    path: '/business/load-balancer',
+    path: 'load-balancer',
     redirect: {
       name: MENU_BUSINESS_LOAD_BALANCER_OVERVIEW,
     },
@@ -84,7 +84,7 @@ const loadBalancerBiz: RouteRecordRaw[] = [
   },
   {
     name: MENU_BUSINESS_LOAD_BALANCER_APPLY,
-    path: '/business/load-balancer/apply',
+    path: 'load-balancer/apply',
     component: () => import('@/views/load-balancer/clb/apply/index.vue'),
     meta: {
       ...new Meta({

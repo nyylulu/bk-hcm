@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { RouteLocationRaw } from 'vue-router';
 import { ModelProperty } from '@/model/typings';
-import { APPLICATION_TYPE_MAP } from '../apply-list/constants';
+import { APPLICATION_TYPE_MAP } from '@/views/ticket/constants';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
 import { LB_ISP, NET_CHARGE_MAP, VendorMap } from '@/common/constant';
 import { LB_NETWORK_TYPE_MAP } from '@/constants';
@@ -13,6 +13,9 @@ import detailHeader from '@/views/resource/resource-manage/common/header/detail-
 import gridContainer from '@/components/layout/grid-container/grid-container.vue';
 import gridItem from '@/components/layout/grid-container/grid-item.vue';
 import status from './components/status.vue';
+import { MENU_SERVICE_TICKET_MANAGEMENT } from '@/constants/menu-symbol';
+
+const props = defineProps<{ applicationDetail: IApplicationDetail; loading: boolean }>();
 
 const DISPLAY_CLB_SPECS_MAP: Record<string, string> = {
   shared: '共享型',
@@ -25,8 +28,6 @@ const DISPLAY_CLB_SPECS_MAP: Record<string, string> = {
   'clb.c4.large': '性能容量型(clb.c4.large)',
   'clb.c4.xlarge': '性能容量型(clb.c4.xlarge)',
 };
-
-const props = defineProps<{ applicationDetail: IApplicationDetail; loading: boolean }>();
 
 const { getNameFromBusinessMap } = useBusinessMapStore();
 
@@ -80,7 +81,7 @@ const paramInfoFields: ModelProperty[] = [
 ];
 
 const navigateTo: RouteLocationRaw = {
-  path: '/service/my-apply',
+  name: MENU_SERVICE_TICKET_MANAGEMENT,
   query: { type: 'load_balancer' },
 };
 </script>

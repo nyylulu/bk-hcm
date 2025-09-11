@@ -27,7 +27,12 @@ import { headRouteConfig } from '@/router/header-config';
 import logo from '@/assets/image/logo.png';
 import './index.scss';
 
-import { MENU_BUSINESS_TASK_MANAGEMENT } from '@/constants/menu-symbol';
+import {
+  MENU_BUSINESS_LOAD_BALANCER,
+  MENU_BUSINESS_OPERATION_LOG,
+  MENU_BUSINESS_TASK_MANAGEMENT,
+  MENU_SERVICE_TICKET_MANAGEMENT,
+} from '@/constants/menu-symbol';
 import { jsonp } from '@/http';
 import i18n from '@/language/i18n';
 
@@ -74,7 +79,14 @@ export default defineComponent({
 
     // 过渡方式，最终希望所有路由通过name跳转
     const getRouteLinkParams = (config: any) => {
-      if ([MENU_BUSINESS_TASK_MANAGEMENT].includes(config.name)) {
+      if (
+        [
+          MENU_BUSINESS_TASK_MANAGEMENT,
+          MENU_SERVICE_TICKET_MANAGEMENT,
+          MENU_BUSINESS_OPERATION_LOG,
+          MENU_BUSINESS_LOAD_BALANCER,
+        ].includes(config.name)
+      ) {
         return { name: config.name };
       }
       return { path: config.path };
@@ -333,7 +345,7 @@ export default defineComponent({
             default: () => (
               <>
                 {whereAmI.value === Senarios.resource ? null : <Breadcrumb></Breadcrumb>}
-                <div class={['/service/my-apply'].includes(curPath.value) ? 'view-warp no-padding' : 'view-warp'}>
+                <div class={['/service/ticket'].includes(curPath.value) ? 'view-warp no-padding' : 'view-warp'}>
                   {isRouterAlive.value ? renderRouterView() : null}
                 </div>
               </>

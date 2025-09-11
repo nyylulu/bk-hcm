@@ -3,7 +3,7 @@ import './index.scss';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import { useAccountStore } from '@/store';
 import { useRoute } from 'vue-router';
-import { APPLICATION_TYPE_MAP } from '../apply-list/constants';
+import { APPLICATION_TYPE_MAP } from '@/views/ticket/constants';
 import Clb from './clb.vue';
 import { applyContentRender } from './apply-content-render.plugin';
 
@@ -40,7 +40,7 @@ export default defineComponent({
   setup() {
     const accountStore = useAccountStore();
     const isLoading = ref(false);
-    const currentApplyData = ref<IApplicationDetail>({});
+    const currentApplyData = ref<Partial<IApplicationDetail>>({});
     const curApplyKey = ref('');
     const isCancelBtnLoading = ref(false);
     const route = useRoute();

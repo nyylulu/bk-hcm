@@ -287,8 +287,7 @@ export default defineComponent({
                     } finally {
                       isSubmitLoading.value = false;
                     }
-                  }}
-                >
+                  }}>
                   确定
                 </Button>
                 <Button
@@ -296,8 +295,7 @@ export default defineComponent({
                   loading={isSubmitLoading.value}
                   onClick={() => {
                     isDialogShow.value = false;
-                  }}
-                >
+                  }}>
                   取消
                 </Button>
               </div>

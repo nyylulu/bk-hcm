@@ -248,7 +248,6 @@ func (l *Layer4ListenerBindRSPreviewExecutor) validateTarget(kt *kit.Kit,
 		return nil
 	}
 
-	detail.targetGroupID = tgID
 	if detail.cvm == nil {
 		// rsType 为 ENI，会导致cvm为空
 		return nil
