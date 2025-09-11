@@ -36,8 +36,8 @@ type ListUrlRulesByTopologyReq struct {
 	LbDomains      []string `json:"lb_domains"`
 
 	// 监听器相关条件
-	LblProtocols []string `json:"lbl_protocols"`
-	LblPorts     []int    `json:"lbl_ports"`
+	LblProtocol []string `json:"lbl_protocol"`
+	LblPorts    []int    `json:"lbl_ports"`
 
 	// 目标相关条件
 	TargetIps   []string `json:"target_ips"`
@@ -58,15 +58,15 @@ type ListUrlRulesByTopologyResp struct {
 
 // UrlRuleDetail URL规则详情
 type UrlRuleDetail struct {
-	ID           string `json:"id"`
-	Ip           string `json:"ip"`
-	LbID         string `json:"lb_id"`
-	LblProtocols string `json:"lbl_protocols"`
-	LblPort      int    `json:"lbl_port"`
-	RuleUrl      string `json:"rule_url"`
-	RuleDomain   string `json:"rule_domain"`
-	TargetCount  int    `json:"target_count"`
-	CloudLblID   string `json:"cloud_lbl_id"`
+	ID          string `json:"id"`
+	Ip          string `json:"ip"`
+	LbID        string `json:"lb_id"`
+	LblProtocol string `json:"lbl_protocol"`
+	LblPort     int    `json:"lbl_port"`
+	RuleUrl     string `json:"rule_url"`
+	RuleDomain  string `json:"rule_domain"`
+	TargetCount int    `json:"target_count"`
+	CloudLblID  string `json:"cloud_lbl_id"`
 }
 
 // HasLbConditions 是否有负载均衡器相关条件
@@ -77,7 +77,7 @@ func (req *ListUrlRulesByTopologyReq) HasLbConditions() bool {
 
 // HasListenerConditions 是否有监听器相关条件
 func (req *ListUrlRulesByTopologyReq) HasListenerConditions() bool {
-	return len(req.LblProtocols) > 0 || len(req.LblPorts) > 0
+	return len(req.LblProtocol) > 0 || len(req.LblPorts) > 0
 }
 
 // HasRuleConditions 是否有规则相关条件
