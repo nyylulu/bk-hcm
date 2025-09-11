@@ -116,15 +116,6 @@ func (tlbur TCloudLbUrlRuleTable) InsertValidate() error {
 	if len(tlbur.Creator) == 0 {
 		return errors.New("creator is required")
 	}
-
-	if tlbur.BkBizID <= 0 {
-		return errors.New("bk_biz_id is required")
-	}
-
-	if len(tlbur.AccountID) == 0 {
-		return errors.New("account_id is required")
-	}
-
 	return nil
 }
 
