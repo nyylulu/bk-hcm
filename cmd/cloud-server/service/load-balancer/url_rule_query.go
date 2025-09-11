@@ -91,6 +91,38 @@ func (svc *lbSvc) ListUrlRulesByTopo(cts *rest.Contexts) (any, error) {
 	return result, nil
 }
 
+// buildBatchFilter 构建批量过滤条件
+func (svc *lbSvc) buildBatchFilter(field string, ids []string) *filter.Expression {
+	if len(ids) > int(core.DefaultMaxPageLimit) {
+		batches := slice.Split(ids, int(core.DefaultMaxPageLimit))
+		batchConditions := make([]*filter.AtomRule, 0, len(batches))
+		for _, batch := range batches {
+			batchConditions = append(batchConditions, tools.RuleIn(field, batch))
+		}
+		return tools.ExpressionOr(batchConditions...)
+	}
+	return tools.ExpressionAnd(tools.RuleIn(field, ids))
+}
+
+// queryListenerIDs 查询监听器ID列表
+func (svc *lbSvc) queryListenerIDs(kt *kit.Kit, vendor enumor.Vendor, req *cslb.ListUrlRulesByTopologyReq,
+	lbIDs []string) ([]string, error) {
+	if !req.HasListenerConditions() {
+		return nil, nil
+	}
+
+	listenerIDs, err := svc.queryListenerIDsByLbIDs(kt, vendor, req, lbIDs)
+	if err != nil {
+		logs.Errorf("query listener ids by lb ids failed, err: %v, rid: %s", err, kt.Rid)
+		return nil, fmt.Errorf("query listener ids by lb ids failed, err: %v", err)
+	}
+
+	if len(listenerIDs) == 0 {
+		logs.Infof("no listeners found with conditions, proceeding with other filters, rid: %s", kt.Rid)
+	}
+	return listenerIDs, nil
+}
+
 // buildUrlRuleQueryFilter 构建URL规则查询条件
 func (svc *lbSvc) buildUrlRuleQueryFilter(kt *kit.Kit, bizID int64, vendor enumor.Vendor,
 	req *cslb.ListUrlRulesByTopologyReq) (*filter.Expression, error) {
@@ -104,23 +136,14 @@ func (svc *lbSvc) buildUrlRuleQueryFilter(kt *kit.Kit, bizID int64, vendor enumo
 		logs.Infof("no load balancer found with conditions, proceeding with other filters, rid: %s", kt.Rid)
 	}
 
-	var ListenerIDs []string
-	if req.HasListenerConditions() {
-		ListenerIDs, err = svc.queryListenerIDsByLbIDs(kt, vendor, req, lbIDs)
-		if err != nil {
-			logs.Errorf("query listener ids by lb ids failed, err: %v, rid: %s", err, kt.Rid)
-			return nil, fmt.Errorf("query listener ids by lb ids failed, err: %v", err)
-		}
-
-		if len(ListenerIDs) == 0 {
-			logs.Infof("no listeners found with conditions, proceeding with other filters, rid: %s", kt.Rid)
-		}
+	listenerIDs, err := svc.queryListenerIDs(kt, vendor, req, lbIDs)
+	if err != nil {
+		return nil, err
 	}
 
 	conditions := []*filter.AtomRule{
 		tools.RuleEqual("rule_type", enumor.Layer7RuleType),
 	}
-
 	conditions = svc.addRuleConditions(req, conditions)
 
 	conditions, targetGroupIDs, err := svc.addTargetConditions(kt, req, conditions)
@@ -133,48 +156,15 @@ func (svc *lbSvc) buildUrlRuleQueryFilter(kt *kit.Kit, bizID int64, vendor enumo
 	filters := []*filter.Expression{baseFilter}
 
 	if len(targetGroupIDs) > 0 {
-		if len(targetGroupIDs) > int(core.DefaultMaxPageLimit) {
-			batches := slice.Split(targetGroupIDs, int(core.DefaultMaxPageLimit))
-			batchConditions := make([]*filter.AtomRule, 0, len(batches))
-			for _, batch := range batches {
-				batchConditions = append(batchConditions, tools.RuleIn("target_group_id", batch))
-			}
-			batchOrFilter := tools.ExpressionOr(batchConditions...)
-			filters = append(filters, batchOrFilter)
-		} else {
-			targetFilter := tools.ExpressionAnd(tools.RuleIn("target_group_id", targetGroupIDs))
-			filters = append(filters, targetFilter)
-		}
+		filters = append(filters, svc.buildBatchFilter("target_group_id", targetGroupIDs))
 	}
 
 	if req.HasLbConditions() && len(lbIDs) > 0 {
-		if len(lbIDs) > int(core.DefaultMaxPageLimit) {
-			batches := slice.Split(lbIDs, int(core.DefaultMaxPageLimit))
-			batchConditions := make([]*filter.AtomRule, 0, len(batches))
-			for _, batch := range batches {
-				batchConditions = append(batchConditions, tools.RuleIn("lb_id", batch))
-			}
-			batchOrFilter := tools.ExpressionOr(batchConditions...)
-			filters = append(filters, batchOrFilter)
-		} else {
-			lbFilter := tools.ExpressionAnd(tools.RuleIn("lb_id", lbIDs))
-			filters = append(filters, lbFilter)
-		}
+		filters = append(filters, svc.buildBatchFilter("lb_id", lbIDs))
 	}
 
-	if len(ListenerIDs) > 0 {
-		if len(ListenerIDs) > int(core.DefaultMaxPageLimit) {
-			batches := slice.Split(ListenerIDs, int(core.DefaultMaxPageLimit))
-			batchConditions := make([]*filter.AtomRule, 0, len(batches))
-			for _, batch := range batches {
-				batchConditions = append(batchConditions, tools.RuleIn("lbl_id", batch))
-			}
-			batchOrFilter := tools.ExpressionOr(batchConditions...)
-			filters = append(filters, batchOrFilter)
-		} else {
-			listenerFilter := tools.ExpressionAnd(tools.RuleIn("lbl_id", ListenerIDs))
-			filters = append(filters, listenerFilter)
-		}
+	if len(listenerIDs) > 0 {
+		filters = append(filters, svc.buildBatchFilter("lbl_id", listenerIDs))
 	}
 
 	if len(filters) > 1 {
