@@ -439,8 +439,8 @@ func (svc *lbSvc) queryUrlRulesByFilter(kt *kit.Kit, vendor enumor.Vendor,
 		return nil, fmt.Errorf("vendor: %s not support", vendor)
 	}
 }
-func (svc *lbSvc) buildUrlRuleResponse(kt *kit.Kit,
-	urlRuleList *dataproto.TCloudURLRuleListResult, req *cslb.ListUrlRulesByTopologyReq) (*cslb.ListUrlRulesByTopologyResp, error) {
+func (svc *lbSvc) buildUrlRuleResponse(kt *kit.Kit, urlRuleList *dataproto.TCloudURLRuleListResult,
+	req *cslb.ListUrlRulesByTopologyReq) (*cslb.ListUrlRulesByTopologyResp, error) {
 
 	result := &cslb.ListUrlRulesByTopologyResp{
 		Count:   int(urlRuleList.Count),
