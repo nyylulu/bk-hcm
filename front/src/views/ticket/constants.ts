@@ -1,5 +1,8 @@
 import { QueryRuleOPEnum } from '@/typings';
-import { reverseObj } from './util';
+
+export const reverseObj = (originalMap: Object) => {
+  Object.fromEntries(Object.entries(originalMap).map(([key, value]) => [value, key]));
+};
 
 // 单据类型映射 (英中)
 export const APPLICATION_TYPE_MAP: Record<string, string> = {

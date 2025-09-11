@@ -3,13 +3,14 @@
     padding: 20px 30px;
     border-radius: 2px;
     background: #fff;
-    box-shadow: 0px 1px 2px 0px rgba(49, 50, 56, .1);
+    box-shadow: 0 1px 2px 0 rgb(49 50 56 / 10%);
 
     .approval-process-wrapper {
       margin-left: auto;
       font-size: 14px;
       color: #3a84ff;
       cursor: pointer;
+
       &:hover {
         color: #699df4;
       }
@@ -45,21 +46,19 @@
     }
   }
 
-
   .create-account-btn {
     font-size: 12px;
   }
 
-
   .status {
     padding: 1px 8px;
-    color: #ffffff;
+    color: #fff;
     border-radius: 10px;
     font-size: 12px;
-    background: #367FF9;
+    background: #367ff9;
 
     &.pending {
-      background: #367FF9;
+      background: #367ff9;
     }
 
     &.rejected {
@@ -67,11 +66,11 @@
     }
 
     &.completed {
-      background: #27BE78;
+      background: #27be78;
     }
 
     &.cancelled {
-      background: #AAAAAA;
+      background: #aaa;
     }
 
     &.deliver_error {
@@ -79,10 +78,9 @@
     }
 
     &.delivering {
-      background: #367FF9;
+      background: #367ff9;
     }
   }
-
 
   .error-text {
     color: #ea3636;
