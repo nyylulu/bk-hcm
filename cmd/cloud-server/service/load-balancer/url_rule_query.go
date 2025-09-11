@@ -536,7 +536,7 @@ func (svc *lbSvc) buildUrlRuleDetail(rule corelb.TCloudLbUrlRule,
 	}
 
 	if listener, exists := listenerMap[rule.LblID]; exists {
-		detail.LblProtocols = string(listener.Protocol)
+		detail.LblProtocol = string(listener.Protocol)
 		detail.LblPort = int(listener.Port)
 		detail.CloudLblID = listener.CloudID
 	}

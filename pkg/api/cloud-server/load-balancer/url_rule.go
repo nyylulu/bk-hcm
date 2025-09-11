@@ -58,15 +58,15 @@ type ListUrlRulesByTopologyResp struct {
 
 // UrlRuleDetail URL规则详情
 type UrlRuleDetail struct {
-	ID           string `json:"id"`
-	Ip           string `json:"ip"`
-	LbID         string `json:"lb_id"`
-	LblProtocols string `json:"lbl_protocols"`
-	LblPort      int    `json:"lbl_port"`
-	RuleUrl      string `json:"rule_url"`
-	RuleDomain   string `json:"rule_domain"`
-	TargetCount  int    `json:"target_count"`
-	CloudLblID   string `json:"cloud_lbl_id"`
+	ID          string `json:"id"`
+	Ip          string `json:"ip"`
+	LbID        string `json:"lb_id"`
+	LblProtocol string `json:"lbl_protocol"`
+	LblPort     int    `json:"lbl_port"`
+	RuleUrl     string `json:"rule_url"`
+	RuleDomain  string `json:"rule_domain"`
+	TargetCount int    `json:"target_count"`
+	CloudLblID  string `json:"cloud_lbl_id"`
 }
 
 // HasLbConditions 是否有负载均衡器相关条件
