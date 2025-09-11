@@ -21,6 +21,7 @@ package cslb
 
 import (
 	"hcm/pkg/api/core"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/runtime/filter"
 )
@@ -34,7 +35,7 @@ type ListUrlRulesByTopologyReq struct {
 	CloudLbIds     []string       `json:"cloud_lb_ids" validate:"omitempty,max=500"`
 	LbVips         []string       `json:"lb_vips" validate:"omitempty,max=500"`
 	LbDomains      []string       `json:"lb_domains" validate:"omitempty,max=500"`
-	LblProtocols   []string       `json:"lbl_protocols" validate:"omitempty"`
+	LblProtocol    []string       `json:"lbl_protocol" validate:"omitempty"`
 	LblPorts       []int          `json:"lbl_ports" validate:"omitempty,max=1000"`
 	RuleDomains    []string       `json:"rule_domains" validate:"omitempty,max=500"`
 	RuleUrls       []string       `json:"rule_urls" validate:"omitempty,max=500"`
@@ -51,15 +52,15 @@ type ListUrlRulesByTopologyResp struct {
 
 // UrlRuleDetail url rule detail.
 type UrlRuleDetail struct {
-	ID           string `json:"id"`
-	Ip           string `json:"ip"`
-	LblProtocols string `json:"lbl_protocols"`
-	LblPort      int    `json:"lbl_port"`
-	RuleUrl      string `json:"rule_url"`
-	RuleDomain   string `json:"rule_domain"`
-	TargetCount  int    `json:"target_count"`
-	ListenerID   string `json:"listener_id"`
-	LbID         string `json:"lb_id"`
+	ID          string `json:"id"`
+	Ip          string `json:"ip"`
+	LblProtocol string `json:"lbl_protocol"`
+	LblPort     int    `json:"lbl_port"`
+	RuleUrl     string `json:"rule_url"`
+	RuleDomain  string `json:"rule_domain"`
+	TargetCount int    `json:"target_count"`
+	ListenerID  string `json:"listener_id"`
+	LbID        string `json:"lb_id"`
 }
 
 // HasLbConditions check if there are load balancer related query conditions
@@ -70,7 +71,7 @@ func (r *ListUrlRulesByTopologyReq) HasLbConditions() bool {
 
 // HasListenerConditions check if there are listener related query conditions
 func (r *ListUrlRulesByTopologyReq) HasListenerConditions() bool {
-	return len(r.LblProtocols) > 0 || len(r.LblPorts) > 0
+	return len(r.LblProtocol) > 0 || len(r.LblPorts) > 0
 }
 
 // HasRuleConditions check if there are rule related query conditions
@@ -94,7 +95,7 @@ func (r *ListUrlRulesByTopologyReq) Validate() error {
 }
 
 // BuildLoadBalancerFilter build load balancer query filter
-func (r *ListUrlRulesByTopologyReq) BuildLoadBalancerFilter(bizID int64, vendor string) *filter.Expression {
+func (r *ListUrlRulesByTopologyReq) BuildLoadBalancerFilter(bizID int64, vendor enumor.Vendor) *filter.Expression {
 	lbConditions := []*filter.AtomRule{
 		tools.RuleEqual("vendor", vendor),
 		tools.RuleEqual("account_id", r.AccountID),
@@ -138,7 +139,7 @@ func (r *ListUrlRulesByTopologyReq) BuildLoadBalancerFilter(bizID int64, vendor 
 }
 
 // BuildListenerFilter build listener query filter
-func (r *ListUrlRulesByTopologyReq) BuildListenerFilter(bizID int64, vendor string, lbIDs []string) *filter.Expression {
+func (r *ListUrlRulesByTopologyReq) BuildListenerFilter(bizID int64, vendor enumor.Vendor, lbIDs []string) *filter.Expression {
 	if !r.HasListenerConditions() {
 		return nil
 	}
@@ -147,29 +148,20 @@ func (r *ListUrlRulesByTopologyReq) BuildListenerFilter(bizID int64, vendor stri
 		tools.RuleEqual("vendor", vendor),
 		tools.RuleEqual("account_id", r.AccountID),
 		tools.RuleEqual("bk_biz_id", bizID),
-		tools.RuleIn("lb_id", lbIDs),
 	}
 
-	if len(r.LblProtocols) > 0 {
-		listenerConditions = append(listenerConditions, tools.RuleIn("protocol", r.LblProtocols))
+	if len(lbIDs) > 0 {
+		listenerConditions = append(listenerConditions, tools.RuleIn("lb_id", lbIDs))
+	}
+
+	if len(r.LblProtocol) > 0 {
+		listenerConditions = append(listenerConditions, tools.RuleIn("protocol", r.LblProtocol))
 	}
 	if len(r.LblPorts) > 0 {
 		listenerConditions = append(listenerConditions, tools.RuleIn("port", r.LblPorts))
 	}
 
 	return tools.ExpressionAnd(listenerConditions...)
-}
-
-// BuildUrlRuleBaseConditions build URL rule base query conditions
-func (r *ListUrlRulesByTopologyReq) BuildUrlRuleBaseConditions(bizID int64) []*filter.AtomRule {
-	conditions := []*filter.AtomRule{}
-
-	// Add business ID filter condition
-	if bizID > 0 {
-		conditions = append(conditions, tools.RuleEqual("bk_biz_id", bizID))
-	}
-
-	return conditions
 }
 
 // BuildLoadBalancerIDCondition build load balancer ID query condition
@@ -206,7 +198,7 @@ func (r *ListUrlRulesByTopologyReq) BuildRuleFilter() []*filter.AtomRule {
 }
 
 // BuildTargetGroupFilter build target group query filter
-func (r *ListUrlRulesByTopologyReq) BuildTargetGroupFilter(bizID int64, vendor string) *filter.Expression {
+func (r *ListUrlRulesByTopologyReq) BuildTargetGroupFilter(bizID int64, vendor enumor.Vendor) *filter.Expression {
 	if !r.HasTargetConditions() {
 		return nil
 	}
@@ -242,7 +234,7 @@ func (r *ListUrlRulesByTopologyReq) BuildTargetFilter(targetGroupIDs []string) *
 
 // BuildAllConditions build all query conditions
 func (r *ListUrlRulesByTopologyReq) BuildAllConditions(bizID int64) []*filter.AtomRule {
-	conditions := []*filter.AtomRule{}
+	conditions := make([]*filter.AtomRule, 0)
 
 	// Basic business conditions
 	if bizID > 0 {
@@ -270,8 +262,8 @@ func (r *ListUrlRulesByTopologyReq) BuildAllConditions(bizID int64) []*filter.At
 	}
 
 	// Listener conditions
-	if len(r.LblProtocols) > 0 {
-		conditions = append(conditions, tools.RuleIn("protocol", r.LblProtocols))
+	if len(r.LblProtocol) > 0 {
+		conditions = append(conditions, tools.RuleIn("protocol", r.LblProtocol))
 	}
 	if len(r.LblPorts) > 0 {
 		conditions = append(conditions, tools.RuleIn("port", r.LblPorts))
