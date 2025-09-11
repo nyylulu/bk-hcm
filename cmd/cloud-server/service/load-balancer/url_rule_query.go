@@ -82,7 +82,7 @@ func (svc *lbSvc) ListUrlRulesByTopo(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
-	result, err := svc.buildUrlRuleResponse(cts.Kit, urlRuleList)
+	result, err := svc.buildUrlRuleResponse(cts.Kit, urlRuleList, req)
 	if err != nil {
 		logs.Errorf("list url rules by topo failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
@@ -105,13 +105,13 @@ func (svc *lbSvc) buildBatchFilter(field string, ids []string) *filter.Expressio
 }
 
 // queryListenerIDs 查询监听器ID列表
-func (svc *lbSvc) queryListenerIDs(kt *kit.Kit, vendor enumor.Vendor, req *cslb.ListUrlRulesByTopologyReq,
+func (svc *lbSvc) queryListenerIDs(kt *kit.Kit, bizID int64, vendor enumor.Vendor, req *cslb.ListUrlRulesByTopologyReq,
 	lbIDs []string) ([]string, error) {
 	if !req.HasListenerConditions() {
 		return nil, nil
 	}
 
-	listenerIDs, err := svc.queryListenerIDsByLbIDs(kt, vendor, req, lbIDs)
+	listenerIDs, err := svc.queryListenerIDsByLbIDs(kt, bizID, vendor, req, lbIDs)
 	if err != nil {
 		logs.Errorf("query listener ids by lb ids failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, fmt.Errorf("query listener ids by lb ids failed, err: %v", err)
@@ -136,13 +136,29 @@ func (svc *lbSvc) buildUrlRuleQueryFilter(kt *kit.Kit, bizID int64, vendor enumo
 		logs.Infof("no load balancer found with conditions, proceeding with other filters, rid: %s", kt.Rid)
 	}
 
-	listenerIDs, err := svc.queryListenerIDs(kt, vendor, req, lbIDs)
+	listenerIDs, err := svc.queryListenerIDs(kt, bizID, vendor, req, lbIDs)
 	if err != nil {
 		return nil, err
 	}
 
 	conditions := []*filter.AtomRule{
 		tools.RuleEqual("rule_type", enumor.Layer7RuleType),
+	}
+
+	if len(req.LblProtocol) > 0 {
+		hasLayer7 := false
+		for _, protocol := range req.LblProtocol {
+			if protocol == "HTTP" || protocol == "HTTPS" {
+				hasLayer7 = true
+				break
+			}
+		}
+		if !hasLayer7 {
+			return &filter.Expression{
+				Op:    filter.And,
+				Rules: []filter.RuleFactory{},
+			}, nil
+		}
 	}
 	conditions = svc.addRuleConditions(req, conditions)
 
@@ -178,30 +194,6 @@ func (svc *lbSvc) buildUrlRuleQueryFilter(kt *kit.Kit, bizID int64, vendor enumo
 		return combinedFilter, nil
 	}
 	return baseFilter, nil
-}
-
-// addLoadBalancerConditions 添加负载均衡器相关条件
-func (svc *lbSvc) addLoadBalancerConditions(kt *kit.Kit, bizID int64, vendor enumor.Vendor,
-	req *cslb.ListUrlRulesByTopologyReq, conditions []*filter.AtomRule) ([]*filter.AtomRule, error) {
-
-	hasLbConditions := len(req.LbRegions) > 0 || len(req.LbNetworkTypes) > 0 || len(req.LbIpVersions) > 0 ||
-		len(req.CloudLbIds) > 0 || len(req.LbVips) > 0 || len(req.LbDomains) > 0
-
-	if hasLbConditions {
-
-		lbIDs, err := svc.queryLoadBalancerIDsByConditions(kt, bizID, vendor, req)
-		if err != nil {
-			return nil, fmt.Errorf("query load balancer ids failed, err: %v", err)
-		}
-
-		if len(lbIDs) == 0 {
-			return conditions, nil
-		}
-
-		conditions = append(conditions, tools.RuleIn("lb_id", lbIDs))
-	}
-
-	return conditions, nil
 }
 
 // addRuleConditions 添加规则相关条件
@@ -256,29 +248,13 @@ func (svc *lbSvc) queryLoadBalancerIDsByUserConditions(kt *kit.Kit, bizID int64,
 	return svc.queryLoadBalancerIDsByFilter(kt, lbFilter)
 }
 
-// queryLoadBalancerIDsByConditions 根据基础条件查询负载均衡器ID
-func (svc *lbSvc) queryLoadBalancerIDsByConditions(kt *kit.Kit, bizID int64, vendor enumor.Vendor,
-	req *cslb.ListUrlRulesByTopologyReq) ([]string, error) {
-
-	lbConditions := []*filter.AtomRule{
-		tools.RuleEqual("vendor", vendor),
-		tools.RuleEqual("account_id", req.AccountID),
-		tools.RuleEqual("bk_biz_id", bizID),
-	}
-
-	if len(req.LbNetworkTypes) > 0 {
-		lbConditions = append(lbConditions, tools.RuleIn("lb_type", req.LbNetworkTypes))
-	}
-
-	lbFilter := tools.ExpressionAnd(lbConditions...)
-	return svc.queryLoadBalancerIDsByFilter(kt, lbFilter)
-}
-
 // queryListenerIDsByLbIDs 根据CLB ID列表和监听器条件查询监听器ID
-func (svc *lbSvc) queryListenerIDsByLbIDs(kt *kit.Kit, vendor enumor.Vendor, req *cslb.ListUrlRulesByTopologyReq, lbIDs []string) ([]string, error) {
+func (svc *lbSvc) queryListenerIDsByLbIDs(kt *kit.Kit, bizID int64, vendor enumor.Vendor, req *cslb.ListUrlRulesByTopologyReq,
+	lbIDs []string) ([]string, error) {
 	listenerConditions := []*filter.AtomRule{
 		tools.RuleEqual("vendor", vendor),
 		tools.RuleEqual("account_id", req.AccountID),
+		tools.RuleEqual("bk_biz_id", bizID),
 	}
 
 	if len(lbIDs) > 0 {
@@ -463,8 +439,8 @@ func (svc *lbSvc) queryUrlRulesByFilter(kt *kit.Kit, vendor enumor.Vendor,
 		return nil, fmt.Errorf("vendor: %s not support", vendor)
 	}
 }
-func (svc *lbSvc) buildUrlRuleResponse(kt *kit.Kit,
-	urlRuleList *dataproto.TCloudURLRuleListResult) (*cslb.ListUrlRulesByTopologyResp, error) {
+func (svc *lbSvc) buildUrlRuleResponse(kt *kit.Kit, urlRuleList *dataproto.TCloudURLRuleListResult,
+	req *cslb.ListUrlRulesByTopologyReq) (*cslb.ListUrlRulesByTopologyResp, error) {
 
 	result := &cslb.ListUrlRulesByTopologyResp{
 		Count:   int(urlRuleList.Count),
@@ -475,25 +451,25 @@ func (svc *lbSvc) buildUrlRuleResponse(kt *kit.Kit,
 		return result, nil
 	}
 
-	lbIDs := make([]string, 0, len(urlRuleList.Details))
-	listenerIDs := make([]string, 0, len(urlRuleList.Details))
+	ruleLbIDs := make([]string, 0, len(urlRuleList.Details))
+	ruleListenerIDs := make([]string, 0, len(urlRuleList.Details))
 	targetGroupIDs := make([]string, 0, len(urlRuleList.Details))
 
 	for _, rule := range urlRuleList.Details {
-		lbIDs = append(lbIDs, rule.LbID)
-		listenerIDs = append(listenerIDs, rule.LblID)
+		ruleLbIDs = append(ruleLbIDs, rule.LbID)
+		ruleListenerIDs = append(ruleListenerIDs, rule.LblID)
 		if rule.TargetGroupID != "" {
 			targetGroupIDs = append(targetGroupIDs, rule.TargetGroupID)
 		}
 	}
 
-	lbMap, err := svc.batchGetLoadBalancerInfo(kt, lbIDs)
+	lbMap, err := svc.batchGetLoadBalancerInfo(kt, ruleLbIDs)
 	if err != nil {
 		logs.Errorf("batch get load balancer info failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
-	listenerMap, err := svc.batchGetListenerInfo(kt, listenerIDs)
+	listenerMap, err := svc.batchGetListenerInfo(kt, ruleListenerIDs)
 	if err != nil {
 		logs.Errorf("batch get listener info failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
