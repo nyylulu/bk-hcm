@@ -86,7 +86,7 @@ func (svc *lbSvc) ListUrlRulesByTopo(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
-	result, err := svc.buildUrlRuleResponse(cts.Kit, urlRuleList)
+	result, err := svc.buildUrlRuleResponse(urlRuleList, cts.Kit)
 	if err != nil {
 		logs.Errorf("build url rule response failed, bizID: %d, vendor: %s, err: %v, rid: %s",
 			bizID, vendor, err, cts.Kit.Rid)
@@ -99,13 +99,26 @@ func (svc *lbSvc) ListUrlRulesByTopo(cts *rest.Contexts) (any, error) {
 // buildUrlRuleQueryFilter 构建URL规则查询条件
 func (svc *lbSvc) buildUrlRuleQueryFilter(kt *kit.Kit, bizID int64, vendor enumor.Vendor,
 	req *cslb.ListUrlRulesByTopologyReq) (*filter.Expression, error) {
+	if len(req.LblProtocol) > 0 {
+		hasLayer7 := false
+		for _, protocol := range req.LblProtocol {
+			if protocol == "HTTP" || protocol == "HTTPS" {
+				hasLayer7 = true
+				break
+			}
+		}
+		if !hasLayer7 {
+			return &filter.Expression{
+				Op:    filter.And,
+				Rules: []filter.RuleFactory{},
+			}, nil
+		}
+	}
 
 	conditions := []*filter.AtomRule{
 		tools.RuleEqual("rule_type", enumor.Layer7RuleType),
 	}
-
 	conditions = svc.addRuleConditions(req, conditions)
-
 	var lbIDs []string
 	if req.HasLbConditions() {
 		var err error
@@ -183,8 +196,8 @@ func (svc *lbSvc) addRuleConditions(req *cslb.ListUrlRulesByTopologyReq,
 }
 
 // addTargetConditions 添加目标相关条件，需要查询目标表
-func (svc *lbSvc) addTargetConditions(kt *kit.Kit, bizID int64, vendor enumor.Vendor, req *cslb.ListUrlRulesByTopologyReq,
-	conditions []*filter.AtomRule) ([]*filter.AtomRule, []string, error) {
+func (svc *lbSvc) addTargetConditions(kt *kit.Kit, bizID int64, vendor enumor.Vendor,
+	req *cslb.ListUrlRulesByTopologyReq, conditions []*filter.AtomRule) ([]*filter.AtomRule, []string, error) {
 	if !req.HasTargetConditions() {
 		return conditions, nil, nil
 	}
@@ -282,27 +295,6 @@ func (svc *lbSvc) queryListenerIDsByConditions(kt *kit.Kit, bizID int64, vendor 
 	}
 
 	return listenerIDs, nil
-}
-
-// queryRuleIDsByTargetConditions 根据目标条件查询规则ID
-func (svc *lbSvc) queryRuleIDsByTargetConditions(kt *kit.Kit, bizID int64, vendor enumor.Vendor,
-	req *cslb.ListUrlRulesByTopologyReq) ([]string, error) {
-
-	targetGroupIDs, err := svc.queryTargetGroupIDsByTargetConditions(kt, bizID, vendor, req)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(targetGroupIDs) == 0 {
-		return []string{}, nil
-	}
-
-	ruleIDs, err := svc.queryRuleIDsByTargetGroupIDs(kt, targetGroupIDs)
-	if err != nil {
-		return nil, err
-	}
-
-	return ruleIDs, nil
 }
 
 // queryTargetGroupIDsByTargetConditions 根据目标条件查询目标组ID
@@ -431,7 +423,8 @@ func (svc *lbSvc) queryUrlRulesByFilter(kt *kit.Kit, vendor enumor.Vendor,
 }
 
 // buildUrlRuleResponse 构建URL规则响应
-func (svc *lbSvc) buildUrlRuleResponse(kt *kit.Kit, urlRuleList *dataproto.TCloudURLRuleListResult) (*cslb.ListUrlRulesByTopologyResp, error) {
+func (svc *lbSvc) buildUrlRuleResponse(urlRuleList *dataproto.TCloudURLRuleListResult,
+	kt *kit.Kit) (*cslb.ListUrlRulesByTopologyResp, error) {
 
 	result := &cslb.ListUrlRulesByTopologyResp{
 		Count:   int(urlRuleList.Count),
@@ -475,8 +468,9 @@ func (svc *lbSvc) buildUrlRuleResponse(kt *kit.Kit, urlRuleList *dataproto.TClou
 }
 
 // buildUrlRuleDetail URL规则详情
-func (svc *lbSvc) buildUrlRuleDetail(kt *kit.Kit, rule corelb.TCloudLbUrlRule, lbMap map[string]*corelb.BaseLoadBalancer,
-	listenerMap map[string]*corelb.BaseListener, targetCountMap map[string]int) (cslb.UrlRuleDetail, error) {
+func (svc *lbSvc) buildUrlRuleDetail(kt *kit.Kit, rule corelb.TCloudLbUrlRule,
+	lbMap map[string]*corelb.BaseLoadBalancer, listenerMap map[string]*corelb.BaseListener,
+	targetCountMap map[string]int) (cslb.UrlRuleDetail, error) {
 
 	detail := cslb.UrlRuleDetail{
 		ID: rule.ID,
