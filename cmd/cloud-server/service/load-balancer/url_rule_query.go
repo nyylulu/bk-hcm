@@ -66,21 +66,25 @@ func (svc *lbSvc) ListUrlRulesByTopo(cts *rest.Contexts) (any, error) {
 	}
 	bizID, err := cts.PathParameter("bk_biz_id").Int64()
 	if err != nil {
+		logs.Errorf("list url rules by topo failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	filters, err := svc.buildUrlRuleQueryFilter(cts.Kit, bizID, vendor, req)
 	if err != nil {
+		logs.Errorf("list url rules by topo failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	urlRuleList, err := svc.queryUrlRulesByFilter(cts.Kit, vendor, filters, req.Page)
 	if err != nil {
+		logs.Errorf("list url rules by topo failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	result, err := svc.buildUrlRuleResponse(cts.Kit, urlRuleList)
 	if err != nil {
+		logs.Errorf("list url rules by topo failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -97,23 +101,19 @@ func (svc *lbSvc) buildUrlRuleQueryFilter(kt *kit.Kit, bizID int64, vendor enumo
 	}
 
 	if len(lbIDs) == 0 && req.HasLbConditions() {
-		// 即使没有匹配的负载均衡器，也继续执行URL规则查询
+		logs.Infof("no load balancer found with conditions, proceeding with other filters, rid: %s", kt.Rid)
 	}
 
 	var ListenerIDs []string
 	if req.HasListenerConditions() {
 		ListenerIDs, err = svc.queryListenerIDsByLbIDs(kt, vendor, req, lbIDs)
 		if err != nil {
+			logs.Errorf("query listener ids by lb ids failed, err: %v, rid: %s", err, kt.Rid)
 			return nil, fmt.Errorf("query listener ids by lb ids failed, err: %v", err)
 		}
 
 		if len(ListenerIDs) == 0 {
-			return &filter.Expression{
-				Op: filter.And,
-				Rules: []filter.RuleFactory{
-					tools.RuleEqual("id", "never_match_condition"),
-				},
-			}, nil
+			logs.Infof("no listeners found with conditions, proceeding with other filters, rid: %s", kt.Rid)
 		}
 	}
 
@@ -125,6 +125,7 @@ func (svc *lbSvc) buildUrlRuleQueryFilter(kt *kit.Kit, bizID int64, vendor enumo
 
 	conditions, targetGroupIDs, err := svc.addTargetConditions(kt, req, conditions)
 	if err != nil {
+		logs.Errorf("add target conditions failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -146,7 +147,7 @@ func (svc *lbSvc) buildUrlRuleQueryFilter(kt *kit.Kit, bizID int64, vendor enumo
 		}
 	}
 
-	if len(lbIDs) > 0 {
+	if req.HasLbConditions() && len(lbIDs) > 0 {
 		if len(lbIDs) > int(core.DefaultMaxPageLimit) {
 			batches := slice.Split(lbIDs, int(core.DefaultMaxPageLimit))
 			batchConditions := make([]*filter.AtomRule, 0, len(batches))
@@ -238,6 +239,7 @@ func (svc *lbSvc) addTargetConditions(kt *kit.Kit, req *cslb.ListUrlRulesByTopol
 
 	targetGroupIDs, err := svc.queryTargetGroupIDsByTargetConditions(kt, req)
 	if err != nil {
+		logs.Errorf("query target group ids failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, nil, fmt.Errorf("query target group ids failed, err: %v", err)
 	}
 
@@ -258,6 +260,7 @@ func (svc *lbSvc) queryLoadBalancerIDsByUserConditions(kt *kit.Kit, bizID int64,
 
 	lbFilter, err := svc.buildLoadBalancerFilter(bizID, vendor, req)
 	if err != nil {
+		logs.Errorf("build load balancer filter failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 	return svc.queryLoadBalancerIDsByFilter(kt, lbFilter)
