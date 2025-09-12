@@ -21,7 +21,6 @@ package cslb
 
 import (
 	"hcm/pkg/api/core"
-	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/runtime/filter"
 )
@@ -35,7 +34,7 @@ type ListUrlRulesByTopologyReq struct {
 	CloudLbIds     []string       `json:"cloud_lb_ids" validate:"omitempty,max=500"`
 	LbVips         []string       `json:"lb_vips" validate:"omitempty,max=500"`
 	LbDomains      []string       `json:"lb_domains" validate:"omitempty,max=500"`
-	LblProtocol    []string       `json:"lbl_protocol" validate:"omitempty"`
+	LblProtocols   []string       `json:"lbl_protocols" validate:"omitempty"`
 	LblPorts       []int          `json:"lbl_ports" validate:"omitempty,max=1000"`
 	RuleDomains    []string       `json:"rule_domains" validate:"omitempty,max=500"`
 	RuleUrls       []string       `json:"rule_urls" validate:"omitempty,max=500"`
@@ -52,106 +51,93 @@ type ListUrlRulesByTopologyResp struct {
 
 // UrlRuleDetail url rule detail.
 type UrlRuleDetail struct {
-	ID          string `json:"id"`
-	LbVips      string `json:"lb_vips"`
-	LblProtocol string `json:"lbl_protocol"`
-	LblPort     int    `json:"lbl_port"`
-	RuleUrl     string `json:"rule_url"`
-	RuleDomain  string `json:"rule_domain"`
-	TargetCount int    `json:"target_count"`
-	ListenerID  string `json:"listener_id"`
-	CloudLbID   string `json:"cloud_lb_id"`
+	ID          string   `json:"id"`
+	LbVips      []string `json:"lb_vips"`
+	LblProtocol string   `json:"lbl_protocol"`
+	LblPort     int      `json:"lbl_port"`
+	RuleUrl     string   `json:"rule_url"`
+	RuleDomain  string   `json:"rule_domain"`
+	TargetCount int      `json:"target_count"`
+	CloudLblID  string   `json:"cloud_lbl_id"`
+	CloudLbID   string   `json:"cloud_lb_id"`
 }
 
-// HasLbConditions check if there are load balancer related query conditions
-func (r *ListUrlRulesByTopologyReq) HasLbConditions() bool {
-	return len(r.LbRegions) > 0 || len(r.LbNetworkTypes) > 0 || len(r.LbIpVersions) > 0 ||
-		len(r.CloudLbIds) > 0 || len(r.LbVips) > 0 || len(r.LbDomains) > 0
+// GetLbCond get lb condition
+func (r *ListUrlRulesByTopologyReq) GetLbCond() []filter.RuleFactory {
+	rules := make([]filter.RuleFactory, 0)
+
+	if len(r.LbRegions) > 0 {
+		rules = append(rules, tools.RuleIn("region", r.LbRegions))
+	}
+	if len(r.LbNetworkTypes) > 0 {
+		rules = append(rules, tools.RuleIn("lb_type", r.LbNetworkTypes))
+	}
+	if len(r.LbIpVersions) > 0 {
+		rules = append(rules, tools.RuleIn("ip_version", r.LbIpVersions))
+	}
+	if len(r.CloudLbIds) > 0 {
+		rules = append(rules, tools.RuleIn("cloud_id", r.CloudLbIds))
+	}
+	if len(r.LbDomains) > 0 {
+		rules = append(rules, tools.RuleIn("domain", r.LbDomains))
+	}
+	if len(r.LbVips) > 0 {
+		rules = append(rules, tools.ExpressionOr(
+			tools.RuleJsonOverlaps("private_ipv4_addresses", r.LbVips),
+			tools.RuleJsonOverlaps("private_ipv6_addresses", r.LbVips),
+			tools.RuleJsonOverlaps("public_ipv4_addresses", r.LbVips),
+			tools.RuleJsonOverlaps("public_ipv6_addresses", r.LbVips),
+		))
+	}
+
+	return rules
 }
 
-// HasListenerConditions check if there are listener related query conditions
-func (r *ListUrlRulesByTopologyReq) HasListenerConditions() bool {
-	return len(r.LblProtocol) > 0 || len(r.LblPorts) > 0
+// GetLblCond get listener condition
+func (r *ListUrlRulesByTopologyReq) GetLblCond() []filter.RuleFactory {
+	rules := make([]filter.RuleFactory, 0)
+
+	if len(r.LblProtocols) > 0 {
+		rules = append(rules, tools.RuleIn("protocol", r.LblProtocols))
+	}
+	if len(r.LblPorts) > 0 {
+		rules = append(rules, tools.RuleIn("port", r.LblPorts))
+	}
+
+	return rules
 }
 
-// HasTargetConditions check if there are target related query conditions
-func (r *ListUrlRulesByTopologyReq) HasTargetConditions() bool {
-	return len(r.TargetIps) > 0 || len(r.TargetPorts) > 0
+// GetRuleCond get rule condition
+func (r *ListUrlRulesByTopologyReq) GetRuleCond() []filter.RuleFactory {
+	rules := make([]filter.RuleFactory, 0)
+
+	if len(r.RuleDomains) > 0 {
+		rules = append(rules, tools.RuleIn("domain", r.RuleDomains))
+	}
+	if len(r.RuleUrls) > 0 {
+		rules = append(rules, tools.RuleIn("url", r.RuleUrls))
+	}
+
+	return rules
+}
+
+// GetTargetCond get target condition
+func (r *ListUrlRulesByTopologyReq) GetTargetCond() []filter.RuleFactory {
+	rules := make([]filter.RuleFactory, 0)
+
+	if len(r.TargetIps) > 0 {
+		rules = append(rules, tools.RuleIn("ip", r.TargetIps))
+	}
+	if len(r.TargetPorts) > 0 {
+		rules = append(rules, tools.RuleIn("port", r.TargetPorts))
+	}
+
+	return rules
 }
 
 // Validate validate request parameters
 func (r *ListUrlRulesByTopologyReq) Validate() error {
 	return nil
-}
-
-// BuildLoadBalancerFilter build load balancer query filter
-func (r *ListUrlRulesByTopologyReq) BuildLoadBalancerFilter(bizID int64, vendor enumor.Vendor) *filter.Expression {
-	lbConditions := []*filter.AtomRule{
-		tools.RuleEqual("vendor", vendor),
-		tools.RuleEqual("account_id", r.AccountID),
-		tools.RuleEqual("bk_biz_id", bizID),
-	}
-
-	// If no load balancer conditions, return only basic conditions
-	if !r.HasLbConditions() {
-		return tools.ExpressionAnd(lbConditions...)
-	}
-
-	if len(r.LbRegions) > 0 {
-		lbConditions = append(lbConditions, tools.RuleIn("region", r.LbRegions))
-	}
-	if len(r.LbNetworkTypes) > 0 {
-		lbConditions = append(lbConditions, tools.RuleIn("lb_type", r.LbNetworkTypes))
-	}
-	if len(r.LbIpVersions) > 0 {
-		lbConditions = append(lbConditions, tools.RuleIn("ip_version", r.LbIpVersions))
-	}
-	if len(r.CloudLbIds) > 0 {
-		lbConditions = append(lbConditions, tools.RuleIn("cloud_id", r.CloudLbIds))
-	}
-	if len(r.LbDomains) > 0 {
-		lbConditions = append(lbConditions, tools.RuleIn("domain", r.LbDomains))
-	}
-
-	if len(r.LbVips) > 0 {
-		vipConditions := []*filter.AtomRule{
-			tools.RuleJsonOverlaps("private_ipv4_addresses", r.LbVips),
-			tools.RuleJsonOverlaps("private_ipv6_addresses", r.LbVips),
-			tools.RuleJsonOverlaps("public_ipv4_addresses", r.LbVips),
-			tools.RuleJsonOverlaps("public_ipv6_addresses", r.LbVips),
-		}
-		vipOrFilter := tools.ExpressionOr(vipConditions...)
-		andFilter, _ := tools.And(tools.ExpressionAnd(lbConditions...), vipOrFilter)
-		return andFilter
-	}
-
-	return tools.ExpressionAnd(lbConditions...)
-}
-
-// BuildListenerFilter build listener query filter
-func (r *ListUrlRulesByTopologyReq) BuildListenerFilter(bizID int64, vendor enumor.Vendor, lbIDs []string) *filter.Expression {
-	if !r.HasListenerConditions() {
-		return nil
-	}
-
-	listenerConditions := []*filter.AtomRule{
-		tools.RuleEqual("vendor", vendor),
-		tools.RuleEqual("account_id", r.AccountID),
-		tools.RuleEqual("bk_biz_id", bizID),
-	}
-
-	if len(lbIDs) > 0 {
-		listenerConditions = append(listenerConditions, tools.RuleIn("lb_id", lbIDs))
-	}
-
-	if len(r.LblProtocol) > 0 {
-		listenerConditions = append(listenerConditions, tools.RuleIn("protocol", r.LblProtocol))
-	}
-	if len(r.LblPorts) > 0 {
-		listenerConditions = append(listenerConditions, tools.RuleIn("port", r.LblPorts))
-	}
-
-	return tools.ExpressionAnd(listenerConditions...)
 }
 
 // BuildRuleFilter build rule query filter
@@ -169,39 +155,4 @@ func (r *ListUrlRulesByTopologyReq) BuildRuleFilter() []*filter.AtomRule {
 	}
 
 	return conditions
-}
-
-// BuildTargetGroupFilter build target group query filter
-func (r *ListUrlRulesByTopologyReq) BuildTargetGroupFilter(bizID int64, vendor enumor.Vendor) *filter.Expression {
-	if !r.HasTargetConditions() {
-		return nil
-	}
-
-	targetGroupConditions := []*filter.AtomRule{
-		tools.RuleEqual("vendor", vendor),
-		tools.RuleEqual("account_id", r.AccountID),
-		tools.RuleEqual("bk_biz_id", bizID),
-	}
-
-	return tools.ExpressionAnd(targetGroupConditions...)
-}
-
-// BuildTargetFilter build target query filter
-func (r *ListUrlRulesByTopologyReq) BuildTargetFilter(targetGroupIDs []string) *filter.Expression {
-	if !r.HasTargetConditions() {
-		return nil
-	}
-
-	targetConditions := []*filter.AtomRule{
-		tools.RuleIn("target_group_id", targetGroupIDs),
-	}
-
-	if len(r.TargetIps) > 0 {
-		targetConditions = append(targetConditions, tools.RuleIn("ip", r.TargetIps))
-	}
-	if len(r.TargetPorts) > 0 {
-		targetConditions = append(targetConditions, tools.RuleIn("port", r.TargetPorts))
-	}
-
-	return tools.ExpressionAnd(targetConditions...)
 }
