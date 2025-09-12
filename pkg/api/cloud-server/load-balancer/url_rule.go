@@ -74,19 +74,9 @@ func (r *ListUrlRulesByTopologyReq) HasListenerConditions() bool {
 	return len(r.LblProtocol) > 0 || len(r.LblPorts) > 0
 }
 
-// HasRuleConditions check if there are rule related query conditions
-func (r *ListUrlRulesByTopologyReq) HasRuleConditions() bool {
-	return len(r.RuleDomains) > 0 || len(r.RuleUrls) > 0
-}
-
 // HasTargetConditions check if there are target related query conditions
 func (r *ListUrlRulesByTopologyReq) HasTargetConditions() bool {
 	return len(r.TargetIps) > 0 || len(r.TargetPorts) > 0
-}
-
-// HasAnyConditions check if there are any query conditions
-func (r *ListUrlRulesByTopologyReq) HasAnyConditions() bool {
-	return r.HasLbConditions() || r.HasListenerConditions() || r.HasRuleConditions() || r.HasTargetConditions()
 }
 
 // Validate validate request parameters
@@ -164,25 +154,9 @@ func (r *ListUrlRulesByTopologyReq) BuildListenerFilter(bizID int64, vendor enum
 	return tools.ExpressionAnd(listenerConditions...)
 }
 
-// BuildLoadBalancerIDCondition build load balancer ID query condition
-func (r *ListUrlRulesByTopologyReq) BuildLoadBalancerIDCondition(lbIDs []string) *filter.AtomRule {
-	if len(lbIDs) == 0 {
-		return nil
-	}
-	return tools.RuleIn("lb_id", lbIDs)
-}
-
-// BuildTargetGroupIDCondition build target group ID query condition
-func (r *ListUrlRulesByTopologyReq) BuildTargetGroupIDCondition(targetGroupIDs []string) *filter.AtomRule {
-	if len(targetGroupIDs) == 0 {
-		return nil
-	}
-	return tools.RuleIn("target_group_id", targetGroupIDs)
-}
-
 // BuildRuleFilter build rule query filter
 func (r *ListUrlRulesByTopologyReq) BuildRuleFilter() []*filter.AtomRule {
-	if !r.HasRuleConditions() {
+	if len(r.RuleDomains) == 0 && len(r.RuleUrls) == 0 {
 		return nil
 	}
 
@@ -230,60 +204,4 @@ func (r *ListUrlRulesByTopologyReq) BuildTargetFilter(targetGroupIDs []string) *
 	}
 
 	return tools.ExpressionAnd(targetConditions...)
-}
-
-// BuildAllConditions build all query conditions
-func (r *ListUrlRulesByTopologyReq) BuildAllConditions(bizID int64) []*filter.AtomRule {
-	conditions := make([]*filter.AtomRule, 0)
-
-	// Basic business conditions
-	if bizID > 0 {
-		conditions = append(conditions, tools.RuleEqual("bk_biz_id", bizID))
-	}
-
-	// Load balancer conditions
-	if len(r.LbRegions) > 0 {
-		conditions = append(conditions, tools.RuleIn("region", r.LbRegions))
-	}
-	if len(r.LbNetworkTypes) > 0 {
-		conditions = append(conditions, tools.RuleIn("lb_type", r.LbNetworkTypes))
-	}
-	if len(r.LbIpVersions) > 0 {
-		conditions = append(conditions, tools.RuleIn("ip_version", r.LbIpVersions))
-	}
-	if len(r.CloudLbIds) > 0 {
-		conditions = append(conditions, tools.RuleIn("cloud_id", r.CloudLbIds))
-	}
-	if len(r.LbDomains) > 0 {
-		conditions = append(conditions, tools.RuleIn("domain", r.LbDomains))
-	}
-	if r.AccountID != "" {
-		conditions = append(conditions, tools.RuleEqual("account_id", r.AccountID))
-	}
-
-	// Listener conditions
-	if len(r.LblProtocol) > 0 {
-		conditions = append(conditions, tools.RuleIn("protocol", r.LblProtocol))
-	}
-	if len(r.LblPorts) > 0 {
-		conditions = append(conditions, tools.RuleIn("port", r.LblPorts))
-	}
-
-	// Rule conditions
-	if len(r.RuleDomains) > 0 {
-		conditions = append(conditions, tools.RuleIn("domain", r.RuleDomains))
-	}
-	if len(r.RuleUrls) > 0 {
-		conditions = append(conditions, tools.RuleIn("url", r.RuleUrls))
-	}
-
-	// Target conditions
-	if len(r.TargetIps) > 0 {
-		conditions = append(conditions, tools.RuleIn("ip", r.TargetIps))
-	}
-	if len(r.TargetPorts) > 0 {
-		conditions = append(conditions, tools.RuleIn("port", r.TargetPorts))
-	}
-
-	return conditions
 }
