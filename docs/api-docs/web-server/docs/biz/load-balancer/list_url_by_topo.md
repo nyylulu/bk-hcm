@@ -101,7 +101,7 @@ POST  /api/v1/cloud/bizs/{bk_biz_id}/vendors/{vendor}/url_rules/by_topo/list
     "details": [
       {
         "id": "00000007",
-        "ip": "127.0.0.1",
+        "lb_vips": "127.0.0.1",
         "lbl_protocol": "HTTP",
         "lbl_port": 8080,
         "rule_url": "/xxx",
@@ -147,11 +147,11 @@ POST  /api/v1/cloud/bizs/{bk_biz_id}/vendors/{vendor}/url_rules/by_topo/list
 | 参数名称         | 参数类型         | 描述       |
 |--------------|--------------|----------|
 | id           | string       | URL规则ID  |
-| ip           | string array | 负载均衡VIP  |
+| lb_vips      | string array | 负载均衡VIP  |
 | lbl_protocol | string       | 监听器协议    |
 | lbl_port     | int          | 监听器端口    |
 | rule_url     | string       | 监听器的URL  |
 | rule_domain  | string array | 监听器的域名   | 
 | target_count | int          | 监听器的RS数量 |
-| lb_id        | string       | 负载均衡ID   |
+| cloud_lb_id  | string       | 云负载均衡ID  |
 | cloud_lbl_id | string       | 云监听器ID   |
