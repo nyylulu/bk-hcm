@@ -142,79 +142,96 @@ func (svc *lbSvc) listUrlRulesByTopo(kt *kit.Kit, bizID int64, vendor enumor.Ven
 func (svc *lbSvc) getUrlRuleTopoInfoByReq(kt *kit.Kit, bizID int64, vendor enumor.Vendor, req *cslb.ListUrlRulesByTopologyReq) (
 	*cslb.UrlRuleTopoInfo, error) {
 
-	// 检查监听器协议，如果是四层协议（TCP/UDP），直接返回空结果
-	if len(req.LblProtocols) > 0 {
-		hasLayer4Protocol := false
-		hasLayer7Protocol := false
-		for _, protocol := range req.LblProtocols {
-			if protocol == "TCP" || protocol == "UDP" {
-				hasLayer4Protocol = true
-			} else if protocol == "HTTP" || protocol == "HTTPS" {
-				hasLayer7Protocol = true
-			}
-		}
-		if hasLayer4Protocol && !hasLayer7Protocol {
-			return &cslb.UrlRuleTopoInfo{Match: false}, nil
-		}
+	if svc.shouldReturnEmptyForLayer4Protocol(req) {
+		return &cslb.UrlRuleTopoInfo{Match: false}, nil
+	}
+	lbMap, err := svc.queryLoadBalancers(kt, bizID, vendor, req)
+	if err != nil {
+		return nil, err
+	}
+	if len(lbMap) == 0 {
+		return &cslb.UrlRuleTopoInfo{Match: false}, nil
 	}
 
+	lbIDs := maps.Keys(lbMap)
+	reqRuleCond := req.GetRuleCond()
+	reqTargetCond := req.GetTargetCond()
+
+	if len(reqRuleCond) == 0 && len(reqTargetCond) == 0 {
+		return svc.queryRulesWithoutConditions(kt, vendor, req, lbMap, lbIDs)
+	}
+
+	return svc.queryRulesWithConditions(kt, vendor, req, lbMap, lbIDs, reqRuleCond, reqTargetCond)
+}
+
+// shouldReturnEmptyForLayer4Protocol 检查是否应该为四层协议返回空结果
+func (svc *lbSvc) shouldReturnEmptyForLayer4Protocol(req *cslb.ListUrlRulesByTopologyReq) bool {
+	if len(req.LblProtocols) == 0 {
+		return false
+	}
+	hasLayer4Protocol := false
+	hasLayer7Protocol := false
+	for _, protocol := range req.LblProtocols {
+		if protocol == "TCP" || protocol == "UDP" {
+			hasLayer4Protocol = true
+		} else if protocol == "HTTP" || protocol == "HTTPS" {
+			hasLayer7Protocol = true
+		}
+	}
+	return hasLayer4Protocol && !hasLayer7Protocol
+}
+
+// queryLoadBalancers 查询负载均衡器
+func (svc *lbSvc) queryLoadBalancers(kt *kit.Kit, bizID int64, vendor enumor.Vendor, req *cslb.ListUrlRulesByTopologyReq) (map[string]corelb.BaseLoadBalancer, error) {
 	commonCond := make([]filter.RuleFactory, 0)
 	commonCond = append(commonCond, tools.RuleEqual("bk_biz_id", bizID))
 	commonCond = append(commonCond, tools.RuleEqual("vendor", vendor))
 	commonCond = append(commonCond, tools.RuleEqual("account_id", req.AccountID))
 
-	// 根据条件查询clb信息
 	lbCond := make([]filter.RuleFactory, 0)
 	lbCond = append(lbCond, commonCond...)
 	lbCond = append(lbCond, req.GetLbCond()...)
+
 	lbMap, err := svc.getLbByCond(kt, lbCond)
 	if err != nil {
 		logs.Errorf("get lb by cond failed, err: %v, lbCond: %v, rid: %s", err, lbCond, kt.Rid)
 		return nil, err
 	}
+	return lbMap, nil
+}
 
-	if len(lbMap) == 0 {
+// queryRulesWithoutConditions 查询没有特定条件的规则
+func (svc *lbSvc) queryRulesWithoutConditions(kt *kit.Kit, vendor enumor.Vendor, req *cslb.ListUrlRulesByTopologyReq, lbMap map[string]corelb.BaseLoadBalancer, lbIDs []string) (*cslb.UrlRuleTopoInfo, error) {
+	lblCond := []filter.RuleFactory{tools.RuleIn("lb_id", lbIDs)}
+	if len(req.LblProtocols) > 0 {
+		lblCond = append(lblCond, tools.RuleIn("protocol", req.LblProtocols))
+	}
+	lblMap, err := svc.getLblByCond(kt, vendor, lblCond)
+	if err != nil {
+		logs.Errorf("get lbl by cond failed, err: %v, lblCond: %v, rid: %s", err, lblCond, kt.Rid)
+		return nil, err
+	}
+	if len(lblMap) == 0 {
 		return &cslb.UrlRuleTopoInfo{Match: false}, nil
 	}
-	lbIDs := maps.Keys(lbMap)
-	reqRuleCond := req.GetRuleCond()
-	reqTargetCond := req.GetTargetCond()
+	lblIDs := maps.Keys(lblMap)
 
-	// 如果请求没有规则和RS条件，需要查询监听器和规则来构建完整的拓扑信息
-	if len(reqRuleCond) == 0 && len(reqTargetCond) == 0 {
-		// 查询所有监听器
-		lblCond := []filter.RuleFactory{tools.RuleIn("lb_id", lbIDs)}
-		// 如果指定了协议，添加协议过滤条件
-		if len(req.LblProtocols) > 0 {
-			lblCond = append(lblCond, tools.RuleIn("protocol", req.LblProtocols))
-		}
-		lblMap, err := svc.getLblByCond(kt, vendor, lblCond)
-		if err != nil {
-			logs.Errorf("get lbl by cond failed, err: %v, lblCond: %v, rid: %s", err, lblCond, kt.Rid)
-			return nil, err
-		}
-		if len(lblMap) == 0 {
-			return &cslb.UrlRuleTopoInfo{Match: false}, nil
-		}
-		lblIDs := maps.Keys(lblMap)
-
-		ruleCond := []filter.RuleFactory{tools.RuleIn("lbl_id", lblIDs)}
-		ruleMap, err := svc.getRuleByCond(kt, vendor, ruleCond)
-		if err != nil {
-			logs.Errorf("get rule by cond failed, err: %v, ruleCond: %v, rid: %s", err, ruleCond, kt.Rid)
-			return nil, err
-		}
-		if len(ruleMap) == 0 {
-			return &cslb.UrlRuleTopoInfo{Match: false}, nil
-		}
-
-		// 返回所有规则的ID作为查询条件
-		ruleIDs := maps.Keys(ruleMap)
-		finalRuleCond := []filter.RuleFactory{tools.RuleIn("id", ruleIDs)}
-		return &cslb.UrlRuleTopoInfo{Match: true, LbMap: lbMap, LblMap: lblMap, RuleCond: finalRuleCond}, nil
+	ruleCond := []filter.RuleFactory{tools.RuleIn("lbl_id", lblIDs)}
+	ruleMap, err := svc.getRuleByCond(kt, vendor, ruleCond)
+	if err != nil {
+		logs.Errorf("get rule by cond failed, err: %v, ruleCond: %v, rid: %s", err, ruleCond, kt.Rid)
+		return nil, err
 	}
+	if len(ruleMap) == 0 {
+		return &cslb.UrlRuleTopoInfo{Match: false}, nil
+	}
+	ruleIDs := maps.Keys(ruleMap)
+	finalRuleCond := []filter.RuleFactory{tools.RuleIn("id", ruleIDs)}
+	return &cslb.UrlRuleTopoInfo{Match: true, LbMap: lbMap, LblMap: lblMap, RuleCond: finalRuleCond}, nil
+}
 
-	// 根据条件查询监听器信息
+// queryRulesWithConditions 根据条件查询规则
+func (svc *lbSvc) queryRulesWithConditions(kt *kit.Kit, vendor enumor.Vendor, req *cslb.ListUrlRulesByTopologyReq, lbMap map[string]corelb.BaseLoadBalancer, lbIDs []string, reqRuleCond []filter.RuleFactory, reqTargetCond []filter.RuleFactory) (*cslb.UrlRuleTopoInfo, error) {
 	lblCond := make([]filter.RuleFactory, 0)
 	lblCond = append(lblCond, tools.RuleIn("lb_id", lbIDs))
 	lblCond = append(lblCond, req.GetLblCond()...)
@@ -240,14 +257,11 @@ func (svc *lbSvc) getUrlRuleTopoInfoByReq(kt *kit.Kit, bizID int64, vendor enumo
 		return &cslb.UrlRuleTopoInfo{Match: false}, nil
 	}
 
-	// 如果请求中不含RS的条件，那么可以直接返回规则条件
 	if len(reqTargetCond) == 0 {
 		ruleIDs := maps.Keys(ruleMap)
 		ruleCond := []filter.RuleFactory{tools.RuleIn("id", ruleIDs)}
 		return &cslb.UrlRuleTopoInfo{Match: true, LbMap: lbMap, LblMap: lblMap, RuleCond: ruleCond}, nil
 	}
-
-	// 根据RS条件查询，得到规则条件
 	ruleIDs := maps.Keys(ruleMap)
 	tgLbRelCond := []filter.RuleFactory{tools.RuleIn("listener_rule_id", ruleIDs),
 		tools.RuleEqual("vendor", vendor), tools.RuleEqual("binding_status", enumor.SuccessBindingStatus)}
