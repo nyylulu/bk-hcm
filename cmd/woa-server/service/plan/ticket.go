@@ -36,6 +36,7 @@ import (
 	"hcm/pkg/rest"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 	cvt "hcm/pkg/tools/converter"
+	"hcm/pkg/tools/slice"
 )
 
 // ListResPlanTicket list resource plan ticket.
@@ -549,12 +550,12 @@ func (s *service) approveResPlanTicketITSMByBiz(kt *kit.Kit, ticketID string, bi
 	if status.Status != enumor.RPTicketStatusAuditing {
 		return nil, fmt.Errorf("ticket %s is not in auditing status", ticketID)
 	}
-	if len(status.ItsmSn) == 0 {
+	if len(status.ItsmSN) == 0 {
 		return nil, fmt.Errorf("ITSM SN of ticket %s can not be found", ticketID)
 	}
 	// 进行审批
 	approveReq := &itsm.ApproveNodeOpt{
-		SN:       status.ItsmSn,
+		SN:       status.ItsmSN,
 		StateId:  req.StateId,
 		Operator: kt.User,
 		Approval: cvt.PtrToVal(req.Approval),
@@ -565,4 +566,92 @@ func (s *service) approveResPlanTicketITSMByBiz(kt *kit.Kit, ticketID string, bi
 		return nil, err
 	}
 	return nil, nil
+}
+
+// RetryResPlanTicket 重试资源预测单中失败的子单
+func (s *service) RetryResPlanTicket(cts *rest.Contexts) (any, error) {
+	ticketID := cts.PathParameter("ticket_id").String()
+	if len(ticketID) == 0 {
+		return nil, errf.NewFromErr(errf.InvalidParameter, errors.New("ticket id can not be empty"))
+	}
+
+	// authorize ticket resource plan access.
+	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.Application, Action: meta.Find}}
+	if err := s.authorizer.AuthorizeWithPerm(cts.Kit, authRes); err != nil {
+		return nil, err
+	}
+
+	if err := s.retryBizResPlanTicket(cts.Kit, ticketID, constant.AttachedAllBiz); err != nil {
+		logs.Errorf("failed to retry res plan ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// RetryBizResPlanTicket 业务下 重试资源预测单中失败的子单
+func (s *service) RetryBizResPlanTicket(cts *rest.Contexts) (any, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+
+	ticketID := cts.PathParameter("ticket_id").String()
+	if len(ticketID) == 0 {
+		return nil, errf.NewFromErr(errf.InvalidParameter, errors.New("ticket id can not be empty"))
+	}
+
+	// authorize biz access.
+	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: bkBizID}
+	if err = s.authorizer.AuthorizeWithPerm(cts.Kit, authRes); err != nil {
+		return nil, err
+	}
+
+	if err := s.retryBizResPlanTicket(cts.Kit, ticketID, bkBizID); err != nil {
+		logs.Errorf("failed to retry res plan ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (s *service) retryBizResPlanTicket(kt *kit.Kit, ticketID string, bizID int64) error {
+
+	status, err := s.planController.GetResPlanTicketStatusByBiz(kt, ticketID, bizID)
+	if err != nil {
+		logs.Errorf("failed to get resource plan ticket status info, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+
+	// 校验状态
+	if status.Status != enumor.RPTicketStatusAuditing {
+		return fmt.Errorf("ticket %s is not in auditing status", ticketID)
+	}
+
+	// 获取失败的子单列表
+	failedSubTickets := make([]ptypes.ListResPlanSubTicketItem, 0)
+	listReq := &ptypes.ListResPlanSubTicketReq{
+		TicketID: ticketID,
+		Statuses: []enumor.RPSubTicketStatus{enumor.RPSubTicketStatusFailed},
+		Page:     core.NewDefaultBasePage(),
+	}
+	for {
+		rst, err := s.planController.ListResPlanSubTicket(kt, listReq)
+		if err != nil {
+			logs.Errorf("failed to list res plan sub ticket, err: %v, rid: %s", err, kt.Rid)
+			return err
+		}
+
+		failedSubTickets = append(failedSubTickets, rst.Details...)
+
+		if len(rst.Details) < int(listReq.Page.Limit) {
+			break
+		}
+		listReq.Page.Start += uint32(listReq.Page.Limit)
+	}
+
+	failedIDs := slice.Map(failedSubTickets, func(item ptypes.ListResPlanSubTicketItem) string {
+		return item.ID
+	})
+	return s.planController.RetryResPlanFailedSubTickets(kt, ticketID, failedIDs)
 }

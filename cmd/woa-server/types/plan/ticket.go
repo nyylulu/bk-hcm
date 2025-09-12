@@ -56,10 +56,10 @@ type TicketInfo struct {
 	Demands          rpt.ResPlanDemands    `json:"demands"`
 	SubmittedAt      string                `json:"submitted_at"`
 	Status           enumor.RPTicketStatus `json:"status"`
-	ItsmSn           string                `json:"itsm_sn"`
-	ItsmUrl          string                `json:"itsm_url"`
-	CrpSn            string                `json:"crp_sn"`
-	CrpUrl           string                `json:"crp_url"`
+	ItsmSN           string                `json:"itsm_sn"`
+	ItsmURL          string                `json:"itsm_url"`
+	CrpSN            string                `json:"crp_sn"`
+	CrpURL           string                `json:"crp_url"`
 }
 
 // ListResPlanTicketReq is list resource plan ticket request.
@@ -410,9 +410,11 @@ type RPTicketWithStatusAndResListRst core.ListResultT[RPTicketWithStatusAndRes]
 // RPTicketWithStatusAndRes resource plan ticket with status and resource.
 type RPTicketWithStatusAndRes struct {
 	rpdaotypes.RPTicketWithStatus
-	TicketTypeName string               `json:"ticket_type_name"`
-	OriginalInfo   RPTicketResourceInfo `json:"original_info"`
-	UpdatedInfo    RPTicketResourceInfo `json:"updated_info"`
+	TicketTypeName      string               `json:"ticket_type_name"`
+	OriginalInfo        RPTicketResourceInfo `json:"original_info"`
+	UpdatedInfo         RPTicketResourceInfo `json:"updated_info"`
+	AuditedOriginalInfo RPTicketResourceInfo `json:"audited_original_info"`
+	AuditedUpdatedInfo  RPTicketResourceInfo `json:"audited_updated_info"`
 }
 
 // RPTicketResourceInfo resource plan ticket resource info.
@@ -508,10 +510,10 @@ type GetRPTicketBaseInfo struct {
 type GetRPTicketStatusInfo struct {
 	Status     enumor.RPTicketStatus `json:"status"`
 	StatusName string                `json:"status_name"`
-	ItsmSn     string                `json:"itsm_sn"`
-	ItsmUrl    string                `json:"itsm_url"`
-	CrpSn      string                `json:"crp_sn"`
-	CrpUrl     string                `json:"crp_url"`
+	ItsmSN     string                `json:"itsm_sn"`
+	ItsmURL    string                `json:"itsm_url"`
+	CrpSN      string                `json:"crp_sn"`
+	CrpURL     string                `json:"crp_url"`
 	Message    string                `json:"message"`
 }
 
@@ -540,10 +542,17 @@ type GetRPTicketItsmAudit struct {
 	Logs         []*ItsmAuditLog       `json:"logs"`
 }
 
+// GetRPTicketAdminAudit get resource plan ticket admin audit.
+type GetRPTicketAdminAudit struct {
+	Status       enumor.RPAdminAuditStatus `json:"status"`
+	CurrentSteps []*AdminAuditStep         `json:"current_steps"`
+	Logs         []*AdminAuditLog          `json:"logs"`
+}
+
 // GetRPTicketCrpAudit get resource plan ticket crp audit.
 type GetRPTicketCrpAudit struct {
-	CrpSn        string                `json:"crp_sn"`
-	CrpUrl       string                `json:"crp_url"`
+	CrpSN        string                `json:"crp_sn"`
+	CrpURL       string                `json:"crp_url"`
 	Status       enumor.RPTicketStatus `json:"status"`
 	StatusName   string                `json:"status_name"`
 	Message      string                `json:"message"`
@@ -564,6 +573,20 @@ type ItsmAuditLog struct {
 	Operator  string `json:"operator"`
 	OperateAt string `json:"operate_at"`
 	Message   string `json:"message"`
+}
+
+// AdminAuditStep is admin audit step.
+type AdminAuditStep struct {
+	Name           string          `json:"name"`
+	Processors     []string        `json:"processors"`
+	ProcessorsAuth map[string]bool `json:"processors_auth"`
+}
+
+// AdminAuditLog is admin audit log.
+type AdminAuditLog struct {
+	Name      string `json:"name"`
+	Operator  string `json:"operator"`
+	OperateAt string `json:"operate_at"`
 }
 
 // CrpAuditStep is crp audit step.
@@ -641,5 +664,16 @@ type AuditResPlanTicketITSMReq struct {
 
 // Validate ...
 func (r *AuditResPlanTicketITSMReq) Validate() error {
+	return validator.Validate.Struct(r)
+}
+
+// AuditResPlanTicketAdminReq 通过管理员审批需求单请求
+type AuditResPlanTicketAdminReq struct {
+	Approval        *bool `json:"approval" validate:"required"`
+	UseTransferPool *bool `json:"use_transfer_pool" validate:"required"`
+}
+
+// Validate ...
+func (r *AuditResPlanTicketAdminReq) Validate() error {
 	return validator.Validate.Struct(r)
 }

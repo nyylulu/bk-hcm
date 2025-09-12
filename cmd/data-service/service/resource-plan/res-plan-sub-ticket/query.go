@@ -17,25 +17,31 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package resourceplan ...
-package resourceplan
+// Package resplansubticket ...
+package resplansubticket
 
 import (
-	"hcm/cmd/data-service/service/capability"
-	resplandemand "hcm/cmd/data-service/service/resource-plan/res-plan-demand"
-	demandchangelog "hcm/cmd/data-service/service/resource-plan/res-plan-demand-changelog"
-	demandpenaltybase "hcm/cmd/data-service/service/resource-plan/res-plan-demand-penalty-base"
-	resplansubticket "hcm/cmd/data-service/service/resource-plan/res-plan-sub-ticket"
-	transferappliedrecord "hcm/cmd/data-service/service/resource-plan/res-plan-transfer-applied-record"
-	resplanweek "hcm/cmd/data-service/service/resource-plan/res-plan-week"
+	rpproto "hcm/pkg/api/data-service/resource-plan"
+	"hcm/pkg/criteria/errf"
+	"hcm/pkg/dal/dao/types"
+	"hcm/pkg/rest"
 )
 
-// InitService initial the resource plan service.
-func InitService(cap *capability.Capability) {
-	resplandemand.InitService(cap)
-	demandpenaltybase.InitService(cap)
-	demandchangelog.InitService(cap)
-	resplanweek.InitService(cap)
-	transferappliedrecord.InitService(cap)
-	resplansubticket.InitService(cap)
+// ListResPlanSubTicket list res plan sub ticket
+func (svc *service) ListResPlanSubTicket(cts *rest.Contexts) (interface{}, error) {
+	req := new(rpproto.ResPlanSubTicketListReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, err
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+	opt := &types.ListOption{
+		Filter: req.Filter,
+		Page:   req.Page,
+		Fields: req.Fields,
+	}
+
+	return svc.dao.ResPlanSubTicket().List(cts.Kit, opt)
 }

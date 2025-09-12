@@ -35,15 +35,15 @@ func (f *ResPlanFetcher) getItsmAndCrpAuditStatus(kt *kit.Kit, bkBizID int64,
 	ticketStatus *ptypes.GetRPTicketStatusInfo) (*ptypes.GetRPTicketItsmAudit, *ptypes.GetRPTicketCrpAudit, error) {
 
 	itsmAudit := &ptypes.GetRPTicketItsmAudit{
-		ItsmSn:  ticketStatus.ItsmSn,
-		ItsmUrl: ticketStatus.ItsmUrl,
+		ItsmSn:  ticketStatus.ItsmSN,
+		ItsmUrl: ticketStatus.ItsmURL,
 	}
 	crpAudit := &ptypes.GetRPTicketCrpAudit{
-		CrpSn:  ticketStatus.CrpSn,
-		CrpUrl: ticketStatus.CrpUrl,
+		CrpSN:  ticketStatus.CrpSN,
+		CrpURL: ticketStatus.CrpURL,
 	}
 	// 审批未开始
-	if ticketStatus.ItsmSn == "" {
+	if ticketStatus.ItsmSN == "" {
 		itsmAudit.Status = enumor.RPTicketStatusInit
 		itsmAudit.StatusName = itsmAudit.Status.Name()
 		crpAudit.Status = enumor.RPTicketStatusInit
@@ -52,29 +52,29 @@ func (f *ResPlanFetcher) getItsmAndCrpAuditStatus(kt *kit.Kit, bkBizID int64,
 	}
 
 	// 获取ITSM审批记录和当前审批节点
-	itsmStatus, err := f.itsmCli.GetTicketStatus(kt, ticketStatus.ItsmSn)
+	itsmStatus, err := f.itsmCli.GetTicketStatus(kt, ticketStatus.ItsmSN)
 	if err != nil {
-		logs.Errorf("failed to get itsm audit status, err: %v, sn: %s, rid: %s", err, ticketStatus.ItsmSn, kt.Rid)
+		logs.Errorf("failed to get itsm audit status, err: %v, sn: %s, rid: %s", err, ticketStatus.ItsmSN, kt.Rid)
 		return nil, nil, err
 	}
-	itsmLogs, err := f.itsmCli.GetTicketLog(kt, ticketStatus.ItsmSn)
+	itsmLogs, err := f.itsmCli.GetTicketLog(kt, ticketStatus.ItsmSN)
 	if err != nil {
-		logs.Errorf("failed to get itsm audit log, err: %v, sn: %s, rid: %s", err, ticketStatus.ItsmSn, kt.Rid)
+		logs.Errorf("failed to get itsm audit log, err: %v, sn: %s, rid: %s", err, ticketStatus.ItsmSN, kt.Rid)
 		return nil, nil, err
 	}
 	if itsmLogs.Data == nil {
-		logs.Errorf("itsm audit log is empty, sn: %s, rid: %s", ticketStatus.ItsmSn, kt.Rid)
-		return nil, nil, fmt.Errorf("itsm audit log is empty, sn: %s", ticketStatus.ItsmSn)
+		logs.Errorf("itsm audit log is empty, sn: %s, rid: %s", ticketStatus.ItsmSN, kt.Rid)
+		return nil, nil, fmt.Errorf("itsm audit log is empty, sn: %s", ticketStatus.ItsmSN)
 	}
 
 	itsmAudit, err = f.setItsmAuditDetails(kt, bkBizID, itsmAudit, itsmStatus, itsmLogs.Data)
 	if err != nil {
-		logs.Errorf("failed to set itsm audit details, err: %v, sn: %s, rid: %s", err, ticketStatus.ItsmSn, kt.Rid)
+		logs.Errorf("failed to set itsm audit details, err: %v, sn: %s, rid: %s", err, ticketStatus.ItsmSN, kt.Rid)
 		return nil, nil, err
 	}
 
 	// ITSM审批中或审批终止在itsm阶段
-	if ticketStatus.CrpSn == "" {
+	if ticketStatus.CrpSN == "" {
 		// ITSM流程没有正常结束，将单据审批状态作为ITSM流程的当前状态
 		if itsmAudit.Status != enumor.RPTicketStatusDone {
 			itsmAudit.Status = ticketStatus.Status
@@ -95,14 +95,14 @@ func (f *ResPlanFetcher) getItsmAndCrpAuditStatus(kt *kit.Kit, bkBizID int64,
 	itsmAudit.StatusName = itsmAudit.Status.Name()
 
 	// 流程走到CRP步骤，获取CRP审批记录和当前审批节点
-	crpCurrentSteps, err := f.GetCrpCurrentApprove(kt, bkBizID, ticketStatus.CrpSn)
+	crpCurrentSteps, err := f.GetCrpCurrentApprove(kt, bkBizID, ticketStatus.CrpSN)
 	if err != nil {
-		logs.Errorf("failed to get crp current approve, err: %v, sn: %s, rid: %s", err, ticketStatus.CrpSn, kt.Rid)
+		logs.Errorf("failed to get crp current approve, err: %v, sn: %s, rid: %s", err, ticketStatus.CrpSN, kt.Rid)
 		return nil, nil, err
 	}
-	crpApproveLogs, err := f.GetCrpApproveLogs(kt, ticketStatus.CrpSn)
+	crpApproveLogs, err := f.GetCrpApproveLogs(kt, ticketStatus.CrpSN)
 	if err != nil {
-		logs.Errorf("failed to get crp approve logs, err: %v, sn: %s, rid: %s", err, ticketStatus.CrpSn, kt.Rid)
+		logs.Errorf("failed to get crp approve logs, err: %v, sn: %s, rid: %s", err, ticketStatus.CrpSN, kt.Rid)
 		return nil, nil, err
 	}
 

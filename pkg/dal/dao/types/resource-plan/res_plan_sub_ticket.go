@@ -17,25 +17,12 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package resourceplan ...
-package resourceplan
+package resplan
 
-import (
-	"hcm/cmd/data-service/service/capability"
-	resplandemand "hcm/cmd/data-service/service/resource-plan/res-plan-demand"
-	demandchangelog "hcm/cmd/data-service/service/resource-plan/res-plan-demand-changelog"
-	demandpenaltybase "hcm/cmd/data-service/service/resource-plan/res-plan-demand-penalty-base"
-	resplansubticket "hcm/cmd/data-service/service/resource-plan/res-plan-sub-ticket"
-	transferappliedrecord "hcm/cmd/data-service/service/resource-plan/res-plan-transfer-applied-record"
-	resplanweek "hcm/cmd/data-service/service/resource-plan/res-plan-week"
-)
+import rpst "hcm/pkg/dal/table/resource-plan/res-plan-sub-ticket"
 
-// InitService initial the resource plan service.
-func InitService(cap *capability.Capability) {
-	resplandemand.InitService(cap)
-	demandpenaltybase.InitService(cap)
-	demandchangelog.InitService(cap)
-	resplanweek.InitService(cap)
-	transferappliedrecord.InitService(cap)
-	resplansubticket.InitService(cap)
+// RPSubTicketListResult list resource plan sub_ticket result.
+type RPSubTicketListResult struct {
+	Count   uint64                       `json:"count"`
+	Details []rpst.ResPlanSubTicketTable `json:"details"`
 }

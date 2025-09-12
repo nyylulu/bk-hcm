@@ -107,10 +107,10 @@ func (f *ResPlanFetcher) GetTicketInfo(kt *kit.Kit, ticketID string) (*ptypes.Ti
 		Demands:          demands,
 		SubmittedAt:      base.SubmittedAt,
 		Status:           status.Status,
-		ItsmSn:           status.ItsmSn,
-		ItsmUrl:          status.ItsmUrl,
-		CrpSn:            status.CrpSn,
-		CrpUrl:           status.CrpUrl,
+		ItsmSN:           status.ItsmSN,
+		ItsmURL:          status.ItsmURL,
+		CrpSN:            status.CrpSN,
+		CrpURL:           status.CrpURL,
 	}
 
 	return brief, nil
@@ -207,10 +207,10 @@ func (f *ResPlanFetcher) GetResPlanTicketStatusInfo(kt *kit.Kit, ticketID string
 	result := &ptypes.GetRPTicketStatusInfo{
 		Status:     detail.Status,
 		StatusName: detail.Status.Name(),
-		ItsmSn:     detail.ItsmSn,
-		ItsmUrl:    detail.ItsmUrl,
-		CrpSn:      detail.CrpSn,
-		CrpUrl:     detail.CrpUrl,
+		ItsmSN:     detail.ItsmSN,
+		ItsmURL:    detail.ItsmURL,
+		CrpSN:      detail.CrpSN,
+		CrpURL:     detail.CrpURL,
 		Message:    detail.Message,
 	}
 

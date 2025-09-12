@@ -376,6 +376,7 @@ resPlan:
     enable: false
     quota: 5000
     audit_quota: 1000
+  adminAuditor: []
 
 # 开启自研云资源同步服务,单位:分钟
 resourceSync:

@@ -782,6 +782,7 @@ type ResPlan struct {
 	ReportPenaltyRatio   bool                 `yaml:"reportPenaltyRatio"`
 	ExpireNotification   ResPlanExpireNotice  `yaml:"expireNotification"`
 	RefreshTransferQuota ResPlanTransferQuota `yaml:"refreshTransferQuota"`
+	AdminAuditor         []string             `yaml:"adminAuditor"`
 }
 
 // ResPlanExpireNotice 资源预测过期通知配置

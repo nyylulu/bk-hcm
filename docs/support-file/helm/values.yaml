@@ -1196,6 +1196,7 @@ resPlan:
     quota: 0
     # 预测转移审批额度
     audit_quota: 0
+  adminAuditor: []
 
 # Alarm告警平台的配置
 alarm:

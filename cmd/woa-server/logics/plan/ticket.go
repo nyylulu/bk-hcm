@@ -20,12 +20,15 @@
 package plan
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/api/core"
+	rpproto "hcm/pkg/api/data-service/resource-plan"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
@@ -33,12 +36,16 @@ import (
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
 	rpdaotypes "hcm/pkg/dal/dao/types/resource-plan"
+	rpst "hcm/pkg/dal/table/resource-plan/res-plan-sub-ticket"
 	rpt "hcm/pkg/dal/table/resource-plan/res-plan-ticket"
 	rpts "hcm/pkg/dal/table/resource-plan/res-plan-ticket-status"
 	tabletypes "hcm/pkg/dal/table/types"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/runtime/filter"
+	"hcm/pkg/tools/classifier"
+	cvt "hcm/pkg/tools/converter"
+	"hcm/pkg/tools/slice"
 	"hcm/pkg/tools/times"
 
 	"github.com/jmoiron/sqlx"
@@ -221,6 +228,41 @@ func (c *Controller) ListResPlanTicketWithRes(kt *kit.Kit, req *core.ListReq) (*
 func (c *Controller) appendFieldToListResPlanTickets(kt *kit.Kit, details []rpdaotypes.RPTicketWithStatus) (
 	[]ptypes.RPTicketWithStatusAndRes, error) {
 
+	// 获取子单通过情况
+	ticketIDs := slice.Map(details, func(detail rpdaotypes.RPTicketWithStatus) string {
+		return detail.ID
+	})
+	listOpt := &rpproto.ResPlanSubTicketListReq{
+		ListReq: core.ListReq{
+			Filter: tools.ExpressionAnd(
+				tools.RuleIn("ticket_id", ticketIDs),
+				tools.RuleEqual("status", enumor.RPSubTicketStatusDone),
+			),
+			Page: core.NewDefaultBasePage(),
+			Fields: []string{"id", "ticket_id", "status", "sub_original_cpu_core", "sub_updated_cpu_core",
+				"sub_original_memory", "sub_original_disk_size", "sub_updated_memory", "sub_updated_disk_size"},
+		},
+	}
+	subTickets := make([]rpst.ResPlanSubTicketTable, 0)
+	for {
+		listRst, err := c.client.DataService().Global.ResourcePlan.ListResPlanSubTicket(kt, listOpt)
+		if err != nil {
+			logs.Errorf("failed to list resource plan sub ticket, err: %v, rid: %s", err, kt.Rid)
+			return nil, err
+		}
+
+		subTickets = append(subTickets, listRst.Details...)
+
+		if len(listRst.Details) < int(listOpt.Page.Limit) {
+			break
+		}
+		listOpt.Page.Start += uint32(listOpt.Page.Limit)
+	}
+
+	subTicketMap := classifier.ClassifySlice(subTickets, func(item rpst.ResPlanSubTicketTable) string {
+		return item.TicketID
+	})
+
 	ticketWithRes := make([]ptypes.RPTicketWithStatusAndRes, 0, len(details))
 	for _, detail := range details {
 		item := ptypes.RPTicketWithStatusAndRes{
@@ -250,9 +292,150 @@ func (c *Controller) appendFieldToListResPlanTickets(kt *kit.Kit, details []rpda
 				"ticket id: %s, rid: %s", detail.Type, detail.ID, kt.Rid)
 		}
 
+		// 已审批数
+		if subs, ok := subTicketMap[detail.ID]; ok {
+			item.AuditedOriginalInfo, item.AuditedUpdatedInfo = calcSubTicketsApprovedResources(subs)
+		}
+
 		ticketWithRes = append(ticketWithRes, item)
 	}
 	return ticketWithRes, nil
+}
+
+func calcSubTicketsApprovedResources(subTickets []rpst.ResPlanSubTicketTable) (
+	ptypes.RPTicketResourceInfo, ptypes.RPTicketResourceInfo) {
+
+	originalInfo := ptypes.NewNullResourceInfo()
+	updatedInfo := ptypes.NewNullResourceInfo()
+	for _, item := range subTickets {
+		if cvt.PtrToVal(item.SubOriginalCPUCore) > 0 {
+			originalInfo.Append(
+				cvt.PtrToVal(item.SubOriginalCPUCore),
+				cvt.PtrToVal(item.SubOriginalMemory),
+				cvt.PtrToVal(item.SubOriginalDiskSize),
+			)
+		}
+		if cvt.PtrToVal(item.SubUpdatedCPUCore) > 0 {
+			updatedInfo.Append(
+				cvt.PtrToVal(item.SubUpdatedCPUCore),
+				cvt.PtrToVal(item.SubUpdatedMemory),
+				cvt.PtrToVal(item.SubUpdatedDiskSize),
+			)
+		}
+	}
+	return originalInfo, updatedInfo
+}
+
+// ApproveResPlanSubTicketAdmin 审批资源预测子单 - 管理员审批阶段
+func (c *Controller) ApproveResPlanSubTicketAdmin(kt *kit.Kit, subTicketID string, bizID int64,
+	req *ptypes.AuditResPlanTicketAdminReq) error {
+
+	// 校验审批人
+	processors := c.resFetcher.GetAdminAuditors()
+	if !slices.Contains(processors, kt.User) {
+		logs.Errorf("not authorized to approve res plan sub ticket, user: %s, processors: %v, rid: %s",
+			kt.User, processors, kt.Rid)
+		return errors.New("not authorized to approve res plan sub ticket")
+	}
+
+	// 查询数据
+	subTicket, err := c.getSubTicketByBiz(kt, subTicketID, bizID)
+	if err != nil {
+		logs.Errorf("failed to get sub_ticket status info, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+
+	// 校验状态
+	if !subTicket.IsInAdminAuditing() {
+		logs.Errorf("sub ticket: %s is not in admin auditing, now status: %s, stage: %s, rid: %s",
+			subTicket.ID, subTicket.Status.Name(), subTicket.Stage, kt.Rid)
+	}
+
+	// 审批，改变子单状态
+	err = c.approveResPlanTicketAdmin(kt, subTicket, req)
+	if err != nil {
+		logs.Errorf("failed to approve res plan ticket admin, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+	return nil
+}
+
+func (c *Controller) approveResPlanTicketAdmin(kt *kit.Kit, subTicket *rpst.ResPlanSubTicketTable,
+	req *ptypes.AuditResPlanTicketAdminReq) error {
+
+	var demandsStruct rpt.ResPlanDemands
+	if err := json.Unmarshal([]byte(subTicket.SubDemands), &demandsStruct); err != nil {
+		logs.Errorf("failed to unmarshal sub ticket demands, err: %v, id: %s, rid: %s", err,
+			subTicket.ID, kt.Rid)
+		return err
+	}
+	if len(demandsStruct) == 0 {
+		logs.Errorf("sub ticket demands is empty, id: %s, rid: %s", subTicket.ID, kt.Rid)
+		return fmt.Errorf("sub ticket %s demands is empty", subTicket.ID)
+	}
+
+	var subTicketType enumor.RPTicketType
+	ticketStatus := enumor.RPSubTicketStatusRejected
+	adminAuditStatus := enumor.RPAdminAuditStatusRejected
+	if cvt.PtrToVal(req.Approval) {
+		// 审批通过
+		adminAuditStatus = enumor.RPAdminAuditStatusDone
+		if !cvt.PtrToVal(req.UseTransferPool) {
+			// 不使用中转池，根据单据需求情况修改子单类型
+			subTicketType = enumor.RPTicketTypeAdjust
+			if demandsStruct[0].Original == nil {
+				subTicketType = enumor.RPTicketTypeAdd
+			}
+			if demandsStruct[0].Updated == nil {
+				subTicketType = enumor.RPTicketTypeDelete
+			}
+		}
+	}
+
+	updateItem := rpproto.ResPlanSubTicketUpdateReq{
+		ID:                 subTicket.ID,
+		SubType:            subTicketType,
+		Status:             ticketStatus,
+		AdminAuditStatus:   adminAuditStatus,
+		AdminAuditOperator: kt.User,
+		AdminAuditAt:       time.Now().Format(constant.DateTimeLayout),
+	}
+
+	updateReq := &rpproto.ResPlanSubTicketBatchUpdateReq{
+		SubTickets: []rpproto.ResPlanSubTicketUpdateReq{updateItem},
+	}
+	return c.client.DataService().Global.ResourcePlan.BatchUpdateResPlanSubTicket(kt, updateReq)
+}
+
+func (c *Controller) getSubTicketByBiz(kt *kit.Kit, subTicketID string, bizID int64) (
+	*rpst.ResPlanSubTicketTable, error) {
+
+	rules := []*filter.AtomRule{tools.RuleEqual("id", subTicketID)}
+	if bizID != constant.AttachedAllBiz {
+		rules = append(rules, tools.RuleEqual("bk_biz_id", bizID))
+	}
+	listReq := &rpproto.ResPlanSubTicketListReq{
+		ListReq: core.ListReq{
+			Filter: tools.ExpressionAnd(rules...),
+			Page:   core.NewDefaultBasePage(),
+			Fields: []string{"id", "sub_demands", "status", "stage", "admin_audit_status", "crp_sn", "crp_url"},
+		},
+	}
+	rst, err := c.client.DataService().Global.ResourcePlan.ListResPlanSubTicket(kt, listReq)
+	if err != nil {
+		logs.Errorf("failed to list sub ticket, err: %v, id: %s, bk_biz_id: %d, rid: %s", err, subTicketID,
+			bizID, kt.Rid)
+		return nil, err
+	}
+
+	if len(rst.Details) < 1 {
+		logs.Errorf("get sub ticket by biz, but len details != 1, id: %s, bk_biz_id: %d, rid: %s",
+			subTicketID, bizID, kt.Rid)
+		return nil, fmt.Errorf("cannot found sub_ticket: %s for biz %d", subTicketID, bizID)
+	}
+
+	ticketInfo := rst.Details[0]
+	return &ticketInfo, nil
 }
 
 // GetResPlanTicketStatusByBiz 检查ticket是否存在，并校验业务id是否正确， bizID 为-1 表示不限制业务条件
@@ -301,10 +484,10 @@ func (c *Controller) GetResPlanTicketStatusByBiz(kt *kit.Kit, ticketID string, b
 	result := &ptypes.GetRPTicketStatusInfo{
 		Status:     detail.Status,
 		StatusName: detail.Status.Name(),
-		ItsmSn:     detail.ItsmSn,
-		ItsmUrl:    detail.ItsmUrl,
-		CrpSn:      detail.CrpSn,
-		CrpUrl:     detail.CrpUrl,
+		ItsmSN:     detail.ItsmSN,
+		ItsmURL:    detail.ItsmURL,
+		CrpSN:      detail.CrpSN,
+		CrpURL:     detail.CrpURL,
 		Message:    detail.Message,
 	}
 

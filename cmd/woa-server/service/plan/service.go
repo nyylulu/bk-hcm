@@ -84,6 +84,29 @@ func (s *service) initPlanService(h *rest.Handler) {
 		"/plans/resources/tickets/{ticket_id}/approve_itsm_node", s.ApproveResPlanTicketITSMNode)
 	h.Add("ApproveBizResPlanTicketITSMNode", http.MethodPost,
 		"/bizs/{bk_biz_id}/plans/resources/tickets/{ticket_id}/approve_itsm_node", s.ApproveBizResPlanTicketITSMNode)
+	h.Add("RetryResPlanTicket", http.MethodPost,
+		"/plans/resources/tickets/{ticket_id}/retry", s.RetryResPlanTicket)
+	h.Add("RetryBizResPlanTicket", http.MethodPost,
+		"/bizs/{bk_biz_id}/plans/resources/tickets/{ticket_id}/retry", s.RetryBizResPlanTicket)
+
+	// sub_ticket
+	h.Add("ListBizResPlanSubTicket", http.MethodPost, "/bizs/{bk_biz_id}/plans/resources/sub_tickets/list",
+		s.ListBizResPlanSubTicket)
+	h.Add("ListResPlanSubTicket", http.MethodPost, "/plans/resources/sub_tickets/list",
+		s.ListResPlanSubTicket)
+	h.Add("GetResPlanSubTicketDetail", http.MethodGet, "/plans/resources/sub_tickets/{sub_ticket_id}",
+		s.GetResPlanSubTicketDetail)
+	h.Add("GetBizResPlanSubTicketDetail", http.MethodGet,
+		"/bizs/{bk_biz_id}/plans/resources/sub_tickets/{sub_ticket_id}", s.GetBizResPlanSubTicketDetail)
+	h.Add("GetResPlanSubTicketAudit", http.MethodGet, "/plans/resources/sub_tickets/{sub_ticket_id}/audit",
+		s.GetResPlanSubTicketAudit)
+	h.Add("GetBizResPlanSubTicketAudit", http.MethodGet,
+		"/bizs/{bk_biz_id}/plans/resources/sub_tickets/{sub_ticket_id}/audit", s.GetBizResPlanSubTicketAudit)
+	h.Add("ApproveResPlanTicketAdminNode", http.MethodPost,
+		"/plans/resources/sub_tickets/{sub_ticket_id}/approve_admin_node", s.ApproveResPlanSubTicketAdminNode)
+	h.Add("ApproveBizResPlanTicketAdminNode", http.MethodPost,
+		"/bizs/{bk_biz_id}/plans/resources/sub_tickets/{sub_ticket_id}/approve_admin_node",
+		s.ApproveBizResPlanSubTicketAdminNode)
 
 	// demand
 	h.Add("ListResPlanDemand", http.MethodPost, "/plans/resources/demands/list", s.ListResPlanDemand)

@@ -56,6 +56,18 @@ type Fetcher interface {
 	// GetResPlanTicketAudit get res plan ticket audit
 	GetResPlanTicketAudit(kt *kit.Kit, ticketID string, bkBizID int64) (*ptypes.GetResPlanTicketAuditResp, error)
 
+	// ListResPlanSubTicket list resource plan sub_ticket.
+	ListResPlanSubTicket(kt *kit.Kit, req *ptypes.ListResPlanSubTicketReq) (*ptypes.ListResPlanSubTicketResp, error)
+	// GetResPlanSubTicketDetail get resource plan sub_ticket detail.
+	GetResPlanSubTicketDetail(kt *kit.Kit, subTicketID string) (*ptypes.GetSubTicketDetailResp, string, error)
+	// GetResPlanSubTicketAudit get res plan sub ticket audit
+	GetResPlanSubTicketAudit(kt *kit.Kit, bizID int64, subTicketID string) (*ptypes.GetSubTicketAuditResp, string,
+		error)
+	// GetAdminAuditors get admin auditors
+	GetAdminAuditors() []string
+	// GetSubTicketInfo get sub ticket info
+	GetSubTicketInfo(kt *kit.Kit, subTicketID string) (*ptypes.SubTicketInfo, error)
+
 	// GetCrpCurrentApprove get crp current approve
 	GetCrpCurrentApprove(kt *kit.Kit, bkBizID int64, orderID string) ([]*ptypes.CrpAuditStep, error)
 	// GetCrpApproveLogs get crp approve logs

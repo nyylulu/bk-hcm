@@ -49,22 +49,22 @@ import (
 // applyResPlanDemandChange apply res plan demand change.
 func (d *Dispatcher) applyResPlanDemandChange(kt *kit.Kit, ticket *ptypes.TicketInfo) error {
 	// call crp api to get plan order change info.
-	changeDemandsOri, err := d.QueryCrpOrderChangeInfo(kt, ticket.CrpSn)
+	changeDemandsOri, err := d.QueryCrpOrderChangeInfo(kt, ticket.CrpSN)
 	if err != nil {
-		logs.Errorf("failed to query crp order change info, err: %v, crp_sn: %s, rid: %s", err, ticket.CrpSn,
+		logs.Errorf("failed to query crp order change info, err: %v, crp_sn: %s, rid: %s", err, ticket.CrpSN,
 			kt.Rid)
 		return err
 	}
 	// 需要先把key相同的预测数据聚合，避免过大的扣减在数据库中不存在
 	changeDemandsMap, err := d.aggregateDemandChangeInfo(kt, changeDemandsOri, ticket)
 	if err != nil {
-		logs.Errorf("failed to aggregate demand change info, err: %v, crp_sn: %s, rid: %s", err, ticket.CrpSn,
+		logs.Errorf("failed to aggregate demand change info, err: %v, crp_sn: %s, rid: %s", err, ticket.CrpSN,
 			kt.Rid)
 		return err
 	}
 
 	logs.Infof("aggregate demand change info start, ticketID: %s, crpSn: %s, changeDemandsMap: %+v, rid: %s",
-		ticket.ID, ticket.CrpSn, cvt.PtrToSlice(maps.Values(changeDemandsMap)), kt.Rid)
+		ticket.ID, ticket.CrpSN, cvt.PtrToSlice(maps.Values(changeDemandsMap)), kt.Rid)
 
 	// changeDemand可能会在扣减时模糊匹配到同一个需求，因此需要在扣减操作生效前记录扣减量，最后统一执行
 	upsertReq, updatedIDs, createLogReq, updateLogReq, err := d.prepareResPlanDemandChangeReq(kt, ticket,
@@ -105,7 +105,7 @@ func (d *Dispatcher) applyResPlanDemandChange(kt *kit.Kit, ticket *ptypes.Ticket
 	}
 
 	logs.Infof("aggregate demand change info end, ticketID: %s, crpSn: %s, createdIDs: %v, updatedIDs: %v, rid: %s",
-		ticket.ID, ticket.CrpSn, createdIDs, updatedIDs, kt.Rid)
+		ticket.ID, ticket.CrpSN, createdIDs, updatedIDs, kt.Rid)
 
 	return nil
 }
@@ -274,7 +274,7 @@ func convUpdateResPlanDemandReqs(kt *kit.Kit, ticket *ptypes.TicketInfo,
 		logCreateReq := rpproto.DemandChangelogCreate{
 			DemandID:       demandID,
 			TicketID:       ticket.ID,
-			CrpOrderID:     ticket.CrpSn,
+			CrpOrderID:     ticket.CrpSN,
 			SuborderID:     "",
 			Type:           enumor.DemandChangelogTypeAdjust,
 			ExpectTime:     expectTimeStr,
@@ -714,7 +714,7 @@ func convCreateResPlanDemandReqs(kt *kit.Kit, ticket *ptypes.TicketInfo, demand 
 		// DemandID 需要在demand创建后补充
 		DemandID:       "",
 		TicketID:       ticket.ID,
-		CrpOrderID:     ticket.CrpSn,
+		CrpOrderID:     ticket.CrpSN,
 		SuborderID:     "",
 		Type:           enumor.DemandChangelogTypeAppend,
 		ExpectTime:     expectTimeFormat.Format(constant.DateLayout),
@@ -770,10 +770,8 @@ func (d *Dispatcher) ApplyResPlanDemandChangeFromRPTickets(kt *kit.Kit, tickets 
 			Demands:          demands,
 			SubmittedAt:      ticket.SubmittedAt,
 			Status:           ticket.Status,
-			ItsmSn:           ticket.ItsmSn,
-			ItsmUrl:          ticket.ItsmSn,
-			CrpSn:            ticket.CrpSn,
-			CrpUrl:           ticket.CrpSn,
+			ItsmSN:           ticket.ItsmSN,
+			CrpSN:            ticket.CrpSN,
 		}
 
 		if err := d.applyResPlanDemandChange(kt, ticketInfo); err != nil {

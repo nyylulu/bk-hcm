@@ -92,3 +92,9 @@ const (
 	// IEGResPlanServiceProductName CRP预测
 	IEGResPlanServiceProductName = "IEG资源预测服务"
 )
+
+// AdminAuditStepName 管理员审批阶段名称
+const AdminAuditStepName = "管理员审批"
+
+// AdminHandler 管理员用户列表，兜底
+const AdminHandler = "dommyzhang;forestchen"

@@ -403,10 +403,10 @@ func (c *Controller) calcPenaltyBaseCoreByTicket(kt *kit.Kit, tickets []rtypes.R
 		}
 		bizOrgRelMap[ticket.BkBizID] = bizOrgRel
 		// TODO Controller 调用 dispatcher 下的 QueryCrpOrderChangeInfo 方法不太合适，应再抽象一层
-		changes, err := c.dispatcher.QueryCrpOrderChangeInfo(kt, ticket.CrpSn)
+		changes, err := c.dispatcher.QueryCrpOrderChangeInfo(kt, ticket.CrpSN)
 		if err != nil {
 			logs.Errorf("failed to query crp order change info, err: %v, ticket_id: %s, crp_cn: %s, rid: %s",
-				err, ticket.ID, ticket.CrpSn, kt.Rid)
+				err, ticket.ID, ticket.CrpSN, kt.Rid)
 			return nil, nil, err
 		}
 		for _, change := range changes {

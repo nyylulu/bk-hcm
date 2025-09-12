@@ -183,6 +183,44 @@ func (b *ResourcePlanClient) DeleteResPlanWeek(kt *kit.Kit, req *dataproto.Batch
 		b.client, rest.DELETE, kt, req, "/res_plans/res_plan_weeks/batch")
 }
 
+// --- res plan sub ticket ---
+
+// ListResPlanSubTicket list resource plan sub ticket
+func (b *ResourcePlanClient) ListResPlanSubTicket(kt *kit.Kit, req *rpproto.ResPlanSubTicketListReq) (
+	*rpproto.ResPlanSubTicketListResult, error) {
+
+	return common.Request[rpproto.ResPlanSubTicketListReq, rpproto.ResPlanSubTicketListResult](
+		b.client, rest.POST, kt, req, "/res_plans/res_plan_sub_tickets/list")
+}
+
+// BatchCreateResPlanSubTicket batch create resource plan sub ticket
+func (b *ResourcePlanClient) BatchCreateResPlanSubTicket(kt *kit.Kit, req *rpproto.ResPlanSubTicketBatchCreateReq) (
+	*core.BatchCreateResult, error) {
+
+	return common.Request[rpproto.ResPlanSubTicketBatchCreateReq, core.BatchCreateResult](
+		b.client, rest.POST, kt, req, "/res_plans/res_plan_sub_tickets/batch/create")
+}
+
+// BatchUpdateResPlanSubTicket update resource plan sub ticket
+func (b *ResourcePlanClient) BatchUpdateResPlanSubTicket(kt *kit.Kit,
+	req *rpproto.ResPlanSubTicketBatchUpdateReq) error {
+	return common.RequestNoResp[rpproto.ResPlanSubTicketBatchUpdateReq](
+		b.client, rest.PATCH, kt, req, "/res_plans/res_plan_sub_tickets/batch")
+}
+
+// UpdateResPlanSubTicketStatusCAS update resource plan sub ticket status with CAS
+func (b *ResourcePlanClient) UpdateResPlanSubTicketStatusCAS(kt *kit.Kit,
+	req *rpproto.ResPlanSubTicketStatusUpdateReq) error {
+	return common.RequestNoResp[rpproto.ResPlanSubTicketStatusUpdateReq](
+		b.client, rest.PATCH, kt, req, "/res_plans/res_plan_sub_tickets/status/cas")
+}
+
+// DeleteResPlanSubTicket delete resource plan sub ticket
+func (b *ResourcePlanClient) DeleteResPlanSubTicket(kt *kit.Kit, req *dataproto.BatchDeleteReq) error {
+	return common.RequestNoResp[dataproto.BatchDeleteReq](
+		b.client, rest.DELETE, kt, req, "/res_plans/res_plan_sub_tickets/batch")
+}
+
 // --- woa device type ---
 
 // ListWoaDeviceType list woa device type

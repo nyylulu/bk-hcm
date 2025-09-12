@@ -17,25 +17,37 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package resourceplan ...
-package resourceplan
+// Package resplansubticket ...
+package resplansubticket
 
 import (
+	"net/http"
+
 	"hcm/cmd/data-service/service/capability"
-	resplandemand "hcm/cmd/data-service/service/resource-plan/res-plan-demand"
-	demandchangelog "hcm/cmd/data-service/service/resource-plan/res-plan-demand-changelog"
-	demandpenaltybase "hcm/cmd/data-service/service/resource-plan/res-plan-demand-penalty-base"
-	resplansubticket "hcm/cmd/data-service/service/resource-plan/res-plan-sub-ticket"
-	transferappliedrecord "hcm/cmd/data-service/service/resource-plan/res-plan-transfer-applied-record"
-	resplanweek "hcm/cmd/data-service/service/resource-plan/res-plan-week"
+	"hcm/pkg/dal/dao"
+	"hcm/pkg/rest"
 )
 
-// InitService initial the resource plan service.
+// InitService initialize the res plan sub ticket service
 func InitService(cap *capability.Capability) {
-	resplandemand.InitService(cap)
-	demandpenaltybase.InitService(cap)
-	demandchangelog.InitService(cap)
-	resplanweek.InitService(cap)
-	transferappliedrecord.InitService(cap)
-	resplansubticket.InitService(cap)
+	svc := &service{
+		dao: cap.Dao,
+	}
+	h := rest.NewHandler()
+	h.Add("BatchCreateResPlanSubTicket", http.MethodPost, "/res_plans/res_plan_sub_tickets/batch/create",
+		svc.BatchCreateResPlanSubTicket)
+	h.Add("DeleteResPlanSubTicket", http.MethodDelete, "/res_plans/res_plan_sub_tickets/batch",
+		svc.DeleteResPlanSubTicket)
+	h.Add("ListResPlanSubTicket", http.MethodPost, "/res_plans/res_plan_sub_tickets/list",
+		svc.ListResPlanSubTicket)
+	h.Add("BatchUpdateResPlanSubTicket", http.MethodPatch, "/res_plans/res_plan_sub_tickets/batch",
+		svc.BatchUpdateResPlanSubTicket)
+	h.Add("UpdateResPlanSubTicketStatusCAS", http.MethodPatch, "/res_plans/res_plan_sub_tickets/status/cas",
+		svc.UpdateResPlanSubTicketStatusCAS)
+
+	h.Load(cap.WebService)
+}
+
+type service struct {
+	dao dao.Set
 }

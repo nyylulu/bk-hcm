@@ -41,6 +41,6 @@ type RPTicketWithStatus struct {
 	rpt.ResPlanTicketTable
 	Status     enumor.RPTicketStatus `json:"status"`
 	StatusName string                `json:"status_name"`
-	ItsmSn     string                `db:"itsm_sn" json:"-"`
-	CrpSn      string                `db:"crp_sn" json:"-"`
+	ItsmSN     string                `db:"itsm_sn" json:"-"`
+	CrpSN      string                `db:"crp_sn" json:"-"`
 }

@@ -138,6 +138,19 @@ type Logics interface {
 	// UpdatePlanTransferQuotaConfigs 更新预测转移额度配置
 	UpdatePlanTransferQuotaConfigs(kt *kit.Kit, req *ptypes.UpdatePlanTransferQuotaConfigsReq) error
 
+	// ListResPlanSubTicket list res plan sub ticket.
+	ListResPlanSubTicket(kt *kit.Kit, req *ptypes.ListResPlanSubTicketReq) (*ptypes.ListResPlanSubTicketResp, error)
+	// GetResPlanSubTicketDetail get res plan sub ticket detail.
+	GetResPlanSubTicketDetail(kt *kit.Kit, subTicketID string) (*ptypes.GetSubTicketDetailResp, string, error)
+	// GetResPlanSubTicketAudit get res plan sub ticket audit.
+	GetResPlanSubTicketAudit(kt *kit.Kit, bizID int64, subTicketID string) (*ptypes.GetSubTicketAuditResp, string,
+		error)
+	// ApproveResPlanSubTicketAdmin approve res plan ticket admin.
+	ApproveResPlanSubTicketAdmin(kt *kit.Kit, subTicketID string, bizID int64,
+		req *ptypes.AuditResPlanTicketAdminReq) error
+	// RetryResPlanFailedSubTickets retry res plan failed sub tickets.
+	RetryResPlanFailedSubTickets(kt *kit.Kit, ticketID string, subTicketIDs []string) error
+
 	// CreateDemandWeek create demand week.
 	CreateDemandWeek(kt *kit.Kit, createReqs []rpproto.ResPlanWeekCreateReq) (*core.BatchCreateResult, error)
 
@@ -302,8 +315,8 @@ func (c *Controller) CreateAuditFlow(kt *kit.Kit, ticketID string) error {
 	update := &rpts.ResPlanTicketStatusTable{
 		TicketID: ticketID,
 		Status:   enumor.RPTicketStatusAuditing,
-		ItsmSn:   sn,
-		ItsmUrl:  itsmStatus.Data.TicketUrl,
+		ItsmSN:   sn,
+		ItsmURL:  itsmStatus.Data.TicketUrl,
 	}
 
 	if err = c.updateTicketStatus(kt, update); err != nil {

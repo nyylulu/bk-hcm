@@ -151,12 +151,12 @@ func (d *Dispatcher) dealTicket() error {
 		return nil
 	}
 
-	if tkInfo.ItsmSn == "" {
+	if tkInfo.ItsmSN == "" {
 		logs.Errorf("failed to handle ticket for itsm sn is empty, id: %s, rid: %s", tkID, kt.Rid)
 		return errors.New("failed to handle ticket for itsm sn is empty")
 	}
 
-	if tkInfo.CrpSn != "" {
+	if tkInfo.CrpSN != "" {
 		return d.checkCrpTicket(kt, tkInfo)
 	}
 
@@ -164,7 +164,7 @@ func (d *Dispatcher) dealTicket() error {
 }
 
 func (d *Dispatcher) checkCrpTicket(kt *kit.Kit, ticket *ptypes.TicketInfo) error {
-	logs.Infof("ready to check crp flow, sn: %s, id: %s, rid: %s", ticket.CrpSn, ticket.ID, kt.Rid)
+	logs.Infof("ready to check crp flow, sn: %s, id: %s, rid: %s", ticket.CrpSN, ticket.ID, kt.Rid)
 
 	req := &cvmapi.QueryPlanOrderReq{
 		ReqMeta: cvmapi.ReqMeta{
@@ -173,7 +173,7 @@ func (d *Dispatcher) checkCrpTicket(kt *kit.Kit, ticket *ptypes.TicketInfo) erro
 			Method:  cvmapi.CvmCbsPlanOrderQueryMethod,
 		},
 		Params: &cvmapi.QueryPlanOrderParam{
-			OrderIds: []string{ticket.CrpSn},
+			OrderIds: []string{ticket.CrpSN},
 		},
 	}
 	resp, err := d.crpCli.QueryPlanOrder(kt.Ctx, nil, req)
@@ -183,34 +183,34 @@ func (d *Dispatcher) checkCrpTicket(kt *kit.Kit, ticket *ptypes.TicketInfo) erro
 	}
 	if resp.Error.Code != 0 {
 		logs.Errorf("%s: failed to query crp plan order, code: %d, msg: %s, crp_sn: %s, rid: %s",
-			constant.ResPlanTicketWatchFailed, resp.Error.Code, resp.Error.Message, ticket.CrpSn, kt.Rid)
+			constant.ResPlanTicketWatchFailed, resp.Error.Code, resp.Error.Message, ticket.CrpSN, kt.Rid)
 		return fmt.Errorf("failed to query crp plan order, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
 	}
 	if resp.Result == nil {
 		logs.Errorf("%s: failed to query crp plan order, for result is empty, crp_sn: %s, rid: %s",
-			constant.ResPlanTicketWatchFailed, ticket.CrpSn, kt.Rid)
+			constant.ResPlanTicketWatchFailed, ticket.CrpSN, kt.Rid)
 		return errors.New("failed to query crp plan order, for result is empty")
 	}
-	planItem, ok := resp.Result[ticket.CrpSn]
+	planItem, ok := resp.Result[ticket.CrpSN]
 	if !ok {
 		logs.Errorf("%s: query crp plan order return no result by sn: %s, rid: %s",
-			constant.ResPlanTicketWatchFailed, ticket.CrpSn, kt.Rid)
-		return fmt.Errorf("query crp plan order return no result by sn: %s", ticket.CrpSn)
+			constant.ResPlanTicketWatchFailed, ticket.CrpSN, kt.Rid)
+		return fmt.Errorf("query crp plan order return no result by sn: %s", ticket.CrpSN)
 	}
 	// CRP返回状态码为： 1 追加单， 2 调整单， 3 订单不存在， 4 其它错误（只有1 和 2 是正确的）
 	if planItem.Code != 1 && planItem.Code != 2 {
 		logs.Errorf("%s: failed to query crp plan order, order status is incorrect, code: %d, data: %+v, rid: %s",
 			constant.ResPlanTicketWatchFailed, planItem.Code, planItem.Data, kt.Rid)
-		return fmt.Errorf("crp plan order status is incorrect, code: %d, sn: %s", planItem.Code, ticket.CrpSn)
+		return fmt.Errorf("crp plan order status is incorrect, code: %d, sn: %s", planItem.Code, ticket.CrpSN)
 	}
 
 	update := &rpts.ResPlanTicketStatusTable{
 		TicketID: ticket.ID,
 		Status:   enumor.RPTicketStatusAuditing,
-		ItsmSn:   ticket.ItsmSn,
-		ItsmUrl:  ticket.ItsmUrl,
-		CrpSn:    ticket.CrpSn,
-		CrpUrl:   ticket.CrpUrl,
+		ItsmSN:   ticket.ItsmSN,
+		ItsmURL:  ticket.ItsmURL,
+		CrpSN:    ticket.CrpSN,
+		CrpURL:   ticket.CrpURL,
 	}
 
 	switch planItem.Data.BaseInfo.Status {
@@ -245,9 +245,9 @@ func (d *Dispatcher) checkCrpTicket(kt *kit.Kit, ticket *ptypes.TicketInfo) erro
 }
 
 func (d *Dispatcher) checkItsmTicket(kt *kit.Kit, ticket *ptypes.TicketInfo) error {
-	logs.Infof("ready to check itsm flow, sn: %s, id: %s", ticket.ItsmSn, ticket.ID)
+	logs.Infof("ready to check itsm flow, sn: %s, id: %s", ticket.ItsmSN, ticket.ID)
 
-	resp, err := d.itsmCli.GetTicketStatus(kt, ticket.ItsmSn)
+	resp, err := d.itsmCli.GetTicketStatus(kt, ticket.ItsmSN)
 	if err != nil {
 		logs.Errorf("failed to get itsm ticket status, err: %v, id: %s, rid: %s", err, ticket.ID, kt.Rid)
 		return err
@@ -256,8 +256,8 @@ func (d *Dispatcher) checkItsmTicket(kt *kit.Kit, ticket *ptypes.TicketInfo) err
 	update := &rpts.ResPlanTicketStatusTable{
 		TicketID: ticket.ID,
 		Status:   enumor.RPTicketStatusRejected,
-		ItsmSn:   ticket.ItsmSn,
-		ItsmUrl:  ticket.ItsmUrl,
+		ItsmSN:   ticket.ItsmSN,
+		ItsmURL:  ticket.ItsmURL,
 	}
 
 	switch resp.Data.CurrentStatus {
@@ -324,10 +324,10 @@ func (d *Dispatcher) createCrpTicket(kt *kit.Kit, ticket *ptypes.TicketInfo) err
 	update := &rpts.ResPlanTicketStatusTable{
 		TicketID: ticket.ID,
 		Status:   enumor.RPTicketStatusAuditing,
-		ItsmSn:   ticket.ItsmSn,
-		ItsmUrl:  ticket.ItsmUrl,
-		CrpSn:    sn,
-		CrpUrl:   cvmapi.CvmPlanLinkPrefix + sn,
+		ItsmSN:   ticket.ItsmSN,
+		ItsmURL:  ticket.ItsmURL,
+		CrpSN:    sn,
+		CrpURL:   cvmapi.CvmPlanLinkPrefix + sn,
 	}
 
 	if err = d.updateTicketStatus(kt, update); err != nil {
@@ -357,7 +357,7 @@ func (d *Dispatcher) checkTicketTimeout(kt *kit.Kit, ticket *ptypes.TicketInfo) 
 
 // finishAuditFlow 单据的所有子单均已结单，汇总成功的子单并应用到本地
 func (d *Dispatcher) finishAuditFlow(kt *kit.Kit, ticket *ptypes.TicketInfo) error {
-	itsmStatus, err := d.itsmCli.GetTicketStatus(kt, ticket.ItsmSn)
+	itsmStatus, err := d.itsmCli.GetTicketStatus(kt, ticket.ItsmSN)
 	if err != nil {
 		logs.Errorf("failed to get itsm ticket status, err: %v, id: %s, rid: %s", err, ticket.ID, kt.Rid)
 		return err
@@ -366,7 +366,7 @@ func (d *Dispatcher) finishAuditFlow(kt *kit.Kit, ticket *ptypes.TicketInfo) err
 	// 将itsm单结单，如果itsm单已结单，继续走后续流程
 	if len(itsmStatus.Data.CurrentSteps) > 0 && itsmStatus.Data.CurrentSteps[0].StateId == d.crpAuditNode.ID {
 		approveReq := &itsm.ApproveReq{
-			Sn:       ticket.ItsmSn,
+			Sn:       ticket.ItsmSN,
 			StateID:  int(d.crpAuditNode.ID),
 			Approver: d.crpAuditNode.Approver,
 			Action:   "true",
@@ -402,10 +402,10 @@ func (d *Dispatcher) updateTicketStatusFailed(kt *kit.Kit, ticket *ptypes.Ticket
 	update := &rpts.ResPlanTicketStatusTable{
 		TicketID: ticket.ID,
 		Status:   enumor.RPTicketStatusFailed,
-		ItsmSn:   ticket.ItsmSn,
-		ItsmUrl:  ticket.ItsmUrl,
-		CrpSn:    ticket.CrpSn,
-		CrpUrl:   ticket.CrpUrl,
+		ItsmSN:   ticket.ItsmSN,
+		ItsmURL:  ticket.ItsmURL,
+		CrpSN:    ticket.CrpSN,
+		CrpURL:   ticket.CrpURL,
 		Message:  msg,
 	}
 

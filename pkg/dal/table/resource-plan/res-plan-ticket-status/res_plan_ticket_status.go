@@ -51,14 +51,14 @@ type ResPlanTicketStatusTable struct {
 	TicketID string `db:"ticket_id" json:"ticket_id" validate:"lte=64"`
 	// Status 单据状态
 	Status enumor.RPTicketStatus `db:"status" json:"status" validate:"lte=64"`
-	// ItsmSn 关联的ITSM单据编码
-	ItsmSn string `db:"itsm_sn" json:"itsm_sn" validate:"lte=64"`
-	// ItsmUrl 关联的ITSM单据链接
-	ItsmUrl string `db:"itsm_url" json:"itsm_url" validate:"lte=64"`
-	// CrpSn 关联的CRP单据编码
-	CrpSn string `db:"crp_sn" json:"crp_sn" validate:"lte=64"`
-	// CrpUrl 关联的CRP单据链接
-	CrpUrl string `db:"crp_url" json:"crp_url" validate:"lte=64"`
+	// ItsmSN 关联的ITSM单据编码
+	ItsmSN string `db:"itsm_sn" json:"itsm_sn" validate:"lte=64"`
+	// ItsmURL 关联的ITSM单据链接
+	ItsmURL string `db:"itsm_url" json:"itsm_url" validate:"lte=64"`
+	// CrpSN 关联的CRP单据编码
+	CrpSN string `db:"crp_sn" json:"crp_sn" validate:"lte=64"`
+	// CrpURL 关联的CRP单据链接
+	CrpURL string `db:"crp_url" json:"crp_url" validate:"lte=64"`
 	// Message 单据失败信息
 	Message string `db:"message" json:"message" validate:"lte=255"`
 	// CreatedAt 创建时间

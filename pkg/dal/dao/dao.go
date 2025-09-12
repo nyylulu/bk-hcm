@@ -156,6 +156,7 @@ type Set interface {
 	TCloudZiyanSGRule() securitygroup.TCloudZiyanSGRule
 
 	ResPlanTicket() resplan.ResPlanTicketInterface
+	ResPlanSubTicket() resplan.ResPlanSubTicketInterface
 	ResPlanDemand() resplan.ResPlanDemandInterface
 	ResPlanDemandPenaltyBase() resplan.DemandPenaltyBaseInterface
 	ResPlanDemandChangelog() resplan.DemandChangelogInterface
@@ -849,6 +850,15 @@ func (s *set) TCloudZiyanRegion() region.TCloudZiyanRegion {
 // ResPlanTicket resource plan ticket dao.
 func (s *set) ResPlanTicket() resplan.ResPlanTicketInterface {
 	return &resplan.ResPlanTicketDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
+// ResPlanSubTicket resource plan sub ticket dao.
+func (s *set) ResPlanSubTicket() resplan.ResPlanSubTicketInterface {
+	return &resplan.ResPlanSubTicketDao{
 		Orm:   s.orm,
 		IDGen: s.idGen,
 		Audit: s.audit,
