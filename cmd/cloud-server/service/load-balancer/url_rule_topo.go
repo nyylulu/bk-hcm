@@ -218,14 +218,14 @@ func (svc *lbSvc) buildUrlRuleDetail(kt *kit.Kit, vendor enumor.Vendor, info *cs
 
 		detail := cslb.UrlRuleDetail{
 			ID:          rule.ID,
-			Ip:          ip,
+			LbVips:      ip,
 			LblProtocol: string(lbl.Protocol),
 			LblPort:     int(lbl.Port),
 			RuleUrl:     rule.URL,
 			RuleDomain:  rule.Domain,
 			TargetCount: ruleIDTargetCountMap[rule.ID],
 			ListenerID:  lbl.CloudID,
-			LbID:        lb.ID,
+			CloudLbID:   lb.CloudID,
 		}
 		details = append(details, detail)
 	}

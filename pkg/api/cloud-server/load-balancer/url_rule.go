@@ -53,14 +53,14 @@ type ListUrlRulesByTopologyResp struct {
 // UrlRuleDetail url rule detail.
 type UrlRuleDetail struct {
 	ID          string `json:"id"`
-	Ip          string `json:"ip"`
+	LbVips      string `json:"lb_vips"`
 	LblProtocol string `json:"lbl_protocol"`
 	LblPort     int    `json:"lbl_port"`
 	RuleUrl     string `json:"rule_url"`
 	RuleDomain  string `json:"rule_domain"`
 	TargetCount int    `json:"target_count"`
 	ListenerID  string `json:"listener_id"`
-	LbID        string `json:"lb_id"`
+	CloudLbID   string `json:"cloud_lb_id"`
 }
 
 // HasLbConditions check if there are load balancer related query conditions

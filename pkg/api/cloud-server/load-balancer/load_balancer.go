@@ -1179,6 +1179,8 @@ type ListenerWithTopo struct {
 	NonZeroWeightTargetCount int                                 `json:"non_zero_weight_target_count"`
 	TargetGroupID            string                              `json:"target_group_id"`
 }
+
+// UrlRuleTopoInfo url rule topo info
 type UrlRuleTopoInfo struct {
 	Match    bool
 	LbMap    map[string]corelb.BaseLoadBalancer
