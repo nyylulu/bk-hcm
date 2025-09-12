@@ -14,7 +14,7 @@ image:
   pullPolicy: IfNotPresent
   pullSecrets: []
   # tag版本，不需要带v前缀
-  tag: 1.8.2.5-alpha.2
+  tag: 1.8.5.4
 
 apigwReleaseVersion: 1.0.0
 
@@ -813,6 +813,8 @@ bkLoginCookieName: ""
 bkItsmUrl: http://itsm.bk.com
 # HCM 地址
 bkHCMUrl: http://hcm.bk.com
+# HCM 网关地址
+bkApigwHCMUrl: http://hcm.bk.com
 # 中英文持久化设置cookie使用，一般设置为 .域名
 bkDomain: .bk.com
 # 蓝鲸配置平台创建业务页面跳转链接
@@ -1440,3 +1442,31 @@ compatibility:
 
 # ccHostPoolBiz cmdb host pool biz id
 ccHostPoolBiz: 1
+
+# defines bkbotapproval related settings.
+bkbotapproval:
+  # endpoints is a seed list of host:port addresses of api gateway nodes.
+  endpoints:
+    - demo.com
+  # appCode is the BlueKing app code of hcm to request api gateway.
+  appCode: bk-hcm
+  # appSecret is the BlueKing app secret of hcm to request api gateway.
+  appSecret: xxxxxxxxx
+  # user is the BlueKing user of hcm to request api gateway.
+  user: bk-hcm
+  # bkTicket is the BlueKing access ticket of hcm to request api gateway.
+  bkTicket:
+  # bkToken is the BlueKing access token of hcm to request api gateway.
+  bkToken:
+  # defines tls related options.
+  tls:
+    # server should be accessed without verifying the TLS certificate.
+    insecureSkipVerify:
+    # server requires TLS client certificate authentication.
+    certFile:
+    # server requires TLS client certificate authentication.
+    keyFile:
+    # trusted root certificates for server.
+    caFile:
+    # the password to decrypt the certificate.
+    password:

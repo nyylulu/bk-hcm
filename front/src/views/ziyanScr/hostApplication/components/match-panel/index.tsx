@@ -1,5 +1,5 @@
 import { defineComponent, ref } from 'vue';
-import './index.scss';
+import classes from './index.module.scss';
 import ComputedResource from './components/computed-resource';
 import CommonResource from './components/common-resource';
 import { Tab } from 'bkui-vue';
@@ -29,7 +29,7 @@ export default defineComponent({
     ];
 
     return () => (
-      <Tab v-model:active={activeName.value} type='unborder-card'>
+      <Tab v-model:active={activeName.value} type='unborder-card' class={classes['match-panel-container']}>
         {tabs.map(({ key, label, component }) => (
           <BkTabPanel key={key} label={label} name={key} renderDirective='if'>
             {component()}

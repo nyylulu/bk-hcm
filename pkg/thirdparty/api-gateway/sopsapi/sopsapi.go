@@ -100,7 +100,10 @@ func (c *sopsApi) GetTaskList(ctx context.Context, header http.Header, bkBizID i
 		return nil, fmt.Errorf("failed to parse get task list api, bkBizID: %d, errCode: %d, errMsg: %s",
 			bkBizID, resp.Code, resp.Message)
 	}
-
+	if resp.Data == nil {
+		return nil, fmt.Errorf("sops get task list failed, data is nil, bkBizID: %d, keyword: %d, response: %+v",
+			bkBizID, keyword, resp)
+	}
 	return resp.Data, nil
 }
 
@@ -146,6 +149,10 @@ func (c *sopsApi) CreateTask(ctx context.Context, header http.Header, templateID
 	if !resp.Result || resp.Code != 0 {
 		return nil, fmt.Errorf("failed to parse create task api, templateID: %d, bkBizID: %d, errCode: %d, "+
 			"errMsg: %s, req: %+v", templateID, bkBizID, resp.Code, resp.Message, req)
+	}
+	if resp.Data == nil {
+		return nil, fmt.Errorf("sops create task failed, data is nil, bkBizID: %d, templateID: %d, response: %+v",
+			templateID, bkBizID, resp)
 	}
 
 	return resp, nil
@@ -209,6 +216,11 @@ func (c *sopsApi) GetTaskStatus(ctx context.Context, header http.Header, taskID,
 			taskID, bkBizID, resp.Code, resp.Message)
 	}
 
+	if resp.Data == nil {
+		return nil, fmt.Errorf("sops get task status failed, data is nil, bkBizID: %d, taskID: %d, response: %+v",
+			bkBizID, taskID, resp)
+	}
+
 	return resp, nil
 }
 
@@ -241,7 +253,10 @@ func (c *sopsApi) GetTaskNodeDetail(ctx context.Context, header http.Header, tas
 		return nil, fmt.Errorf("failed to parse get task node detail api, taskID: %d, bkBizID: %d, nodeID: %s, "+
 			"errCode: %d, errMsg: %s", taskID, bkBizID, nodeID, resp.Code, resp.Message)
 	}
-
+	if resp.Data == nil {
+		return nil, fmt.Errorf("sops get task node detail failed, data is nil, bkBizID: %d, taskID: %d, nodeID: %s, response: %+v",
+			bkBizID, taskID, nodeID, resp)
+	}
 	return resp, nil
 }
 
@@ -279,7 +294,10 @@ func (c *sopsApi) GetTaskNodeData(kt *kit.Kit, header http.Header, taskID, bkBiz
 		return nil, fmt.Errorf("failed to parse get task node data api, taskID: %d, bkBizID: %d, nodeID: %s, "+
 			"subStacks: %s, errCode: %d, errMsg: %s", taskID, bkBizID, nodeID, subStacks, resp.Code, resp.Message)
 	}
-
+	if resp.Data == nil {
+		return nil, fmt.Errorf("sops get task node data failed, data is nil, bkBizID: %d, taskID: %d, nodeID: %s, "+
+			"subStacks: %v, response: %+v", bkBizID, taskID, nodeID, subStacks, resp)
+	}
 	return resp.Data, nil
 }
 
@@ -313,6 +331,9 @@ func (c *sopsApi) GetTaskDetail(kt *kit.Kit, header http.Header, taskID, bkBizID
 		return nil, fmt.Errorf("failed to parse get task node data api, taskID: %d, bkBizID: %d, "+
 			"errCode: %d, errMsg: %s", taskID, bkBizID, resp.Code, resp.Message)
 	}
-
+	if resp.Data == nil {
+		return nil, fmt.Errorf("sops get task detail, data is nil, bizID: %d, taskID: %d, resp: %+v",
+			bkBizID, taskID, resp)
+	}
 	return resp, nil
 }

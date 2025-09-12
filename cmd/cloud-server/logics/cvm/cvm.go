@@ -54,6 +54,8 @@ type Interface interface {
 	CvmResetSystem(kt *kit.Kit, params *TaskManageBaseReq) (string, error)
 	CvmPowerOperation(kt *kit.Kit, bkBizID int64, uniqueID string, source enumor.TaskManagementSource,
 		taskOperation enumor.TaskOperation, cvmList []corecvm.BaseCvm) (string, error)
+	CvmIdleCheck(kt *kit.Kit, bkBizID int64, bkHostIDs []int64, source enumor.TaskManagementSource,
+		cvmList []corecvm.Cvm[corecvm.TCloudZiyanHostExtension]) (string, string, error)
 }
 
 type cvm struct {
@@ -62,7 +64,6 @@ type cvm struct {
 	eip        eip.Interface
 	disk       disk.Interface
 	cmdbClient cmdb.Client
-	cmdb       cmdb.Client
 }
 
 // NewCvm new cvm.

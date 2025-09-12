@@ -46,8 +46,10 @@ type GcpCreditListResult = core.ListResultT[GcpCreditUsage]
 
 // GcpCreditUsage ...
 type GcpCreditUsage struct {
-	ProjectId string               `json:"project_id"`
-	Credits   []corebill.GcpCredit `json:"credits"`
+	ProjectId      string               `json:"project_id"`
+	SkuID          string               `json:"sku_id"`
+	SkuDescription string               `json:"sku_description"`
+	Credits        []corebill.GcpCredit `json:"credits"`
 
 	PromotionCredit        *decimal.Decimal `json:"promotion_credit"`
 	BillingAccountId       string           `json:"billing_account_id"`

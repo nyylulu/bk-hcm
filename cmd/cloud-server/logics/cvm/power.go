@@ -82,7 +82,7 @@ func (c *cvm) CvmPowerOperation(kt *kit.Kit, bkBizID int64, uniqueID string, sou
 		return "", err
 	}
 
-	if err = c.updateTaskManagementAndDetailsForPower(kt, taskManagementID, flowID, detailList); err != nil {
+	if err = c.updateTaskManagementAndDetailsForCvm(kt, taskManagementID, flowID, detailList); err != nil {
 		logs.Errorf("update task management and details failed, err: %v, rid: %s", err, kt.Rid)
 		return "", err
 	}
@@ -336,12 +336,14 @@ func (c *cvm) listTCloudZiyanCvmWithExt(kt *kit.Kit, ids []string) (
 	return result, nil
 }
 
-func (c *cvm) updateTaskManagementAndDetailsForPower(kt *kit.Kit, taskManagementID, flowID string, details []*cvmTaskDetail) error {
-
+func (c *cvm) updateTaskManagementAndDetailsForCvm(kt *kit.Kit, taskManagementID, flowID string, details []*cvmTaskDetail) error {
+	if len(details) == 0 {
+		return nil
+	}
 	for _, detail := range details {
 		detail.flowID = flowID
 	}
-	if err := c.updateTaskDetailsForPower(kt, details); err != nil {
+	if err := c.updateTaskDetailsForCvm(kt, details); err != nil {
 		logs.Errorf("update task details failed, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
@@ -353,7 +355,7 @@ func (c *cvm) updateTaskManagementAndDetailsForPower(kt *kit.Kit, taskManagement
 	return nil
 }
 
-func (c *cvm) updateTaskDetailsForPower(kt *kit.Kit, details []*cvmTaskDetail) error {
+func (c *cvm) updateTaskDetailsForCvm(kt *kit.Kit, details []*cvmTaskDetail) error {
 	if len(details) == 0 {
 		return nil
 	}

@@ -22,6 +22,7 @@ import (
 
 const timeLayout = "2006-01-02"
 
+// Rule ...
 type Rule interface {
 	GetDeep() int
 	Validate(option *RuleOption) (string, error)
@@ -30,8 +31,11 @@ type Rule interface {
 }
 
 // *************** define condition ************************
+
+// Condition ...
 type Condition string
 
+// Validate ...
 func (c Condition) Validate() error {
 	if c == ConditionAnd || c == ConditionOr {
 		return nil
@@ -39,6 +43,7 @@ func (c Condition) Validate() error {
 	return fmt.Errorf("unexpected condition: %s", c)
 }
 
+// ToMgo ...
 func (c Condition) ToMgo() (mgoOperator string, err error) {
 	switch c {
 	case ConditionOr:
@@ -56,6 +61,8 @@ var (
 )
 
 // *************** define operator ************************
+
+// Operator ...
 type Operator string
 
 var (
@@ -133,6 +140,7 @@ var SupportOperators = map[Operator]bool{
 	OperatorNotExist: true,
 }
 
+// Validate ...
 func (op Operator) Validate() error {
 	if support, ok := SupportOperators[op]; !support || !ok {
 		return fmt.Errorf("unsupported operator: %s", op)
@@ -141,16 +149,20 @@ func (op Operator) Validate() error {
 }
 
 // *************** define rule ************************
+
+// AtomRule ...
 type AtomRule struct {
 	Field    string      `json:"field"`
 	Operator Operator    `json:"operator"`
 	Value    interface{} `json:"value"`
 }
 
+// GetDeep ...
 func (r AtomRule) GetDeep() int {
 	return int(1)
 }
 
+// Validate ...
 func (r AtomRule) Validate(option *RuleOption) (string, error) {
 	if err := r.Operator.Validate(); err != nil {
 		return "operator", err
@@ -164,8 +176,10 @@ func (r AtomRule) Validate(option *RuleOption) (string, error) {
 	return "", nil
 }
 
+// Matcher ...
 type Matcher func(r AtomRule) bool
 
+// Match ...
 func (r AtomRule) Match(matcher Matcher) bool {
 	return matcher(r)
 }
@@ -194,7 +208,9 @@ func (r AtomRule) validateValue(option *RuleOption) error {
 		return validateNumericType(r.Value)
 	case OperatorDatetimeLess, OperatorDatetimeLessOrEqual, OperatorDatetimeGreater, OperatorDatetimeGreaterOrEqual:
 		return validateDatetimeStringType(r.Value)
-	case OperatorBeginsWith, OperatorNotBeginsWith, OperatorContains, OperatorNotContains, OperatorsEndsWith, OperatorNotEndsWith:
+	case OperatorBeginsWith, OperatorNotBeginsWith,
+		OperatorContains, OperatorNotContains,
+		OperatorsEndsWith, OperatorNotEndsWith:
 		return validateNotEmptyStringType(r.Value)
 	case OperatorIsEmpty, OperatorIsNotEmpty:
 		return nil
@@ -338,6 +354,8 @@ func (r AtomRule) ToMgo() (mgoFiler map[string]interface{}, key string, err erro
 }
 
 // *************** define query ************************
+
+// CombinedRule ...
 type CombinedRule struct {
 	Condition Condition `json:"condition"`
 	Rules     []Rule    `json:"rules"`
@@ -369,6 +387,7 @@ type RuleOption struct {
 	MaxConditionAndRulesCount int
 }
 
+// GetDeep ...
 func (r CombinedRule) GetDeep() int {
 	maxChildDeep := 1
 	for _, child := range r.Rules {
@@ -413,6 +432,7 @@ func (r CombinedRule) Validate(option *RuleOption) (string, error) {
 	return "", nil
 }
 
+// ToMgo ...
 func (r CombinedRule) ToMgo() (mgoFilter map[string]interface{}, key string, err error) {
 	if err := r.Condition.Validate(); err != nil {
 		return nil, "condition", err
@@ -438,6 +458,7 @@ func (r CombinedRule) ToMgo() (mgoFilter map[string]interface{}, key string, err
 	return mgoFilter, "", nil
 }
 
+// Match ...
 func (r CombinedRule) Match(matcher Matcher) bool {
 	if len(r.Rules) == 0 {
 		return true

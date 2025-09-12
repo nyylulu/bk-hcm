@@ -434,7 +434,6 @@ func (m *Matcher) updateApplyOrderToDb(kt *kit.Kit, order *types.ApplyOrder, mat
 				DeviceType: t.DeviceType,
 				Region:     t.RegionID,
 				Zone:       t.ZoneID,
-				DiskType:   t.DiskType,
 				CPUCore:    t.CpuCore,
 			}
 		})
@@ -484,7 +483,6 @@ func (m *Matcher) GetCpuCoreSum(kt *kit.Kit, deviceTypeCountMap map[types.Delive
 			DeviceType: deliverGroup.DeviceType,
 			RegionID:   deliverGroup.Region,
 			ZoneID:     deliverGroup.Zone,
-			DiskType:   deliverGroup.DiskType,
 		}
 		verifyGroupMap[verifyGroupKey] += deliveredCore
 	}
@@ -495,7 +493,6 @@ func (m *Matcher) GetCpuCoreSum(kt *kit.Kit, deviceTypeCountMap map[types.Delive
 			DeviceType: key.DeviceType,
 			RegionID:   key.RegionID,
 			ZoneID:     key.ZoneID,
-			DiskType:   key.DiskType,
 			CpuCore:    val,
 		})
 	}

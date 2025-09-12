@@ -66,6 +66,8 @@ type Client interface {
 	GetTicketLog(kt *kit.Kit, id string) (*GetTicketLogResp, error)
 	// ApproveNode 通过/拒绝 ITSM指定节点 自动识别 `审批意见`、`备注` 字段
 	ApproveNode(kt *kit.Kit, param *ApproveNodeOpt) error
+	// GetItsmConfig 获取itsm配置
+	GetItsmConfig() *cc.ApiGateway
 }
 
 // NewClient initialize a new itsm client
@@ -109,6 +111,11 @@ func (i *itsm) header(kt *kit.Kit) http.Header {
 	header.Set(constant.RidKey, kt.Rid)
 	header.Set(constant.BKGWAuthKey, i.config.GetAuthValue())
 	return header
+}
+
+// GetItsmConfig 获取itsm配置
+func (i *itsm) GetItsmConfig() *cc.ApiGateway {
+	return i.config
 }
 
 // CreateApplyTicket create itsm ticket

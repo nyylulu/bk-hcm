@@ -27,7 +27,7 @@
     <template #footer>
       <div class="footer">
         <bk-checkbox v-model="isAgree" class="agree-checkbox">确认需要屏蔽该单据的退还通知</bk-checkbox>
-        <dialog-footer
+        <modal-footer
           confirm-text="确认屏蔽"
           :disabled="!isAgree"
           :loading="rollingServerUsageStore.updateAppliedRecordsNoticeDisabledLoading"
@@ -46,7 +46,7 @@ import { RollingServerRecordItem, useRollingServerUsageStore } from '@/store';
 import { ModelPropertyDisplay } from '@/model/typings';
 
 import { Message } from 'bkui-vue';
-import DialogFooter from '@/components/common-dialog/dialog-footer.vue';
+import ModalFooter from '@/components/modal/modal-footer.vue';
 
 const model = defineModel<boolean>();
 const props = defineProps<{ details: RollingServerRecordItem }>();

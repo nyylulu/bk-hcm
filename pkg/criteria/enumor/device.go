@@ -19,7 +19,11 @@
 
 package enumor
 
-import "fmt"
+import (
+	"fmt"
+
+	"hcm/pkg/criteria/constant"
+)
 
 // DiskType is disk type.
 type DiskType string
@@ -29,6 +33,8 @@ const (
 	DiskPremium DiskType = "CLOUD_PREMIUM"
 	// DiskSSD disk cloud ssd.
 	DiskSSD DiskType = "CLOUD_SSD"
+	// DiskLocalBasic disk local basic.
+	DiskLocalBasic DiskType = "LOCAL_BASIC"
 	// DiskUnknown 当CRP出现拆单时，会出现云盘类型为空的情况，此时需在某些场景中特殊处理
 	DiskUnknown DiskType = "UNKNOWN"
 )
@@ -38,6 +44,7 @@ func (t DiskType) Validate() error {
 	switch t {
 	case DiskPremium:
 	case DiskSSD:
+	case DiskLocalBasic:
 	default:
 		return fmt.Errorf("unsupported disk type: %s", t)
 	}
@@ -56,9 +63,10 @@ func (t DiskType) GetWithDefault() DiskType {
 
 // diskTypeNameMap records disk type corresponding name.
 var diskTypeNameMap = map[DiskType]string{
-	DiskPremium: "高性能云硬盘",
-	DiskSSD:     "SSD云硬盘",
-	DiskUnknown: "",
+	DiskPremium:    "高性能云硬盘",
+	DiskSSD:        "SSD云硬盘",
+	DiskLocalBasic: "本地盘",
+	DiskUnknown:    "",
 }
 
 // Name return disk type name.
@@ -84,4 +92,28 @@ func GetDiskTypeFromCrpName(name string) (DiskType, error) {
 		}
 	}
 	return "", fmt.Errorf("unsupported disk type name: %s", name)
+}
+
+// DiskSpec disk specifications
+type DiskSpec struct {
+	DiskType DiskType `json:"disk_type"`
+	DiskSize uint     `json:"disk_size"`
+	DiskNum  uint     `json:"disk_num"`
+}
+
+// Validate DiskType.
+func (t DiskSpec) Validate() error {
+	if err := t.DiskType.Validate(); err != nil {
+		return err
+	}
+
+	if t.DiskSize < 0 || t.DiskSize > constant.DataDiskMaxSize {
+		return fmt.Errorf("invalid disk size: %d", t.DiskSize)
+	}
+
+	if t.DiskNum < 0 || t.DiskNum > constant.DataDiskTotalNum {
+		return fmt.Errorf("invalid disk num: %d", t.DiskNum)
+	}
+
+	return nil
 }

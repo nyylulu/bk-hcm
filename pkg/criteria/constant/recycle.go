@@ -30,5 +30,8 @@ const GlobalConfigTypeRecycle = "recycle"
 // RecycleDetectConcurrenceConfigKey 回收预检并发配置
 const RecycleDetectConcurrenceConfigKey = "detect_concurrence"
 
+// RecycleTransitHost2CRBatchSizeConfigKey 回收转CR模块单次请求批量大小
+const RecycleTransitHost2CRBatchSizeConfigKey = "transit_host2cr_batch_size"
+
 // DetectDefaultConcurrence 预检单个单据默认并发数
 const DetectDefaultConcurrence = 10

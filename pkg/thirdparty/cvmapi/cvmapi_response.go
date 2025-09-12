@@ -111,11 +111,12 @@ type InstanceItem struct {
 	SecurityGroupId string                `json:"securityGroupId"`
 	ImageName       string                `json:"imageName"`
 	PrivateVpcId    string                `json:"privateVpcId"`
-	CloudRegion     string                `json:"cloudRegion"`
-	PrivateSubnetId string                `json:"privateSubnetId"`
-	CreateTime      string                `json:"createTime"`
-	Pool            int                   `json:"pool"`
-	ObsProject      string                `json:"obsProject"`
+	// TODO CRP返回该字段为空，需确认
+	CloudRegion     string `json:"cloudRegion"`
+	PrivateSubnetId string `json:"privateSubnetId"`
+	CreateTime      string `json:"createTime"`
+	Pool            int    `json:"pool"`
+	ObsProject      string `json:"obsProject"`
 }
 
 // PlanOrderChangeResp cvm plan order change response

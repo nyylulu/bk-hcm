@@ -81,7 +81,7 @@ func (ds *taskServer) prepare(opt *options.Option) error {
 	// init service discovery.
 	svcOpt := serviced.NewServiceOption(cc.TaskServerName, cc.TaskServer().Network, opt.Sys)
 	discOpt := serviced.DiscoveryOption{
-		Services: []cc.Name{cc.DataServiceName, cc.HCServiceName},
+		Services: []cc.Name{cc.DataServiceName, cc.HCServiceName, cc.WoaServerName},
 	}
 	sd, err := serviced.NewServiceD(cc.TaskServer().Service, svcOpt, discOpt)
 	if err != nil {

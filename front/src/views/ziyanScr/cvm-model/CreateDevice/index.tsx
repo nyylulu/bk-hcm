@@ -5,7 +5,7 @@ import AreaSelector from '../../hostApplication/components/AreaSelector';
 import ZoneSelector from '../../hostApplication/components/ZoneSelector';
 import RequirementTypeSelector from '@/components/scr/requirement-type-selector';
 import apiService from '@/api/scrApi';
-import DialogFooter from '@/components/common-dialog/dialog-footer.vue';
+import ModalFooter from '@/components/modal/modal-footer.vue';
 
 export interface ICvmDeviceCreateModel {
   require_type: number[];
@@ -165,7 +165,7 @@ export default defineComponent({
                   该机型在CRP不存在，请确认是否添加
                 </bk-checkbox>
               )}
-              <DialogFooter
+              <ModalFooter
                 disabled={disabledSubmit.value}
                 loading={isSubmitLoading.value}
                 onConfirm={handleConfirm}

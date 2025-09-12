@@ -148,4 +148,6 @@ const (
 	TaskRebootCvm TaskOperation = "reboot_cvm"
 	// TaskCvmResetSystem is a task indicating that cvm reset system.
 	TaskCvmResetSystem TaskOperation = "cvm_reset_system"
+	// TaskIdleCheckCvm is a task indicating that idle check cvm.
+	TaskIdleCheckCvm TaskOperation = "idle_check_cvm"
 )

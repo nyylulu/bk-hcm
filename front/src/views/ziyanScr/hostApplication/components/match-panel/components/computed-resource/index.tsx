@@ -1,12 +1,11 @@
 import { defineComponent, ref, computed, reactive, watchEffect } from 'vue';
-import './index.scss';
+import classes from '../../index.module.scss';
 import http from '@/http';
-import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
 import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
-
-import { Button, Form, Message } from 'bkui-vue';
-import CommonLocalTable from '@/components/CommonLocalTable';
+import useTableSelection from '@/hooks/use-table-selection';
+import { Button, Form, Message, Table } from 'bkui-vue';
+import { Column } from 'bkui-vue/lib/table/props';
 import QcloudRegionSelector from '@/views/ziyanScr/components/qcloud-resource/region-selector.vue';
 import QcloudZoneSelector from '@/views/ziyanScr/components/qcloud-resource/zone-selector.vue';
 import DevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/index.vue';
@@ -24,7 +23,16 @@ export default defineComponent({
   },
   setup(props) {
     const { getBusinessApiPath } = useWhereAmI();
-    const { selections, handleSelectionChange } = useSelection();
+
+    const isRowSelectEnable = () => true;
+    const DATA_ROW_KEY = 'row_key';
+
+    const tableRef = ref(null);
+
+    const { selections, resetSelections, handleSelectAll, handleSelectChange } = useTableSelection({
+      isRowSelectable: isRowSelectEnable,
+      rowKey: DATA_ROW_KEY,
+    });
 
     const options = ref([
       { value: 'IDCPM', label: 'IDC_物理机' },
@@ -48,8 +56,8 @@ export default defineComponent({
       });
     });
 
-    const tableColumns = ref([
-      { type: 'selection', width: 30, minWidth: 30, isDefaultShow: true },
+    const tableColumns = ref<Column[]>([
+      { type: 'selection', width: 30, minWidth: 30 },
       { label: '机型', field: 'device_type' },
       {
         label: '地域',
@@ -79,9 +87,15 @@ export default defineComponent({
           `/api/v1/woa/${getBusinessApiPath()}pool/findmany/recall/match/device`,
           removeEmptyFields({ ...formModel }),
         );
-        deviceList.value = res.data?.info || [];
+        const list = res.data?.info || [];
+        deviceList.value = list.map((item: any, index: number) => ({
+          ...item,
+          [DATA_ROW_KEY]: `${item.device_type ?? ''}_${item.bk_cloud_zone ?? ''}_${index}`,
+        }));
       } finally {
         isLoading.value = false;
+        resetSelections();
+        tableRef.value?.clearSelection();
       }
     };
     const handleReset = () => {
@@ -133,9 +147,9 @@ export default defineComponent({
       props.handleClose();
     };
     return () => (
-      <div class={'apply-list-container'}>
-        <div class={'filter-container'}>
-          <Form model={formModel} class={'scr-form-wrapper'}>
+      <div class={classes['apply-list-container']}>
+        <div class={classes['filter-container']}>
+          <Form model={formModel} class={classes['scr-form-wrapper']}>
             <FormItem label='资源类型' property='resource_type'>
               <bk-select v-model={formModel.resource_type} onChange={onResourceTypeChange}>
                 {options.value.map((opt) => (
@@ -155,7 +169,6 @@ export default defineComponent({
             </FormItem>
             <FormItem label='机型' property='device_type'>
               <DevicetypeSelector
-                class='tbkselect'
                 v-model={formModel.spec.device_type}
                 resourceType={formModel.resource_type === 'QCLOUDCVM' ? 'cvm' : 'idcpm'}
                 params={cvmDevicetypeParams.value}
@@ -173,25 +186,29 @@ export default defineComponent({
         <Button theme='success' disabled={selections.value.length === 0} onClick={submitSelectedDevices} class={'ml24'}>
           手工匹配资源
         </Button>
-        <div class={'table-container'}>
-          {/* <CommonTable /> */}
-          <CommonLocalTable
-            loading={isLoading.value}
-            hasSearch={false}
-            tableOptions={{
-              rowKey: 'domain',
-              columns: tableColumns.value,
-              extra: {
-                onSelect: (selections: any) => {
-                  handleSelectionChange(selections, () => true, false);
-                },
-                onSelectAll: (selections: any) => {
-                  handleSelectionChange(selections, () => true, true);
-                },
-              },
+
+        <div class={classes['data-list-container']} v-bkloading={{ loading: isLoading.value }}>
+          <Table
+            ref={tableRef}
+            data={deviceList.value}
+            columns={tableColumns.value}
+            rowKey={DATA_ROW_KEY}
+            showOverflowTooltip={true}
+            isRowSelectEnable={isRowSelectEnable}
+            onSelectAll={handleSelectAll}
+            maxHeight={'calc(100vh - 350px)'}
+            onSelectionChange={handleSelectChange}>
+            {{
+              prepend: () =>
+                deviceList.value.length ? (
+                  <div class={classes['table-prepend']}>
+                    已{selections.value.length === deviceList.value.length ? '全选' : '选择'}机型总类：
+                    <em class={classes['selected-num']}>{selections.value.length}</em>， 待交付数：
+                    <em class={classes['pending-num']}>{props.formModelData.pending_num}</em>
+                  </div>
+                ) : null,
             }}
-            tableData={deviceList.value}
-          />
+          </Table>
         </div>
       </div>
     );

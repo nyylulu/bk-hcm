@@ -14,93 +14,22 @@
 package detector
 
 import (
-	"context"
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
+	"sync/atomic"
 
-	"hcm/cmd/woa-server/dal/task/dao"
-	"hcm/cmd/woa-server/dal/task/table"
-	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/enumor"
-	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/xrayapi"
 	"hcm/pkg/thirdparty/xshipapi"
+	"hcm/pkg/tools/classifier"
+	"hcm/pkg/tools/maps"
+	"hcm/pkg/tools/slice"
+
+	"golang.org/x/time/rate"
 )
-
-func (d *Detector) checkUwork(step *table.DetectStep, retry int) (int, string, error) {
-	kt := core.NewBackendKit()
-
-	attempt := 0
-	exeInfo := ""
-	var err error = nil
-
-	for i := 0; i < retry; i++ {
-		attempt = i
-		exeInfo, err = d.checkUworkPass(kt, step)
-		if err == nil {
-			break
-		}
-
-		// retry gap until last retry
-		if (i + 1) < retry {
-			time.Sleep(3 * time.Second)
-		}
-	}
-
-	return attempt, exeInfo, err
-}
-
-func (d *Detector) checkUworkPass(kt *kit.Kit, step *table.DetectStep) (string, error) {
-	exeInfos := make([]string, 0)
-
-	if step.User == "" {
-		logs.Errorf("failed to check uwork-xray ticket, for invalid user is empty, step id: %s, rid: %s", step.ID,
-			kt.Rid)
-		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to check uwork-xray, for invalid user is empty")
-	}
-
-	filter := &mapstr.MapStr{
-		"suborder_id": step.SuborderID,
-		"ip":          step.IP,
-	}
-	host, err := dao.Set().RecycleHost().GetRecycleHost(context.Background(), filter)
-	if err != nil {
-		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to get host asset id, err: %s, subOrderID: %s, "+
-			"stepIP: %s", err.Error(), step.SuborderID, step.IP)
-	}
-
-	// 获取尚未结单的故障单
-	exeInfo, ticketIDs, err := d.checkXrayFaultTickets(kt, host.AssetID)
-	if err != nil {
-		logs.Errorf("failed to check uwork-xray ticket, err: %v, stepIP: %s, assetID: %s, step id: %s, rid: %s",
-			err, step.IP, host.AssetID, step.ID, kt.Rid)
-		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to check uwork-xray, err: %v", err)
-	}
-
-	exeInfos = append(exeInfos, exeInfo)
-	if len(ticketIDs) > 0 {
-		return strings.Join(exeInfos, "\n"), fmt.Errorf("has uwork-xray tickets: %s", strings.Join(ticketIDs, ";"))
-	}
-
-	// 获取尚未结单的x-ship流程单
-	exeInfoProcess, processes, err := d.checkXShipProcess(kt, host.AssetID)
-	if err != nil {
-		logs.Errorf("failed to check uwork-xship process, err: %v, stepIP: %s, assetID: %s, step id: %s, rid: %s",
-			err, step.IP, host.AssetID, step.ID, kt.Rid)
-		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to check uwork-xship process, err: %v", err)
-	}
-
-	exeInfos = append(exeInfos, exeInfoProcess)
-	if len(processes) > 0 {
-		return strings.Join(exeInfos, "\n"), fmt.Errorf("has uwork-xship process: %s", strings.Join(processes, ";"))
-	}
-
-	return strings.Join(exeInfos, "\n"), nil
-}
 
 // GetUworkOpenTicketByAssetID 获取Uwork未完结的流程单
 func (d *Detector) GetUworkOpenTicketByAssetID(kt *kit.Kit, assetID string) ([]string, error) {
@@ -125,7 +54,7 @@ func (d *Detector) GetUworkOpenTicketByAssetID(kt *kit.Kit, assetID string) ([]s
 func (d *Detector) checkXrayFaultTickets(kt *kit.Kit, assetID string) (string, []string, error) {
 	var execInfo string
 
-	respTicket, err := d.xray.CheckXrayFaultTickets(kt.Ctx, kt.Header(), assetID, enumor.XrayFaultTicketNotEnd)
+	respTicket, err := d.xray.CheckXrayFaultTickets(kt, []string{assetID}, enumor.XrayFaultTicketNotEnd)
 	if err != nil {
 		logs.Errorf("failed to check uwork-xray ticket, err: %v, assetID: %s, rid: %s", err, assetID, kt.Rid)
 		return execInfo, nil, fmt.Errorf("failed to check uwork-xray, err: %v", err)
@@ -148,7 +77,7 @@ func (d *Detector) checkXrayFaultTickets(kt *kit.Kit, assetID string) (string, [
 func (d *Detector) checkXShipProcess(kt *kit.Kit, assetID string) (string, []string, error) {
 	var execInfo string
 
-	respProcess, err := d.xship.GetXServerProcess(kt.Ctx, kt.Header(), assetID)
+	respProcess, err := d.xship.GetXServerProcess(kt, assetID)
 	if err != nil {
 		logs.Errorf("failed to check uwork-xship process, err: %v, assetID: %s, rid: %s", err, assetID, kt.Rid)
 		return execInfo, nil, fmt.Errorf("failed to check uwork-xship, err: %v", err)
@@ -157,18 +86,229 @@ func (d *Detector) checkXShipProcess(kt *kit.Kit, assetID string) (string, []str
 	processRespStr := d.structToStr(respProcess)
 	execInfo = fmt.Sprintf("uwork-xship process response: %s", processRespStr)
 
-	if respProcess.Code != xshipapi.CodeSuccess {
-		return execInfo, nil, fmt.Errorf("check uwork-xship process api return err: %s", respProcess.Message)
-	}
-
-	if respProcess.Data == nil {
-		return execInfo, nil, errors.New("check uwork-xship process api return data is nil")
-	}
-
 	processes := make([]string, 0)
 	for _, process := range respProcess.Data.Processes {
 		processes = append(processes, fmt.Sprintf("%d(%s)", process.ID, process.Name))
 	}
 
 	return execInfo, processes, nil
+}
+
+// CheckUworkMaxBatchSize ...
+const CheckUworkMaxBatchSize = xrayapi.XRayCheckFaultTicketMaxLength
+
+// CheckUworkWorkGroup 检查是否有Uwork故障或流程单据
+type CheckUworkWorkGroup struct {
+	stepBatchChan chan *stepBatch
+	started       atomic.Bool
+	currency      int
+	xray          xrayapi.XrayClientInterface
+	xship         xshipapi.XshipClientInterface
+	resultHandler StepResultHandler
+	// xship 只有单个查询接口，需要限流
+	xshipRateLimiter *rate.Limiter
+}
+
+// MaxBatchSize ...
+func (p *CheckUworkWorkGroup) MaxBatchSize() int {
+	return CheckUworkMaxBatchSize
+}
+
+// NewCheckUworkWorkGroup ...
+func NewCheckUworkWorkGroup(xray xrayapi.XrayClientInterface, xship xshipapi.XshipClientInterface,
+	resultHandler StepResultHandler, workerNum int, limit int, burst int) *CheckUworkWorkGroup {
+
+	return &CheckUworkWorkGroup{
+		stepBatchChan:    make(chan *stepBatch, workerNum),
+		currency:         workerNum,
+		xray:             xray,
+		xship:            xship,
+		resultHandler:    resultHandler,
+		xshipRateLimiter: rate.NewLimiter(rate.Limit(limit), burst),
+	}
+}
+
+// Start 启动worker
+func (p *CheckUworkWorkGroup) Start(kt *kit.Kit) {
+	if !p.started.CompareAndSwap(false, true) {
+		// already started
+		return
+	}
+
+	for i := 0; i < p.currency; i++ {
+		subKit := kt.NewSubKit()
+		go p.queryWorker(subKit, i)
+	}
+}
+
+// HandleResult ...
+func (p *CheckUworkWorkGroup) HandleResult(kt *kit.Kit, steps []*StepMeta, detectErr error, log string,
+	needRetry bool) {
+
+	p.resultHandler.HandleResult(kt, steps, detectErr, log, needRetry)
+}
+
+func (p *CheckUworkWorkGroup) queryWorker(kt *kit.Kit, idx int) {
+	logs.Infof("check uwork query worker %d start, rid: %s", idx, kt.Rid)
+	defer logs.Infof("check uwork query worker %d exit, rid: %s", idx, kt.Rid)
+
+	for {
+		select {
+		case batch := <-p.stepBatchChan:
+			logs.V(4).Infof("check uwork worker %d got steps: %d:%s, rid: %s",
+				idx, len(batch.steps), batch.steps, kt.Rid)
+			p.Run(batch.kt, batch.steps)
+		case <-kt.Ctx.Done():
+			return
+		}
+	}
+}
+
+// Run 执行检查
+func (p *CheckUworkWorkGroup) Run(kt *kit.Kit, steps []*StepMeta) {
+	if len(steps) == 0 {
+		logs.Warnf("check uwork worker receive empty steps, rid: %s", kt.Rid)
+		return
+	}
+
+	hostMap := make(map[string][]*HostExecInfo, len(steps))
+	for _, step := range steps {
+		hostMap[step.Step.AssetID] = append(hostMap[step.Step.AssetID], &HostExecInfo{StepMeta: step})
+	}
+	assetIDs := maps.Keys(hostMap)
+
+	worker := checkUworkWorker{
+		xray:             p.xray,
+		xship:            p.xship,
+		hostMap:          hostMap,
+		resultHandler:    p,
+		xshipRateLimiter: p.xshipRateLimiter,
+	}
+	worker.checkAll(kt, assetIDs)
+}
+
+// Submit 提交检查
+func (p *CheckUworkWorkGroup) Submit(kt *kit.Kit, steps []*StepMeta) {
+	p.stepBatchChan <- &stepBatch{kt: kt, steps: steps}
+}
+
+// checkUworkWorker worker
+type checkUworkWorker struct {
+	xray             xrayapi.XrayClientInterface
+	xship            xshipapi.XshipClientInterface
+	hostMap          map[string][]*HostExecInfo
+	resultHandler    StepResultHandler
+	xshipRateLimiter *rate.Limiter
+}
+
+func (w *checkUworkWorker) checkAll(kt *kit.Kit, assetIDs []string) {
+	// 1. 检查尚未完结的故障单
+	opSuccessIDs := w.checkXrayFaultTickets(kt, assetIDs)
+
+	if len(opSuccessIDs) == 0 {
+		return
+	}
+
+	// 2. 检查尚未完结的x-ship流程单
+	w.checkXShipProcess(kt, opSuccessIDs)
+}
+
+// 获取尚未结单的故障单
+func (w *checkUworkWorker) checkXrayFaultTickets(kt *kit.Kit, assetIDs []string) (succeed []string) {
+	ticketResp, err := w.xray.CheckXrayFaultTickets(kt, assetIDs, enumor.XrayFaultTicketNotEnd)
+	if err != nil {
+		logs.Errorf("failed to check uwork-xray ticket, err: %v, assetIDs: %s, rid: %s", err, assetIDs, kt.Rid)
+		// fail all
+		w.handleHostBatchError(kt, assetIDs, err, err.Error())
+		return nil
+	}
+
+	succeed = make([]string, 0, len(assetIDs))
+	hostTicketMap := classifier.ClassifySlice(ticketResp.Data,
+		func(ticket *xrayapi.Ticket) string { return ticket.ServerAssetId })
+	for assetID, hostExecInfos := range w.hostMap {
+		tickets := hostTicketMap[assetID]
+		notEndedTicketIDs := make([]string, 0, len(tickets))
+		for _, ticket := range tickets {
+			if ticket.IsEnd == enumor.XrayFaultTicketNotEnd {
+				notEndedTicketIDs = append(notEndedTicketIDs, strconv.Itoa(ticket.InstanceID))
+			}
+		}
+		if len(notEndedTicketIDs) > 0 {
+			hostExecLog := fmt.Sprintf("%d xray ticket(s): %s", len(notEndedTicketIDs),
+				strings.Join(notEndedTicketIDs, ","))
+			hostExecError := fmt.Errorf("has uwork-xray tickets: %s", notEndedTicketIDs)
+			w.handleHostBatchResult(kt, []string{assetID}, hostExecError, hostExecLog)
+			continue
+		}
+		for _, hostExecInfo := range hostExecInfos {
+			hostExecInfo.ExecLog += fmt.Sprintf("xray ticket: %s", "no xray ticket")
+		}
+		// 检查成功
+		succeed = append(succeed, assetID)
+	}
+	return succeed
+}
+
+func (w *checkUworkWorker) checkXShipProcess(kt *kit.Kit, assetIDs []string) {
+	for _, assetID := range assetIDs {
+		hosts := w.hostMap[assetID]
+		err := w.xshipRateLimiter.Wait(kt.Ctx)
+		if err != nil {
+			hostExecErr := fmt.Errorf("failed to check uwork-xship wait rate limiter failed, err: %w", err)
+			w.handleHostBatchError(kt, []string{assetID}, hostExecErr, hostExecErr.Error())
+			continue
+		}
+
+		resp, err := w.xship.GetXServerProcess(kt, assetID)
+		if err != nil {
+			ips := make([]string, 0, len(hosts))
+			for _, host := range hosts {
+				ips = append(ips, host.Step.IP)
+			}
+			ips = slice.Unique(ips)
+			logs.Errorf("failed to check uwork-xship process, err: %v, assetID: %s, ip: %v, rid: %s",
+				err, assetID, ips, kt.Rid)
+			hostExecErr := fmt.Errorf("failed to check uwork-xship, err: %w", err)
+			w.handleHostBatchError(kt, []string{assetID}, hostExecErr, hostExecErr.Error())
+			continue
+		}
+		processRespStr := structToStr(resp)
+		execLog := fmt.Sprintf("\nuwork-xship process response: %s", processRespStr)
+		var execErr error
+		processes := make([]string, 0)
+		for _, process := range resp.Data.Processes {
+			processes = append(processes, fmt.Sprintf("%d(%s)", process.ID, process.Name))
+		}
+		if len(processes) > 0 {
+			// 标记失败
+			execErr = fmt.Errorf("has uwork-xship process: %s", strings.Join(processes, ";"))
+		}
+		w.handleHostBatchResult(kt, []string{assetID}, execErr, execLog)
+	}
+}
+
+// handleHostBatchError 获取失败，需要重试
+func (w *checkUworkWorker) handleHostBatchError(kt *kit.Kit, assetIDs []string, err error, execLog string) {
+	for _, assetID := range assetIDs {
+		resultHosts := w.hostMap[assetID]
+		for _, host := range resultHosts {
+			host.Error = err
+			host.ExecLog += execLog
+			w.resultHandler.HandleResult(kt, []*StepMeta{host.StepMeta}, host.Error, host.ExecLog, true)
+		}
+	}
+
+}
+
+// handleResult 处理结果, 不需要重试
+func (w *checkUworkWorker) handleHostBatchResult(kt *kit.Kit, assetIDs []string, err error, execLog string) {
+	for _, assetID := range assetIDs {
+		resultHosts := w.hostMap[assetID]
+		for _, host := range resultHosts {
+			host.Error = err
+			host.ExecLog += execLog
+			w.resultHandler.HandleResult(kt, []*StepMeta{host.StepMeta}, host.Error, host.ExecLog, false)
+		}
+	}
 }

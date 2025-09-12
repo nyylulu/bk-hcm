@@ -6,7 +6,7 @@ import { CLB_SPECS } from '@/common/constant';
 import { ModelPropertyColumn } from '@/model/typings';
 import { ISearchItem } from 'bkui-vue/lib/search-select/utils';
 
-import dialogFooter from '@/components/common-dialog/dialog-footer.vue';
+import ModalFooter from '@/components/modal/modal-footer.vue';
 
 interface IProps {
   accountId: string;
@@ -147,7 +147,7 @@ const handleClosed = () => {
       </bk-table-column>
     </bk-table>
     <template #footer>
-      <dialog-footer :disabled="!selected" @confirm="handleConfirm" @closed="handleClosed" />
+      <modal-footer :disabled="!selected" @confirm="handleConfirm" @closed="handleClosed" />
     </template>
   </bk-dialog>
 </template>

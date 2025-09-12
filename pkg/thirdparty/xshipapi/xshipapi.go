@@ -16,11 +16,14 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
 
 	"hcm/pkg/cc"
+	"hcm/pkg/kit"
 	"hcm/pkg/rest"
 	"hcm/pkg/rest/client"
 
@@ -34,7 +37,7 @@ type XshipClientInterface interface {
 	// GetReinstallTaskStatus get host reinstall task status
 	GetReinstallTaskStatus(ctx context.Context, header http.Header, orderID string) (*ReinstallStatusResp, error)
 	// GetXServerProcess get server processes in X-Server.
-	GetXServerProcess(ctx context.Context, header http.Header, assetID string) (*XServerProcessResp, error)
+	GetXServerProcess(kt *kit.Kit, assetID string) (*XServerProcessResp, error)
 }
 
 // NewXshipClientInterface creates a Xship api instance
@@ -147,12 +150,13 @@ func (x *xshipApi) GetReinstallTaskStatus(ctx context.Context, header http.Heade
 }
 
 // GetXServerProcess get server processes in X-Server.
-func (x *xshipApi) GetXServerProcess(ctx context.Context, header http.Header, assetID string) (
-	*XServerProcessResp, error) {
+// doc: https://iwiki.woa.com/p/4009692712 建议QPS 20
+func (x *xshipApi) GetXServerProcess(kt *kit.Kit, assetID string) (*XServerProcessResp, error) {
 
 	subPath := "xwing-service-security/queryServerInXserverProcess"
 
 	key, val := x.getAuthHeader()
+	header := kt.Header()
 	if header == nil {
 		header = http.Header{}
 	}
@@ -166,7 +170,7 @@ func (x *xshipApi) GetXServerProcess(ctx context.Context, header http.Header, as
 
 	resp := new(XServerProcessResp)
 	err := x.client.Post().
-		WithContext(ctx).
+		WithContext(kt.Ctx).
 		Body(req).
 		SubResourcef(subPath).
 		WithHeaders(header).
@@ -176,6 +180,11 @@ func (x *xshipApi) GetXServerProcess(ctx context.Context, header http.Header, as
 	if err != nil {
 		return nil, err
 	}
-
+	if resp.Data == nil {
+		return nil, errors.New("check uwork-xship process api return data is nil")
+	}
+	if resp.Code != CodeSuccess {
+		return nil, fmt.Errorf("check uwork-xship process api return err: %s", resp.Message)
+	}
 	return resp, nil
 }

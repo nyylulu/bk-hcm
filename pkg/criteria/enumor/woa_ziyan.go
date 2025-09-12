@@ -471,3 +471,28 @@ const (
 	// CvmInstanceStatusRunning CVM实例-运行中
 	CvmInstanceStatusRunning = "RUNNING"
 )
+
+// CvmModifyRecordStatus is cvm modify record status
+type CvmModifyRecordStatus int
+
+const (
+	// ApprovalPendingCvmModifyStatus CVM变更记录-待审批
+	ApprovalPendingCvmModifyStatus CvmModifyRecordStatus = 0
+	// ApprovedCvmModifyStatus CVM变更记录-审批通过
+	ApprovedCvmModifyStatus CvmModifyRecordStatus = 1
+	// ApprovalFailedCvmModifyStatus CVM变更记录-审批失败
+	ApprovalFailedCvmModifyStatus CvmModifyRecordStatus = 2
+	// ApprovalRejectedCvmModifyStatus CVM变更记录-审批拒绝
+	ApprovalRejectedCvmModifyStatus CvmModifyRecordStatus = 3
+	// ApprovalTimeoutCvmModifyStatus CVM变更记录-审批超时/作废
+	ApprovalTimeoutCvmModifyStatus CvmModifyRecordStatus = 4
+)
+
+// CvmModifyRecordStatusMap cvm modify record status map
+var CvmModifyRecordStatusMap = map[CvmModifyRecordStatus]string{
+	ApprovalPendingCvmModifyStatus:  "待审批",
+	ApprovedCvmModifyStatus:         "审批通过",
+	ApprovalFailedCvmModifyStatus:   "审批失败",
+	ApprovalRejectedCvmModifyStatus: "审批拒绝",
+	ApprovalTimeoutCvmModifyStatus:  "审批超时",
+}

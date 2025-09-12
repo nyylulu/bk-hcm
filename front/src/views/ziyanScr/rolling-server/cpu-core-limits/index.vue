@@ -47,7 +47,8 @@ const getCpuQuota = async (bizId: string | number) => {
   // 可申请的核数 = min(（单个业务的实际额度 - 单个业务已交付的核数）, 剩余额度（全平台）)
   const quotaA = bizQuota - sum_delivered_core;
   const quotaB = globalQuotaConfig.global_quota - globalQuotaConfig.sum_delivered_core;
-  availableCpuCoreQuota.value = Math.min(quotaA, quotaB);
+  // 可申请的核数为负数时，展示为0
+  availableCpuCoreQuota.value = Math.max(Math.min(quotaA, quotaB), 0);
 };
 watchEffect(() => {
   getCpuQuota(props.bizId);

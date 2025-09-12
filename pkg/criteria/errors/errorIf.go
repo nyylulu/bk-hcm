@@ -41,12 +41,13 @@ type CCErrorIf interface {
 	CreateDefaultCCErrorIf(language string) DefaultCCErrorIf
 	// Error returns an error for specific language
 	Error(language string, errCode int) error
-	// Errorf Errorf returns an error with args for specific language
+	// Errorf returns an error with args for specific language
 	Errorf(language string, errCode int, args ...interface{}) error
 
 	Load(res map[string]ErrorCode)
 }
 
+// NewFromStdError ...
 func NewFromStdError(err error, defaultErrCode int) CCErrorCoder {
 	ccErr, ok := err.(CCErrorCoder)
 	if ok == true {
@@ -66,20 +67,23 @@ func GetGlobalCCError() CCErrorIf {
 	return globalCCError
 }
 
+// SetGlobalCCError ...
 func SetGlobalCCError(ccError CCErrorIf) {
 	globalCCError = ccError
 }
 
 var (
-	// 1199074 is CCErrCommGlobalCCErrorNotInitialized actually
+	// GlobalCCErrorNotInitialized 1199074 is CCErrCommGlobalCCErrorNotInitialized actually
 	GlobalCCErrorNotInitialized = New(1199074, "global cc error not initialized")
 )
 
+// RawErrorInfo ...
 type RawErrorInfo struct {
 	ErrCode int
 	Args    []interface{}
 }
 
+// ToCCError ...
 func (rei *RawErrorInfo) ToCCError(ccErrorIF DefaultCCErrorIf) CCErrorCoder {
 	if rei.ErrCode == 0 {
 		return nil

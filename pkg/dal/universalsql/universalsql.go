@@ -10,12 +10,14 @@
  * limitations under the License.
  */
 
+// Package universalsql ...
 package universalsql
 
 import (
 	"hcm/pkg/criteria/mapstr"
 )
 
+// Result ...
 type Result interface {
 	ToSQL() (string, error)
 	ToMapStr() mapstr.MapStr

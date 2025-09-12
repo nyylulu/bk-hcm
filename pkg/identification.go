@@ -26,6 +26,7 @@ import (
 var identification string = "unknown"
 var server *types.ServerInfo
 
+// GetIdentification ...
 func GetIdentification() string {
 	return identification
 }

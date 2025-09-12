@@ -1,7 +1,6 @@
 import { App } from 'vue';
 import PermissionDialog from '@/components/permission-dialog';
 import editItem from './edit-item/install';
-import propertyList from './property-list/install';
 
 // 搜索组件
 import SearchAccount from './search/account.vue';
@@ -70,7 +69,7 @@ export default {
       app.component(component.name, component);
     });
 
-    [editItem, propertyList].forEach((item) => {
+    [editItem].forEach((item) => {
       app.use(item);
     });
   },

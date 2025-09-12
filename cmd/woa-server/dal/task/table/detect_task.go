@@ -22,6 +22,8 @@ type DetectTask struct {
 	TaskID     string       `json:"task_id" bson:"task_id"`
 	OrderID    uint64       `json:"order_id" bson:"order_id"`
 	SuborderID string       `json:"suborder_id" bson:"suborder_id"`
+	AssetID    string       `json:"bk_asset_id" bson:"bk_asset_id"`
+	HostID     int64        `json:"bk_host_id" bson:"bk_host_id"`
 	IP         string       `json:"ip" bson:"ip"`
 	User       string       `json:"bk_username" bson:"bk_username"`
 	Status     DetectStatus `json:"status" bson:"status"`

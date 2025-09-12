@@ -122,6 +122,8 @@ const (
 	Bind AuditAction = "bind"
 	// Deliver 交付
 	Deliver AuditAction = "deliver"
+	// IdleCheck 空闲检查
+	IdleCheck AuditAction = "idle_check"
 )
 
 // AuditActionEnums op type map.
@@ -141,6 +143,7 @@ var AuditActionEnums = map[AuditAction]struct{}{
 	Disassociate: {},
 	Bind:         {},
 	Deliver:      {},
+	IdleCheck:    {},
 }
 
 // Exist judge enum value exist.

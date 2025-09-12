@@ -19,12 +19,15 @@
 
 package export
 
-import "hcm/pkg/logs"
+import (
+	"hcm/pkg/logs"
+	"hcm/pkg/table"
+)
 
 // BillSummaryProductTableHeader 账单调整导出表头
-var BillSummaryProductTableHeader []string
+var BillSummaryProductTableHeader [][]string
 
-var _ Table = (*BillSummaryProductTable)(nil)
+var _ table.Table = (*BillSummaryProductTable)(nil)
 
 func init() {
 	var err error
@@ -44,12 +47,12 @@ type BillSummaryProductTable struct {
 	CurrentMonthCost          string `header:"当前账单美金（美元）"`
 }
 
-// GetHeaderValues ...
-func (b BillSummaryProductTable) GetHeaderValues() ([]string, error) {
-	return parseHeaderFields(b)
+// GetValuesByHeader ...
+func (b BillSummaryProductTable) GetValuesByHeader() ([]string, error) {
+	return table.GetValuesByHeader(b)
 }
 
 // GetHeaders ...
-func (b BillSummaryProductTable) GetHeaders() ([]string, error) {
-	return parseHeader(b)
+func (b BillSummaryProductTable) GetHeaders() ([][]string, error) {
+	return table.GetHeaders(b)
 }

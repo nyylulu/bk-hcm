@@ -20,9 +20,11 @@ import (
 
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/pkg"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/criteria/validator"
+	"hcm/pkg/thirdparty/api-gateway/bkbotapproval"
 	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/tools/metadata"
 	"hcm/pkg/tools/querybuilder"
@@ -128,6 +130,7 @@ const (
 	ApplyStatusTerminate    ApplyStatus = "TERMINATE"
 	// ApplyStatusGracefulTerminate 比起 ApplyStatusTerminate，将不再发起重试，但是后续的流程仍会继续流转
 	ApplyStatusGracefulTerminate ApplyStatus = "GRACEFUL_TERMINATE"
+	ApplyStatusConfirming        ApplyStatus = "CONFIRMING" // 修改需求后-待用户确认
 )
 
 // GenerateRecord apply order vm generate record
@@ -419,41 +422,42 @@ func (param *MatchPoolDeviceReq) Validate() (errKey string, err error) {
 
 // DeviceInfo device info
 type DeviceInfo struct {
-	OrderId           uint64             `json:"order_id" bson:"order_id"`
-	SubOrderId        string             `json:"suborder_id" bson:"suborder_id"`
-	GenerateId        uint64             `json:"generate_id" bson:"generate_id"`
-	BkBizId           int                `json:"bk_biz_id" bson:"bk_biz_id"`
-	User              string             `json:"bk_username" bson:"bk_username"`
-	BkHostId          int64              `json:"bk_host_id" bson:"bk_host_id"`
-	Ip                string             `json:"ip" bson:"ip"`
-	AssetId           string             `json:"asset_id" bson:"asset_id"`
-	InstanceID        string             `json:"instance_id" bson:"instance_id"`
-	RequireType       enumor.RequireType `json:"require_type" bson:"require_type"`
-	ResourceType      ResourceType       `json:"resource_type" bson:"resource_type"`
-	DeviceType        string             `json:"device_type" bson:"device_type"`
-	Description       string             `json:"description" bson:"description"`
-	Remark            string             `json:"remark" bson:"remark"`
-	ZoneName          string             `json:"zone_name" bson:"zone_name"`
-	ZoneID            int                `json:"zone_id" bson:"zone_id"`
-	CloudZone         string             `json:"cloud_zone" bson:"cloud_zone"`
-	CloudRegion       string             `json:"cloud_region" bson:"cloud_region"` // 云地域，目前仅升降配需要且赋值了该字段
-	ModuleName        string             `json:"module_name" bson:"module_name"`
-	Equipment         string             `json:"rack_id" bson:"rack_id"`
-	IsMatched         bool               `json:"is_matched" bson:"is_matched"`
-	IsChecked         bool               `json:"is_checked" bson:"is_checked"`
-	IsInited          bool               `json:"is_inited" bson:"is_inited"`
-	IsDiskChecked     bool               `json:"is_disk_checked" bson:"is_disk_checked"`
-	IsDelivered       bool               `json:"is_delivered" bson:"is_delivered"`
-	Deliverer         string             `json:"deliverer" bson:"deliverer"`
-	GenerateTaskId    string             `json:"generate_task_id" bson:"generate_task_id"`
-	GenerateTaskLink  string             `json:"generate_task_link" bson:"generate_task_link"`
-	InitTaskId        string             `json:"init_task_id" bson:"init_task_id"`
-	InitTaskLink      string             `json:"init_task_link" bson:"init_task_link"`
-	DiskCheckTaskId   string             `json:"disk_check_task_id" bson:"disk_check_task_id"`
-	DiskCheckTaskLink string             `json:"disk_check_task_link" bson:"disk_check_task_link"`
-	IsManualMatched   bool               `json:"is_manual_matched" bson:"is_manual_matched"` // 是否手工匹配
-	CreateAt          time.Time          `json:"create_at" bson:"create_at"`
-	UpdateAt          time.Time          `json:"update_at" bson:"update_at"`
+	OrderId      uint64             `json:"order_id" bson:"order_id"`
+	SubOrderId   string             `json:"suborder_id" bson:"suborder_id"`
+	GenerateId   uint64             `json:"generate_id" bson:"generate_id"`
+	BkBizId      int                `json:"bk_biz_id" bson:"bk_biz_id"`
+	User         string             `json:"bk_username" bson:"bk_username"`
+	BkHostId     int64              `json:"bk_host_id" bson:"bk_host_id"`
+	Ip           string             `json:"ip" bson:"ip"`
+	AssetId      string             `json:"asset_id" bson:"asset_id"`
+	InstanceID   string             `json:"instance_id" bson:"instance_id"`
+	RequireType  enumor.RequireType `json:"require_type" bson:"require_type"`
+	ResourceType ResourceType       `json:"resource_type" bson:"resource_type"`
+	DeviceType   string             `json:"device_type" bson:"device_type"`
+	Description  string             `json:"description" bson:"description"`
+	Remark       string             `json:"remark" bson:"remark"`
+	ZoneName     string             `json:"zone_name" bson:"zone_name"`
+	ZoneID       int                `json:"zone_id" bson:"zone_id"`
+	CloudZone    string             `json:"cloud_zone" bson:"cloud_zone"`
+	// CloudRegion TODO 仅升降配有该字段，CVM生产返回的数据中没有该字段，待排查原因；影响交付后预测用量的判断
+	CloudRegion       string    `json:"cloud_region" bson:"cloud_region"`
+	ModuleName        string    `json:"module_name" bson:"module_name"`
+	Equipment         string    `json:"rack_id" bson:"rack_id"`
+	IsMatched         bool      `json:"is_matched" bson:"is_matched"`
+	IsChecked         bool      `json:"is_checked" bson:"is_checked"`
+	IsInited          bool      `json:"is_inited" bson:"is_inited"`
+	IsDiskChecked     bool      `json:"is_disk_checked" bson:"is_disk_checked"`
+	IsDelivered       bool      `json:"is_delivered" bson:"is_delivered"`
+	Deliverer         string    `json:"deliverer" bson:"deliverer"`
+	GenerateTaskId    string    `json:"generate_task_id" bson:"generate_task_id"`
+	GenerateTaskLink  string    `json:"generate_task_link" bson:"generate_task_link"`
+	InitTaskId        string    `json:"init_task_id" bson:"init_task_id"`
+	InitTaskLink      string    `json:"init_task_link" bson:"init_task_link"`
+	DiskCheckTaskId   string    `json:"disk_check_task_id" bson:"disk_check_task_id"`
+	DiskCheckTaskLink string    `json:"disk_check_task_link" bson:"disk_check_task_link"`
+	IsManualMatched   bool      `json:"is_manual_matched" bson:"is_manual_matched"` // 是否手工匹配
+	CreateAt          time.Time `json:"create_at" bson:"create_at"`
+	UpdateAt          time.Time `json:"update_at" bson:"update_at"`
 }
 
 // ApplyTicket resource apply ticket
@@ -478,13 +482,36 @@ type TicketStage string
 
 // TicketStage resource apply ticket stage
 const (
-	TicketStageUncommit  TicketStage = "UNCOMMIT"
-	TicketStageAudit     TicketStage = "AUDIT"
-	TicketStageTerminate TicketStage = "TERMINATE"
-	TicketStageRunning   TicketStage = "RUNNING"
-	TicketStageSuspend   TicketStage = "SUSPEND"
-	TicketStageDone      TicketStage = "DONE"
+	TicketStageUncommit   TicketStage = "UNCOMMIT"
+	TicketStageAudit      TicketStage = "AUDIT"
+	TicketStageTerminate  TicketStage = "TERMINATE"
+	TicketStageRunning    TicketStage = "RUNNING"
+	TicketStageSuspend    TicketStage = "SUSPEND"
+	TicketStageDone       TicketStage = "DONE"
+	TicketStageConfirming TicketStage = "CONFIRMING" // 修改需求后-待用户确认
 )
+
+// TicketStageEnums ticket stage enum
+var TicketStageEnums = map[TicketStage]string{
+	TicketStageUncommit:   "未提交",
+	TicketStageAudit:      "待审核",
+	TicketStageTerminate:  "终止",
+	TicketStageRunning:    "备货中",
+	TicketStageSuspend:    "备货异常",
+	TicketStageDone:       "完成",
+	TicketStageConfirming: "待确认(需求调整)",
+}
+
+// TicketStageOrder defines the order of ticket stages
+var TicketStageOrder = []TicketStage{
+	TicketStageUncommit,
+	TicketStageAudit,
+	TicketStageTerminate,
+	TicketStageRunning,
+	TicketStageSuspend,
+	TicketStageDone,
+	TicketStageConfirming,
+}
 
 // GetApplyTicketReq get apply ticket request parameter
 type GetApplyTicketReq struct {
@@ -819,7 +846,9 @@ type ResourceSpec struct {
 	// 被继承云主机实例ID
 	InheritInstanceId string `json:"inherit_instance_id" bson:"inherit_instance_id"`
 	// 分区生产时报错的可用区ID列表
-	FailedZoneIDs []string `json:"failed_zone_ids" bson:"failed_zone_ids"`
+	FailedZoneIDs []string          `json:"failed_zone_ids" bson:"failed_zone_ids"`
+	SystemDisk    enumor.DiskSpec   `json:"system_disk" bson:"system_disk"`
+	DataDisk      []enumor.DiskSpec `json:"data_disk" bson:"data_disk"`
 }
 
 // Validate whether ResourceSpec is valid
@@ -838,20 +867,9 @@ func (s *ResourceSpec) Validate(resType ResourceType) (errKey string, err error)
 		return "device_type", fmt.Errorf("device_type cannot be empty")
 	}
 
-	if s.DiskSize < 0 {
-		return "disk_size", fmt.Errorf("disk_size invalid value < 0")
-	}
-
-	diskLimit := int64(16000)
-	if s.DiskSize > diskLimit {
-		return "disk_size", fmt.Errorf("disk_size exceed limit %d", diskLimit)
-	}
-
-	// 规格为 10 的倍数
-	diskUnit := int64(10)
-	modDisk := s.DiskSize % diskUnit
-	if modDisk != 0 {
-		return "disk_size", fmt.Errorf("disk_size must be in multiples of %d", diskUnit)
+	// 磁盘校验
+	if errKey, err = s.ValidateDisk(); err != nil {
+		return errKey, err
 	}
 
 	switch resType {
@@ -871,6 +889,69 @@ func (s *ResourceSpec) Validate(resType ResourceType) (errKey string, err error)
 		if s.ChargeType == cvmapi.ChargeTypePrePaid && s.ChargeMonths < 1 {
 			return "charge_months", fmt.Errorf("charge_months invalid value < 1")
 		}
+	}
+
+	return "", nil
+}
+
+// ValidateDisk validate disk spec
+func (s *ResourceSpec) ValidateDisk() (string, error) {
+	// 兼容旧的数据盘校验
+	if len(s.DataDisk) == 0 {
+		if s.DiskSize < 0 {
+			return "disk_size", fmt.Errorf("disk_size invalid value < 0")
+		}
+
+		diskLimit := int64(constant.DataDiskMaxSize)
+		if s.DiskSize > diskLimit {
+			return "disk_size", fmt.Errorf("disk_size exceed limit %d", diskLimit)
+		}
+
+		// 规格为 10 的倍数
+		diskUnit := int64(constant.DataDiskMultiple)
+		modDisk := s.DiskSize % diskUnit
+		if modDisk != 0 {
+			return "disk_size", fmt.Errorf("disk_size must be in multiples of %d", diskUnit)
+		}
+	}
+
+	// 系统盘类型校验
+	if len(s.SystemDisk.DiskType) > 0 {
+		if err := s.SystemDisk.Validate(); err != nil {
+			return "system_disk", err
+		}
+		if s.SystemDisk.DiskSize < constant.SystemDiskMinSize || s.SystemDisk.DiskSize > constant.SystemDiskMaxSize {
+			return "system_disk.disk_size", fmt.Errorf("system_disk_size invalid value, must be in range [%d, %d]",
+				constant.SystemDiskMinSize, constant.SystemDiskMaxSize)
+		}
+		// 系统盘大小必须是50的倍数
+		if s.SystemDisk.DiskSize%constant.SystemDiskMultiple != 0 {
+			return "system_disk.disk_size", fmt.Errorf("system_disk_size must be a multiple of %d",
+				constant.SystemDiskMultiple)
+		}
+	}
+
+	// 数据盘类型校验
+	dataDiskTotalNum := uint(0)
+	for _, dd := range s.DataDisk {
+		if err := dd.Validate(); err != nil {
+			return "data_disk", err
+		}
+		if dd.DiskSize < constant.DataDiskMinSize || dd.DiskSize > constant.DataDiskMaxSize {
+			return "data_disk.disk_size", fmt.Errorf("data_disk_size invalid value, must be in range [%d, %d]",
+				constant.DataDiskMinSize, constant.DataDiskMaxSize)
+		}
+		// 数据盘大小必须是10的倍数
+		if dd.DiskSize%constant.DataDiskMultiple != 0 {
+			return "data_disk.disk_size", fmt.Errorf("data_disk_size must be a multiple of %d",
+				constant.DataDiskMultiple)
+		}
+		dataDiskTotalNum += dd.DiskNum
+	}
+	// 数据盘总数量不能超过20块
+	if dataDiskTotalNum < 0 || dataDiskTotalNum > constant.DataDiskTotalNum {
+		return "data_disk.disk_total_num", fmt.Errorf("data_disk_total_num invalid value, must be in range [0, %d]",
+			constant.DataDiskTotalNum)
 	}
 
 	return "", nil
@@ -1488,8 +1569,10 @@ type RecommendApplyRst struct {
 
 // GetApplyModifyReq get apply order modify record request
 type GetApplyModifyReq struct {
-	SuborderID []string          `json:"suborder_id"`
-	Page       metadata.BasePage `json:"page" bson:"page"`
+	ID         []uint64                       `json:"id"`
+	SuborderID []string                       `json:"suborder_id"`
+	Status     []enumor.CvmModifyRecordStatus `json:"status"`
+	Page       metadata.BasePage              `json:"page" bson:"page"`
 }
 
 // Validate whether GetApplyModifyReq is valid
@@ -1521,6 +1604,18 @@ func (param *GetApplyModifyReq) GetFilter() (map[string]interface{}, error) {
 	if len(param.SuborderID) > 0 {
 		filter["suborder_id"] = mapstr.MapStr{
 			pkg.BKDBIN: param.SuborderID,
+		}
+	}
+
+	if len(param.Status) > 0 {
+		filter["status"] = mapstr.MapStr{
+			pkg.BKDBIN: param.Status,
+		}
+	}
+
+	if len(param.ID) > 0 {
+		filter["id"] = mapstr.MapStr{
+			pkg.BKDBIN: param.ID,
 		}
 	}
 
@@ -1583,4 +1678,36 @@ type DeviceInitMsg struct {
 	JobUrl string
 	JobID  string
 	BizID  int64
+}
+
+// ConfirmApplyModifyCompare confirm apply modify compare
+type ConfirmApplyModifyCompare struct {
+	PreDeviceType string `json:"pre_device_type"`
+	PreZone       string `json:"pre_zone"`
+	PreNum        string `json:"pre_num"`
+	PreVpc        string `json:"pre_vpc"`
+	PreSubnet     string `json:"pre_subnet"`
+	CurDeviceType string `json:"cur_device_type"`
+	CurZone       string `json:"cur_zone"`
+	CurNum        string `json:"cur_num"`
+	CurVpc        string `json:"cur_vpc"`
+	CurSubnet     string `json:"cur_subnet"`
+}
+
+// ConfirmApplyModifyReq confirm apply modify request
+type ConfirmApplyModifyReq struct {
+	BkUsername                                      string `json:"bk_username" validate:"required"`
+	bkbotapproval.CvmApplyModifyConfirmCallbackData `json:",inline"`
+}
+
+// Validate validate
+func (c *ConfirmApplyModifyReq) Validate() error {
+	return validator.Validate.Struct(c)
+}
+
+// ConfirmApplyModifyResp confirm modify response
+type ConfirmApplyModifyResp struct {
+	ResponseMsg   string                    `json:"response_msg"`   // 点击按钮后回显的信息
+	ResponseColor bkbotapproval.ButtonColor `json:"response_color"` // 点击按钮后回显的颜色
+	RequestID     string                    `json:"request_id"`
 }

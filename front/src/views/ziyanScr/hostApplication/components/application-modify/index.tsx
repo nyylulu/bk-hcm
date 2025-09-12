@@ -13,7 +13,7 @@ import { getBusinessNameById } from '@/views/ziyanScr/host-recycle/field-diction
 import { getTypeCn } from '@/views/ziyanScr/cvm-produce/transform';
 import { getResourceTypeName } from '../transform';
 import { getRegionCn, getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
-import { getDiskTypesName, getImageName } from '@/components/property-list/transform';
+import { getDiskTypesName, getImageName } from '@/views/ziyanScr/cvm-produce/component/property-display/transform';
 import http from '@/http';
 import { getEntirePath } from '@/utils';
 import { useWhereAmI } from '@/hooks/useWhereAmI';

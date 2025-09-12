@@ -131,8 +131,6 @@ func (c *Controller) getVerifySliceWithDeviceInfo(deviceTypeMap map[string]wdt.W
 				RegionID:   device.RegionID,
 				ZoneID:     device.ZoneID,
 				CpuCore:    cpuCore,
-				DiskType:   "",
-				DiskSize:   0,
 			})
 		}
 	default:
@@ -146,8 +144,6 @@ func (c *Controller) getVerifySliceWithDeviceInfo(deviceTypeMap map[string]wdt.W
 			RegionID:   subOrder.Spec.Region,
 			ZoneID:     subOrder.Spec.Zone,
 			CpuCore:    int64(subOrder.Replicas) * cpuCore,
-			DiskType:   subOrder.Spec.DiskType.GetWithDefault(),
-			DiskSize:   int64(subOrder.Replicas) * subOrder.Spec.DiskSize,
 		})
 	}
 
@@ -172,8 +168,7 @@ func (c *Controller) fillVerifyElems(kt *kit.Kit, subOrder ttypes.Suborder, bkBi
 	}
 	availableTime := NewAvailableTime(nowDemandYear, nowDemandMonth)
 
-	createElem := func(deviceType, regionID, zoneID string, cpuCore int64, diskType enumor.DiskType,
-		diskSize int64) VerifyResPlanElemV2 {
+	createElem := func(deviceType, regionID, zoneID string, cpuCore int64) VerifyResPlanElemV2 {
 
 		return VerifyResPlanElemV2{
 			IsPrePaid:     isPrePaid,
@@ -184,9 +179,7 @@ func (c *Controller) fillVerifyElems(kt *kit.Kit, subOrder ttypes.Suborder, bkBi
 			DemandClass:   enumor.DemandClassCVM,
 			RegionID:      regionID,
 			ZoneID:        zoneID,
-			DiskType:      diskType,
 			CpuCore:       cpuCore,
-			DiskSize:      diskSize,
 		}
 	}
 
@@ -197,8 +190,6 @@ func (c *Controller) fillVerifyElems(kt *kit.Kit, subOrder ttypes.Suborder, bkBi
 			elem.RegionID,
 			elem.ZoneID,
 			elem.CpuCore,
-			elem.DiskType,
-			elem.DiskSize,
 		))
 	}
 	return verifyElems, nil

@@ -115,18 +115,23 @@ func (cli *client) LoadBalancer(kt *kit.Kit, params *SyncBaseParams, opt *SyncLB
 		lbFromCloud, lbFromDB, isLBChange)
 
 	// 删除云上已经删除的负载均衡实例
-	if err = cli.deleteLoadBalancer(kt, params.AccountID, params.Region, delCloudIDs); err != nil {
-		return nil, err
+	if len(delCloudIDs) != 0 {
+		if err = cli.deleteLoadBalancer(kt, params.AccountID, params.Region, delCloudIDs); err != nil {
+			return nil, err
+		}
 	}
-
 	// 创建云上新增负载均衡实例
-	_, err = cli.createLoadBalancer(kt, params.AccountID, params.Region, addSlice)
-	if err != nil {
-		return nil, err
+	if len(addSlice) != 0 {
+		_, err = cli.createLoadBalancer(kt, params.AccountID, params.Region, addSlice)
+		if err != nil {
+			return nil, err
+		}
 	}
 	// 更新变更负载均衡
-	if err = cli.updateLoadBalancer(kt, params.AccountID, params.Region, updateMap); err != nil {
-		return nil, err
+	if len(updateMap) != 0 {
+		if err = cli.updateLoadBalancer(kt, params.AccountID, params.Region, updateMap); err != nil {
+			return nil, err
+		}
 	}
 	ids := slice.Map(lbFromDB, corelb.TCloudLoadBalancer.GetID)
 	if err = cli.updateLoadBalancerSyncTime(kt, ids); err != nil {
@@ -489,6 +494,11 @@ func (cli *client) listLBFromDB(kt *kit.Kit, params *SyncBaseParams) ([]corelb.T
 }
 
 func (cli *client) updateLoadBalancerSyncTime(kt *kit.Kit, ids []string) error {
+	if len(ids) == 0 {
+		logs.Infof("[%s] no lbs need to update sync time, rid: %s", enumor.TCloud, kt.Rid)
+		return nil
+	}
+
 	var updateReq protocloud.TCloudClbBatchUpdateReq
 	syncTime := times.ConvStdTimeFormat(time.Now())
 

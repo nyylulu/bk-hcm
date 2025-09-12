@@ -162,6 +162,8 @@ FROM (
 	SELECT
 		ANY_VALUE(billing_account_id) AS billing_account_id,
 		project.id AS project_id,
+		sku.id as sku_id,
+		sku.description as sku_description,
 		ANY_VALUE(project.name) as project_name,
 		ANY_VALUE(project.number) as project_number,
 		ANY_VALUE(currency) as currency,
@@ -179,7 +181,7 @@ FROM (
 	FROM
 		%s.%s
 		%s  
-	GROUP BY project.id )
+	GROUP BY project.id, sku.id, sku.description ) ORDER BY sku_id
 `
 )
 

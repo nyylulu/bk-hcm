@@ -1,16 +1,16 @@
 import { defineComponent, ref, computed } from 'vue';
-import './index.scss';
+import classes from '../../index.module.scss';
 import useFormModel from '@/hooks/useFormModel';
-import { Button, Form, Input, Message } from 'bkui-vue';
+import { Button, Form, Input, Message, Table } from 'bkui-vue';
+import { Column } from 'bkui-vue/lib/table/props';
 import http from '@/http';
 import { timeFormatter } from '@/common/util';
 import { INSTANCE_CHARGE_MAP } from '@/common/constant';
-import CommonLocalTable from '@/components/CommonLocalTable';
 import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
 import { useLegacyTableSettings } from '@/hooks/use-table-settings';
+import useTableSelection from '@/hooks/use-table-selection';
 import AreaSelector from '@/views/ziyanScr/hostApplication/components/AreaSelector';
 import ZoneSelector from '@/views/ziyanScr/hostApplication/components/ZoneSelector';
-import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import DiskTypeSelect from '../../../DiskTypeSelect';
 import { useUserStore } from '@/store';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
@@ -30,7 +30,17 @@ export default defineComponent({
   },
   setup(props) {
     const { getBusinessApiPath } = useWhereAmI();
-    const { selections, handleSelectionChange } = useSelection();
+
+    const isRowSelectEnable = () => true;
+    const DATA_ROW_KEY = 'asset_id';
+
+    const tableRef = ref(null);
+
+    const { selections, resetSelections, handleSelectAll, handleSelectChange } = useTableSelection({
+      isRowSelectable: isRowSelectEnable,
+      rowKey: DATA_ROW_KEY,
+    });
+
     const userStore = useUserStore();
     const { formModel, forceClear } = useFormModel({
       resource_type: props.formModelData.resource_type,
@@ -54,18 +64,20 @@ export default defineComponent({
         label: '腾讯云_CVM',
       },
     ]);
-    const domainList = ref([]);
+    const deviceList = ref([]);
     const isLoading = ref(false);
     const getListData = async () => {
       isLoading.value = true;
       try {
-        const { data } = await getDomainList();
-        domainList.value = data.info || [];
+        const { data } = await getDeviceList();
+        deviceList.value = data.info || [];
       } finally {
         isLoading.value = false;
+        resetSelections();
+        tableRef.value?.clearSelection();
       }
     };
-    const getDomainList = () => {
+    const getDeviceList = () => {
       const { resource_type, spec } = formModel;
 
       return http.post(
@@ -73,7 +85,7 @@ export default defineComponent({
         removeEmptyFields({ resource_type, ips: ipArray.value, spec }),
       );
     };
-    const tableColumns = ref([
+    const tableColumns = ref<(Column & { defaultHidden?: boolean })[]>([
       { type: 'selection', fixed: true, width: 30, minWidth: 30 },
       {
         field: 'match_tag',
@@ -96,7 +108,7 @@ export default defineComponent({
       {
         field: 'ip',
         label: '内网 IP',
-        width: 110,
+        width: 130,
       },
       {
         field: 'device_type',
@@ -181,6 +193,13 @@ export default defineComponent({
           [...chareTypeSet.value].some((item) => !initialChareTypeSet.value.has(item))),
     );
 
+    // 待交付数
+    const pendingNum = computed(() => props.formModelData.pending_num);
+
+    const matchButtonDisabled = computed(
+      () => selections.value.length === 0 || selections.value.length > pendingNum.value,
+    );
+
     const ipArray = computed(() => {
       const ipv4 = /^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$/;
       const ips = [];
@@ -234,9 +253,9 @@ export default defineComponent({
       props.handleClose();
     };
     return () => (
-      <div class={'apply-list-container'}>
-        <div class={'filter-container'}>
-          <Form model={formModel} class={'scr-form-wrapper'}>
+      <div class={classes['apply-list-container']}>
+        <div class={classes['filter-container']}>
+          <Form model={formModel} class={classes['scr-form-wrapper']}>
             <FormItem label='资源类型'>
               <bk-select v-model={formModel.resource_type} onChange={onResourceTypeChange}>
                 {options.value.map((opt) => (
@@ -247,25 +266,24 @@ export default defineComponent({
             <FormItem label='地域'>
               <AreaSelector
                 ref='areaSelector'
-                multiple
                 v-model={formModel.spec.region}
                 params={{ resourceType: formModel.resource_type }}
-                onChange={onRegionChange}></AreaSelector>
+                onChange={onRegionChange}
+                {...{ multiple: true }}></AreaSelector>
             </FormItem>
             <FormItem label='园区'>
               <ZoneSelector
                 ref='zoneSelector'
-                multiple
                 v-model={formModel.spec.zone}
                 params={{
                   resourceType: formModel.resource_type,
                   region: formModel.spec.region,
                 }}
+                {...{ multiple: true }}
               />
             </FormItem>
             <FormItem label='机型'>
               <DevicetypeSelector
-                class='tbkselect'
                 v-model={formModel.spec.device_type}
                 resourceType={formModel.resource_type === 'QCLOUDCVM' ? 'cvm' : 'idcpm'}
                 params={cvmDevicetypeParams.value}
@@ -304,10 +322,18 @@ export default defineComponent({
           }}>
           重置
         </Button>
-        <Button theme='success' disabled={selections.value.length === 0} onClick={submitSelectedDevices} class={'ml24'}>
+        <Button
+          theme='success'
+          disabled={matchButtonDisabled.value}
+          onClick={submitSelectedDevices}
+          class={'ml24'}
+          v-bk-tooltips={{
+            content: '已选择数超过待交付数',
+            disabled: !selections.value.length || !matchButtonDisabled.value,
+          }}>
           手工匹配资源
         </Button>
-        <div class={'Devices-CommonTable'}>
+        <div class={classes['data-list-container']} v-bkloading={{ loading: isLoading.value }}>
           {isInitialChareTypeEmpty.value && <bk-alert theme='error' title='原单据的计费模式为空' />}
           {!isInitialChareTypeEmpty.value && isChareTypeHasEmpty.value && (
             <bk-alert theme='error' title='选择匹配的资源，存在计费模式为空的情况' />
@@ -322,24 +348,29 @@ export default defineComponent({
                 .join('、')})`}
             />
           )}
-          <CommonLocalTable
-            loading={isLoading.value}
-            hasSearch={false}
-            tableOptions={{
-              rowKey: 'domain',
-              columns: tableColumns.value,
-              extra: {
-                onSelect: (selections: any) => {
-                  handleSelectionChange(selections, () => true, false);
-                },
-                onSelectAll: (selections: any) => {
-                  handleSelectionChange(selections, () => true, true);
-                },
-                settings: tableSettings.value,
-              },
+
+          <Table
+            ref={tableRef}
+            data={deviceList.value}
+            columns={tableColumns.value}
+            settings={tableSettings.value}
+            rowKey={DATA_ROW_KEY}
+            showOverflowTooltip={true}
+            isRowSelectEnable={isRowSelectEnable}
+            onSelectAll={handleSelectAll}
+            maxHeight={'calc(100vh - 420px)'}
+            onSelectionChange={handleSelectChange}>
+            {{
+              prepend: () =>
+                deviceList.value.length ? (
+                  <div class={classes['table-prepend']}>
+                    待交付数：<em class={classes['pending-num']}>{props.formModelData.pending_num}</em>，已
+                    {selections.value.length === deviceList.value.length ? '全选' : '选择'}：
+                    <em class={classes['selected-num']}>{selections.value.length}</em>
+                  </div>
+                ) : null,
             }}
-            tableData={domainList.value}
-          />
+          </Table>
         </div>
       </div>
     );

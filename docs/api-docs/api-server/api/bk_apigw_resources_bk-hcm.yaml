@@ -720,3 +720,29 @@ paths:
           userVerifiedRequired: true
         disabledStages: []
         descriptionEn:
+  /api/v1/woa/bizs/{bk_biz_id}/task/confirm/apply/record/modify:
+    post:
+      operationId: callback_biz_confirm_apply_modify
+      description: 蓝鲸审批助手-用户确认操作的回调接口
+      tags:
+        - SCR
+        - Apply
+      responses:
+        default:
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        backend:
+          type: HTTP
+          method: post
+          path: /api/v1/woa/bizs/{bk_biz_id}/task/confirm/apply/record/modify
+          matchSubpath: false
+          timeout: 30
+          upstreams: {}
+          transformHeaders: {}
+        authConfig:
+          userVerifiedRequired: true
+        disabledStages: []
+        descriptionEn:

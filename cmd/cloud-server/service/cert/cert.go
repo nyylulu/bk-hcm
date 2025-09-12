@@ -28,6 +28,7 @@ import (
 	"hcm/pkg/client"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/rest"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 )
 
 // InitCertService initialize the cvm service.
@@ -36,6 +37,7 @@ func InitCertService(c *capability.Capability) {
 		client:     c.ApiClient,
 		authorizer: c.Authorizer,
 		audit:      c.Audit,
+		cmdbCli:    c.CmdbCli,
 	}
 
 	h := rest.NewHandler()
@@ -58,4 +60,5 @@ type certSvc struct {
 	client     *client.ClientSet
 	authorizer auth.Authorizer
 	audit      audit.Interface
+	cmdbCli    cmdb.Client
 }

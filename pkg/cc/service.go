@@ -147,6 +147,7 @@ type CloudServerSetting struct {
 	Cmdb             ApiGateway       `yaml:"cmdb"`
 	CCHostPoolBiz    int64            `yaml:"ccHostPoolBiz"`
 	ConcurrentConfig ConcurrentConfig `yaml:"concurrentConfig"`
+	TmpFileDir       string           `yaml:"tmpFileDir"`
 }
 
 // trySetFlagBindIP try set flag bind ip.
@@ -160,6 +161,9 @@ func (s *CloudServerSetting) trySetDefault() {
 	s.Service.trySetDefault()
 	s.Log.trySetDefault()
 	s.ConcurrentConfig.trySetDefault()
+	if s.TmpFileDir == "" {
+		s.TmpFileDir = "/tmp"
+	}
 
 	return
 }
@@ -577,6 +581,7 @@ type WoaServerSetting struct {
 	Log             LogOption  `yaml:"log"`
 	Cmdb            ApiGateway `yaml:"cmdb"`
 	BkHcmURL        string     `yaml:"bkHcmUrl"`
+	BkApigwHCMURL   string     `yaml:"bkApigwHCMUrl"`
 	MongoDB         MongoDB    `yaml:"mongodb"`
 	Watch           MongoDB    `yaml:"watch"`
 	Redis           Redis      `yaml:"redis"`
@@ -629,6 +634,10 @@ func (s WoaServerSetting) Validate() error {
 
 	if s.BkHcmURL == "" {
 		return fmt.Errorf("bkHcmUrl should not be empty")
+	}
+
+	if s.BkApigwHCMURL == "" {
+		return fmt.Errorf("bkApigwHCMUrl should not be empty")
 	}
 
 	// 开启Mongo之后才校验参数

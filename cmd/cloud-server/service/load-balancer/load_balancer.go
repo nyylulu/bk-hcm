@@ -73,6 +73,7 @@ func InitService(c *capability.Capability) {
 	bizService(bizH, svc)
 	bizURLRuleService(bizH, svc)
 	bizSopService(bizH, svc)
+	bizExportService(bizH, svc)
 
 	h.Load(c.WebService)
 	bizH.Load(c.WebService)
@@ -145,6 +146,8 @@ func bizService(h *rest.Handler, svc *lbSvc) {
 	h.Add("DeleteBizListener", http.MethodDelete, "/listeners/batch", svc.DeleteBizListener)
 	h.Add("UpdateBizDomainAttr", http.MethodPatch, "/listeners/{lbl_id}/domains", svc.UpdateBizDomainAttr)
 	h.Add("ListBizListenerWithTargets", http.MethodPost, "/listeners/with/targets/list", svc.ListBizListenerWithTargets)
+	h.Add("ListBizListenerByCond", http.MethodPost, "/listeners/list_by_cond", svc.ListBizListenerByCond)
+	h.Add("ListBizTargetByCond", http.MethodPost, "/targets/list_by_cond", svc.ListBizTargetByCond)
 
 	h.Add("ListBizListenerTargetWeightStat", http.MethodPost, "/listeners/rs_weight_stat",
 		svc.ListBizListenerTargetWeightStat)
@@ -200,6 +203,12 @@ func bizSopService(h *rest.Handler, svc *lbSvc) {
 		"/sops/rule/online", svc.BatchBizRuleOnline)
 	h.Add("BatchBizRuleOffline", http.MethodDelete,
 		"/sops/rule/offline", svc.BatchBizRuleOffline)
+}
+
+func bizExportService(h *rest.Handler, svc *lbSvc) {
+	h.Add("ExportBizListenerPreCheck", http.MethodPost,
+		"/vendors/{vendor}/listeners/export/pre_check", svc.PreCheckExportBizListener)
+	h.Add("ExportBizListener", http.MethodPost, "/vendors/{vendor}/listeners/export", svc.ExportBizListener)
 }
 
 type lbSvc struct {

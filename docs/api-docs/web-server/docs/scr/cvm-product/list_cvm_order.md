@@ -96,7 +96,17 @@ POST /api/v1/woa/cvm/findmany/apply/order
           "image": "Tencent Linux Release 1.2 (tkernel2)",
           "network": "TENTHOUSAND",
           "region": "ap-shanghai",
-          "zone": "ap-shanghai-2"
+          "zone": "ap-shanghai-2",
+          "system_disk": {
+            "disk_type": "CLOUD_PREMIUM",
+            "disk_size": 100,
+            "disk_num": 1,
+          },
+          "data_disk": [{
+            "disk_type": "CLOUD_PREMIUM",
+            "disk_size": 100,
+            "disk_num": 1,
+          }]
         },
         "task_id": "YT000001",
         "task_link": "",
@@ -153,6 +163,69 @@ POST /api/v1/woa/cvm/findmany/apply/order
 | success_list | string array | 成功生产资源的IP列表                          |
 | create_at	   | timestamp    | 步骤开始时间                               |
 | update_at	   | timestamp    | 步骤结束时间                               |
+
+#### spec for QCLOUDCVM
+
+| 参数名称       | 参数类型            | 必选 | 描述                                                                  |
+|---------------|-------------------|------|----------------------------------------------------------------------|
+| region        | string            | 是   | 地域                                                                  |
+| zone          | string            | 是   | 可用区                                                                |
+| device_type   | string            | 是   | 机型                                                                  |
+| image_id      | string            | 是   | 镜像ID                                                                 |
+| disk_size     | int               | 否   | 数据盘磁盘大小，单位G（已废弃，优先使用data_disk字段）                         |
+| disk_type	    | string            | 否   | 数据盘磁盘类型。"CLOUD_SSD": SSD云硬盘, "CLOUD_PREMIUM": 高性能云盘（已废弃，优先使用data_disk字段） |
+| network_type  | string            | 是   | 网络类型。"ONETHOUSAND": 千兆, "TENTHOUSAND": 万兆                       |
+| vpc	        | string            | 否   | 私有网络，默认为空                                                       |
+| subnet        | string            | 否   | 私有子网，默认为空                                                       |
+| charge_type   | string            | 否   | 计费模式 (PREPAID:包年包月，POSTPAID_BY_HOUR:按量计费)，默认:包年包月        |
+| charge_months | int               | 否   | 计费时长，单位：月(计费模式为包年包月时，该字段必传)                           |
+| system_disk   | DiskObject        | 是   | 系统盘，磁盘大小：50G-1000G且为50的倍数（IT类型默认本地盘、50G；其他类型默认高性能云盘、100G） |
+| data_disk     | array DiskObject  | 否   | 数据盘，支持多块硬盘，磁盘大小：20G-32000G且为10的倍数，数据盘数量总和不能超过20块 |
+
+#### spec for IDCPM
+
+| 参数名称         | 参数类型    | 必选 | 描述                                        |
+|--------------|---------|----|-------------------------------------------|
+| region       | string  | 是  | 地域                                        |
+| zone         | string  | 是  | 可用区                                       |
+| device_type  | string	 | 是  | 机型                                        |
+| os_type      | string	 | 是  | 操作系统                                      |
+| raid_type    | string	 | 是  | RAID类型                                    |
+| network_type | string  | 是  | 网络类型。"ONETHOUSAND": 千兆, "TENTHOUSAND": 万兆 |
+| isp          | string  | 否  | 外网运营商                                     |
+
+#### spec for QCLOUDDVM
+
+| 参数名称         | 参数类型    | 必选 | 描述                                        |
+|--------------|---------|----|-------------------------------------------|
+| region       | string	 | 是  | 地域                                        |
+| zone	        | string  | 是  | 可用区                                       |
+| device_group | string	 | 是  | 机型类别                                      |
+| device_type  | string	 | 是  | 机型                                        |
+| image	       | string  | 是  | 镜像名                                       |
+| mount_path   | string	 | 是  | 数据盘挂载点                                    |
+| network_type | string  | 是  | 网络类型。"ONETHOUSAND": 千兆, "TENTHOUSAND": 万兆 |
+| cpu_provider | string	 | 是  | CPU类型                                     |
+
+#### spec for IDCDVM
+
+| 参数名称         | 参数类型    | 必选 | 描述                                        |
+|--------------|---------|----|-------------------------------------------|
+| region	      | string  | 是  | 地域                                        |
+| zone	        | string  | 是  | 可用区                                       |
+| device_group | string	 | 是  | 机型类别                                      |
+| device_type  | string	 | 是  | 机型                                        |
+| image	       | string	 | 是  | 镜像名                                       |
+| kernel	      | string  | 是  | 内核                                        |
+| mount_path   | string  | 是  | 数据盘挂载点                                    |
+| network_type | string  | 是  | 网络类型。"ONETHOUSAND": 千兆, "TENTHOUSAND": 万兆 |
+
+#### spec for DiskObject
+| 参数名称   | 参数类型  | 必选 | 描述                                                      |
+|-----------|---------|------|----------------------------------------------------------|
+| disk_type | string  | 是   | 磁盘类型，"CLOUD_SSD": SSD云硬盘, "CLOUD_PREMIUM": 高性能云盘 |
+| disk_size | int     | 是   | 磁盘大小，单位G                                             |
+| disk_num  | int     | 否   | 磁盘数量，所有磁盘数量之和不能超过20块，默认1块                  |
 
 **注意：**
 

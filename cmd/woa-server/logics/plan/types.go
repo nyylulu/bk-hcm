@@ -169,9 +169,7 @@ type VerifyResPlanElemV2 struct {
 	DemandClass   enumor.DemandClass
 	RegionID      string
 	ZoneID        string
-	DiskType      enumor.DiskType
 	CpuCore       int64
-	DiskSize      int64
 }
 
 // VerifyResPlanResElem verify resource plan result element.

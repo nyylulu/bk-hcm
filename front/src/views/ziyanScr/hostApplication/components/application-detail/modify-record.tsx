@@ -1,6 +1,6 @@
 import { defineComponent, ref, watch } from 'vue';
 import { Sideslider, Table } from 'bkui-vue';
-import { useFieldVal } from '@/components/property-list/field-map';
+import { useFieldVal } from '@/views/ziyanScr/cvm-produce/component/property-display/field-map';
 import { timeFormatter } from '@/common/util';
 import http from '@/http';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
@@ -25,9 +25,9 @@ export default defineComponent({
   emits: ['update:modelValue'],
   setup(props, { attrs, emit }) {
     // 需要跟后端、产品确定哪些字段不展示
-    const FIELD_BLACK_LIST = ['replicas'];
+    const FIELD_BLACK_LIST = ['replicas', 'disk_size', 'disk_type'];
 
-    const { getBusinessApiPath } = useWhereAmI();
+    const { getBusinessApiPath, isBusinessPage } = useWhereAmI();
     const { getFieldCn, getFieldCnVal } = useFieldVal();
     const isDisplay = ref(false);
     watch(
@@ -46,6 +46,8 @@ export default defineComponent({
       emit('update:modelValue', false);
     };
     const recordList = ref([]);
+
+    const statusNames = { 0: '待审批', 1: '已调整需求', 2: '审批失败', 3: '审批拒绝', 4: '审批超时/作废' };
     const recordColumns = [
       {
         type: 'expand',
@@ -66,6 +68,15 @@ export default defineComponent({
         },
       },
     ];
+
+    if (!isBusinessPage) {
+      recordColumns.splice(3, 0, {
+        label: '状态',
+        field: 'status',
+        render: ({ row }: { row: { status: keyof typeof statusNames } }) => <>{statusNames[row.status]}</>,
+      });
+    }
+
     const expandRowTable = [
       {
         label: '修改属性',
@@ -80,7 +91,7 @@ export default defineComponent({
         field: 'prev',
         align: 'left',
         render: ({ row }: any) => {
-          return <span>{getFieldCnVal(row.key, row.prev)}</span>;
+          return <span>{getFieldCnVal(row.key, row.prev, row.prevRow)}</span>;
         },
       },
       {
@@ -88,18 +99,20 @@ export default defineComponent({
         field: 'cur',
         align: 'left',
         render: ({ row }: any) => {
-          return <span>{getFieldCnVal(row.key, row.cur)}</span>;
+          return <span>{getFieldCnVal(row.key, row.cur, row.curRow)}</span>;
         },
       },
     ];
-    const handleDetail = (detail: any) => {
-      return Object.keys(detail?.cur_data).reduce((prev, cur) => {
+    const handleDetail = (details: any) => {
+      return Object.keys(details?.cur_data).reduce((prev, cur) => {
         if (!FIELD_BLACK_LIST.includes(cur)) {
           const obj = {
             key: cur,
-            prev: detail.pre_data[cur],
-            cur: detail.cur_data[cur],
-            hasChange: detail.pre_data[cur] !== detail.cur_data[cur],
+            prev: details.pre_data[cur],
+            cur: details.cur_data[cur],
+            hasChange: details.pre_data[cur] !== details.cur_data[cur],
+            prevRow: details.pre_data,
+            curRow: details.cur_data,
           };
           prev.push(obj);
         }
@@ -110,10 +123,10 @@ export default defineComponent({
     const fetchRecord = async () => {
       const res = await http.post(
         `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/${getBusinessApiPath()}task/find/apply/record/modify`,
-        { suborder_id: [props.showObj.suborderId] },
+        { suborder_id: [props.showObj.suborderId], status: isBusinessPage ? [1] : undefined },
       );
       const list = res.data?.info || [];
-      list.forEach((item) => {
+      list.forEach((item: any) => {
         item.detailList = handleDetail(item.details);
       });
       recordList.value = list;
@@ -145,7 +158,7 @@ export default defineComponent({
               </div>
               <Table data={recordList.value} columns={recordColumns}>
                 {{
-                  expandRow: (row) => (
+                  expandRow: (row: any) => (
                     <div class='record-expand'>
                       <Table data={row.detailList} columns={expandRowTable}></Table>
                     </div>

@@ -854,7 +854,7 @@ func parseFloatOption(ctx context.Context, val interface{}) FloatOption {
 	return floatOption
 }
 
-// parseIntOption  parse int data in option
+// ParseIntOption  parse int data in option
 func ParseIntOption(ctx context.Context, val interface{}) IntOption {
 	rid := util.ExtractRequestIDFromContext(ctx)
 	intOption := IntOption{}
@@ -1008,7 +1008,7 @@ func parseEnumOption(options []interface{}, enumOptions *[]EnumVal) error {
 	return nil
 }
 
-// parseFloatOption  parse float data in option
+// ParseFloatOption  parse float data in option
 func ParseFloatOption(ctx context.Context, val interface{}) FloatOption {
 	rid := util.ExtractRequestIDFromContext(ctx)
 	floatOption := FloatOption{}

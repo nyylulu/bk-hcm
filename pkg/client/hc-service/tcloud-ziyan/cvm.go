@@ -23,6 +23,7 @@ import (
 	"context"
 	"net/http"
 
+	typecvm "hcm/pkg/adaptor/types/cvm"
 	"hcm/pkg/api/core"
 	"hcm/pkg/api/core/cloud/cvm"
 	protocvm "hcm/pkg/api/hc-service/cvm"
@@ -222,4 +223,12 @@ func (cli *CvmClient) BatchAssociateSecurityGroup(kt *kit.Kit,
 
 	return common.RequestNoResp[protocvm.TCloudCvmBatchAssociateSecurityGroupReq](
 		cli.client, http.MethodPost, kt, req, "/cvms/security_groups/batch/associate")
+}
+
+// ListInstanceConfig list instance config.
+func (cli *CvmClient) ListInstanceConfig(kt *kit.Kit, req *protocvm.TCloudInstanceConfigListOption) (
+	*typecvm.TCloudInstanceConfigListResult, error) {
+
+	return common.Request[protocvm.TCloudInstanceConfigListOption, typecvm.TCloudInstanceConfigListResult](
+		cli.client, "POST", kt, req, "/instances/config/list")
 }

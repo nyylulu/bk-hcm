@@ -1,0 +1,58 @@
+.match-panel-container {
+  padding: 12px 32px;
+  overflow: hidden;
+}
+
+.apply-list-container {
+  .filter-container {
+    margin-bottom: 20px;
+    background-color: #fff;
+    border-radius: 2px;
+  }
+
+  .filter-common-table {
+    background-color: #fff;
+  }
+}
+
+.scr-form-wrapper {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 0 24px;
+
+  :global {
+    .bk-form-item {
+      flex: 0 0 25%;
+      margin: 8px 0;
+
+      .bk-form-content,
+      .bk-date-picker {
+        width: 280px;
+        margin-right: 8px;
+      }
+    }
+  }
+}
+
+.data-list-container {
+  margin-top: 16px;
+}
+
+.table-prepend {
+  background: #f0f1f5;
+  width: 100%;
+  padding: 10px;
+
+  .pending-num {
+    color: #3a84ff;
+    font-style: normal;
+    font-weight: 700;
+  }
+
+  .selected-num {
+    color: #f59500;
+    font-style: normal;
+    font-weight: 700;
+  }
+}

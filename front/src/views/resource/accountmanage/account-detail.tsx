@@ -491,7 +491,7 @@ export default defineComponent({
       await http.patch(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/accounts/${resourceAccountStore.resourceAccount?.id}`, {
         managers: accountFormModel.managers,
         memo: accountFormModel.memo,
-        bk_biz_id: accountFormModel.bk_biz_id || undefined,
+        bk_biz_id: isResourceAccount.value ? accountFormModel.bk_biz_id : undefined,
         usage_biz_ids: Array.isArray(accountFormModel.usage_biz_ids)
           ? accountFormModel.usage_biz_ids
           : [accountFormModel.usage_biz_ids],

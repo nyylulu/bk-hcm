@@ -15,6 +15,7 @@ package scheduler
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -53,6 +54,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty"
+	"hcm/pkg/thirdparty/api-gateway/bkbotapproval"
 	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/cvmapi"
@@ -118,6 +120,8 @@ type Interface interface {
 	TerminateApplyOrder(kit *kit.Kit, param *types.TerminateApplyOrderReq) error
 	// ModifyApplyOrder modify resource apply order
 	ModifyApplyOrder(kit *kit.Kit, param *types.ModifyApplyReq) error
+	// ConfirmApplyModify confirm resource apply modify
+	ConfirmApplyModify(kit *kit.Kit, param *types.ConfirmApplyModifyReq) (*types.ConfirmApplyModifyResp, error)
 	// RecommendApplyOrder get resource apply order modification recommendation
 	RecommendApplyOrder(kit *kit.Kit, param *types.RecommendApplyReq) (*types.RecommendApplyRst, error)
 	// GetApplyModify gets resource apply order modify records
@@ -166,18 +170,19 @@ type Interface interface {
 
 // scheduler provides resource apply service
 type scheduler struct {
-	lang         language.CCLanguageIf
-	itsm         itsm.Client
-	cc           cmdb.Client
-	dispatcher   *dispatcher.Dispatcher
-	generator    *generator.Generator
-	matcher      *matcher.Matcher
-	recommend    *recommender.Recommender
-	configLogics config.Logics
-	rsLogics     rollingserver.Logics
-	gcLogics     greenchannel.Logics
-	crpCli       cvmapi.CVMClientInterface
-	bizLogic     biz.Logics
+	lang          language.CCLanguageIf
+	itsm          itsm.Client
+	cc            cmdb.Client
+	dispatcher    *dispatcher.Dispatcher
+	generator     *generator.Generator
+	matcher       *matcher.Matcher
+	recommend     *recommender.Recommender
+	configLogics  config.Logics
+	rsLogics      rollingserver.Logics
+	gcLogics      greenchannel.Logics
+	crpCli        cvmapi.CVMClientInterface
+	bizLogic      biz.Logics
+	bkBotApproval bkbotapproval.Client
 }
 
 // New creates a scheduler
@@ -211,18 +216,19 @@ func New(ctx context.Context, rsLogics rollingserver.Logics, gcLogics greenchann
 	dispatch.SetGenerator(generate)
 
 	scheduler := &scheduler{
-		lang:         language.NewFromCtx(language.EmptyLanguageSetting),
-		itsm:         thirdCli.ITSM,
-		crpCli:       thirdCli.CVM,
-		cc:           cmdbCli,
-		dispatcher:   dispatch,
-		generator:    generate,
-		matcher:      match,
-		recommend:    recommend,
-		configLogics: configLogics,
-		rsLogics:     rsLogics,
-		gcLogics:     gcLogics,
-		bizLogic:     bizLogic,
+		lang:          language.NewFromCtx(language.EmptyLanguageSetting),
+		itsm:          thirdCli.ITSM,
+		crpCli:        thirdCli.CVM,
+		cc:            cmdbCli,
+		dispatcher:    dispatch,
+		generator:     generate,
+		matcher:       match,
+		recommend:     recommend,
+		configLogics:  configLogics,
+		rsLogics:      rsLogics,
+		gcLogics:      gcLogics,
+		bizLogic:      bizLogic,
+		bkBotApproval: thirdCli.BkBotApproval,
 	}
 
 	return scheduler, nil
@@ -1788,7 +1794,32 @@ func (s *scheduler) GetMatchDevice(kit *kit.Kit, param *types.GetMatchDeviceReq)
 
 // MatchDevice execute resource apply match devices
 func (s *scheduler) MatchDevice(kt *kit.Kit, param *types.MatchDeviceReq) error {
-	if err := s.generator.MatchCVM(kt, param); err != nil {
+	// get order by suborder id
+	order, err := s.generator.GetApplyOrder(param.SuborderId)
+	if err != nil {
+		logs.Errorf("failed to match cvm when get apply order, err: %v, order id: %s, rid: %s", err, param.SuborderId,
+			kt.Rid)
+		return fmt.Errorf("failed to match cvm, err: %v, order id: %s", err, param.SuborderId)
+	}
+
+	// 获取实际生产成功的数量
+	deviceInfos, err := s.matcher.GetUnreleasedDevice(param.SuborderId)
+	if err != nil {
+		logs.Errorf("failed to get product device info, subOrderID: %s, err: %v, rid: %s",
+			param.SuborderId, err, kt.Rid)
+		return err
+	}
+
+	productSuccCount := len(deviceInfos)
+	// 手工匹配的数量 + 已生产的数量 不能大于 需要交付的总数量
+	if len(param.Device)+productSuccCount > int(order.TotalNum) {
+		logs.Errorf("match device && successfully generator amount exceeds origin requirement, subOrderID: %s, "+
+			"productNum: %d, TotalNum: %d, rid: %s", order.SubOrderId, productSuccCount, order.TotalNum, kt.Rid)
+		return fmt.Errorf("match device && successfully generator amount %d exceeds origin value %d",
+			len(param.Device)+productSuccCount, order.TotalNum)
+	}
+
+	if err = s.generator.MatchCVM(kt, param, order); err != nil {
 		logs.Errorf("failed to match devices, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
@@ -1839,12 +1870,12 @@ func (s *scheduler) StartApplyOrder(kt *kit.Kit, param *types.StartApplyOrderReq
 
 	// check status
 	for _, order := range insts {
-		// cannot start apply order if its stage is not SUSPEND
-		if order.Stage != types.TicketStageSuspend {
-			logs.Errorf("cannot terminate order %s, for its stage %s != %s, rid: %s", order.SubOrderId, order.Stage,
-				types.TicketStageSuspend, kt.Rid)
-			return fmt.Errorf("cannot terminate order %s, for its stage %s != %s", order.SubOrderId, order.Stage,
-				types.TicketStageSuspend)
+		// cannot start apply order if its stage is not SUSPEND、CONFIRMING
+		if order.Stage != types.TicketStageSuspend && order.Stage != types.TicketStageConfirming {
+			logs.Errorf("cannot start order %s, for its stage %s != %s and %s, rid: %s", order.SubOrderId, order.Stage,
+				types.TicketStageSuspend, types.TicketStageConfirming, kt.Rid)
+			return fmt.Errorf("cannot start order %s, for its stage %s != %s and %s", order.SubOrderId, order.Stage,
+				types.TicketStageSuspend, types.TicketStageConfirming)
 		}
 
 		// TODO 暂不支持重试升降配类型单据
@@ -1867,12 +1898,12 @@ func (s *scheduler) StartApplyOrder(kt *kit.Kit, param *types.StartApplyOrderReq
 func (s *scheduler) startOrder(kt *kit.Kit, orders []*types.ApplyOrder) error {
 	now := time.Now()
 	for _, order := range orders {
-		// cannot start apply order if its stage is not SUSPEND
-		if order.Stage != types.TicketStageSuspend {
-			logs.Errorf("cannot start order %s, for its stage %s != %s, rid: %s", order.SubOrderId, order.Stage,
-				types.TicketStageSuspend, kt.Rid)
-			return fmt.Errorf("cannot start order %s, for its stage %s != %s", order.SubOrderId, order.Stage,
-				types.TicketStageSuspend)
+		// cannot start apply order if its stage is not SUSPEND、CONFIRMING
+		if order.Stage != types.TicketStageSuspend && order.Stage != types.TicketStageConfirming {
+			logs.Errorf("cannot start order %s, for its stage %s != %s and %s, rid: %s", order.SubOrderId, order.Stage,
+				types.TicketStageSuspend, types.TicketStageConfirming, kt.Rid)
+			return fmt.Errorf("cannot start order %s, for its stage %s != %s and %s", order.SubOrderId, order.Stage,
+				types.TicketStageSuspend, types.TicketStageConfirming)
 		}
 
 		if err := s.startSubOrderFailedStep(kt, order.SubOrderId); err != nil {
@@ -2075,7 +2106,7 @@ func (s *scheduler) terminateOrder(orders []*types.ApplyOrder) error {
 	return nil
 }
 
-// ModifyApplyOrder modify resource apply order
+// ModifyApplyOrder 修改需求重试
 func (s *scheduler) ModifyApplyOrder(kt *kit.Kit, param *types.ModifyApplyReq) error {
 	filter := &mapstr.MapStr{
 		"suborder_id": mapstr.MapStr{
@@ -2110,20 +2141,160 @@ func (s *scheduler) ModifyApplyOrder(kt *kit.Kit, param *types.ModifyApplyReq) e
 		return err
 	}
 
-	// modify apply order
-	if err = s.modifyOrder(kt, order, param); err != nil {
-		logs.Errorf("failed to modify apply order, subOrderID: %s, err: %v, rid: %s", order.SubOrderId, err, kt.Rid)
-		return fmt.Errorf("failed to modify apply order, err: %v", err)
+	// 订单申请人本人修改，可以直接修改，不需要发送消息确认
+	if kt.User == order.User {
+		// modify apply order
+		if err = s.modifyOrder(kt, order, param); err != nil {
+			logs.Errorf("failed to modify apply order, subOrderID: %s, err: %v, rid: %s", order.SubOrderId, err, kt.Rid)
+			return fmt.Errorf("failed to modify apply order, err: %v", err)
+		}
+
+		// create apply order modify record
+		if _, err = s.createModifyRecord(kt, order, param, enumor.ApprovedCvmModifyStatus); err != nil {
+			logs.Errorf("failed to create apply order modify record, subOrderID: %s, err: %v, rid: %s",
+				order.SubOrderId, err, kt.Rid)
+			return err
+		}
+		return nil
 	}
 
 	// create apply order modify record
-	if err = s.createModifyRecord(kt, order, param); err != nil {
+	modifyID, err := s.createModifyRecord(kt, order, param, enumor.ApprovalPendingCvmModifyStatus)
+	if err != nil {
 		logs.Errorf("failed to create apply order modify record, subOrderID: %s, err: %v, rid: %s",
 			order.SubOrderId, err, kt.Rid)
 		return err
 	}
 
+	// 给用户发送确认消息
+	if err = s.sendConfirmMessage(kt, order, modifyID, param); err != nil {
+		logs.Errorf("failed to send apply order modify message, subOrderID: %s, modifyID: %s, err: %v, rid: %s",
+			order.SubOrderId, modifyID, err, kt.Rid)
+		return err
+	}
+
+	// modify apply order confirming
+	if err = s.modifyOrderStatusConfirming(kt, order); err != nil {
+		logs.Errorf("failed to modify apply order confirming, subOrderID: %s, err: %v, rid: %s",
+			order.SubOrderId, err, kt.Rid)
+		return fmt.Errorf("failed to modify apply order confirming, err: %v", err)
+	}
+
 	return nil
+}
+
+// sendConfirmMessage 发送[蓝鲸审批助手]消息
+func (s *scheduler) sendConfirmMessage(kt *kit.Kit, order *types.ApplyOrder, modifyID uint64,
+	param *types.ModifyApplyReq) error {
+
+	// 主机申请单的详情链接
+	applyOrderURL := fmt.Sprintf(s.itsm.GetItsmConfig().ApplyLinkFormat, order.OrderId, order.BkBizId, order.BkBizId,
+		order.ResourceType)
+	// 同意的Action
+	approveActionJSON, err := json.Marshal(bkbotapproval.CvmApplyModifyConfirmCallbackData{
+		BkBizID:    order.BkBizId,
+		Action:     bkbotapproval.ApproveActionType,
+		SuborderID: order.SubOrderId,
+		ModifyID:   modifyID,
+	})
+	if err != nil {
+		logs.Errorf("failed to marshal approve action, subOrderID: %s, modifyID: %d, err: %v, rid: %s",
+			order.SubOrderId, modifyID, err, kt.Rid)
+		return err
+	}
+
+	// 拒绝的Action
+	rejectActionJSON, err := json.Marshal(bkbotapproval.CvmApplyModifyConfirmCallbackData{
+		BkBizID:    order.BkBizId,
+		Action:     bkbotapproval.RejectActionType,
+		SuborderID: order.SubOrderId,
+		ModifyID:   modifyID,
+	})
+	if err != nil {
+		logs.Errorf("failed to marshal reject action, subOrderID: %s, modifyID: %d, err: %v, rid: %s",
+			order.SubOrderId, modifyID, err, kt.Rid)
+		return err
+	}
+
+	modifyCompare := getModifyApplyCompare(order, param)
+	loc, err := time.LoadLocation(cc.WoaServer().LocalTimezone)
+	if err != nil {
+		logs.Warnf("get location time zone: %s failed, err: %v, rid: %s", cc.WoaServer().LocalTimezone, err, kt.Rid)
+		loc = time.UTC
+	}
+	createTime := order.CreateAt.In(loc).Format(constant.DateTimeLayout)
+	modifyTime := time.Now().In(loc).Format(constant.DateTimeLayout)
+	callbackURL := fmt.Sprintf("%s/api/v1/woa/bizs/%d/task/confirm/apply/record/modify",
+		cc.WoaServer().BkApigwHCMURL, order.BkBizId)
+	req := &bkbotapproval.SendMessageTplReq{
+		Title:     "海垒主机申请单需求调整授权",
+		Approvers: []string{order.User},
+		Receiver:  []string{order.User},
+		Summary: fmt.Sprintf(`单号：[%s](%s)\n提单时间：%s\n\n\n%s%s%s%s%s\n\n\n%s%s%s%s%s\n\n\n修改人：%s\n修改时间：%s\n
+注意：如6小时内未确认操作，将自动释放本次修改`, order.SubOrderId, applyOrderURL, createTime, modifyCompare.PreDeviceType,
+			modifyCompare.PreZone, modifyCompare.PreNum, modifyCompare.PreVpc, modifyCompare.PreSubnet,
+			modifyCompare.CurDeviceType, modifyCompare.CurZone, modifyCompare.CurNum, modifyCompare.CurVpc,
+			modifyCompare.CurSubnet, kt.User, modifyTime),
+		Actions: []bkbotapproval.MessageAction{
+			{
+				Name:         "确认修改",
+				Color:        bkbotapproval.GreenButtonColor,
+				CallbackURL:  callbackURL,
+				CallbackData: approveActionJSON,
+			},
+			{
+				Name:         "拒绝修改",
+				Color:        bkbotapproval.RedButtonColor,
+				CallbackURL:  callbackURL,
+				CallbackData: rejectActionJSON,
+			},
+		},
+	}
+	err = s.bkBotApproval.SendMessage(kt, req)
+	if err != nil {
+		logs.Errorf("failed to send bkbotapproval modify message, subOrderID: %s, modifyID: %d, err: %v, rid: %s",
+			order.SubOrderId, modifyID, err, kt.Rid)
+		return err
+	}
+
+	return nil
+}
+
+// getModifyApplyCompare 获取变更前后的对比信息
+func getModifyApplyCompare(order *types.ApplyOrder, param *types.ModifyApplyReq) types.ConfirmApplyModifyCompare {
+	modifyCompare := types.ConfirmApplyModifyCompare{}
+	// 机型是否有变化
+	modifyCompare.PreDeviceType = fmt.Sprintf("修改前机型：%s\n", order.Spec.DeviceType)
+	modifyCompare.CurDeviceType = fmt.Sprintf("修改后机型：%s", param.Spec.DeviceType)
+	if order.Spec.DeviceType != param.Spec.DeviceType {
+		modifyCompare.CurDeviceType += "<font color=red>（有调整）</font>"
+	}
+	modifyCompare.CurDeviceType += "\n"
+
+	// 园区是否有变化
+	modifyCompare.PreZone = fmt.Sprintf("修改前园区：%s\n", order.Spec.Zone)
+	modifyCompare.CurZone = fmt.Sprintf("修改后园区：%s", param.Spec.Zone)
+	if order.Spec.DeviceType != param.Spec.DeviceType {
+		modifyCompare.CurZone += "<font color=red>（有调整）</font>"
+	}
+	modifyCompare.CurZone += "\n"
+
+	// 交付数量是否有变化
+	modifyCompare.PreNum = fmt.Sprintf("修改前待交付数量：%d\n", order.TotalNum-param.ProductNum)
+	modifyCompare.CurNum = fmt.Sprintf("修改后待交付数量：%d\n", param.TotalNum-param.ProductNum)
+
+	// VPC是否有变化
+	if order.Spec.Vpc != param.Spec.Vpc {
+		modifyCompare.PreVpc = fmt.Sprintf("修改前VPC：%s\n", order.Spec.Vpc)
+		modifyCompare.CurVpc = fmt.Sprintf("修改后VPC：%s\n", param.Spec.Vpc)
+	}
+
+	// 子网是否有变化
+	if order.Spec.Subnet != param.Spec.Subnet {
+		modifyCompare.PreSubnet = fmt.Sprintf("修改前子网：%s\n", order.Spec.Subnet)
+		modifyCompare.CurSubnet = fmt.Sprintf("修改后子网：%s\n", param.Spec.Subnet)
+	}
+	return modifyCompare
 }
 
 func (s *scheduler) validateModification(kt *kit.Kit, order *types.ApplyOrder, param *types.ModifyApplyReq) error {
@@ -2357,12 +2528,12 @@ func (s *scheduler) validateModifyZone(kt *kit.Kit, order *types.ApplyOrder, par
 
 func (s *scheduler) modifyOrder(kt *kit.Kit, order *types.ApplyOrder, param *types.ModifyApplyReq) error {
 	now := time.Now()
-	// cannot modify apply order if its stage is not SUSPEND
-	if order.Stage != types.TicketStageSuspend {
-		logs.Errorf("cannot modify order %s, for its stage %s != %s, rid: %s", order.SubOrderId, order.Status,
-			types.TicketStageSuspend, kt.Rid)
-		return fmt.Errorf("cannot modify order %s, for its stage %s != %s", order.SubOrderId, order.Status,
-			types.TicketStageSuspend)
+	// cannot modify apply order if its stage is not SUSPEND、CONFIRMING
+	if order.Stage != types.TicketStageSuspend && order.Stage != types.TicketStageConfirming {
+		logs.Errorf("cannot modify order %s, for its stage %s != %s and %s, rid: %s", order.SubOrderId, order.Status,
+			types.TicketStageSuspend, types.TicketStageConfirming, kt.Rid)
+		return fmt.Errorf("cannot modify order %s, for its stage %s != %s and %s", order.SubOrderId, order.Status,
+			types.TicketStageSuspend, types.TicketStageConfirming)
 	}
 
 	if err := s.startSubOrderFailedStep(kt, order.SubOrderId); err != nil {
@@ -2410,12 +2581,41 @@ func (s *scheduler) modifyOrder(kt *kit.Kit, order *types.ApplyOrder, param *typ
 	return nil
 }
 
-func (s *scheduler) createModifyRecord(kt *kit.Kit, order *types.ApplyOrder, param *types.ModifyApplyReq) error {
+// modifyOrderStatusConfirming 修改主机申请单状态为“待用户确认”
+func (s *scheduler) modifyOrderStatusConfirming(kt *kit.Kit, order *types.ApplyOrder) error {
+	// cannot modify apply order if its stage is not SUSPEND
+	if order.Stage != types.TicketStageSuspend {
+		logs.Errorf("cannot modify order %s, for its stage %s != %s, rid: %s", order.SubOrderId, order.Status,
+			types.TicketStageSuspend, kt.Rid)
+		return fmt.Errorf("cannot modify order %s, for its stage %s != %s", order.SubOrderId, order.Status,
+			types.TicketStageSuspend)
+	}
+
+	filter := &mapstr.MapStr{
+		"suborder_id": order.SubOrderId,
+	}
+
+	update := &mapstr.MapStr{
+		"stage":  types.TicketStageConfirming,
+		"status": types.ApplyStatusConfirming,
+	}
+
+	if err := model.Operation().ApplyOrder().UpdateApplyOrder(context.Background(), filter, update); err != nil {
+		logs.Errorf("failed to update order %s status, err: %v, rid: %s", order.SubOrderId, err, kt.Rid)
+		return fmt.Errorf("failed to update order %s status, err: %v", order.SubOrderId, err)
+	}
+
+	return nil
+}
+
+func (s *scheduler) createModifyRecord(kt *kit.Kit, order *types.ApplyOrder, param *types.ModifyApplyReq,
+	status enumor.CvmModifyRecordStatus) (uint64, error) {
+
 	id, err := dao.Set().ModifyRecord().NextSequence(kt.Ctx)
 	if err != nil {
 		logs.Errorf("failed to get modify record next sequence id, subOrderID: %s, err: %v, rid: %s",
 			order.SubOrderId, err, kt.Rid)
-		return errf.Newf(pkg.CCErrObjectDBOpErrno, err.Error())
+		return 0, errf.Newf(pkg.CCErrObjectDBOpErrno, err.Error())
 	}
 
 	modifyRecord := &table.ModifyRecord{
@@ -2434,6 +2634,8 @@ func (s *scheduler) createModifyRecord(kt *kit.Kit, order *types.ApplyOrder, par
 				NetworkType: order.Spec.NetworkType,
 				Vpc:         order.Spec.Vpc,
 				Subnet:      order.Spec.Subnet,
+				SystemDisk:  order.Spec.SystemDisk,
+				DataDisk:    order.Spec.DataDisk,
 			},
 			CurData: &table.ModifyData{
 				TotalNum:    param.TotalNum,
@@ -2447,13 +2649,40 @@ func (s *scheduler) createModifyRecord(kt *kit.Kit, order *types.ApplyOrder, par
 				NetworkType: param.Spec.NetworkType,
 				Vpc:         param.Spec.Vpc,
 				Subnet:      param.Spec.Subnet,
+				SystemDisk:  param.Spec.SystemDisk,
+				DataDisk:    param.Spec.DataDisk,
 			},
 		},
 		CreateAt: time.Now(),
+		Status:   status,
 	}
 
 	if err = dao.Set().ModifyRecord().CreateModifyRecord(kt.Ctx, modifyRecord); err != nil {
 		logs.Errorf("failed to create modify record, subOrderID: %s, err: %v, rid: %s", order.SubOrderId, err, kt.Rid)
+		return 0, err
+	}
+
+	return id, nil
+}
+
+// updateModifyRecordStatus 更新变更记录状态
+func (s *scheduler) updateModifyRecordData(kt *kit.Kit, subOrderID string, modifyID uint64,
+	status enumor.CvmModifyRecordStatus) error {
+
+	filter := mapstr.MapStr{
+		"id":          modifyID,
+		"suborder_id": subOrderID,
+	}
+
+	update := &mapstr.MapStr{
+		"status":    status,
+		"approver":  kt.User,
+		"update_at": time.Now(),
+	}
+
+	if err := dao.Set().ModifyRecord().UpdateModifyRecord(kt.Ctx, &filter, update); err != nil {
+		logs.Errorf("failed to update modify record, err: %v, subOrderID: %s, modifyID: %d, rid: %s",
+			err, subOrderID, modifyID, kt.Rid)
 		return err
 	}
 
@@ -3082,4 +3311,179 @@ func calProductDeviceTypeCountMap(devices []*types.DeviceInfo, checkDelivered bo
 		deliverGroupCntMap[deliveredKey]++
 	}
 	return deviceTypeCountMap, deliverGroupCntMap
+}
+
+// ConfirmApplyModify modify resource apply modify 用户确认变更记录点接口
+func (s *scheduler) ConfirmApplyModify(kt *kit.Kit, param *types.ConfirmApplyModifyReq) (
+	*types.ConfirmApplyModifyResp, error) {
+
+	// 查询主机申请单信息
+	filter := &mapstr.MapStr{
+		"suborder_id": param.SuborderID,
+	}
+	order, err := model.Operation().ApplyOrder().GetApplyOrder(kt.Ctx, filter)
+	if err != nil {
+		logs.Errorf("failed to get apply order, err: %v, param: %+v, rid: %s", err, cvt.PtrToVal(param), kt.Rid)
+		return nil, err
+	}
+
+	// 验证确认信息
+	if err = validateConfirm(kt, param, order); err != nil {
+		return nil, err
+	}
+
+	// 查询主机申请单变更记录
+	modifyRecord, err := s.checkAndGetModifyRecord(kt, param, order)
+	if err != nil {
+		return nil, err
+	}
+
+	// 获取实际生产成功的数量
+	deviceInfos, err := s.matcher.GetUnreleasedDevice(order.SubOrderId)
+	if err != nil {
+		logs.Errorf("failed to get generate records, subOrderID: %s, err: %v, rid: %s", order.SubOrderId, err, kt.Rid)
+		return nil, err
+	}
+	productSuccCount := uint(len(deviceInfos))
+
+	if productSuccCount > modifyRecord.Details.CurData.TotalNum {
+		return nil, fmt.Errorf("cannot confirm apply modify, subOrderID: %s, product success count %d > "+
+			"modify record count %d", order.SubOrderId, productSuccCount, modifyRecord.Details.CurData.TotalNum)
+	}
+
+	return s.auditApplyModifyCallback(kt, param, order, modifyRecord, productSuccCount)
+}
+
+func (s *scheduler) auditApplyModifyCallback(kt *kit.Kit, param *types.ConfirmApplyModifyReq, order *types.ApplyOrder,
+	modifyRecord *table.ModifyRecord, productSuccCount uint) (*types.ConfirmApplyModifyResp, error) {
+
+	// 审批状态
+	auditStatus := enumor.ApprovalRejectedCvmModifyStatus
+	if param.Action == bkbotapproval.ApproveActionType {
+		auditStatus = enumor.ApprovedCvmModifyStatus
+	}
+
+	// update apply order modify record
+	err := s.updateModifyRecordData(kt, order.SubOrderId, modifyRecord.ID, auditStatus)
+	if err != nil {
+		logs.Errorf("failed to update apply order modify record, subOrderID: %s, modifyID: %d, err: %v, param: %+v, "+
+			"rid: %s", order.SubOrderId, modifyRecord.ID, err, cvt.PtrToVal(param), kt.Rid)
+		return nil, err
+	}
+
+	// 审批不通过的话，直接返回
+	if auditStatus != enumor.ApprovedCvmModifyStatus {
+		// 需要把主机申请单，由“待确认”更新为“备货异常”
+		if order.Stage == types.TicketStageConfirming {
+			if err = s.updateApplyOrderStatus(kt, order,
+				types.TicketStageSuspend, types.ApplyStatusTerminate); err != nil {
+				logs.Errorf("failed to update apply order status SUSPEND, subOrderID: %s, err: %v, param: %+v, rid: %s",
+					order.SubOrderId, err, cvt.PtrToVal(param), kt.Rid)
+				return nil, err
+			}
+		}
+		return &types.ConfirmApplyModifyResp{
+			ResponseMsg:   "单据拒绝成功",
+			ResponseColor: bkbotapproval.RedButtonColor,
+			RequestID:     kt.Rid,
+		}, nil
+	}
+
+	// modify apply order
+	maReq := &types.ModifyApplyReq{
+		TotalNum:   modifyRecord.Details.CurData.TotalNum,
+		ProductNum: productSuccCount,
+		Spec: &types.ResourceSpec{
+			Region:      modifyRecord.Details.CurData.Region,
+			Zone:        modifyRecord.Details.CurData.Zone,
+			DeviceType:  modifyRecord.Details.CurData.DeviceType,
+			ImageId:     modifyRecord.Details.CurData.ImageId,
+			DiskSize:    modifyRecord.Details.CurData.DiskSize,
+			DiskType:    modifyRecord.Details.CurData.DiskType,
+			NetworkType: modifyRecord.Details.CurData.NetworkType,
+			Vpc:         modifyRecord.Details.CurData.Vpc,
+			Subnet:      modifyRecord.Details.CurData.Subnet,
+		},
+	}
+	if err = s.modifyOrder(kt, order, maReq); err != nil {
+		logs.Errorf("failed to modify apply order confirmed, subOrderID: %s, err: %v, rid: %s",
+			order.SubOrderId, err, kt.Rid)
+		return nil, fmt.Errorf("failed to modify apply order confirming, err: %v", err)
+	}
+
+	return &types.ConfirmApplyModifyResp{
+		ResponseMsg:   "单据确认成功",
+		ResponseColor: bkbotapproval.GreenButtonColor,
+		RequestID:     kt.Rid,
+	}, nil
+}
+
+func (s *scheduler) checkAndGetModifyRecord(kt *kit.Kit, param *types.ConfirmApplyModifyReq, order *types.ApplyOrder) (
+	*table.ModifyRecord, error) {
+
+	mrReq := &types.GetApplyModifyReq{ID: []uint64{param.ModifyID}}
+	listModify, err := s.GetApplyModify(kt, mrReq)
+	if err != nil {
+		logs.Errorf("failed to get apply modify record, err: %v, param: %+v, rid: %s", err, cvt.PtrToVal(param), kt.Rid)
+		return nil, err
+	}
+
+	if len(listModify.Info) != 1 {
+		return nil, fmt.Errorf("cannot confirm apply modify, subOrderID: %s, modifyID: %d, modify record count %d != 1",
+			order.SubOrderId, param.ModifyID, len(listModify.Info))
+	}
+
+	modifyRecord := listModify.Info[0]
+	// 变更状态不是“待确认”，则报错提示
+	if modifyRecord.Status != enumor.ApprovalPendingCvmModifyStatus {
+		auditStatusName := enumor.CvmModifyRecordStatusMap[modifyRecord.Status]
+		logs.Errorf("cannot confirm apply modify, subOrderID: %s, modifyID: %d, action: %s, 变更单不能重复操作，"+
+			"当前状态是: %s, rid: %s", order.SubOrderId, param.ModifyID, param.Action, auditStatusName, kt.Rid)
+		return nil, fmt.Errorf("cannot confirm apply modify, subOrderID: %s, modifyID: %d, action: %s, "+
+			"变更单不能重复操作，当前状态是: %s", order.SubOrderId, param.ModifyID, param.Action, auditStatusName)
+	}
+
+	if modifyRecord.Details == nil || modifyRecord.Details.CurData == nil {
+		logs.Errorf("cannot confirm apply modify, subOrderID: %s, modifyID: %d, action: %s, modify record details "+
+			"is nil, rid: %s", order.SubOrderId, param.ModifyID, param.Action, kt.Rid)
+		return nil, fmt.Errorf("cannot confirm apply modify, subOrderID: %s, modifyID: %d, action: %s, modify record "+
+			"details is nil", order.SubOrderId, param.ModifyID, param.Action)
+	}
+
+	return modifyRecord, nil
+}
+
+func validateConfirm(kt *kit.Kit, param *types.ConfirmApplyModifyReq, order *types.ApplyOrder) error {
+	// 校验主机申请单是否属于该业务
+	if order.BkBizId != param.BkBizID {
+		logs.Errorf("cannot confirm apply modify %s, for its bizid %d != %d, rid: %s", order.SubOrderId,
+			order.BkBizId, param.BkBizID, kt.Rid)
+		return fmt.Errorf("cannot confirm apply modify %s, for its bizid %d != %d", order.SubOrderId,
+			order.BkBizId, param.BkBizID)
+	}
+
+	// 校验当前用户是否是主机申请人
+	if kt.User != order.User {
+		logs.Errorf("cannot confirm apply modify %s, apply order not belonging to the current user: %s, rid: %s",
+			order.SubOrderId, kt.User, kt.Rid)
+		return fmt.Errorf("cannot confirm apply modify %s, apply order not belonging to the current user: %s",
+			order.SubOrderId, kt.User)
+	}
+
+	// cannot confirm apply modify if its stage is not SUSPEND、CONFIRMING
+	if order.Stage != types.TicketStageSuspend && order.Stage != types.TicketStageConfirming {
+		logs.Errorf("cannot confirm apply modify, subOrderID: %s, modifyID: %d, action: %s, stage: %s, param: %+v, "+
+			"单据处于备货中或已完成，确认失败, rid: %s", order.SubOrderId, param.ModifyID, param.Action, order.Stage,
+			cvt.PtrToVal(param), kt.Rid)
+		return fmt.Errorf("cannot confirm apply modify, subOrderID: %s, modifyID: %d, action: %s, stage: %s, "+
+			"单据处于备货中或已完成，确认失败", order.SubOrderId, param.ModifyID, param.Action, order.Stage)
+	}
+
+	// 暂不支持重试升降配类型单据
+	if order.ResourceType == types.ResourceTypeUpgradeCvm {
+		logs.Errorf("cannot confirm apply modify %s, for its resource type is %s, rid: %s", order.SubOrderId,
+			order.ResourceType, kt.Rid)
+		return fmt.Errorf("CVM升降配暂不支持修改单据重试")
+	}
+	return nil
 }

@@ -21,11 +21,17 @@ import (
 
 // ModifyRecord defines a resource apply order modify record's detail information
 type ModifyRecord struct {
-	ID         uint64        `json:"id" bson:"id"`
-	SuborderID string        `json:"suborder_id" bson:"suborder_id"`
-	User       string        `json:"bk_username" bson:"bk_username"`
-	Details    *ModifyDetail `json:"details" bson:"details"`
-	CreateAt   time.Time     `json:"create_at" bson:"create_at"`
+	ID         uint64 `json:"id" bson:"id"`
+	SuborderID string `json:"suborder_id" bson:"suborder_id"`
+	// 修改人
+	User     string        `json:"bk_username" bson:"bk_username"`
+	Details  *ModifyDetail `json:"details" bson:"details"`
+	CreateAt time.Time     `json:"create_at" bson:"create_at"`
+	UpdateAt time.Time     `json:"update_at" bson:"update_at"`
+	// 变更状态(0:待审批 1:审批通过 2:审批失败 3:审批拒绝 4:审批超时)
+	Status enumor.CvmModifyRecordStatus `json:"status" bson:"status"`
+	// 审批人
+	Approver string `json:"approver" bson:"approver"`
 }
 
 // ModifyDetail apply order modify details with previous and current data
@@ -36,15 +42,17 @@ type ModifyDetail struct {
 
 // ModifyData apply order modified data
 type ModifyData struct {
-	TotalNum    uint            `json:"total_num" bson:"total_num"`
-	Replicas    uint            `json:"replicas" bson:"replicas"`
-	Region      string          `json:"region" bson:"region"`
-	Zone        string          `json:"zone" bson:"zone"`
-	DeviceType  string          `json:"device_type" bson:"device_type"`
-	ImageId     string          `json:"image_id" bson:"image_id"`
-	DiskSize    int64           `json:"disk_size" bson:"disk_size"`
-	DiskType    enumor.DiskType `json:"disk_type" bson:"disk_type"`
-	NetworkType string          `json:"network_type" bson:"network_type"`
-	Vpc         string          `json:"vpc" bson:"vpc"`
-	Subnet      string          `json:"subnet" bson:"subnet"`
+	TotalNum    uint              `json:"total_num" bson:"total_num"`
+	Replicas    uint              `json:"replicas" bson:"replicas"`
+	Region      string            `json:"region" bson:"region"`
+	Zone        string            `json:"zone" bson:"zone"`
+	DeviceType  string            `json:"device_type" bson:"device_type"`
+	ImageId     string            `json:"image_id" bson:"image_id"`
+	DiskSize    int64             `json:"disk_size" bson:"disk_size"`
+	DiskType    enumor.DiskType   `json:"disk_type" bson:"disk_type"`
+	NetworkType string            `json:"network_type" bson:"network_type"`
+	Vpc         string            `json:"vpc" bson:"vpc"`
+	Subnet      string            `json:"subnet" bson:"subnet"`
+	SystemDisk  enumor.DiskSpec   `json:"system_disk" bson:"system_disk"`
+	DataDisk    []enumor.DiskSpec `json:"data_disk" bson:"data_disk"`
 }

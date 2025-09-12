@@ -15,51 +15,89 @@ package detector
 
 import (
 	"fmt"
-	"time"
+	"sync/atomic"
 
-	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/pkg"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/api-gateway/cmdb"
+	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/querybuilder"
+	"hcm/pkg/tools/slice"
 )
 
-func (d *Detector) checkOwner(step *table.DetectStep, retry int) (int, string, error) {
-	attempt := 0
-	exeInfo := ""
-	var err error = nil
+// CheckOwnerMaxBatchSize 检查是否包含虚拟子机
+const CheckOwnerMaxBatchSize = pkg.BKMaxInstanceLimit / 2
 
-	for i := 0; i < retry; i++ {
-		attempt = i
-		exeInfo, err = d.checkHasVm(step.IP)
-		if err == nil {
-			break
-		}
-
-		// retry gap until last retry
-		if (i + 1) < retry {
-			time.Sleep(3 * time.Second)
-		}
-	}
-
-	return attempt, exeInfo, err
+// CheckOwnerWorkGroup 查询bk Owner的主机池，如果该主机在Owner主机池里面，则不允许回收
+type CheckOwnerWorkGroup struct {
+	stepBatchChan chan *stepBatch
+	started       atomic.Bool
+	currency      int
+	cc            CmdbOperator
+	resultHandler StepResultHandler
 }
 
-func (d *Detector) checkHasVm(ip string) (string, error) {
-	ips := []string{ip}
-	hostBase, err := d.getHostBaseInfo(ips)
-	if err != nil {
-		logs.Errorf("failed to get host from cc, err: %v, ip: %s", err, ip)
-		return "", fmt.Errorf("failed to get host from cc err: %v", err)
+// MaxBatchSize ...
+func (t *CheckOwnerWorkGroup) MaxBatchSize() int {
+	return CheckOwnerMaxBatchSize
+}
+
+// NewCheckOwnerWorkGroup ...
+func NewCheckOwnerWorkGroup(cc cmdb.Client, resultHandler StepResultHandler,
+	workerNum int) *CheckOwnerWorkGroup {
+
+	return &CheckOwnerWorkGroup{
+		cc:            NewCmdbOperator(cc),
+		resultHandler: resultHandler,
+		currency:      workerNum,
+		stepBatchChan: make(chan *stepBatch, workerNum),
+	}
+}
+
+// HandleResult ...
+func (t *CheckOwnerWorkGroup) HandleResult(kt *kit.Kit, steps []*StepMeta, detectErr error, log string,
+	needRetry bool) {
+
+	t.resultHandler.HandleResult(kt, steps, detectErr, log, needRetry)
+}
+
+// Submit 提交检查
+func (t *CheckOwnerWorkGroup) Submit(kt *kit.Kit, steps []*StepMeta) {
+	t.stepBatchChan <- &stepBatch{kt: kt, steps: steps}
+}
+
+// Start 启动worker
+func (t *CheckOwnerWorkGroup) Start(kt *kit.Kit) {
+	if !t.started.CompareAndSwap(false, true) {
+		// already started
+		return
 	}
 
-	cnt := len(hostBase)
-	if cnt != 1 {
-		logs.Errorf("get invalid host num %d != 1", cnt)
-		return "", fmt.Errorf("get invalid host num %d != 1", cnt)
+	for i := 0; i < t.currency; i++ {
+		subKit := kt.NewSubKit()
+		go t.queryWorker(subKit, i)
 	}
+}
 
-	host := hostBase[0]
+func (t *CheckOwnerWorkGroup) queryWorker(kt *kit.Kit, idx int) {
+	logs.Infof("check owner query worker %d start, rid: %s", idx, kt.Rid)
+	defer logs.Infof("check owner query worker %d exit, rid: %s", idx, kt.Rid)
+
+	for {
+		select {
+		case batch := <-t.stepBatchChan:
+			logs.V(4).Infof("check owner worker %d got steps: %d:%s, rid: %s",
+				idx, len(batch.steps), batch.steps, kt.Rid)
+			t.check(batch.kt, batch.steps)
+		case <-kt.Ctx.Done():
+			return
+		}
+	}
+}
+
+func (t *CheckOwnerWorkGroup) check(kt *kit.Kit, steps []*StepMeta) {
+	assetIDs := slice.Map(steps, func(step *StepMeta) string { return step.Step.AssetID })
 
 	req := &cmdb.ListHostReq{
 		HostPropertyFilter: &cmdb.QueryFilter{
@@ -68,8 +106,8 @@ func (d *Detector) checkHasVm(ip string) (string, error) {
 				Rules: []querybuilder.Rule{
 					querybuilder.AtomRule{
 						Field:    "bk_svr_owner_asset_id",
-						Operator: querybuilder.OperatorEqual,
-						Value:    host.BkAssetID,
+						Operator: querybuilder.OperatorIn,
+						Value:    assetIDs,
 					},
 				},
 			},
@@ -78,6 +116,7 @@ func (d *Detector) checkHasVm(ip string) (string, error) {
 			"bk_host_id",
 			"bk_asset_id",
 			"bk_host_innerip",
+			"bk_svr_owner_asset_id",
 		},
 		Page: cmdb.BasePage{
 			Start: 0,
@@ -85,22 +124,32 @@ func (d *Detector) checkHasVm(ip string) (string, error) {
 		},
 	}
 
-	// set rate limit to avoid cc api error "API rate limit exceeded by stage/resource strategy"
-	ccLimiter.Take()
-	resp, err := d.cc.ListHost(d.kt, req)
-	if err != nil {
-		logs.Errorf("failed to get cc host info, err: %v", err)
-		return "", err
+	hostVmMap := make(map[string][]*cmdb.Host)
+
+	for {
+		resp, err := t.cc.ListHost(kt, req)
+		if err != nil {
+			logs.Errorf("failed to get cc host info by bk_svr_owner_asset_id, err: %v", err)
+			e := fmt.Errorf("failed to get cc host info by bk_svr_owner_asset_id, err: %v", err)
+			t.HandleResult(kt, steps, e, err.Error(), true)
+			return
+		}
+		for _, host := range resp.Info {
+			hostVmMap[host.BKSvrOwnerAssetID] = append(hostVmMap[host.BKSvrOwnerAssetID], cvt.ValToPtr(host))
+		}
+		if len(resp.Info) < int(req.Page.Limit) {
+			break
+		}
+		req.Page.Start += req.Page.Limit
 	}
-
-	respStr := d.structToStr(resp)
-	exeInfo := fmt.Sprintf("vm check response: %s", respStr)
-
-	vmNum := len(resp.Info)
-	if vmNum > 0 {
-		logs.Errorf("host has %d vm", vmNum)
-		return exeInfo, fmt.Errorf("host has %d vm", vmNum)
+	for _, step := range steps {
+		if _, ok := hostVmMap[step.Step.AssetID]; ok {
+			hostVmStr := structToStr(hostVmMap[step.Step.AssetID])
+			err := fmt.Errorf("host has %d vm: %s", len(hostVmMap[step.Step.AssetID]), hostVmStr)
+			t.HandleResult(kt, []*StepMeta{step}, err, hostVmStr, false)
+			continue
+		}
+		log := fmt.Sprintf("no vm")
+		t.HandleResult(kt, []*StepMeta{step}, nil, log, false)
 	}
-
-	return exeInfo, nil
 }

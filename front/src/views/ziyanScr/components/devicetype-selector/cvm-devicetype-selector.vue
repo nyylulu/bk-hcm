@@ -12,6 +12,7 @@
     :option-disabled="deviceTypeOptionDisabledCallback"
     :option-disabled-tips-content="deviceTypeOptionDisabledTipsCallback"
     @change="handleChange"
+    v-bind="attrs"
   >
     <template #option="option">
       <span>{{ option.device_type }}</span>
@@ -31,7 +32,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, useTemplateRef, watch } from 'vue';
+import { computed, ref, useAttrs, useTemplateRef, watch } from 'vue';
 import useCvmChargeType from '@/views/ziyanScr/hooks/use-cvm-charge-type';
 import type { CvmDeviceType, DeviceType, SelectionType } from './types';
 import type { RollingServerHost } from '../../rolling-server/inherit-package-form-item/index.vue';
@@ -54,8 +55,8 @@ interface IProps {
   tipClass?: string;
 }
 
-const props = defineProps<IProps>();
 const model = defineModel<string>();
+const props = defineProps<IProps>();
 const emit = defineEmits<{
   change: [
     {
@@ -65,6 +66,7 @@ const emit = defineEmits<{
     },
   ];
 }>();
+const attrs = useAttrs();
 
 const selectorRef = useTemplateRef<typeof DevicetypeSelector>('device-type-selector');
 const { cvmChargeTypes } = useCvmChargeType();

@@ -74,6 +74,7 @@ func register() {
 	action.RegisterAction(actioncvm.StopActionV2{})
 	action.RegisterAction(actioncvm.RebootActionV2{})
 	action.RegisterAction(actioncvm.BatchTaskCvmResetAction{})
+	action.RegisterAction(actioncvm.MonitorIdleCheckAction{})
 
 	action.RegisterAction(actionfirewall.DeleteAction{})
 

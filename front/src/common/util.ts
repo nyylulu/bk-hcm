@@ -320,3 +320,7 @@ export function toArray<T>(value: T | T[]): T[] {
   }
   return Array.of(value);
 }
+
+export const resolveApiPathByBusinessId = (prefix: string, suffix: string, businessId?: number) => {
+  return businessId ? `${prefix}/bizs/${businessId}/${suffix}` : `${prefix}/${suffix}`;
+};

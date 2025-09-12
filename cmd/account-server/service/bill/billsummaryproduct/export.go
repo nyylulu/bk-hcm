@@ -82,9 +82,11 @@ func (s *service) ExportProductSummary(cts *rest.Contexts) (interface{}, error) 
 		return nil, err
 	}
 
-	if err := writer.Write(export.BillSummaryProductTableHeader); err != nil {
-		logs.Errorf("write header failed: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, err
+	for _, header := range export.BillSummaryProductTableHeader {
+		if err := writer.Write(header); err != nil {
+			logs.Errorf("write header failed: %v, val: %v, rid: %s", err, header, cts.Kit.Rid)
+			return nil, err
+		}
 	}
 
 	table, err := toRawData(cts.Kit, result, productMap)
@@ -121,7 +123,7 @@ func toRawData(kt *kit.Kit, details []*billproto.BillSummaryProductResult,
 			CurrentMonthRMBCost:       detail.CurrentMonthRMBCost.String(),
 			CurrentMonthCost:          detail.CurrentMonthCost.String(),
 		}
-		fields, err := row.GetHeaderValues()
+		fields, err := row.GetValuesByHeader()
 		if err != nil {
 			logs.Errorf("get header fields failed, err: %v, rid: %s", err, kt.Rid)
 			return nil, err

@@ -45,10 +45,12 @@ import (
 // createBaseQuotaConfigPeriodically 每个月1号生成当月的所有业务基础额度
 // 协程启动时必定会尝试创建一次当月基础额度（幂等），并将下次执行的时间设置为下个月的1号0点
 func (l *logics) createBaseQuotaConfigPeriodically(loc *time.Location) {
+	rootKit := core.NewBackendKit()
+
 	for {
 		// 记录运行前的时间作为计算下次执行时间的基准，防止运行时超过0点错过1号
 		now := time.Now()
-		kt := core.NewBackendKit()
+		kt := rootKit.NewSubKit()
 		nextMonthFirstDay := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, loc)
 
 		quotaMonth := rstypes.QuotaMonth(fmt.Sprintf("%04d-%02d", nextMonthFirstDay.Year(), nextMonthFirstDay.Month()))
@@ -57,8 +59,7 @@ func (l *logics) createBaseQuotaConfigPeriodically(loc *time.Location) {
 		}
 
 		// 计算下个月1号0点的时间
-		nextMonthFirstDay.AddDate(0, 1, 0)
-
+		nextMonthFirstDay = nextMonthFirstDay.AddDate(0, 1, 0)
 		// 等待直到下个月1号0点
 		time.Sleep(time.Until(nextMonthFirstDay))
 	}
@@ -491,10 +492,8 @@ func (l *logics) CreateBizQuotaConfigs(kt *kit.Kit, req *rstypes.CreateBizQuotaC
 
 	needCreateBizIDs := slice.NotIn(existBkBizIDs, req.BkBizIDs)
 	logs.Infof("create biz quota configs for all biz,"+
-		" all biz number: %d, need create number: %d, need update number: %d",
-		len(req.BkBizIDs), len(needCreateBizIDs), len(needUpdateIDs))
-
-	// need to create
+		" all biz number: %d, need create number: %d, need update number: %d, rid: %s",
+		len(req.BkBizIDs), len(needCreateBizIDs), len(needUpdateIDs), kt.Rid) // need to create
 	if len(needCreateBizIDs) > 0 {
 		createIDs, err := l.batchCreateQuotaConfigs(kt, needCreateBizIDs, req.Quota, year, month)
 		if err != nil {

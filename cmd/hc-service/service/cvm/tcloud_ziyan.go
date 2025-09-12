@@ -62,6 +62,9 @@ func (svc *cvmSvc) initTCloudZiyanCvmService(cap *capability.Capability) {
 
 	h.Add("BatchAssociateTCloudSecurityGroup", http.MethodPost,
 		"/vendors/tcloud-ziyan/cvms/security_groups/batch/associate", svc.BatchAssociateZiyanSecurityGroup)
+	h.Add("ListInstanceConfig", http.MethodPost,
+		"/vendors/tcloud-ziyan/instances/config/list", svc.ListTCloudZiyanInstanceConfig)
+
 	h.Load(cap.WebService)
 }
 
@@ -473,4 +476,30 @@ func (svc *cvmSvc) syncTCloudZiyanCvmWithRelRes(kt *kit.Kit, ziyan tziyan.TCloud
 		return err
 	}
 	return nil
+}
+
+// ListTCloudZiyanInstanceConfig ...
+func (svc *cvmSvc) ListTCloudZiyanInstanceConfig(cts *rest.Contexts) (interface{}, error) {
+	req := new(protocvm.TCloudInstanceConfigListOption)
+	err := cts.DecodeInto(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = req.Validate(); err != nil {
+		return nil, err
+	}
+
+	cli, err := svc.ad.TCloudZiyan(cts.Kit, req.AccountID)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := cli.ListInstanceConfig(cts.Kit, req.TCloudInstanceConfigListOption)
+	if err != nil {
+		logs.Errorf("list tcloud-ziyan instance config failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return result, nil
 }

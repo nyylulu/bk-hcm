@@ -26,6 +26,7 @@ import (
 	recovertask "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
 	"hcm/pkg/api/core"
+	cond "hcm/pkg/condition"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/dal"
@@ -602,7 +603,7 @@ func (r *Returner) filterUpdateRecycleHosts(kt *kit.Kit, subOrderID string, host
 	}
 
 	// 查询已回收的主机
-	hostExists, err := r.getRecycleHostsByAssetIDsStatus(kt, assetIDs, table.RecycleStatusDone)
+	hostExists, err := r.getRecycleHostsByAssetIDsStatus(kt, subOrderID, assetIDs, table.RecycleStatusDone)
 	if err != nil {
 		logs.Errorf("failed to get recycle hosts by assetids and status, subOrderID: %s, err: %v, assetIDs: %v, "+
 			"rid: %s", subOrderID, err, assetIDs, kt.Rid)
@@ -630,12 +631,14 @@ func (r *Returner) filterUpdateRecycleHosts(kt *kit.Kit, subOrderID string, host
 	return filterHosts, nil
 }
 
-func (r *Returner) getRecycleHostsByAssetIDsStatus(kt *kit.Kit, assetIDs []string, status table.RecycleStatus) (
-	[]*table.RecycleHost, error) {
+func (r *Returner) getRecycleHostsByAssetIDsStatus(kt *kit.Kit, excludeSuborderID string, assetIDs []string,
+	status table.RecycleStatus) ([]*table.RecycleHost, error) {
 
 	filter := map[string]interface{}{
 		"asset_id": map[string]interface{}{"$in": assetIDs},
 		"status":   status,
+		// 排除当前子单数据
+		"suborder_id": map[string]interface{}{cond.BKDBNE: excludeSuborderID},
 	}
 
 	page := metadata.BasePage{

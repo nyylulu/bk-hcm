@@ -84,9 +84,10 @@ func (dao Dao) ListJoinSecurityGroup(kt *kit.Kit, sgIDs, resIDs []string, resTyp
 		updateMap["sg_ids"] = sgIDs
 	}
 
+	// NOTE: 索引导致该查询无法以rel.id正序返回，因此需手动指定 ORDER BY rel.priority ASC
 	sql := fmt.Sprintf(`SELECT %s, %s, sg.vendor AS vendor,sg.reviser AS reviser,sg.updated_at AS updated_at,
 		rel.res_type,rel.priority FROM %s AS rel LEFT JOIN %s AS sg ON rel.security_group_id = sg.id 
-		WHERE %s`,
+		WHERE %s ORDER BY rel.priority ASC`,
 		cloud.SecurityGroupColumns.FieldsNamedExprWithout(withoutFields),
 		tools.BaseRelJoinSqlBuild("rel", "sg", "id", "res_id"),
 		table.SecurityGroupCommonRelTable, table.SecurityGroupTable,

@@ -114,6 +114,7 @@ func (b *RollingServerClient) ListQuotaConfig(kt *kit.Kit, req *rsproto.RollingQ
 		b.client, rest.POST, kt, req, "/rolling_servers/quota_configs/list")
 }
 
+// ListQuotaConfigWithOffset list quota config with offset
 func (b *RollingServerClient) ListQuotaConfigWithOffset(kt *kit.Kit, req *rsproto.RollingQuotaConfigListWithOffsetReq) (
 	*rsproto.RollingQuotaConfigListWithOffsetResult, error) {
 
@@ -259,7 +260,8 @@ func (b *RollingServerClient) CreateReturnedRecord(kt *kit.Kit, req *rsproto.Bat
 }
 
 // UpdateReturnedRecord update returned record
-func (b *RollingServerClient) UpdateReturnedRecord(kt *kit.Kit, req *rsproto.BatchUpdateRollingReturnedRecordReq) error {
+func (b *RollingServerClient) UpdateReturnedRecord(kt *kit.Kit,
+	req *rsproto.BatchUpdateRollingReturnedRecordReq) error {
 	return common.RequestNoResp[rsproto.BatchUpdateRollingReturnedRecordReq](
 		b.client, rest.PATCH, kt, req, "/rolling_servers/returned_records/batch")
 }

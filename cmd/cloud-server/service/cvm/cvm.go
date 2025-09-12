@@ -71,6 +71,10 @@ func InitCvmService(c *capability.Capability) {
 	h.Add("BatchStopCvm", http.MethodPost, "/cvms/batch/stop", svc.BatchStopCvm)
 	h.Add("BatchRebootCvm", http.MethodPost, "/cvms/batch/reboot", svc.BatchRebootCvm)
 	h.Add("QueryCvmRelatedRes", http.MethodPost, "/cvms/rel_res/batch", svc.QueryCvmRelatedRes)
+	h.Add("ListInstanceConfig", http.MethodPost,
+		"/vendors/{vendor}/instances/config/query_from_cloud", svc.ListInstanceConfig)
+	h.Add("ListBizInstanceConfig", http.MethodPost,
+		"/bizs/{bk_biz_id}/vendors/{vendor}/instances/config/query_from_cloud", svc.ListBizInstanceConfig)
 
 	// 资源下回收相关接口
 	h.Add("RecycleCvm", http.MethodPost, "/cvms/recycle", svc.RecycleCvm)
@@ -91,6 +95,8 @@ func InitCvmService(c *capability.Capability) {
 	h.Add("InquiryBizPriceCvm", http.MethodPost, "/bizs/{bk_biz_id}/cvms/prices/inquiry", svc.InquiryBizPriceCvm)
 	h.Add("BatchResetAsyncBizCvm", http.MethodPost, "/bizs/{bk_biz_id}/cvms/batch/reset_async",
 		svc.BatchResetAsyncBizCvm)
+	h.Add("BatchSopsAsyncResetBizCvm", http.MethodPost, "/bizs/{bk_biz_id}/cvms/sops/batch/reset_async",
+		svc.BatchSopsAsyncResetBizCvm)
 
 	h.Add("ListBizCvmOperateStatus", http.MethodPost, "/bizs/{bk_biz_id}/cvms/list/operate/status",
 		svc.ListBizCvmOperateStatus)
@@ -116,6 +122,11 @@ func InitCvmService(c *capability.Capability) {
 		"/cvms/{cvm_id}/security_groups/batch_associate", svc.BatchAssociateSecurityGroups)
 	h.Add("BizBatchAssociateSecurityGroups", http.MethodPost,
 		"/bizs/{bk_biz_id}/cvms/{cvm_id}/security_groups/batch_associate", svc.BizBatchAssociateSecurityGroups)
+
+	h.Add("BatchIdleCheckBizCvm", http.MethodPost,
+		"/bizs/{bk_biz_id}/cvms/batch/idle_check", svc.BatchIdleCheckBizCvm)
+	h.Add("GetIdleCheckCvmResult", http.MethodPost,
+		"/bizs/{bk_biz_id}/cvms/idle_check/result/{suborder_id}", svc.GetIdleCheckCvmResult)
 
 	initCvmServiceHooks(svc, h)
 

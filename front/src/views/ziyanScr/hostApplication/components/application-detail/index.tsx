@@ -14,8 +14,8 @@ import { GLOBAL_BIZS_KEY } from '@/common/constant';
 import { MENU_SERVICE_HOST_APPLICATION, MENU_BUSINESS_TICKET_MANAGEMENT } from '@/constants/menu-symbol';
 import http from '@/http';
 
-import { Button, Table, Message, PopConfirm } from 'bkui-vue';
-import { Copy } from 'bkui-vue/lib/icon';
+import { Button, Table, Message, PopConfirm, OverflowTitle } from 'bkui-vue';
+import { Copy, Info } from 'bkui-vue/lib/icon';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import DetailInfo from '@/views/resource/resource-manage/common/info/detail-info';
 import Panel from '@/components/panel';
@@ -68,10 +68,18 @@ export default defineComponent({
         label: '总数',
         field: 'total_num',
         width: 120,
+        showOverflowTooltip: false,
         render: ({ row, cell }: any) => {
-          if (detail.value?.stage === 'AUDIT') return row.replicas;
-          if (row.modify_time > 0) return `${row.total_num}(原总数${row.origin_num})`;
-          return cell;
+          let totalNum = cell;
+          if (detail.value?.stage === 'AUDIT') totalNum = row.replicas;
+          return (
+            <div style={{ display: 'flex', width: '100%', gap: '4px' }}>
+              {row.modify_time > 0 && (
+                <Info style={{ color: '#e9a24c' }} v-bk-tooltips={{ content: `原始值：${row.origin_num}` }} />
+              )}
+              {totalNum}
+            </div>
+          );
         },
       },
       {
@@ -125,6 +133,23 @@ export default defineComponent({
         label: '机型',
         field: 'spec.device_type',
         width: 140,
+        showOverflowTooltip: false,
+        render: ({ row }: any) => (
+          <div style={{ display: 'flex', width: '100%', gap: '4px' }}>
+            {row.original.spec.device_type !== row.spec.device_type && (
+              <Info
+                style={{ flex: 'none', color: '#e9a24c' }}
+                v-bk-tooltips={{ content: `原始值：${row.original.spec.device_type}` }}
+              />
+            )}
+            <OverflowTitle
+              type='tips'
+              resizeable={true}
+              style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {row.spec.device_type}
+            </OverflowTitle>
+          </div>
+        ),
       },
       // 给物理机添加num字段
       ...numColumns,
@@ -162,16 +187,35 @@ export default defineComponent({
       const message = !clipHostIp.value.length ? '仅复制已交付IP' : '已复制';
       Message({ message, theme: 'success', duration: 1500 });
     };
+
     const suborders = ref([]);
+    const subordersOriginal = ref([]);
+
     const cloudMachineList = computed(() => {
-      return suborders.value.filter((item) => {
-        return item.resource_type === 'QCLOUDCVM';
-      });
+      return suborders.value
+        .filter((item) => item.resource_type === 'QCLOUDCVM')
+        .map((item) => {
+          const originalIndex = suborders.value.indexOf(item);
+          const original = subordersOriginal.value[originalIndex];
+          return {
+            ...item,
+            original,
+          };
+        });
     });
     const physicMachineList = computed(() => {
-      return suborders.value.filter((item) => {
-        return ['IDCPM', 'IDCDVM'].includes(item.resource_type);
-      });
+      return suborders.value
+        .filter((item) => {
+          return ['IDCPM', 'IDCDVM'].includes(item.resource_type);
+        })
+        .map((item) => {
+          const originalIndex = suborders.value.indexOf(item);
+          const original = subordersOriginal.value[originalIndex];
+          return {
+            ...item,
+            original,
+          };
+        });
     });
 
     const demandDetailTimer: any = { id: null, count: 0 };
@@ -215,6 +259,7 @@ export default defineComponent({
         { order_id: +orderId },
       );
       detail.value = data;
+      subordersOriginal.value = (data?.suborders || []).slice();
       suborders.value = data?.suborders || [];
     };
 

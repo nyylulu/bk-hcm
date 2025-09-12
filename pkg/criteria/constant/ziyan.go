@@ -83,6 +83,23 @@ const (
 const TgwGroupNameZiyan = "ziyan"
 
 const (
+	// DataDiskTotalNum 数据盘总数量
+	DataDiskTotalNum = 20
+	// DataDiskMinSize 最小数据盘大小，单位GB
+	DataDiskMinSize = 10
+	// DataDiskMaxSize 最大数据盘大小，单位GB
+	DataDiskMaxSize = 32000
+	// DataDiskMultiple 数据盘大小倍数
+	DataDiskMultiple = 10
+	// SystemDiskMinSize 最小数据盘大小，单位GB
+	SystemDiskMinSize = 50
+	// SystemDiskMaxSize 最大数据盘大小，单位GB
+	SystemDiskMaxSize = 1000
+	// SystemDiskMultiple 数据盘大小倍数
+	SystemDiskMultiple = 50
+)
+
+const (
 	// ResourcePlanTransferKey this is the config type for resource plan transfer.
 	ResourcePlanTransferKey = "resource_plan_transfer"
 	// TransferQuotaKey this is the config key for transfer quota.

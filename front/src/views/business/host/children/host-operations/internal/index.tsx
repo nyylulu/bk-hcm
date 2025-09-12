@@ -1,4 +1,4 @@
-import { PropType, defineComponent, ref, toRefs, useTemplateRef, withDirectives } from 'vue';
+import { PropType, defineComponent, ref, toRefs, useTemplateRef, watch, withDirectives } from 'vue';
 import { useRouter } from 'vue-router';
 import cssModule from '../index.module.scss';
 
@@ -23,6 +23,7 @@ import { MoaRequestScene } from '@/components/moa-verify/typings';
 
 import { useVerify } from '@/hooks';
 import { useGlobalPermissionDialog } from '@/store/useGlobalPermissionDialog';
+import { useHostOperationsStore } from '@/store/host-operations';
 import { MENU_BUSINESS_TICKET_MANAGEMENT } from '@/constants/menu-symbol';
 
 export enum OperationActions {
@@ -111,6 +112,10 @@ export default defineComponent({
     } = useBatchOperation({
       selections,
       onFinished: props.onFinished,
+    });
+
+    watch(operationType, (type) => {
+      useHostOperationsStore().setOperationType(type);
     });
 
     const getOperationConfig = (type: OperationActions) => {
@@ -218,7 +223,8 @@ export default defineComponent({
         data={tableData.value}
         columns={computedColumns.value}
         changeData={(data) => (tableData.value = data)}
-        searchData={searchData}>
+        searchData={searchData}
+        {...{ maxHeight: 'calc(100vh - 400px)' }}>
         <div class={cssModule['host-operations-toolbar']}>
           <BkButtonGroup>
             <Button onClick={() => handleSwitch(true)} selected={selected.value === 'target'}>

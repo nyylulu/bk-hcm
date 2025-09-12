@@ -20,12 +20,6 @@ import (
 	"hcm/pkg/criteria/mapstr"
 )
 
-// Deprecated: SearchLimit sub condition
-type SearchLimit struct {
-	Offset int64 `json:"start" field:"start"`
-	Limit  int64 `json:"limit" field:"limit"`
-}
-
 // SearchSort sub condition
 type SearchSort struct {
 	IsDsc bool   `json:"is_dsc"`
@@ -142,13 +136,4 @@ func (ss *searchSortParse) ToMongo() string {
 		}
 	}
 	return strings.Join(orderByArr, ",")
-}
-
-// IsIllegal  limit is illegal
-func (page SearchLimit) IsIllegal() bool {
-	if page.Limit > pkg.BKMaxPageSize && page.Limit != pkg.BKNoLimit ||
-		page.Limit == 0 {
-		return true
-	}
-	return false
 }

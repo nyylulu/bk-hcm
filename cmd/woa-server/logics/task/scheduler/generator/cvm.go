@@ -40,6 +40,8 @@ var (
 	cvmApplyNumReg = regexp.MustCompile(`计算最终当前可申领量(\d+)`)
 	// crpProductFailedMsg CRP生产失败的错误描述
 	crpProductFailedMsg = "CRP申领失败"
+	// crpCapacityLackMsg CRP容量不足的错误描述
+	crpCapacityLackMsg = "无法满足本次需求量"
 	// crpProductZeroNumMsg CRP生产数量为0的错误描述
 	crpProductZeroNumMsg = "list cvm instance failed, for result is null"
 )
@@ -167,30 +169,10 @@ func (g *Generator) getCreateCvmReq(cvm *types.CVM) *cvmapi.OrderCreateReq {
 	if createReq.Params.ChargeType == cvmapi.ChargeTypePrePaid && cvm.ChargeMonths > 0 {
 		createReq.Params.ChargeMonths = cvm.ChargeMonths
 	}
-	// set system disk parameters
-	itDev := regexp.MustCompile(`^IT3\.|^IT2\.|^I3\.|^IT5\.|^IT5c\.`).FindStringSubmatch(cvm.InstanceType)
-	if len(itDev) > 0 {
-		createReq.Params.SystemDiskType = cvmapi.CvmLaunchSystemDiskTypeBasic
-		createReq.Params.SystemDiskSize = cvmapi.CvmLaunchSystemDiskSizeBasic
-	} else {
-		createReq.Params.SystemDiskType = cvmapi.CvmLaunchSystemDiskTypePremium
-		createReq.Params.SystemDiskSize = cvmapi.CvmLaunchSystemDiskSizePremium
-	}
-	// set system disk and data disk for special instance type.
-	if cvm.InstanceType == "BMGY5.16XLARGE256" {
-		createReq.Params.SystemDiskType = cvmapi.CvmLaunchSystemDiskTypeBasic
-		createReq.Params.SystemDiskSize = 440
-		createReq.Params.DataDisk = append(createReq.Params.DataDisk, &cvmapi.DataDisk{
-			DataDiskType: cvmapi.CvmLaunchSystemDiskTypeBasic,
-			DataDiskSize: 1320,
-		})
-	}
-	if cvm.DiskSize > 0 {
-		createReq.Params.DataDisk = append(createReq.Params.DataDisk, &cvmapi.DataDisk{
-			DataDiskType: cvm.DiskType,
-			DataDiskSize: int(cvm.DiskSize),
-		})
-	}
+
+	// set system and data disks params
+	createReq.Params = g.setSystemAndDataDisksParams(cvm, createReq.Params)
+
 	// set obs project type
 	requireType := enumor.RequireType(cvm.ApplyType)
 	createReq.Params.ObsProject = string(requireType.ToObsProject())
@@ -198,6 +180,51 @@ func (g *Generator) getCreateCvmReq(cvm *types.CVM) *cvmapi.OrderCreateReq {
 		createReq.Params.ResourceType = cvmapi.ResourceTypeQuick
 	}
 	return createReq
+}
+
+func (g *Generator) setSystemAndDataDisksParams(cvm *types.CVM,
+	createReqParams *cvmapi.OrderCreateParams) *cvmapi.OrderCreateParams {
+
+	// 系统盘
+	if len(cvm.SystemDisk.DiskType) == 0 {
+		// set system disk parameters 特殊的IT类机型，使用指定的系统盘&数据盘-磁盘类型
+		itDev := regexp.MustCompile(`^IT3\.|^IT2\.|^I3\.|^IT5\.|^IT5c\.`).FindStringSubmatch(cvm.InstanceType)
+		if len(itDev) > 0 {
+			createReqParams.SystemDiskType = cvmapi.CvmLaunchSystemDiskTypeBasic
+			createReqParams.SystemDiskSize = cvmapi.CvmLaunchSystemDiskSizeBasic
+		} else {
+			createReqParams.SystemDiskType = cvmapi.CvmLaunchSystemDiskTypePremium
+			createReqParams.SystemDiskSize = cvmapi.CvmLaunchSystemDiskSizePremium
+		}
+
+		// 特殊的机型，使用指定的系统盘&数据盘-磁盘类型：本地盘
+		if cvm.InstanceType == "BMGY5.16XLARGE256" {
+			createReqParams.SystemDiskType = cvmapi.CvmLaunchSystemDiskTypeBasic
+			createReqParams.SystemDiskSize = 440
+			createReqParams.DataDisk = append(createReqParams.DataDisk, &cvmapi.DataDisk{
+				DataDiskType: cvmapi.CvmLaunchSystemDiskTypeBasic, DataDiskSize: 1320,
+			})
+		}
+	} else {
+		createReqParams.SystemDiskType = cvm.SystemDisk.DiskType
+		createReqParams.SystemDiskSize = cvm.SystemDisk.DiskSize
+	}
+
+	// 数据盘
+	if len(cvm.DataDisk) == 0 && cvm.DiskSize > 0 {
+		createReqParams.DataDisk = append(createReqParams.DataDisk, &cvmapi.DataDisk{
+			DataDiskType: cvm.DiskType, DataDiskSize: uint(cvm.DiskSize),
+		})
+	}
+
+	for _, dd := range cvm.DataDisk {
+		for i := uint(0); i < dd.DiskNum; i++ {
+			createReqParams.DataDisk = append(createReqParams.DataDisk, &cvmapi.DataDisk{
+				DataDiskType: dd.DiskType, DataDiskSize: dd.DiskSize,
+			})
+		}
+	}
+	return createReqParams
 }
 
 func (g *Generator) needRetryCreateCvm(code int, msg string) (bool, int) {
@@ -386,6 +413,8 @@ func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone strin
 		ChargeType:        order.Spec.ChargeType,
 		ChargeMonths:      order.Spec.ChargeMonths,
 		InheritInstanceId: order.Spec.InheritInstanceId,
+		SystemDisk:        order.Spec.SystemDisk,
+		DataDisk:          order.Spec.DataDisk,
 	}
 	// set disk type default value
 	if len(req.DiskType) == 0 {

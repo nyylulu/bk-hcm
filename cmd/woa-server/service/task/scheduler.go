@@ -1385,12 +1385,12 @@ func (s *service) StartBizApplyOrder(cts *rest.Contexts) (any, error) {
 	return s.startApplyOrder(cts, bkBizIDMap, meta.Biz, meta.Create)
 }
 
-// StartApplyOrder start apply order
+// StartApplyOrder 主机申请重试
 func (s *service) StartApplyOrder(cts *rest.Contexts) (any, error) {
 	return s.startApplyOrder(cts, make(map[int64]struct{}), meta.ZiYanResource, meta.Create)
 }
 
-// startApplyOrder start apply order
+// startApplyOrder 主机申请重试
 func (s *service) startApplyOrder(cts *rest.Contexts, bkBizIDMap map[int64]struct{}, resType meta.ResourceType,
 	action meta.Action) (any, error) {
 
@@ -1536,7 +1536,7 @@ func (s *service) ModifyBizApplyOrder(cts *rest.Contexts) (any, error) {
 	return s.modifyApplyOrder(cts, bkBizIDMap, meta.Biz, meta.Create)
 }
 
-// ModifyApplyOrder modify apply order
+// ModifyApplyOrder 修改需求重试
 func (s *service) ModifyApplyOrder(cts *rest.Contexts) (any, error) {
 	return s.modifyApplyOrder(cts, make(map[int64]struct{}), meta.ZiYanResource, meta.Create)
 }
@@ -1692,7 +1692,6 @@ func (s *service) GetApplyModify(cts *rest.Contexts) (any, error) {
 }
 
 // getApplyOrderBizIds get apply order biz ids
-// Deprecated: use listApplyOrders instead
 func (s *service) getApplyOrderBizIds(kit *kit.Kit, suborderIds []string) ([]int64, error) {
 	filter := map[string]interface{}{}
 

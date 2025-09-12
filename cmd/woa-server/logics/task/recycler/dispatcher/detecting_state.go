@@ -23,7 +23,9 @@ import (
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/logics/task/recycler/event"
 	recovertask "hcm/cmd/woa-server/types/task"
+	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	cvt "hcm/pkg/tools/converter"
 )
@@ -85,33 +87,33 @@ func (ds *DetectingState) Execute(ctx EventContext) error {
 		return fmt.Errorf("state %s failed to execute, for invalid context order is nil", ds.Name())
 	}
 	orderId := taskCtx.Order.SuborderID
-
-	ev := ds.dealDetectTask(taskCtx)
-
-	// 记录日志，方便排查问题
-	logs.Infof("recycler:logics:cvm:DetectingState:start, orderID: %s, ev: %+v", orderId, cvt.PtrToVal(ev))
+	kt := core.NewBackendKit()
+	kt.Ctx = taskCtx.Dispatcher.ctx
+	logs.Infof("DetectingState: start detect order: %s, rid: %s", orderId, kt.Rid)
+	ev := ds.dealDetectTask(kt, taskCtx)
+	logs.Infof("DetectingState: end detect order: %s, ev: %+v, rid: %s", orderId, cvt.PtrToVal(ev), kt.Rid)
 
 	return ds.UpdateState(taskCtx, ev)
 }
 
-func (ds *DetectingState) dealDetectTask(ctx *CommonContext) *event.Event {
+func (ds *DetectingState) dealDetectTask(kt *kit.Kit, ctx *CommonContext) *event.Event {
 	orderId := ctx.Order.SuborderID
 
 	// init recycle host status
 	stage := table.RecycleStageDetect
 	status := table.RecycleStatusDetecting
 	if err := ds.updateHostInfo(orderId, stage, status); err != nil {
-		logs.Errorf("failed to update recycle hosts, order id: %s, err: %v")
+		logs.Errorf("failed to update recycle hosts, order id: %s, err: %v, rid: %s", orderId, err, kt.Rid)
 		return &event.Event{Type: event.DetectFailed, Error: err}
 	}
 	// run detection tasks
-	if err := ctx.Dispatcher.detector.DealRecycleOrder(orderId); err != nil {
-		logs.Warnf("failed to run detection tasks, err: %v", err)
+	if err := ctx.Dispatcher.detector.Detect(kt, ctx.Order, true); err != nil {
+		logs.Errorf("failed to run detection tasks, err: %v, rid: %s", err, kt.Rid)
 		return &event.Event{Type: event.DetectFailed, Error: err}
 	}
 
-	if err := ctx.Dispatcher.detector.CheckDetectStatus(orderId); err != nil {
-		logs.Warnf("detection tasks failed, err: %v", err)
+	if err := ctx.Dispatcher.detector.CheckDetectStatus(kt, orderId); err != nil {
+		logs.Errorf("recycle detection failed, order id: %s, err: %v, rid: %s", orderId, err, kt.Rid)
 		return &event.Event{Type: event.DetectFailed, Error: err}
 	}
 
@@ -159,9 +161,14 @@ func (ds *DetectingState) setNextState(order *table.RecycleOrder, ev *event.Even
 			update["stage"] = table.RecycleStageTransit
 			update["status"] = table.RecycleStatusTransiting
 		}
+		// 清空之前产生的message，比如检测失败，避免影响后续流程展示
+		update["message"] = ""
 	case event.DetectFailed:
 		update["stage"] = table.RecycleStageDetect
 		update["status"] = table.RecycleStatusDetectFailed
+		if ev.Error != nil {
+			update["message"] = ev.Error.Error()
+		}
 	default:
 		logs.Errorf("unknown event type: %s, subOrderId: %s, status: %s", ev.Type, order.SuborderID, order.Status)
 		return fmt.Errorf("unknown event type: %s, subOrderId: %s, status: %s", ev.Type, order.SuborderID, order.Status)

@@ -193,8 +193,10 @@ func (req *BatchCvmPowerOperateReq) Validate(checkSessionID bool) error {
 		return errf.New(errf.InvalidParameter, "session_id is required")
 	}
 
-	if err := req.Source.Validate(); err != nil {
-		return err
+	if len(req.Source) > 0 {
+		if err := req.Source.Validate(); err != nil {
+			return err
+		}
 	}
 
 	return validator.Validate.Struct(req)
@@ -337,11 +339,11 @@ type BatchResetCvmReq struct {
 	Hosts      []BatchCvmHostItem `json:"hosts" validate:"required,min=1,max=500"`
 	Pwd        string             `json:"pwd" validate:"required,min=12,max=20"`
 	PwdConfirm string             `json:"pwd_confirm" validate:"required,min=12,max=20"`
-	SessionID  string             `json:"session_id" validate:"required"`
+	SessionID  string             `json:"session_id" validate:"omitempty"`
 }
 
 // Validate batch reset cvm request.
-func (req *BatchResetCvmReq) Validate() error {
+func (req *BatchResetCvmReq) Validate(checkSessionID bool) error {
 	for _, host := range req.Hosts {
 		if err := host.Validate(); err != nil {
 			return err
@@ -349,6 +351,9 @@ func (req *BatchResetCvmReq) Validate() error {
 	}
 	if req.Pwd != req.PwdConfirm {
 		return errf.Newf(errf.InvalidParameter, "pwd and pwd_confirm require the same value")
+	}
+	if checkSessionID && len(req.SessionID) == 0 {
+		return errf.New(errf.InvalidParameter, "session_id is required")
 	}
 	return validator.Validate.Struct(req)
 }

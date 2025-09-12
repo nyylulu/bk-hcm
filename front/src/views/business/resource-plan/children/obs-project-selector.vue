@@ -67,7 +67,7 @@ const isTipsShow = computed(() => {
       <bk-option v-for="item in displayList" :key="item" :id="item" :name="item" />
     </bk-select>
     <div v-if="isTipsShow" class="tips">
-      <i class="hcm-icon bkhcm-icon-prompt tips-icon"></i>
+      <span class="attention">注意：</span>
       所选项目为特殊类型，如需使用该项目类型，请咨询ICR助手
     </div>
   </div>
@@ -83,13 +83,11 @@ const isTipsShow = computed(() => {
     align-items: center;
     margin-top: 2px;
     width: 100%;
-    color: #ea3636;
     font-size: 12px;
     line-height: normal;
 
-    .tips-icon {
-      margin-right: 4px;
-      font-size: 14px;
+    .attention {
+      color: #ea3636;
     }
   }
 }

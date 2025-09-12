@@ -50,7 +50,7 @@ func (v ActionName) Validate() error {
 		ActionBatchTaskTCloudUnBindTarget, ActionBatchTaskTCloudModifyRsWeight, ActionBatchTaskDeleteListener:
 	case ActionSyncTCloudLoadBalancer, SyncTCloudLoadBalancerListener:
 
-	case ActionStartCvmV2, ActionStopCvmV2, ActionRebootCvmV2:
+	case ActionStartCvmV2, ActionStopCvmV2, ActionRebootCvmV2, ActionMonitorIdleCheckCvm:
 	default:
 		return fmt.Errorf("unsupported action name type: %s", v)
 	}
@@ -60,20 +60,21 @@ func (v ActionName) Validate() error {
 
 // 主机相关Action
 const (
-	ActionAssignCvm       ActionName = "assign_cvm"
-	ActionStartCvm        ActionName = "start_cvm"
-	ActionStopCvm         ActionName = "stop_cvm"
-	ActionRebootCvm       ActionName = "reboot_cvm"
-	ActionDeleteCvm       ActionName = "delete_cvm"
-	ActionCreateCvm       ActionName = "create_cvm"
-	ActionCreateAwsCvm    ActionName = "create_aws_cvm"
-	ActionCreateHuaWeiCvm ActionName = "create_huawei_cvm"
-	ActionCreateGcpCvm    ActionName = "create_gcp_cvm"
-	ActionCreateAzureCvm  ActionName = "create_azure_cvm"
-	ActionResetCvm        ActionName = "reset_cvm"
-	ActionStartCvmV2      ActionName = "start_cvm_v2"
-	ActionStopCvmV2       ActionName = "stop_cvm_v2"
-	ActionRebootCvmV2     ActionName = "reboot_cvm_v2"
+	ActionAssignCvm           ActionName = "assign_cvm"
+	ActionStartCvm            ActionName = "start_cvm"
+	ActionStopCvm             ActionName = "stop_cvm"
+	ActionRebootCvm           ActionName = "reboot_cvm"
+	ActionDeleteCvm           ActionName = "delete_cvm"
+	ActionCreateCvm           ActionName = "create_cvm"
+	ActionCreateAwsCvm        ActionName = "create_aws_cvm"
+	ActionCreateHuaWeiCvm     ActionName = "create_huawei_cvm"
+	ActionCreateGcpCvm        ActionName = "create_gcp_cvm"
+	ActionCreateAzureCvm      ActionName = "create_azure_cvm"
+	ActionResetCvm            ActionName = "reset_cvm"
+	ActionStartCvmV2          ActionName = "start_cvm_v2"
+	ActionStopCvmV2           ActionName = "stop_cvm_v2"
+	ActionRebootCvmV2         ActionName = "reboot_cvm_v2"
+	ActionMonitorIdleCheckCvm ActionName = "monitor_idle_check_cvm"
 )
 
 // 防火墙相关Action
