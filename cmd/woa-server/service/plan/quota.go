@@ -21,15 +21,12 @@ package plan
 
 import (
 	plantypes "hcm/cmd/woa-server/types/plan"
-	"hcm/pkg/api/core"
 	rpproto "hcm/pkg/api/data-service/resource-plan"
 	"hcm/pkg/criteria/errf"
-	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
-	"hcm/pkg/runtime/filter"
 	"hcm/pkg/tools/slice"
 )
 
@@ -165,7 +162,7 @@ func (s *service) ListResPlanTransferQuotaSummary(cts *rest.Contexts) (interface
 		return nil, err
 	}
 
-	return s.listResPlanTransferQuotaSummary(cts.Kit, req)
+	return s.planController.ListRemainTransferQuota(cts.Kit, req)
 }
 
 // ListBizResPlanTransferQuotaSummary 查询业务下转移额度使用概览信息.
@@ -200,60 +197,5 @@ func (s *service) ListBizResPlanTransferQuotaSummary(cts *rest.Contexts) (interf
 		return nil, errf.New(errf.PermissionDenied, "no permission")
 	}
 
-	return s.listResPlanTransferQuotaSummary(cts.Kit, req)
-}
-
-// listResPlanTransferQuotaSummary general logic for list transfer quota summary
-func (s *service) listResPlanTransferQuotaSummary(kt *kit.Kit, req *plantypes.ListResPlanTransferQuotaSummaryReq) (
-	*plantypes.ResPlanTransferQuotaSummaryResp, error) {
-
-	// 不带业务ID的查询已使用额度
-	appliedRules := []*filter.AtomRule{tools.RuleEqual("year", req.Year)}
-	if len(req.AppliedType) > 0 {
-		appliedRules = append(appliedRules, tools.RuleIn("applied_type", req.AppliedType))
-	}
-	if len(req.SubTicketID) > 0 {
-		appliedRules = append(appliedRules, tools.RuleIn("sub_ticket_id", req.SubTicketID))
-	}
-	if len(req.TechnicalClass) > 0 {
-		appliedRules = append(appliedRules, tools.RuleIn("technical_class", req.TechnicalClass))
-	}
-	if len(req.ObsProject) > 0 {
-		appliedRules = append(appliedRules, tools.RuleIn("obs_project", req.ObsProject))
-	}
-
-	// 带业务ID的查询已使用额度
-	bizRules := make([]*filter.AtomRule, len(appliedRules))
-	copy(bizRules, appliedRules)
-	if len(req.BkBizIDs) > 0 {
-		bizRules = append(bizRules, tools.RuleIn("bk_biz_id", req.BkBizIDs))
-	}
-
-	// 查询当前业务-已使用的额度
-	bizTarReq := &rpproto.TransferAppliedRecordListReq{ListReq: core.ListReq{
-		Filter: tools.ExpressionAnd(bizRules...),
-		Page:   core.NewDefaultBasePage(),
-	}}
-	bizAppliedQuota, err := s.client.DataService().Global.ResourcePlan.SumResPlanTransferAppliedRecord(kt, bizTarReq)
-	if err != nil {
-		logs.Errorf("failed to list res plan transfer applied record quota, err: %v, rid: %s", err, kt.Rid)
-		return nil, errf.NewFromErr(errf.Aborted, err)
-	}
-
-	// 查询CRP侧的预测额度
-	demands, err := s.planController.QueryCrpDemandsQuota(kt, req.ObsProject, req.TechnicalClass)
-	if err != nil {
-		logs.Errorf("failed to query ieg demands, err: %v, rid: %s", err, kt.Rid)
-		return nil, err
-	}
-
-	var remainQuota int64
-	for _, demand := range demands {
-		remainQuota += demand.CoreAmount
-	}
-
-	return &plantypes.ResPlanTransferQuotaSummaryResp{
-		UsedQuota:   bizAppliedQuota.SumAppliedCore,
-		RemainQuota: remainQuota,
-	}, nil
+	return s.planController.ListRemainTransferQuota(cts.Kit, req)
 }

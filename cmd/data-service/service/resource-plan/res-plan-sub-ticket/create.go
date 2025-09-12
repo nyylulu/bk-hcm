@@ -31,6 +31,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
+	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/util"
 
 	"github.com/jmoiron/sqlx"
@@ -90,6 +91,7 @@ func (svc *service) batchCreateResPlanSubTicketWithTx(kt *kit.Kit, txn *sqlx.Tx,
 			AdminAuditStatus:    item.AdminAuditStatus,
 			CrpSN:               item.CrpSN,
 			CrpURL:              item.CrpURL,
+			Message:             cvt.ValToPtr(""),
 			SubOriginalOS:       item.SubOriginalOS,
 			SubOriginalCPUCore:  item.SubOriginalCPUCore,
 			SubOriginalMemory:   item.SubOriginalMemory,

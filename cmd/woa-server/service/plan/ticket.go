@@ -36,7 +36,6 @@ import (
 	"hcm/pkg/rest"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 	cvt "hcm/pkg/tools/converter"
-	"hcm/pkg/tools/slice"
 )
 
 // ListResPlanTicket list resource plan ticket.
@@ -203,14 +202,15 @@ func (s *service) createResPlanTicket(kt *kit.Kit, bkBizID int64, req *ptypes.Cr
 		if slices.Contains(demand.DemandResTypes, enumor.DemandResTypeCVM) {
 			deviceType := demand.Cvm.DeviceType
 			demands[idx].Updated.Cvm = rpt.Cvm{
-				ResMode:      demand.Cvm.ResMode,
-				DeviceType:   deviceType,
-				DeviceClass:  deviceTypeMap[deviceType].DeviceClass,
-				DeviceFamily: deviceTypeMap[deviceType].DeviceFamily,
-				CoreType:     deviceTypeMap[deviceType].CoreType,
-				Os:           tabletypes.Decimal{Decimal: cvt.PtrToVal(demand.Cvm.Os)},
-				CpuCore:      cvt.PtrToVal(demand.Cvm.CpuCore),
-				Memory:       cvt.PtrToVal(demand.Cvm.Memory),
+				ResMode:        demand.Cvm.ResMode,
+				DeviceType:     deviceType,
+				DeviceClass:    deviceTypeMap[deviceType].DeviceClass,
+				DeviceFamily:   deviceTypeMap[deviceType].DeviceFamily,
+				TechnicalClass: deviceTypeMap[deviceType].TechnicalClass,
+				CoreType:       deviceTypeMap[deviceType].CoreType,
+				Os:             tabletypes.Decimal{Decimal: cvt.PtrToVal(demand.Cvm.Os)},
+				CpuCore:        cvt.PtrToVal(demand.Cvm.CpuCore),
+				Memory:         cvt.PtrToVal(demand.Cvm.Memory),
 			}
 		}
 
@@ -581,7 +581,7 @@ func (s *service) RetryResPlanTicket(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
-	if err := s.retryBizResPlanTicket(cts.Kit, ticketID, constant.AttachedAllBiz); err != nil {
+	if err := s.planController.RetryResPlanFailedSubTickets(cts.Kit, ticketID); err != nil {
 		logs.Errorf("failed to retry res plan ticket, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
@@ -607,51 +607,10 @@ func (s *service) RetryBizResPlanTicket(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
-	if err := s.retryBizResPlanTicket(cts.Kit, ticketID, bkBizID); err != nil {
+	if err := s.planController.RetryResPlanFailedSubTickets(cts.Kit, ticketID); err != nil {
 		logs.Errorf("failed to retry res plan ticket, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	return nil, nil
-}
-
-func (s *service) retryBizResPlanTicket(kt *kit.Kit, ticketID string, bizID int64) error {
-
-	status, err := s.planController.GetResPlanTicketStatusByBiz(kt, ticketID, bizID)
-	if err != nil {
-		logs.Errorf("failed to get resource plan ticket status info, err: %v, rid: %s", err, kt.Rid)
-		return err
-	}
-
-	// 校验状态
-	if status.Status != enumor.RPTicketStatusAuditing {
-		return fmt.Errorf("ticket %s is not in auditing status", ticketID)
-	}
-
-	// 获取失败的子单列表
-	failedSubTickets := make([]ptypes.ListResPlanSubTicketItem, 0)
-	listReq := &ptypes.ListResPlanSubTicketReq{
-		TicketID: ticketID,
-		Statuses: []enumor.RPSubTicketStatus{enumor.RPSubTicketStatusFailed},
-		Page:     core.NewDefaultBasePage(),
-	}
-	for {
-		rst, err := s.planController.ListResPlanSubTicket(kt, listReq)
-		if err != nil {
-			logs.Errorf("failed to list res plan sub ticket, err: %v, rid: %s", err, kt.Rid)
-			return err
-		}
-
-		failedSubTickets = append(failedSubTickets, rst.Details...)
-
-		if len(rst.Details) < int(listReq.Page.Limit) {
-			break
-		}
-		listReq.Page.Start += uint32(listReq.Page.Limit)
-	}
-
-	failedIDs := slice.Map(failedSubTickets, func(item ptypes.ListResPlanSubTicketItem) string {
-		return item.ID
-	})
-	return s.planController.RetryResPlanFailedSubTickets(kt, ticketID, failedIDs)
 }

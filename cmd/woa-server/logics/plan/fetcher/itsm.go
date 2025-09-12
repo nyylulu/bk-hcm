@@ -35,20 +35,14 @@ func (f *ResPlanFetcher) getItsmAndCrpAuditStatus(kt *kit.Kit, bkBizID int64,
 	ticketStatus *ptypes.GetRPTicketStatusInfo) (*ptypes.GetRPTicketItsmAudit, *ptypes.GetRPTicketCrpAudit, error) {
 
 	itsmAudit := &ptypes.GetRPTicketItsmAudit{
-		ItsmSn:  ticketStatus.ItsmSN,
-		ItsmUrl: ticketStatus.ItsmURL,
-	}
-	crpAudit := &ptypes.GetRPTicketCrpAudit{
-		CrpSN:  ticketStatus.CrpSN,
-		CrpURL: ticketStatus.CrpURL,
+		ItsmSN:  ticketStatus.ItsmSN,
+		ItsmURL: ticketStatus.ItsmURL,
 	}
 	// 审批未开始
 	if ticketStatus.ItsmSN == "" {
 		itsmAudit.Status = enumor.RPTicketStatusInit
 		itsmAudit.StatusName = itsmAudit.Status.Name()
-		crpAudit.Status = enumor.RPTicketStatusInit
-		crpAudit.StatusName = crpAudit.Status.Name()
-		return itsmAudit, crpAudit, nil
+		return itsmAudit, nil, nil
 	}
 
 	// 获取ITSM审批记录和当前审批节点
@@ -80,15 +74,11 @@ func (f *ResPlanFetcher) getItsmAndCrpAuditStatus(kt *kit.Kit, bkBizID int64,
 			itsmAudit.Status = ticketStatus.Status
 			itsmAudit.StatusName = itsmAudit.Status.Name()
 			itsmAudit.Message = ticketStatus.Message
-			crpAudit.Status = enumor.RPTicketStatusInit
-			crpAudit.StatusName = crpAudit.Status.Name()
-			return itsmAudit, crpAudit, nil
+			return itsmAudit, nil, nil
 		}
-		// ITSM流程正常结束，CRP单据尚未创建
-		crpAudit.Status = ticketStatus.Status
-		crpAudit.StatusName = crpAudit.Status.Name()
-		crpAudit.Message = ticketStatus.Message
-		return itsmAudit, crpAudit, nil
+		// ITSM流程正常结束，主单审批流即完结
+		// 为兼容旧版本数据，可能存在 crp_sn 不为空的数据，需在下文逻辑中保留兼容
+		return itsmAudit, nil, nil
 	}
 	// itsm审批流已结束
 	itsmAudit.Status = enumor.RPTicketStatusDone
@@ -107,11 +97,15 @@ func (f *ResPlanFetcher) getItsmAndCrpAuditStatus(kt *kit.Kit, bkBizID int64,
 	}
 
 	// CRP审批状态赋值
-	crpAudit.Status = ticketStatus.Status
-	crpAudit.StatusName = crpAudit.Status.Name()
-	crpAudit.Message = ticketStatus.Message
-	crpAudit.CurrentSteps = crpCurrentSteps
-	crpAudit.Logs = crpApproveLogs
+	crpAudit := &ptypes.GetRPTicketCrpAudit{
+		CrpSN:        ticketStatus.CrpSN,
+		CrpURL:       ticketStatus.CrpURL,
+		Status:       ticketStatus.Status,
+		StatusName:   ticketStatus.Status.Name(),
+		Message:      ticketStatus.Message,
+		CurrentSteps: crpCurrentSteps,
+		Logs:         crpApproveLogs,
+	}
 	return itsmAudit, crpAudit, nil
 }
 

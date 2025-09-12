@@ -84,6 +84,14 @@ const (
 	CvmCbsPlanDeptId = 1041
 	// DefaultPlanProductName 需求预测默认规划产品
 	DefaultPlanProductName = "互娱运营支撑产品"
+	// TransferPlanProductID 转移规划产品ID
+	TransferPlanProductID = 4487
+	// TransferPlanProductName 转移规划产品名称
+	TransferPlanProductName = "IEG资源预测服务"
+	// TransferOpProductID 转移运营产品ID
+	TransferOpProductID = 9112
+	// TransferOpProductName 转移运营产品名称
+	TransferOpProductName = "IEG资源预测服务"
 
 	// CvmLaunchMethod cvm methods
 	// 创建CVM订单方法

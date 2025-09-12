@@ -133,6 +133,9 @@ type Logics interface {
 	// QueryCrpDemandsQuota 查询crp预测额度
 	QueryCrpDemandsQuota(kt *kit.Kit, obsProject []enumor.ObsProject, technicalClasses []string) (
 		[]*cvmapi.CvmCbsPlanQueryItem, error)
+	// ListRemainTransferQuota 查询剩余可转移额度
+	ListRemainTransferQuota(kt *kit.Kit, req *ptypes.ListResPlanTransferQuotaSummaryReq) (
+		*ptypes.ResPlanTransferQuotaSummaryResp, error)
 	// GetPlanTransferQuotaConfigs 获取预测转移额度配置
 	GetPlanTransferQuotaConfigs(kt *kit.Kit) (ptypes.TransferQuotaConfig, error)
 	// UpdatePlanTransferQuotaConfigs 更新预测转移额度配置
@@ -149,7 +152,7 @@ type Logics interface {
 	ApproveResPlanSubTicketAdmin(kt *kit.Kit, subTicketID string, bizID int64,
 		req *ptypes.AuditResPlanTicketAdminReq) error
 	// RetryResPlanFailedSubTickets retry res plan failed sub tickets.
-	RetryResPlanFailedSubTickets(kt *kit.Kit, ticketID string, subTicketIDs []string) error
+	RetryResPlanFailedSubTickets(kt *kit.Kit, ticketID string) error
 
 	// CreateDemandWeek create demand week.
 	CreateDemandWeek(kt *kit.Kit, createReqs []rpproto.ResPlanWeekCreateReq) (*core.BatchCreateResult, error)

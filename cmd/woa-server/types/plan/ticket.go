@@ -533,8 +533,8 @@ type GetResPlanTicketAuditResp struct {
 
 // GetRPTicketItsmAudit get resource plan ticket itsm audit.
 type GetRPTicketItsmAudit struct {
-	ItsmSn       string                `json:"itsm_sn"`
-	ItsmUrl      string                `json:"itsm_url"`
+	ItsmSN       string                `json:"itsm_sn"`
+	ItsmURL      string                `json:"itsm_url"`
 	Status       enumor.RPTicketStatus `json:"status"`
 	StatusName   string                `json:"status_name"`
 	Message      string                `json:"message"`

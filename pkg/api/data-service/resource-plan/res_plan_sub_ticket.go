@@ -120,7 +120,7 @@ func (r *ResPlanSubTicketBatchUpdateReq) Validate() error {
 type ResPlanSubTicketUpdateReq struct {
 	ID                  string                    `json:"id" validate:"required"`
 	SubType             enumor.RPTicketType       `json:"sub_type"`
-	SubDemands          types.JsonField           `json:"sub_demands"`
+	SubDemands          *string                   `json:"sub_demands"`
 	BkBizID             int64                     `json:"bk_biz_id"`
 	BkBizName           string                    `json:"bk_biz_name"`
 	OpProductID         int64                     `json:"op_product_id"`
@@ -178,7 +178,7 @@ func (r *ResPlanSubTicketUpdateReq) Validate() error {
 
 // ResPlanSubTicketStatusUpdateReq update res plan sub ticket status, if update to failed, message is required.
 type ResPlanSubTicketStatusUpdateReq struct {
-	ID       string                   `json:"id" validate:"omitempty"`
+	IDs      []string                 `json:"ids" validate:"omitempty"`
 	TicketID string                   `json:"ticket_id" validate:"required"`
 	Source   enumor.RPSubTicketStatus `json:"source" validate:"required"`
 	Target   enumor.RPSubTicketStatus `json:"target" validate:"required"`
@@ -194,7 +194,7 @@ func (r ResPlanSubTicketStatusUpdateReq) Validate() error {
 		return err
 	}
 
-	if r.Target == enumor.RPSubTicketStatusFailed {
+	if r.Target == enumor.RPSubTicketStatusFailed && r.Source != enumor.RPSubTicketStatusInvalid {
 		if r.Message == nil {
 			return errors.New("failed status, message is required")
 		}

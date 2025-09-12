@@ -59,7 +59,8 @@ type Dispatcher struct {
 	demandTime     demandtime.DemandTime
 	ctx            context.Context
 
-	ticketQueue *ptypes.UniQueue
+	ticketQueue    *ptypes.UniQueue
+	subTicketQueue *ptypes.UniQueue
 
 	resFetcher fetcher.Fetcher
 }
@@ -99,6 +100,7 @@ func New(ctx context.Context, sd serviced.State, client *client.ClientSet, dao d
 		demandTime:     demandtime.NewDemandTimeFromTable(client),
 		ctx:            ctx,
 		ticketQueue:    ptypes.NewUniQueue(),
+		subTicketQueue: ptypes.NewUniQueue(),
 		resFetcher:     fetch,
 	}
 
@@ -131,8 +133,8 @@ func (d *Dispatcher) Run() {
 		defer d.recoverLog(constant.ResPlanTicketWatchFailed)
 
 		// TODO: get interval from config
-		// list and watch tickets every 2 minutes
-		wait.JitterUntil(d.listAndWatchTickets, 2*time.Minute, 0.5, true, d.ctx)
+		// list and watch tickets every 20 seconds
+		wait.JitterUntil(d.listAndWatchTickets, 20*time.Second, 0.5, true, d.ctx)
 	}()
 
 	// ticket handler
@@ -141,8 +143,28 @@ func (d *Dispatcher) Run() {
 		go func() {
 			defer d.recoverLog(constant.ResPlanTicketWatchFailed)
 
-			// get and handle tickets every 2 minutes
-			wait.JitterUntil(d.dealTicket, 1*time.Minute, 0.5, true, d.ctx)
+			// get and handle tickets every 5 seconds
+			wait.JitterUntil(d.dealTicket, 5*time.Second, 0.5, true, d.ctx)
+		}()
+	}
+
+	// sub ticket watcher
+	go func() {
+		defer d.recoverLog(constant.ResPlanTicketWatchFailed)
+
+		// TODO: get interval from config
+		// list and watch sub tickets every 20 seconds
+		wait.JitterUntil(d.listAndWatchSubTickets, 20*time.Second, 0.5, true, d.ctx)
+	}()
+
+	// sub ticket handler
+	// TODO: get worker num from config
+	for i := 0; i < 10; i++ {
+		go func() {
+			defer d.recoverLog(constant.ResPlanTicketWatchFailed)
+
+			// get and handle sub tickets every 2 seconds
+			wait.JitterUntil(d.dealSubTicket, 2*time.Second, 0.5, true, d.ctx)
 		}()
 	}
 

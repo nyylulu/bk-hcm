@@ -23,7 +23,7 @@ package plan
 import (
 	"errors"
 
-	plantypes "hcm/cmd/woa-server/types/plan"
+	ptypes "hcm/cmd/woa-server/types/plan"
 	cgconf "hcm/pkg/api/core/global-config"
 	datagconf "hcm/pkg/api/data-service/global_config"
 	"hcm/pkg/criteria/constant"
@@ -36,13 +36,20 @@ import (
 )
 
 // GetPlanTransferQuotaConfigs 获取预测转移额度配置
-func (c *Controller) GetPlanTransferQuotaConfigs(kt *kit.Kit) (plantypes.TransferQuotaConfig, error) {
+func (c *Controller) GetPlanTransferQuotaConfigs(kt *kit.Kit) (ptypes.TransferQuotaConfig, error) {
 	return c.resFetcher.GetPlanTransferQuotaConfigs(kt)
+}
+
+// ListRemainTransferQuota list remain transfer quota.
+func (c *Controller) ListRemainTransferQuota(kt *kit.Kit, req *ptypes.ListResPlanTransferQuotaSummaryReq) (
+	*ptypes.ResPlanTransferQuotaSummaryResp, error) {
+
+	return c.resFetcher.ListRemainTransferQuota(kt, req)
 }
 
 // UpdatePlanTransferQuotaConfigs 更新预测转移额度配置
 func (c *Controller) UpdatePlanTransferQuotaConfigs(kt *kit.Kit,
-	req *plantypes.UpdatePlanTransferQuotaConfigsReq) error {
+	req *ptypes.UpdatePlanTransferQuotaConfigsReq) error {
 
 	if err := req.Validate(); err != nil {
 		logs.Errorf("failed to validate request, err: %v, req: %+v, rid: %s", err, *req, kt.Rid)
@@ -105,7 +112,7 @@ func (c *Controller) QueryCrpDemandsQuota(kt *kit.Kit, obsProject []enumor.ObsPr
 	}
 
 	demandReq := &QueryIEGDemandsReq{
-		OpProdNames:      []string{constant.IEGResPlanServiceProductName},
+		OpProdNames:      []string{cvmapi.TransferOpProductName},
 		ObsProjects:      obsNewProjects,
 		TechnicalClasses: technicalClasses,
 	}

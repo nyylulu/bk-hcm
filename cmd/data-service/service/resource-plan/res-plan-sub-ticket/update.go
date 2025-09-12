@@ -21,11 +21,14 @@
 package resplansubticket
 
 import (
+	"fmt"
+
 	rpproto "hcm/pkg/api/data-service/resource-plan"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/orm"
 	"hcm/pkg/dal/dao/tools"
 	tablers "hcm/pkg/dal/table/resource-plan/res-plan-sub-ticket"
+	ttypes "hcm/pkg/dal/table/types"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
@@ -68,7 +71,6 @@ func (svc *service) batchUpdateResPlanSubTicketWithTx(kt *kit.Kit, txn *sqlx.Tx,
 	for _, updateReq := range updateReqs {
 		record := &tablers.ResPlanSubTicketTable{
 			SubType:             updateReq.SubType,
-			SubDemands:          updateReq.SubDemands,
 			BkBizID:             updateReq.BkBizID,
 			BkBizName:           updateReq.BkBizName,
 			OpProductID:         updateReq.OpProductID,
@@ -95,8 +97,11 @@ func (svc *service) batchUpdateResPlanSubTicketWithTx(kt *kit.Kit, txn *sqlx.Tx,
 			SubUpdatedDiskSize:  updateReq.SubUpdatedDiskSize,
 			Reviser:             kt.User,
 		}
+		if updateReq.SubDemands != nil {
+			record.SubDemands = ttypes.JsonField(*updateReq.SubDemands)
+		}
 
-		if err := svc.dao.ResPlanSubTicket().UpdateWithTx(kt, txn,
+		if _, err := svc.dao.ResPlanSubTicket().UpdateWithTx(kt, txn,
 			tools.EqualExpression("id", updateReq.ID), record); err != nil {
 			logs.Errorf("update res plan sub ticket failed, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
@@ -117,12 +122,12 @@ func (svc *service) UpdateResPlanSubTicketStatusCAS(cts *rest.Contexts) (interfa
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	_, err := svc.dao.Txn().AutoTxn(cts.Kit, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
+	effected, err := svc.dao.Txn().AutoTxn(cts.Kit, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
 		rules := make([]*filter.AtomRule, 0)
 		rules = append(rules, tools.RuleEqual("ticket_id", req.TicketID))
 		rules = append(rules, tools.RuleEqual("status", req.Source))
-		if len(req.ID) > 0 {
-			rules = append(rules, tools.RuleEqual("id", req.ID))
+		if len(req.IDs) > 0 {
+			rules = append(rules, tools.RuleIn("id", req.IDs))
 		}
 		updateFilter := tools.ExpressionAnd(rules...)
 
@@ -132,15 +137,23 @@ func (svc *service) UpdateResPlanSubTicketStatusCAS(cts *rest.Contexts) (interfa
 			Reviser: cts.Kit.User,
 		}
 
-		if err := svc.dao.ResPlanSubTicket().UpdateWithTx(cts.Kit, txn, updateFilter, record); err != nil {
+		effected, err := svc.dao.ResPlanSubTicket().UpdateWithTx(cts.Kit, txn, updateFilter, record)
+		if err != nil {
 			logs.Errorf("update res plan sub ticket status failed, err: %v, rid: %s", err, cts.Kit.Rid)
 			return nil, err
 		}
-		return nil, nil
+		return effected, nil
 	})
 	if err != nil {
 		logs.Errorf("update res plan sub ticket status failed, err: %v, rid: %v", err, cts.Kit.Rid)
 		return nil, err
+	}
+
+	// 入参指定ID时，需确保更新的行数和提供的ID一致
+	if len(req.IDs) > 0 && effected != int64(len(req.IDs)) {
+		logs.Errorf("update res plan sub ticket status failed, expected row count: %d, actual row count: %d, rid: %s",
+			len(req.IDs), effected, cts.Kit.Rid)
+		return nil, fmt.Errorf("update res plan sub ticket status failed, effected rows: %d", effected)
 	}
 
 	return nil, nil

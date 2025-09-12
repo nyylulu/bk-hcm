@@ -21,8 +21,6 @@ package dispatcher
 
 import (
 	"errors"
-	"fmt"
-	"strings"
 	"time"
 
 	ptypes "hcm/cmd/woa-server/types/plan"
@@ -36,7 +34,6 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
-	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/tools/times"
 )
 
@@ -156,101 +153,34 @@ func (d *Dispatcher) dealTicket() error {
 		return errors.New("failed to handle ticket for itsm sn is empty")
 	}
 
-	if tkInfo.CrpSN != "" {
-		return d.checkCrpTicket(kt, tkInfo)
-	}
-
-	return d.checkItsmTicket(kt, tkInfo)
-}
-
-func (d *Dispatcher) checkCrpTicket(kt *kit.Kit, ticket *ptypes.TicketInfo) error {
-	logs.Infof("ready to check crp flow, sn: %s, id: %s, rid: %s", ticket.CrpSN, ticket.ID, kt.Rid)
-
-	req := &cvmapi.QueryPlanOrderReq{
-		ReqMeta: cvmapi.ReqMeta{
-			Id:      cvmapi.CvmId,
-			JsonRpc: cvmapi.CvmJsonRpc,
-			Method:  cvmapi.CvmCbsPlanOrderQueryMethod,
-		},
-		Params: &cvmapi.QueryPlanOrderParam{
-			OrderIds: []string{ticket.CrpSN},
-		},
-	}
-	resp, err := d.crpCli.QueryPlanOrder(kt.Ctx, nil, req)
+	checkSubTicket, err := d.checkItsmTicket(kt, tkInfo)
 	if err != nil {
-		logs.Errorf("failed to query crp plan order, err: %v, rid: %s", err, kt.Rid)
-		return err
-	}
-	if resp.Error.Code != 0 {
-		logs.Errorf("%s: failed to query crp plan order, code: %d, msg: %s, crp_sn: %s, rid: %s",
-			constant.ResPlanTicketWatchFailed, resp.Error.Code, resp.Error.Message, ticket.CrpSN, kt.Rid)
-		return fmt.Errorf("failed to query crp plan order, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
-	}
-	if resp.Result == nil {
-		logs.Errorf("%s: failed to query crp plan order, for result is empty, crp_sn: %s, rid: %s",
-			constant.ResPlanTicketWatchFailed, ticket.CrpSN, kt.Rid)
-		return errors.New("failed to query crp plan order, for result is empty")
-	}
-	planItem, ok := resp.Result[ticket.CrpSN]
-	if !ok {
-		logs.Errorf("%s: query crp plan order return no result by sn: %s, rid: %s",
-			constant.ResPlanTicketWatchFailed, ticket.CrpSN, kt.Rid)
-		return fmt.Errorf("query crp plan order return no result by sn: %s", ticket.CrpSN)
-	}
-	// CRP返回状态码为： 1 追加单， 2 调整单， 3 订单不存在， 4 其它错误（只有1 和 2 是正确的）
-	if planItem.Code != 1 && planItem.Code != 2 {
-		logs.Errorf("%s: failed to query crp plan order, order status is incorrect, code: %d, data: %+v, rid: %s",
-			constant.ResPlanTicketWatchFailed, planItem.Code, planItem.Data, kt.Rid)
-		return fmt.Errorf("crp plan order status is incorrect, code: %d, sn: %s", planItem.Code, ticket.CrpSN)
-	}
-
-	update := &rpts.ResPlanTicketStatusTable{
-		TicketID: ticket.ID,
-		Status:   enumor.RPTicketStatusAuditing,
-		ItsmSN:   ticket.ItsmSN,
-		ItsmURL:  ticket.ItsmURL,
-		CrpSN:    ticket.CrpSN,
-		CrpURL:   ticket.CrpURL,
-	}
-
-	switch planItem.Data.BaseInfo.Status {
-	case cvmapi.PlanOrderStatusRejected:
-		update.Status = enumor.RPTicketStatusRejected
-	case cvmapi.PlanOrderStatusApproved:
-		return d.finishAuditFlow(kt, ticket)
-	default:
-		return d.checkTicketTimeout(kt, ticket)
-	}
-	if err := d.updateTicketStatus(kt, update); err != nil {
-		logs.Errorf("failed to update resource plan ticket status, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to check itsm ticket, err: %v, id: %s, rid: %s", err, tkID, kt.Rid)
 		return err
 	}
 
-	// 单据被拒需要释放资源
-	if update.Status != enumor.RPTicketStatusRejected {
-		return nil
-	}
-	allDemandIDs := make([]string, 0)
-	for _, demand := range ticket.Demands {
-		if demand.Original != nil {
-			allDemandIDs = append(allDemandIDs, demand.Original.DemandID)
+	if checkSubTicket {
+		// 子单拆分完成，更新所有waiting子单的状态到auditing
+		err = d.startWaitingSubTicket(kt, tkID, tkInfo.Applicant)
+		if err != nil {
+			logs.Errorf("failed to start waiting sub ticket, err: %v, id: %s, rid: %s", err, tkID, kt.Rid)
+			return err
 		}
-	}
-	unlockReq := rpproto.NewResPlanDemandLockOpReqBatch(allDemandIDs, 0)
-	if err = d.client.DataService().Global.ResourcePlan.UnlockResPlanDemand(kt, unlockReq); err != nil {
-		logs.Errorf("failed to unlock all resource plan demand, err: %v, rid: %s", err, kt.Rid)
-		return err
+
+		// 检查子单状态，更新主单状态
+		return d.checkSubTicket(kt, tkInfo)
 	}
 	return nil
 }
 
-func (d *Dispatcher) checkItsmTicket(kt *kit.Kit, ticket *ptypes.TicketInfo) error {
-	logs.Infof("ready to check itsm flow, sn: %s, id: %s", ticket.ItsmSN, ticket.ID)
+func (d *Dispatcher) checkItsmTicket(kt *kit.Kit, ticket *ptypes.TicketInfo) (bool, error) {
+	logs.Infof("ready to check itsm flow, sn: %s, id: %s, rid: %s", ticket.ItsmSN, ticket.ID, kt.Rid)
 
+	checkSubTicket := false
 	resp, err := d.itsmCli.GetTicketStatus(kt, ticket.ItsmSN)
 	if err != nil {
 		logs.Errorf("failed to get itsm ticket status, err: %v, id: %s, rid: %s", err, ticket.ID, kt.Rid)
-		return err
+		return false, err
 	}
 
 	update := &rpts.ResPlanTicketStatusTable{
@@ -261,7 +191,7 @@ func (d *Dispatcher) checkItsmTicket(kt *kit.Kit, ticket *ptypes.TicketInfo) err
 	}
 
 	switch resp.Data.CurrentStatus {
-	case string(itsm.StatusFinished), string(itsm.StatusTerminated):
+	case string(itsm.StatusTerminated):
 		// rejected
 		update.Status = enumor.RPTicketStatusRejected
 	case string(itsm.StatusRevoked):
@@ -270,73 +200,34 @@ func (d *Dispatcher) checkItsmTicket(kt *kit.Kit, ticket *ptypes.TicketInfo) err
 	case string(itsm.StatusRunning):
 		// check if CRP audit state
 		if len(resp.Data.CurrentSteps) == 0 {
-			return d.checkTicketTimeout(kt, ticket)
+			return false, d.checkTicketTimeout(kt, ticket)
 		}
 
 		if resp.Data.CurrentSteps[0].StateId != d.crpAuditNode.ID {
-			return d.checkTicketTimeout(kt, ticket)
+			return false, d.checkTicketTimeout(kt, ticket)
 		}
 
 		// CRP audit state, create CRP ticket
-		return d.createCrpTicket(kt, ticket)
+		checkSubTicket = true
+		return checkSubTicket, d.createSubTicket(kt, ticket)
+	case string(itsm.StatusFinished):
+		// ITSM单正常完结时，依然需要确认子单的状态
+		checkSubTicket = true
+		return checkSubTicket, d.createSubTicket(kt, ticket)
 	default:
-		return d.checkTicketTimeout(kt, ticket)
+		return checkSubTicket, d.checkTicketTimeout(kt, ticket)
 	}
 
 	if err = d.updateTicketStatus(kt, update); err != nil {
 		logs.Errorf("failed to update resource plan ticket status, err: %v, rid: %s", err, kt.Rid)
-		return err
+		return checkSubTicket, err
 	}
 
 	if update.Status != enumor.RPTicketStatusRejected && update.Status != enumor.RPTicketStatusRevoked {
-		return nil
+		return checkSubTicket, nil
 	}
 	// 单据被拒需要释放资源
-	return d.unlockTicketOriginalDemands(kt, ticket)
-}
-
-// createCrpTicket create crp ticket.
-func (d *Dispatcher) createCrpTicket(kt *kit.Kit, ticket *ptypes.TicketInfo) error {
-	if ticket == nil {
-		logs.Errorf("failed to create crp ticket, ticket is nil, rid: %s", kt.Rid)
-		return errors.New("ticket is nil")
-	}
-
-	// call crp api to create crp ticket.
-	crpCreator := NewCrpTicketCreator(d.resFetcher, d.crpCli)
-	sn, err := crpCreator.CreateCRPTicket(kt, ticket)
-	if err != nil {
-		// 因CRP单据修改冲突导致的提单失败，不返回报错，记录日志后返回队列继续等待
-		if strings.Contains(err.Error(), constant.CRPResPlanDemandIsInProcessing) {
-			logs.Warnf("failed to create crp ticket, as crp res plan demand is in processing, err: %v, "+
-				"ticket_id: %s, rid: %s", err, ticket.ID, kt.Rid)
-			return nil
-		}
-
-		// 这里主要返回的error是crp ticket创建失败，且ticket状态更新失败的日志在函数内已打印，这里可以忽略该错误
-		_ = d.updateTicketStatusFailed(kt, ticket, err.Error())
-		logs.Errorf("failed to create crp ticket with different ticket type, err: %v, ticket_id: %s, rid: %s", err,
-			ticket.ID, kt.Rid)
-		return err
-	}
-
-	// save crp sn and crp url to resource plan ticket status table.
-	update := &rpts.ResPlanTicketStatusTable{
-		TicketID: ticket.ID,
-		Status:   enumor.RPTicketStatusAuditing,
-		ItsmSN:   ticket.ItsmSN,
-		ItsmURL:  ticket.ItsmURL,
-		CrpSN:    sn,
-		CrpURL:   cvmapi.CvmPlanLinkPrefix + sn,
-	}
-
-	if err = d.updateTicketStatus(kt, update); err != nil {
-		logs.Errorf("failed to update resource plan ticket status, err: %v, ticket_id: %s, rid: %s", err, ticket.ID,
-			kt.Rid)
-		return err
-	}
-
-	return nil
+	return checkSubTicket, d.unlockTicketOriginalDemands(kt, ticket)
 }
 
 // checkTicketTimeout check ticket timeout

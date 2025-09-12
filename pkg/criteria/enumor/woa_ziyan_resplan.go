@@ -48,6 +48,13 @@ const (
 	RPTicketTypeDelay RPTicketType = "delay"
 	// RPTicketTypeTransfer is resource plan ticket status transfer. Only used in sub_ticket.
 	RPTicketTypeTransfer RPTicketType = "transfer"
+
+	// RPTicketTypeTransferIN is resource plan ticket status transfer in.
+	// Will be modified to RPTicketTypeTransfer in sub_ticket create stage.
+	RPTicketTypeTransferIN RPTicketType = "transfer_in"
+	// RPTicketTypeTransferOUT is resource plan ticket status transfer out.
+	// Will be modified to RPTicketTypeTransfer in sub_ticket create stage.
+	RPTicketTypeTransferOUT RPTicketType = "transfer_out"
 )
 
 // Validate RPTicketType.
@@ -73,6 +80,11 @@ var rdTicketTypeNameMap = map[RPTicketType]string{
 // Name return RPTicketType's name.
 func (t RPTicketType) Name() string {
 	return rdTicketTypeNameMap[t]
+}
+
+// CanMerged returns whether the demand can be merged to a sub ticket.
+func (t RPTicketType) CanMerged() bool {
+	return t == RPTicketTypeAdd || t == RPTicketTypeDelete
 }
 
 // GetRPTicketTypeMembers get RPTicketType's members for root tickets.
@@ -207,6 +219,18 @@ func (s RPSubTicketStatus) Validate() error {
 	}
 
 	return nil
+}
+
+// IsUnfinished return true if RPSubTicketStatus is unfinished.
+func (s RPSubTicketStatus) IsUnfinished() bool {
+	switch s {
+	case RPSubTicketStatusInit:
+	case RPSubTicketStatusWaiting:
+	case RPSubTicketStatusAuditing:
+	default:
+		return false
+	}
+	return true
 }
 
 // rpSubTicketStatusNameMap records RPSubTicketStatus's name.
@@ -524,6 +548,8 @@ const (
 	CrpAdjustTypeDelay CrpAdjustType = "加急延期"
 	// CrpAdjustTypeCancel is crp adjust type cancel.
 	CrpAdjustTypeCancel CrpAdjustType = "需求取消"
+	// CrpAdjustTypeTransfer is crp adjust type transfer.
+	CrpAdjustTypeTransfer CrpAdjustType = "转移"
 )
 
 // DemandStatus is resource plan demand status.

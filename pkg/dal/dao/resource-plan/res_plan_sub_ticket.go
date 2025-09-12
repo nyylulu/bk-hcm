@@ -44,7 +44,7 @@ import (
 // ResPlanSubTicketInterface only used for resource plan sub_ticket interface.
 type ResPlanSubTicketInterface interface {
 	CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []rpst.ResPlanSubTicketTable) ([]string, error)
-	UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression, model *rpst.ResPlanSubTicketTable) error
+	UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression, model *rpst.ResPlanSubTicketTable) (int64, error)
 	List(kt *kit.Kit, opt *types.ListOption) (*rtypes.RPSubTicketListResult, error)
 	DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression) error
 }
@@ -91,25 +91,25 @@ func (d ResPlanSubTicketDao) CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []rps
 
 // UpdateWithTx update resource plan sub_ticket with tx.
 func (d ResPlanSubTicketDao) UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, filterExpr *filter.Expression,
-	model *rpst.ResPlanSubTicketTable) error {
+	model *rpst.ResPlanSubTicketTable) (int64, error) {
 
 	if filterExpr == nil {
-		return errf.New(errf.InvalidParameter, "filter expr is nil")
+		return 0, errf.New(errf.InvalidParameter, "filter expr is nil")
 	}
 
 	if err := model.UpdateValidate(); err != nil {
-		return err
+		return 0, err
 	}
 
 	whereExpr, whereValue, err := filterExpr.SQLWhereExpr(tools.DefaultSqlWhereOption)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	opts := utils.NewFieldOptions().AddIgnoredFields(types.DefaultIgnoredFields...)
 	setExpr, toUpdate, err := utils.RearrangeSQLDataWithOption(model, opts)
 	if err != nil {
-		return fmt.Errorf("prepare parsed sql set filter expr failed, err: %v", err)
+		return 0, fmt.Errorf("prepare parsed sql set filter expr failed, err: %v", err)
 	}
 
 	sql := fmt.Sprintf(`UPDATE %s %s %s`, model.TableName(), setExpr, whereExpr)
@@ -118,15 +118,15 @@ func (d ResPlanSubTicketDao) UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, filterExpr *
 	if err != nil {
 		logs.ErrorJson("update resource plan sub ticket failed, filter: %v, err: %v, rid: %v",
 			filterExpr, err, kt.Rid)
-		return err
+		return 0, err
 	}
 
 	if effected == 0 {
 		logs.ErrorJson("update resource plan sub ticket, but record not found, filter: %v, rid: %v",
 			filterExpr, kt.Rid)
-		return err
+		return 0, err
 	}
-	return nil
+	return effected, nil
 }
 
 // List get resource plan sub_ticket list.

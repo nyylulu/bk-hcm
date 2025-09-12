@@ -22,12 +22,18 @@ package fetcher
 import (
 	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/api/core"
+	rpproto "hcm/pkg/api/data-service/resource-plan"
 	"hcm/pkg/criteria/constant"
+	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/tools"
 	tablegconf "hcm/pkg/dal/table/global-config"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/runtime/filter"
+	"hcm/pkg/thirdparty/cvmapi"
 	cvt "hcm/pkg/tools/converter"
+	"hcm/pkg/tools/slice"
 	"hcm/pkg/tools/util"
 )
 
@@ -81,4 +87,103 @@ func (f *ResPlanFetcher) GetConfigsFromData(kt *kit.Kit, configType string) ([]t
 	}
 
 	return dataResp.Details, nil
+}
+
+// ListRemainTransferQuota list remain transfer quota.
+func (f *ResPlanFetcher) ListRemainTransferQuota(kt *kit.Kit, req *ptypes.ListResPlanTransferQuotaSummaryReq) (
+	*ptypes.ResPlanTransferQuotaSummaryResp, error) {
+
+	// 不带业务ID的查询已使用额度
+	appliedRules := []*filter.AtomRule{tools.RuleEqual("year", req.Year)}
+	if len(req.SubTicketID) > 0 {
+		appliedRules = append(appliedRules, tools.RuleIn("sub_ticket_id", req.SubTicketID))
+	}
+	if len(req.TechnicalClass) > 0 {
+		appliedRules = append(appliedRules, tools.RuleIn("technical_class", req.TechnicalClass))
+	}
+	if len(req.ObsProject) > 0 {
+		appliedRules = append(appliedRules, tools.RuleIn("obs_project", req.ObsProject))
+	}
+
+	// 带业务ID的查询已使用额度
+	bizRules := make([]*filter.AtomRule, len(appliedRules))
+	copy(bizRules, appliedRules)
+	if len(req.BkBizIDs) > 0 {
+		bizRules = append(bizRules, tools.RuleIn("bk_biz_id", req.BkBizIDs))
+	}
+
+	// 查询当前业务-已使用的额度
+	bizTarReq := &rpproto.TransferAppliedRecordListReq{ListReq: core.ListReq{
+		Filter: tools.ExpressionAnd(bizRules...),
+		Page:   core.NewDefaultBasePage(),
+	}}
+	bizAppliedQuota, err := f.client.DataService().Global.ResourcePlan.SumResPlanTransferAppliedRecord(kt, bizTarReq)
+	if err != nil {
+		logs.Errorf("failed to list res plan transfer applied record quota, err: %v, rid: %s", err, kt.Rid)
+		return nil, errf.NewFromErr(errf.Aborted, err)
+	}
+
+	// 查询CRP侧的预测额度
+	demands, err := f.QueryCRPTransferPoolDemands(kt, req.ObsProject, req.TechnicalClass)
+	if err != nil {
+		logs.Errorf("failed to query ieg demands, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	var remainQuota int64
+	for _, demand := range demands {
+		remainQuota += demand.CoreAmount
+	}
+
+	return &ptypes.ResPlanTransferQuotaSummaryResp{
+		UsedQuota:   bizAppliedQuota.SumAppliedCore,
+		RemainQuota: remainQuota,
+	}, nil
+}
+
+// QueryCRPTransferPoolDemands 查询预测中转池中剩余CRP预测需求数
+func (f *ResPlanFetcher) QueryCRPTransferPoolDemands(kt *kit.Kit, obsProjects []enumor.ObsProject,
+	technicalClasses []string) ([]*cvmapi.CvmCbsPlanQueryItem, error) {
+
+	obsProjectStr := slice.Map(obsProjects, func(o enumor.ObsProject) string {
+		return string(o)
+	})
+
+	// init request parameter.
+	queryReq := &cvmapi.CvmCbsPlanQueryReq{
+		ReqMeta: cvmapi.ReqMeta{
+			Id:      cvmapi.CvmId,
+			JsonRpc: cvmapi.CvmJsonRpc,
+			Method:  cvmapi.CvmCbsPlanQueryMethod,
+		},
+		Params: &cvmapi.CvmCbsPlanQueryParam{
+			Page: &cvmapi.Page{
+				Start: 0,
+				Size:  int(core.DefaultMaxPageLimit),
+			},
+			BgName:         []string{cvmapi.CvmCbsPlanQueryBgName},
+			ProductName:    []string{cvmapi.TransferOpProductName},
+			ProjectName:    obsProjectStr,
+			TechnicalClass: technicalClasses,
+		},
+	}
+
+	// query all demands.
+	result := make([]*cvmapi.CvmCbsPlanQueryItem, 0)
+	for start := 0; ; start += int(core.DefaultMaxPageLimit) {
+		queryReq.Params.Page.Start = start
+		rst, err := f.crpCli.QueryCvmCbsPlans(kt.Ctx, kt.Header(), queryReq)
+		if err != nil {
+			logs.Errorf("query crp demands failed, err: %v, params: %+v, rid: %s", err, queryReq.Params, kt.Rid)
+			return nil, err
+		}
+
+		result = append(result, rst.Result.Data...)
+
+		if len(rst.Result.Data) < int(core.DefaultMaxPageLimit) {
+			break
+		}
+	}
+
+	return result, nil
 }

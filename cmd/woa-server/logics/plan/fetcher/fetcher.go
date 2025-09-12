@@ -72,11 +72,17 @@ type Fetcher interface {
 	GetCrpCurrentApprove(kt *kit.Kit, bkBizID int64, orderID string) ([]*ptypes.CrpAuditStep, error)
 	// GetCrpApproveLogs get crp approve logs
 	GetCrpApproveLogs(kt *kit.Kit, orderID string) ([]*ptypes.CrpAuditLog, error)
+	// QueryCRPTransferPoolDemands query crp transfer pool demands
+	QueryCRPTransferPoolDemands(kt *kit.Kit, obsProjects []enumor.ObsProject, technicalClasses []string) (
+		[]*cvmapi.CvmCbsPlanQueryItem, error)
 
 	// GetConfigsFromData get configs from global_config table
 	GetConfigsFromData(kt *kit.Kit, configType string) ([]tablegconf.GlobalConfigTable, error)
 	// GetPlanTransferQuotaConfigs get plan transfer quota configs
 	GetPlanTransferQuotaConfigs(kt *kit.Kit) (ptypes.TransferQuotaConfig, error)
+	// ListRemainTransferQuota list remain transfer quota
+	ListRemainTransferQuota(kt *kit.Kit, req *ptypes.ListResPlanTransferQuotaSummaryReq) (
+		*ptypes.ResPlanTransferQuotaSummaryResp, error)
 
 	// GetMetaMaps get res plan meta maps, like zoneMap, regionAreaMap and deviceTypeMap.
 	GetMetaMaps(kt *kit.Kit) (map[string]string, map[string]dmtypes.RegionArea, map[string]wdt.WoaDeviceTypeTable,

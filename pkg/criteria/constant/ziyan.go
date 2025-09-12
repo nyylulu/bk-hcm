@@ -106,8 +106,6 @@ const (
 	TransferQuotaKey = "quota"
 	// TransferAuditQuotaKey this is the config key for transfer audit quota.
 	TransferAuditQuotaKey = "audit_quota"
-	// IEGResPlanServiceProductName CRP预测
-	IEGResPlanServiceProductName = "IEG资源预测服务"
 )
 
 // AdminAuditStepName 管理员审批阶段名称

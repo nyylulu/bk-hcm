@@ -55,14 +55,14 @@ import (
 // CreateResPlanTicket create resource plan ticket.
 func (c *Controller) CreateResPlanTicket(kt *kit.Kit, req *CreateResPlanTicketReq) (string, error) {
 	if err := req.Validate(); err != nil {
-		logs.Errorf("failed to validate create resource plan ticket request, err: %s, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to validate create resource plan ticket request, err: %v, rid: %s", err, kt.Rid)
 		return "", err
 	}
 
 	// construct resource plan ticket.
 	ticket, err := c.constructResPlanTicket(kt, req, kt.User)
 	if err != nil {
-		logs.Errorf("failed to construct resource plan ticket, err: %s, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to construct resource plan ticket, err: %v, rid: %s", err, kt.Rid)
 		return "", err
 	}
 
@@ -400,7 +400,6 @@ func (c *Controller) approveResPlanTicketAdmin(kt *kit.Kit, subTicket *rpst.ResP
 		AdminAuditOperator: kt.User,
 		AdminAuditAt:       time.Now().Format(constant.DateTimeLayout),
 	}
-
 	updateReq := &rpproto.ResPlanSubTicketBatchUpdateReq{
 		SubTickets: []rpproto.ResPlanSubTicketUpdateReq{updateItem},
 	}

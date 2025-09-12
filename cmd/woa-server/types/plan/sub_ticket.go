@@ -28,6 +28,7 @@ import (
 	"hcm/pkg/dal/dao/tools"
 	dtypes "hcm/pkg/dal/dao/types"
 	rpt "hcm/pkg/dal/table/resource-plan/res-plan-ticket"
+	"hcm/pkg/dal/table/types"
 	"hcm/pkg/runtime/filter"
 )
 
@@ -150,6 +151,7 @@ type ListResPlanSubTicketItem struct {
 	ID             string                   `json:"id"`
 	Status         enumor.RPSubTicketStatus `json:"status"`
 	StatusName     string                   `json:"status_name"`
+	SubDemands     types.JsonField          `json:"-"` // Demands 资源需求明细，目前用于后端拆单逻辑，不需要返回给前端
 	Stage          enumor.RPSubTicketStage  `json:"stage"`
 	SubTicketType  enumor.RPTicketType      `json:"sub_ticket_type"`
 	TicketTypeName string                   `json:"ticket_type_name"`

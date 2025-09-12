@@ -23,10 +23,26 @@ import (
 	"errors"
 
 	ptypes "hcm/cmd/woa-server/types/plan"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/cvmapi"
 )
+
+// queryCRPDemands 查询CRP中的预测，按照项目类型和技术大类
+func (c *CrpTicketCreator) queryTransferCRPDemands(kt *kit.Kit, obsProjects []enumor.ObsProject,
+	technicalClasses []string) error {
+
+	crpDemand, err := c.resFetcher.QueryCRPTransferPoolDemands(kt, obsProjects, technicalClasses)
+	if err != nil {
+		logs.Errorf("failed to query transfer pool demands, err: %v, obs_project: %v, technical_classes: %v, rid: %s",
+			err, obsProjects, technicalClasses, kt.Rid)
+		return err
+	}
+
+	c.transferAbleDemands = crpDemand
+	return nil
+}
 
 // queryAdjustAbleDemands query demands that can be adjusted.
 // TODO 在splitter 和 dispatcher 中都调用，可以抽象为一个公共函数
@@ -49,13 +65,13 @@ func (c *CrpTicketCreator) queryAdjustAbleDemands(kt *kit.Kit, req *ptypes.Adjus
 
 	rst, err := c.crpCli.QueryAdjustAbleDemand(kt.Ctx, kt.Header(), queryReq)
 	if err != nil {
-		logs.Errorf("failed to query adjust able demands, err: %s, req: %+v, rid: %s", err, *queryReq.Params,
+		logs.Errorf("failed to query adjust able demands, err: %v, req: %+v, rid: %s", err, *queryReq.Params,
 			kt.Rid)
 		return nil, err
 	}
 
 	if rst.Error.Code != 0 {
-		logs.Errorf("failed to query adjust able demands, err: %s, crp_trace: %s, rid: %s", rst.Error.Message,
+		logs.Errorf("failed to query adjust able demands, err: %v, crp_trace: %s, rid: %s", rst.Error.Message,
 			rst.TraceId, kt.Rid)
 		return nil, errors.New(rst.Error.Message)
 	}

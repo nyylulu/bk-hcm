@@ -49,12 +49,24 @@ import (
 // applyResPlanDemandChange apply res plan demand change.
 func (d *Dispatcher) applyResPlanDemandChange(kt *kit.Kit, ticket *ptypes.TicketInfo) error {
 	// call crp api to get plan order change info.
-	changeDemandsOri, err := d.QueryCrpOrderChangeInfo(kt, ticket.CrpSN)
+	changeDemandsOri, err := d.QueryCrpOrderChangeInfosByTicketID(kt, ticket.ID)
 	if err != nil {
-		logs.Errorf("failed to query crp order change info, err: %v, crp_sn: %s, rid: %s", err, ticket.CrpSN,
-			kt.Rid)
+		logs.Errorf("failed to query crp order change info, err: %v, id: %s, rid: %s", err, ticket.ID, kt.Rid)
 		return err
 	}
+
+	// 所有子单全部未通过
+	if len(changeDemandsOri) == 0 {
+		// 解锁单据关联的原始预测
+		unlockErr := d.unlockTicketOriginalDemands(kt, ticket)
+		if unlockErr != nil {
+			logs.Warnf("failed to unlock ticket original demands, err: %v, id: %s, rid: %s", unlockErr,
+				ticket.ID, kt.Rid)
+		}
+		logs.Infof("no passed sub ticket, ticket id: %s, rid: %s", ticket.ID, kt.Rid)
+		return nil
+	}
+
 	// 需要先把key相同的预测数据聚合，避免过大的扣减在数据库中不存在
 	changeDemandsMap, err := d.aggregateDemandChangeInfo(kt, changeDemandsOri, ticket)
 	if err != nil {
@@ -314,6 +326,13 @@ func (d *Dispatcher) aggregateDemandChangeInfo(kt *kit.Kit, changeDemands []*pty
 
 	changeDemandMap := make(map[ptypes.ResPlanDemandAggregateKey]*ptypes.CrpOrderChangeInfo)
 	for _, changeDemand := range changeDemands {
+		// 剔除非本业务的变更，这些是转移到中转池的变更，不需要体现在HCM
+		if changeDemand.OpProductName != ticket.OpProductName {
+			logs.Infof("op product name: %s, not match ticket op product name: %s, ticket id: %s, rid: %s",
+				changeDemand.OpProductName, ticket.OpProductName, ticket.ID, kt.Rid)
+			continue
+		}
+
 		err := changeDemand.SetRegionAreaAndZoneID(zoneNameMap, regionNameMap)
 		if err != nil {
 			logs.Errorf("failed to set region area and zone id, err: %v, change demand: %+v, rid: %s", err,
@@ -422,6 +441,45 @@ func (d *Dispatcher) applyResPlanDemandChangeAggregate(kt *kit.Kit, ticket *ptyp
 	}
 
 	return nil, nil, nil
+}
+
+// QueryCrpOrderChangeInfosByTicketID query crp order change info by ticket id.
+func (d *Dispatcher) QueryCrpOrderChangeInfosByTicketID(kt *kit.Kit, ticketID string) ([]*ptypes.CrpOrderChangeInfo,
+	error) {
+
+	subTickets := make([]ptypes.ListResPlanSubTicketItem, 0)
+	// 获取单据下所有成功的子单
+	listReq := &ptypes.ListResPlanSubTicketReq{
+		TicketID: ticketID,
+		Statuses: []enumor.RPSubTicketStatus{enumor.RPSubTicketStatusDone},
+		Page:     core.NewDefaultBasePage(),
+	}
+	for {
+		rst, err := d.resFetcher.ListResPlanSubTicket(kt, listReq)
+		if err != nil {
+			logs.Errorf("failed to list res plan sub ticket, err: %v, id: %s, rid: %s", err, ticketID, kt.Rid)
+			return nil, err
+		}
+		subTickets = append(subTickets, rst.Details...)
+
+		if len(rst.Details) < int(listReq.Page.Limit) {
+			break
+		}
+		listReq.Page.Start += uint32(listReq.Page.Limit)
+	}
+
+	crpChangeInfos := make([]*ptypes.CrpOrderChangeInfo, 0)
+	for _, subTicket := range subTickets {
+		changeInfo, err := d.QueryCrpOrderChangeInfo(kt, subTicket.CrpSN)
+		if err != nil {
+			logs.Errorf("failed to query crp order change info, err: %v, sub_ticket_id: %s, sn: %s, rid: %s",
+				err, subTicket.ID, subTicket.CrpSN, kt.Rid)
+			return nil, err
+		}
+
+		crpChangeInfos = append(crpChangeInfos, changeInfo...)
+	}
+	return crpChangeInfos, nil
 }
 
 // QueryCrpOrderChangeInfo query crp order change info.
@@ -693,6 +751,7 @@ func convCreateResPlanDemandReqs(kt *kit.Kit, ticket *ptypes.TicketInfo, demand 
 		RegionName:      demand.RegionName,
 		ZoneID:          demand.ZoneID,
 		ZoneName:        demand.ZoneName,
+		TechnicalClass:  demand.TechnicalClass,
 		DeviceFamily:    demand.DeviceFamily,
 		DeviceClass:     demand.DeviceClass,
 		DeviceType:      demand.DeviceType,

@@ -32,6 +32,7 @@ import (
 	"hcm/pkg/thirdparty/cvmapi"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/math"
+	"hcm/pkg/tools/uuid"
 )
 
 // AdjustAbleRemainObj adjust able resource plan remained avail cpu core.
@@ -42,6 +43,8 @@ type AdjustAbleRemainObj struct {
 	ExpectTime string
 	// WillConsume 记录CRP中预测在本次调整的量
 	WillConsume int64
+	// TransferTarget 用于转移场景，按照用户需求分组计算并存储转移量
+	TransferTarget map[rpt.UpdatedRPDemandItem]int64
 }
 
 // CrpTicketCreator crp ticket creator
@@ -56,31 +59,34 @@ type CrpTicketCreator struct {
 	appendUpdateDemand []*cvmapi.AdjustUpdatedData
 	// adjustAbleDemands 记录每个本地预测需求对应的，CRP中可修改的原有预测
 	adjustAbleDemands map[string][]*cvmapi.CvmCbsPlanQueryItem
+	// transferAbleDemands 记录CRP中可转移的预测（来自中转产品）
+	transferAbleDemands []*cvmapi.CvmCbsPlanQueryItem
 }
 
 // NewCrpTicketCreator new CrpTicketCreator
 func NewCrpTicketCreator(fetch fetcher.Fetcher, crpCli cvmapi.CVMClientInterface) *CrpTicketCreator {
 	return &CrpTicketCreator{
-		resFetcher:         fetch,
-		crpCli:             crpCli,
-		adjCRPDemandsRst:   make(map[string]*AdjustAbleRemainObj),
-		appendUpdateDemand: make([]*cvmapi.AdjustUpdatedData, 0),
-		adjustAbleDemands:  make(map[string][]*cvmapi.CvmCbsPlanQueryItem),
+		resFetcher:          fetch,
+		crpCli:              crpCli,
+		adjCRPDemandsRst:    make(map[string]*AdjustAbleRemainObj),
+		appendUpdateDemand:  make([]*cvmapi.AdjustUpdatedData, 0),
+		adjustAbleDemands:   make(map[string][]*cvmapi.CvmCbsPlanQueryItem),
+		transferAbleDemands: make([]*cvmapi.CvmCbsPlanQueryItem, 0),
 	}
 }
 
-// CreateCRPTicket create crp adjust ticket
-func (c *CrpTicketCreator) CreateCRPTicket(kt *kit.Kit, ticket *ptypes.TicketInfo) (string, error) {
+// CreateCRPTicket create crp ticket
+func (c *CrpTicketCreator) CreateCRPTicket(kt *kit.Kit, subTicket *ptypes.SubTicketInfo) (string, error) {
 	// 1. 新增单走新增流程
-	if ticket.Type == enumor.RPTicketTypeAdd {
-		return c.createAddCrpTicket(kt, ticket)
+	if subTicket.Type == enumor.RPTicketTypeAdd {
+		return c.createAddCrpTicket(kt, subTicket)
 	}
 
 	// 2. 生成调整请求
-	srcData, updateData, err := c.constructCrpAdjustReqParams(kt, ticket)
+	srcData, updateData, err := c.constructCrpAdjustReqParams(kt, subTicket)
 	if err != nil {
 		logs.Errorf("failed to construct adjust crp plan order request params, ticketID: %s, err: %v, rid: %s",
-			ticket.ID, err, kt.Rid)
+			subTicket.ID, err, kt.Rid)
 		return "", err
 	}
 
@@ -92,44 +98,46 @@ func (c *CrpTicketCreator) CreateCRPTicket(kt *kit.Kit, ticket *ptypes.TicketInf
 		},
 		Params: &cvmapi.CvmCbsPlanAdjustParam{
 			BaseInfo: &cvmapi.AdjustBaseInfo{
-				DeptId:          int(ticket.VirtualDeptID),
-				DeptName:        ticket.VirtualDeptName,
-				PlanProductName: ticket.PlanProductName,
+				DeptId:          int(subTicket.VirtualDeptID),
+				DeptName:        subTicket.VirtualDeptName,
+				PlanProductName: subTicket.PlanProductName,
 				Desc:            "",
 			},
 			SrcData:     srcData,
 			UpdatedData: updateData,
-			UserName:    ticket.Applicant,
+			UserName:    subTicket.Applicant,
 		},
 	}
 
-	switch ticket.DemandClass {
+	switch subTicket.DemandClass {
 	case enumor.DemandClassCVM:
 		adjustReq.Params.BaseInfo.Desc = cvmapi.CvmCbsPlanDefaultCvmDesc
 	case enumor.DemandClassCA:
 		adjustReq.Params.BaseInfo.Desc = cvmapi.CvmCbsPlanDefaultCADesc
 	default:
-		logs.Warnf("failed to construct adjust desc, unsupported demand class: %s, rid: %s", ticket.DemandClass, kt.Rid)
+		logs.Warnf("failed to construct adjust desc, unsupported demand class: %s, rid: %s",
+			subTicket.DemandClass, kt.Rid)
 	}
 
-	// 3. 发起提单
+	// 3. 发起调整提单
 	resp, err := c.crpCli.AdjustCvmCbsPlans(kt.Ctx, kt.Header(), adjustReq)
 	if err != nil {
-		logs.Errorf("failed to adjust cvm & cbs plan order, ticketID: %s, err: %v, rid: %s", ticket.ID, err, kt.Rid)
+		logs.Errorf("failed to adjust cvm & cbs plan order, subTicketID: %s, err: %v, rid: %s", subTicket.ID,
+			err, kt.Rid)
 		return "", err
 	}
 
 	if resp.Error.Code != 0 {
-		logs.Errorf("failed to adjust cvm & cbs plan order, ticketID: %s, code: %d, msg: %s, req: %v, crp_trace: %s, "+
-			"rid: %s", ticket.ID, resp.Error.Code, resp.Error.Message, cvt.PtrToVal(adjustReq),
+		logs.Errorf("failed to adjust cvm & cbs plan order, subTicketID: %s, code: %d, msg: %s, req: %v, "+
+			"crp_trace: %s, rid: %s", subTicket.ID, resp.Error.Code, resp.Error.Message, cvt.PtrToVal(adjustReq),
 			resp.TraceId, kt.Rid)
 		return "", fmt.Errorf("failed to create crp ticket, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
 	}
 
 	sn := resp.Result.OrderId
 	if sn == "" {
-		logs.Errorf("failed to adjust cvm & cbs plan order, for return empty order id, ticketID: %s, rid: %s",
-			ticket.ID, kt.Rid)
+		logs.Errorf("failed to adjust cvm & cbs plan order, for return empty order id, subTicketID: %s, rid: %s",
+			subTicket.ID, kt.Rid)
 		return "", errors.New("failed to create crp ticket, for return empty order id")
 	}
 
@@ -137,19 +145,195 @@ func (c *CrpTicketCreator) CreateCRPTicket(kt *kit.Kit, ticket *ptypes.TicketInf
 }
 
 // constructCrpAdjustReq construct cvm cbs plan adjust request.
-func (c *CrpTicketCreator) constructCrpAdjustReqParams(kt *kit.Kit, ticket *ptypes.TicketInfo) ([]*cvmapi.AdjustSrcData,
-	[]*cvmapi.AdjustUpdatedData, error) {
+func (c *CrpTicketCreator) constructCrpAdjustReqParams(kt *kit.Kit, subTicket *ptypes.SubTicketInfo) (
+	[]*cvmapi.AdjustSrcData, []*cvmapi.AdjustUpdatedData, error) {
+
+	// 根据子单的需求类型（新增、删除）决定转移的方向
+	if subTicket.Type == enumor.RPTicketTypeTransfer {
+		transferDirection := subTicket.Type
+		if len(subTicket.Demands) == 0 {
+			logs.Errorf("sub ticket has no demands, sub ticket id: %s, rid: %s", subTicket.ID, kt.Rid)
+			return nil, nil, errors.New("sub ticket has no demands")
+		}
+		if subTicket.Demands[0].Original == nil {
+			transferDirection = enumor.RPTicketTypeAdd
+		} else {
+			transferDirection = enumor.RPTicketTypeDelete
+		}
+
+		switch transferDirection {
+		case enumor.RPTicketTypeAdd:
+			return c.constructAddTransferAdjustReqParams(kt, subTicket)
+		case enumor.RPTicketTypeDelete:
+			return c.constructDelTransferAdjustReqParams(kt, subTicket)
+		default:
+			logs.Errorf("unsupported transfer direction: %s, id: %s, rid: %s", transferDirection, subTicket.ID,
+				kt.Rid)
+			return nil, nil, errors.New("unsupported transfer direction")
+		}
+	}
+
+	return c.constructNormalCrpAdjustReqParams(kt, subTicket)
+}
+
+// constructAddTransferAdjustReqParams 构建CRP调整单请求参数，用于新增转移调整场景（中转产品 -> 本业务）
+func (c *CrpTicketCreator) constructAddTransferAdjustReqParams(kt *kit.Kit, subTicket *ptypes.SubTicketInfo) (
+	[]*cvmapi.AdjustSrcData, []*cvmapi.AdjustUpdatedData, error) {
+
+	// 1. 整合所有需求的项目类型和技术大类
+	obsProjectMap := make([]enumor.ObsProject, 0)
+	technicalClassMap := make([]string, 0)
+	for _, d := range subTicket.Demands {
+		if d.Updated == nil {
+			logs.Errorf("updated demand is nil, sub ticket id: %s, rid: %s", subTicket.ID, kt.Rid)
+			return nil, nil, errors.New("updated demand is nil")
+		}
+		obsProjectMap = append(obsProjectMap, d.Updated.ObsProject)
+		technicalClassMap = append(technicalClassMap, d.Updated.Cvm.TechnicalClass)
+	}
+
+	// 2. 查询CRP中可转移的预测（中转产品）
+	err := c.queryTransferCRPDemands(kt, obsProjectMap, technicalClassMap)
+	if err != nil {
+		logs.Errorf("query crp demands failed, err: %v, sub ticket id: %s, rid: %s", err, subTicket.ID, kt.Rid)
+		return nil, nil, err
+	}
+
+	// 3. 构造调整请求的详细内容。从可转移的中转产品预测中进行调减，以及从预测需求内容中进行追加
+	for _, demand := range subTicket.Demands {
+		if err := c.constructAdjustDemandDetails(kt, subTicket, demand); err != nil {
+			logs.Errorf("failed to construct adjust demand details, err: %v, rid: %s", err, kt.Rid)
+			return nil, nil, err
+		}
+	}
+
+	// 3. 根据暂存的修改信息生成最终的变更请求内容
+	srcData := make([]*cvmapi.AdjustSrcData, 0)
+	updatedData := make([]*cvmapi.AdjustUpdatedData, 0)
+
+	for _, adjustObj := range c.adjCRPDemandsRst {
+		adjustAbleD := adjustObj.OriginDemand
+		willConsume := adjustObj.WillConsume
+
+		deviceCore := float64(adjustAbleD.CoreAmount) / adjustAbleD.CvmAmount
+		// 和CRP确认保留2位小数可以，但是肯定会存在误差
+		willChangeCvm, err := math.RoundToDecimalPlaces(float64(willConsume)/deviceCore, 2)
+		if err != nil {
+			logs.Errorf("failed to round change cvm to 2 decimal places, err: %v, crp_demand:%s, change cvm: %f, "+
+				"rid: %s", err, adjustAbleD.DemandId, float64(willConsume)/deviceCore, kt.Rid)
+			return nil, nil, err
+		}
+
+		// srcItem为中转产品的预测
+		srcItem := &cvmapi.AdjustSrcData{
+			// 转移一定是常规修改
+			AdjustType:          string(enumor.CrpAdjustTypeUpdate),
+			CvmCbsPlanQueryItem: adjustAbleD.Clone(),
+		}
+		// updatedItem为中转产品的预测
+		updatedItem := &cvmapi.AdjustUpdatedData{
+			AdjustType:          string(enumor.CrpAdjustTypeUpdate),
+			CvmCbsPlanQueryItem: adjustAbleD.Clone(),
+		}
+		// transferItem为转移到本业务的预测
+		transferItems, err := c.constructTransferAppendDataToBiz(kt, subTicket, deviceCore, adjustAbleD,
+			adjustObj.TransferTarget)
+		if err != nil {
+			logs.Errorf("failed to construct transfer append data, err: %v, rid: %s", err, kt.Rid)
+			return nil, nil, err
+		}
+
+		// TODO 硬盘跟机器大小毫无关系，且预测扣除时也不考虑硬盘大小，这里先不进行硬盘的扣除，避免出现负数；但是CBS类型的调减会没有效果
+		updatedItem.CvmAmount = max(updatedItem.CvmAmount-willChangeCvm, 0)
+		updatedItem.CoreAmount -= willConsume
+
+		srcData = append(srcData, srcItem)
+		updatedData = append(updatedData, updatedItem)
+		updatedData = append(updatedData, transferItems...)
+	}
+
+	return srcData, updatedData, nil
+}
+
+// constructTransferCrpAdjustReqParams 构建CRP调整单请求参数，用于删除转移调整场景（本业务 -> 中转产品）
+func (c *CrpTicketCreator) constructDelTransferAdjustReqParams(kt *kit.Kit, subTicket *ptypes.SubTicketInfo) (
+	[]*cvmapi.AdjustSrcData, []*cvmapi.AdjustUpdatedData, error) {
 
 	// 1. 通过通配的方式，查询可修改的CRP原有预测
-	err := c.getAllCRPAdjustAbleDemands(kt, ticket.Demands, ticket.PlanProductName, ticket.OpProductName)
+	err := c.getAllCRPAdjustAbleDemands(kt, subTicket.Type, subTicket.Demands,
+		subTicket.PlanProductName, subTicket.OpProductName)
 	if err != nil {
 		logs.Errorf("failed to get crp adjust able demands, err: %v, rid: %s", err, kt.Rid)
 		return nil, nil, err
 	}
 
 	// 2. 构造调整请求的详细内容。从可修改的CRP预测中进行调减，以及从预测需求内容中进行追加
-	for _, demand := range ticket.Demands {
-		if err := c.constructAdjustDemandDetails(kt, ticket, demand); err != nil {
+	for _, demand := range subTicket.Demands {
+		if err := c.constructAdjustDemandDetails(kt, subTicket, demand); err != nil {
+			logs.Errorf("failed to construct adjust demand details, err: %v, rid: %s", err, kt.Rid)
+			return nil, nil, err
+		}
+	}
+
+	// 3. 根据暂存的修改信息生成最终的变更请求内容
+	srcData := make([]*cvmapi.AdjustSrcData, 0)
+	updatedData := make([]*cvmapi.AdjustUpdatedData, 0)
+
+	for _, adjustObj := range c.adjCRPDemandsRst {
+		adjustAbleD := adjustObj.OriginDemand
+		willConsume := adjustObj.WillConsume
+
+		deviceCore := float64(adjustAbleD.CoreAmount) / adjustAbleD.CvmAmount
+		// 和CRP确认保留2位小数可以，但是肯定会存在误差
+		willChangeCvm, err := math.RoundToDecimalPlaces(float64(willConsume)/deviceCore, 2)
+		if err != nil {
+			logs.Errorf("failed to round change cvm to 2 decimal places, err: %v, crp_demand:%s, change cvm: %f, "+
+				"rid: %s", err, adjustAbleD.DemandId, float64(willConsume)/deviceCore, kt.Rid)
+			return nil, nil, err
+		}
+
+		srcItem := &cvmapi.AdjustSrcData{
+			// 转移一定是常规修改
+			AdjustType:          string(enumor.CrpAdjustTypeUpdate),
+			CvmCbsPlanQueryItem: adjustAbleD.Clone(),
+		}
+		updatedItem := &cvmapi.AdjustUpdatedData{
+			AdjustType:          string(enumor.CrpAdjustTypeUpdate),
+			CvmCbsPlanQueryItem: adjustAbleD.Clone(),
+		}
+		// transferItem为转移到中转池的预测
+		transferItems := c.constructTransferAppendDataToPool(adjustAbleD, willChangeCvm, willConsume)
+
+		// if adjust type is update, updated item are normal.
+		// if adjust type is delay, updated will fill parameter TimeAdjustCvmAmount with OriginOs.
+		// if adjust type is cancel, error.
+		// TODO 硬盘跟机器大小毫无关系，且预测扣除时也不考虑硬盘大小，这里先不进行硬盘的扣除，避免出现负数；但是CBS类型的调减会没有效果
+		updatedItem.CvmAmount = max(updatedItem.CvmAmount-willChangeCvm, 0)
+		updatedItem.CoreAmount -= willConsume
+
+		srcData = append(srcData, srcItem)
+		updatedData = append(updatedData, updatedItem)
+		updatedData = append(updatedData, transferItems)
+	}
+
+	return srcData, updatedData, nil
+}
+
+// constructNormalCrpAdjustReqParams 构建CRP调整单请求参数，用于常规调整场景（修改、延期、删除等，非转移）
+func (c *CrpTicketCreator) constructNormalCrpAdjustReqParams(kt *kit.Kit, subTicket *ptypes.SubTicketInfo) (
+	[]*cvmapi.AdjustSrcData, []*cvmapi.AdjustUpdatedData, error) {
+
+	// 1. 通过通配的方式，查询可修改的CRP原有预测
+	err := c.getAllCRPAdjustAbleDemands(kt, subTicket.Type, subTicket.Demands,
+		subTicket.PlanProductName, subTicket.OpProductName)
+	if err != nil {
+		logs.Errorf("failed to get crp adjust able demands, err: %v, rid: %s", err, kt.Rid)
+		return nil, nil, err
+	}
+
+	// 2. 构造调整请求的详细内容。从可修改的CRP预测中进行调减，以及从预测需求内容中进行追加
+	for _, demand := range subTicket.Demands {
+		if err := c.constructAdjustDemandDetails(kt, subTicket, demand); err != nil {
 			logs.Errorf("failed to construct adjust demand details, err: %v, rid: %s", err, kt.Rid)
 			return nil, nil, err
 		}
@@ -211,13 +395,14 @@ func (c *CrpTicketCreator) constructCrpAdjustReqParams(kt *kit.Kit, ticket *ptyp
 }
 
 // getCRPAdjustAbleDemandsForAdjustDemands get all adjustable demands from CRP based on the request's adjust demands.
-func (c *CrpTicketCreator) getAllCRPAdjustAbleDemands(kt *kit.Kit, demands rpt.ResPlanDemands,
-	planProductName string, opProductName string) error {
+func (c *CrpTicketCreator) getAllCRPAdjustAbleDemands(kt *kit.Kit, ticketType enumor.RPTicketType,
+	demands rpt.ResPlanDemands, planProductName string, opProductName string) error {
 
 	for _, demand := range demands {
+		// 在转移拆单模式下，出现original为空是正常的，logs记录即可，不需要报错
 		if demand.Original == nil {
-			logs.Errorf("failed to construct adjust request, demand original is nil, rid: %s", kt.Rid)
-			return errors.New("demand original is nil")
+			logs.Warnf("failed to construct adjust request, demand original is nil, rid: %s", kt.Rid)
+			continue
 		}
 
 		// query crp for a set of res plan demands that can be adjusted.
@@ -232,11 +417,31 @@ func (c *CrpTicketCreator) getAllCRPAdjustAbleDemands(kt *kit.Kit, demands rpt.R
 			DiskType:        demand.Original.Cbs.DiskType,
 			ResMode:         demand.Original.Cvm.ResMode,
 		}
-		adjustAbleDemands, err := c.queryAdjustAbleDemands(kt, adjustAbleReq)
+		AbleDemandsRst, err := c.queryAdjustAbleDemands(kt, adjustAbleReq)
 		if err != nil {
 			logs.Errorf("failed to query adjust able demands, err: %v, req: %+v, rid: %s", err, adjustAbleReq,
 				kt.Rid)
 			return err
+		}
+
+		adjustAbleDemands := make([]*cvmapi.CvmCbsPlanQueryItem, 0)
+		// 仅延期和转移单，可使用“已评审”的CRP预测进行修改
+		// 转移单不可使用“未评审”的CRP预测
+		for _, ad := range AbleDemandsRst {
+			switch ad.ReviewStatus {
+			case enumor.ResPlanReviewStatusPass:
+				if ticketType != enumor.RPTicketTypeTransfer && ticketType != enumor.RPTicketTypeDelay {
+					continue
+				}
+			case enumor.ResPlanReviewStatusPending:
+				if ticketType == enumor.RPTicketTypeTransfer {
+					continue
+				}
+			default:
+				logs.Errorf("unsupported review status: %s, id: %s, rid: %s", ad.ReviewStatus, ad.SliceId, kt.Rid)
+				return fmt.Errorf("unsupported review status: %s", ad.ReviewStatus)
+			}
+			adjustAbleDemands = append(adjustAbleDemands, ad)
 		}
 
 		c.adjustAbleDemands[demand.Original.DemandID] = adjustAbleDemands
@@ -248,38 +453,62 @@ func (c *CrpTicketCreator) getAllCRPAdjustAbleDemands(kt *kit.Kit, demands rpt.R
 // constructAdjustDemandDetails 构造调整预测请求参数
 // 因crp不支持部分调整，这里通过将crp中的预测（可能有多条）调减调整的原始量，再在crp中追加一条调整的目标量，来间接实现部分调整。
 // 在 prePrepareAdjustAbleData 中计算并记录crp中原始预测的调减量，将追加的目标量暂存在 appendUpdateDemand 中
-func (c *CrpTicketCreator) constructAdjustDemandDetails(kt *kit.Kit, ticket *ptypes.TicketInfo,
+func (c *CrpTicketCreator) constructAdjustDemandDetails(kt *kit.Kit, subTicket *ptypes.SubTicketInfo,
 	demand rpt.ResPlanDemand) error {
 
+	// isTransfer: 涉及中转产品转移操作的需求，尽量不使用未评审的预测
+	// isAppend: 所有调整前后会造成预算追加的需求，尽量不使用已评审的预测
+	var isTransfer, isAppend bool
 	var adjustType enumor.CrpAdjustType
-	switch ticket.Type {
+	switch subTicket.Type {
 	case enumor.RPTicketTypeAdjust:
+		isAppend = true
 		adjustType = enumor.CrpAdjustTypeUpdate
-		if demand.Updated.ExpectTime != demand.Original.ExpectTime {
-			adjustType = enumor.CrpAdjustTypeDelay
+	case enumor.RPTicketTypeDelay:
+		adjustType = enumor.CrpAdjustTypeDelay
+		// 这里会包含主分类不变的修改需求，并不属于延期，需将其修改回常规修改类型
+		// 将这种修改需求标记为延期主要为了识别不会造成预算追加的需求
+		if demand.Updated.ExpectTime == demand.Original.ExpectTime {
+			adjustType = enumor.CrpAdjustTypeUpdate
 		}
 	case enumor.RPTicketTypeDelete:
+		isAppend = true
 		// 我们的删除对crp来说是部分调减
 		adjustType = enumor.CrpAdjustTypeUpdate
+	case enumor.RPTicketTypeTransfer:
+		isTransfer = true
+		adjustType = enumor.CrpAdjustTypeTransfer
 	default:
-		logs.Errorf("unsupported ticket type: %s， rid: %s", ticket.Type, kt.Rid)
-		return errors.New("unsupported ticket type")
+		logs.Errorf("unsupported sub ticket type: %s， rid: %s", subTicket.Type, kt.Rid)
+		return errors.New("unsupported sub ticket type")
 	}
 
 	// 预处理，计算crp中的预测调减结果
-	err := c.prePrepareAdjustAbleData(kt, adjustType, demand)
-	if err != nil {
-		logs.Errorf("failed to pre prepare adjust able data, err: %v, rid: %s", err, kt.Rid)
-		return err
+	if demand.Original == nil {
+		// 追加需求，从中转产品转入
+		if adjustType == enumor.CrpAdjustTypeTransfer {
+			err := c.prePrepareTransferableData(kt, subTicket.ID, demand)
+			if err != nil {
+				logs.Errorf("failed to pre prepare transferable data, err: %v, rid: %s", err, kt.Rid)
+				return err
+			}
+		}
+	} else {
+		// 修改，从可修改预测中调减
+		err := c.prePrepareAdjustAbleData(kt, isTransfer, isAppend, adjustType, demand)
+		if err != nil {
+			logs.Errorf("failed to pre prepare adjust able data, err: %v, rid: %s", err, kt.Rid)
+			return err
+		}
 	}
 
-	// 加急延期、删除时不追加预测
-	if adjustType == enumor.CrpAdjustTypeDelay || ticket.Type == enumor.RPTicketTypeDelete {
+	// 加急延期、删除、转移时不追加预测
+	if adjustType == enumor.CrpAdjustTypeDelay || demand.Updated == nil || subTicket.Type == enumor.RPTicketTypeTransfer {
 		return nil
 	}
 
 	// 追加一条等于调整目标量的预测
-	addItem, err := c.constructAdjustAppendData(kt, ticket, demand)
+	addItem, err := c.constructAdjustAppendData(kt, subTicket, demand)
 	if err != nil {
 		logs.Errorf("failed to construct adjust append data, err: %v, rid: %s", err, kt.Rid)
 		return err
@@ -290,10 +519,74 @@ func (c *CrpTicketCreator) constructAdjustDemandDetails(kt *kit.Kit, ticket *pty
 	return nil
 }
 
+// prePrepareTransferableData 预处理可转移的数据.
+// 适用于多个子订单会重复调整到同一条预测数据的场景，先将所有可能的影响汇总到 adjCRPDemandsRst 中
+// TODO 逻辑和 splitter.matchTransferCRPDemands 重复，再抽一层
+func (c *CrpTicketCreator) prePrepareTransferableData(kt *kit.Kit, id string, demand rpt.ResPlanDemand) error {
+
+	if demand.Updated == nil {
+		logs.Errorf("updated demand is nil, ticket id: %s, rid: %s", id, kt.Rid)
+		return errors.New("updated demand is nil")
+	}
+
+	needDemand := demand.Updated
+	// 遍历可用于调减的crp预测，凑齐调减总量
+	needCpuCores := demand.Updated.Cvm.CpuCore
+	for _, transAbleD := range c.transferAbleDemands {
+		if needCpuCores <= 0 {
+			break
+		}
+
+		// 未评审需求跳过，不记录
+		if transAbleD.ReviewStatus == enumor.ResPlanReviewStatusPending {
+			continue
+		}
+
+		var canConsume int64
+		// 项目类型和技术大类需一致
+		if transAbleD.ProjectName != needDemand.ObsProject ||
+			transAbleD.TechnicalClass != needDemand.Cvm.TechnicalClass {
+			continue
+		}
+
+		remainedCpuCores := transAbleD.RealCoreAmount
+		if _, ok := c.adjCRPDemandsRst[transAbleD.SliceId]; ok {
+			remainedCpuCores -= c.adjCRPDemandsRst[transAbleD.SliceId].WillConsume
+		}
+
+		canConsume = min(needCpuCores, remainedCpuCores)
+		// CvmAmount虽然理论上大于等于RealCoreAmount，但是为确保后续除法计算不出异常，判断下CvmAmount的大小
+		if canConsume <= 0 || transAbleD.CvmAmount == 0 {
+			continue
+		}
+
+		if _, ok := c.adjCRPDemandsRst[transAbleD.SliceId]; !ok {
+			c.adjCRPDemandsRst[transAbleD.SliceId] = &AdjustAbleRemainObj{
+				OriginDemand:   transAbleD.Clone(),
+				TransferTarget: make(map[rpt.UpdatedRPDemandItem]int64),
+			}
+		}
+		adjustAbleRemain := c.adjCRPDemandsRst[transAbleD.SliceId]
+		adjustAbleRemain.WillConsume += canConsume
+		adjustAbleRemain.TransferTarget[cvt.PtrToVal(needDemand.Clone())] = canConsume
+		needCpuCores -= canConsume
+	}
+
+	if needCpuCores > 0 {
+		logs.Errorf("crp demand remained is not enough to deduction, adjust: %+v, need cpu cores: %d, rid: %s",
+			needDemand.Cvm, needCpuCores, kt.Rid)
+		return fmt.Errorf("crp demand remained is not enough to deduction, adjust cores: %d, need cores: %d",
+			needDemand.Cvm.CpuCore, needCpuCores)
+	}
+
+	return nil
+}
+
 // prePrepareAdjustAbleData 预处理可调减的数据.
 // 适用于多个子订单会重复调整到同一条预测数据的场景，先将所有可能的影响汇总到 adjCRPDemandsRst 中
-func (c *CrpTicketCreator) prePrepareAdjustAbleData(kt *kit.Kit, adjustType enumor.CrpAdjustType,
-	demand rpt.ResPlanDemand) error {
+// TODO 逻辑和 splitter.matchReviewedCRPDemands 类似，再抽一层
+func (c *CrpTicketCreator) prePrepareAdjustAbleData(kt *kit.Kit, isTransfer, isAppend bool,
+	adjustType enumor.CrpAdjustType, demand rpt.ResPlanDemand) error {
 
 	adjustAbleDemands, ok := c.adjustAbleDemands[demand.Original.DemandID]
 	if !ok {
@@ -316,6 +609,19 @@ func (c *CrpTicketCreator) prePrepareAdjustAbleData(kt *kit.Kit, adjustType enum
 			break
 		}
 
+		// 转移时，不操作未评审的预测
+		if isTransfer {
+			if adjustAbleD.ReviewStatus == enumor.ResPlanReviewStatusPending {
+				continue
+			}
+		}
+		// 非延期、转移场景（删除、修改），不操作已评审的预测，避免影响预算
+		if isAppend {
+			if adjustAbleD.ReviewStatus == enumor.ResPlanReviewStatusPass {
+				continue
+			}
+		}
+
 		// 取消类型的调整单据，不需要给expectTime
 		var updateExpectTime string
 		if demand.Updated != nil {
@@ -329,6 +635,9 @@ func (c *CrpTicketCreator) prePrepareAdjustAbleData(kt *kit.Kit, adjustType enum
 				cvt.PtrToVal(demand.Original), adjustAbleD.SliceId, kt.Rid)
 			continue
 		}
+		logs.Infof("pre prepare adjust able data, adjust_able_demand: %+v, rid: %s", adjustAbleD, kt.Rid)
+		logs.Infof("pre prepare adjust able data, demand: %+v, needCpuCores: %d, canConsume: %d, rid: %s",
+			demand.Original, needCpuCores, canConsume, kt.Rid)
 
 		needCpuCores -= canConsume
 	}
@@ -412,8 +721,8 @@ func (c *CrpTicketCreator) calcAdjustAbleDCanConsumeCPU(kt *kit.Kit, adjustAbleD
 }
 
 // constructAdjustAppendData construct adjust append data.
-func (c *CrpTicketCreator) constructAdjustAppendData(kt *kit.Kit, ticket *ptypes.TicketInfo, demand rpt.ResPlanDemand) (
-	*cvmapi.AdjustUpdatedData, error) {
+func (c *CrpTicketCreator) constructAdjustAppendData(kt *kit.Kit, subTicket *ptypes.SubTicketInfo,
+	demand rpt.ResPlanDemand) (*cvmapi.AdjustUpdatedData, error) {
 
 	// 根据HCM的diskType，生成CRP的diskType和diskName
 	diskTypeName := demand.Updated.Cbs.DiskType.Name()
@@ -423,12 +732,12 @@ func (c *CrpTicketCreator) constructAdjustAppendData(kt *kit.Kit, ticket *ptypes
 	}
 
 	demandItem := &cvmapi.CvmCbsPlanQueryItem{
-		SliceId:         demand.Original.DemandID,
+		SliceId:         uuid.UUID(),
 		ProjectName:     demand.Updated.ObsProject,
-		PlanProductId:   int(ticket.PlanProductID),
-		PlanProductName: ticket.PlanProductName,
-		ProductId:       int(ticket.OpProductID),
-		ProductName:     ticket.OpProductName,
+		PlanProductId:   int(subTicket.PlanProductID),
+		PlanProductName: subTicket.PlanProductName,
+		ProductId:       int(subTicket.OpProductID),
+		ProductName:     subTicket.OpProductName,
 		InstanceType:    demand.Updated.Cvm.DeviceClass,
 		CityId:          0,
 		CityName:        demand.Updated.RegionName,
@@ -449,4 +758,95 @@ func (c *CrpTicketCreator) constructAdjustAppendData(kt *kit.Kit, ticket *ptypes
 	}
 
 	return updatedData, nil
+}
+
+// constructTransferAppendData construct transfer append data. Use for transfer to biz.
+func (c *CrpTicketCreator) constructTransferAppendDataToBiz(kt *kit.Kit, subTicket *ptypes.SubTicketInfo,
+	deviceCore float64, source *cvmapi.CvmCbsPlanQueryItem, transferTarget map[rpt.UpdatedRPDemandItem]int64) (
+	[]*cvmapi.AdjustUpdatedData, error) {
+
+	allAppendData := make([]*cvmapi.AdjustUpdatedData, 0)
+	for key, tranferCore := range transferTarget {
+		// 和CRP确认保留2位小数可以，但是肯定会存在误差
+		transferCVM, err := math.RoundToDecimalPlaces(float64(tranferCore)/deviceCore, 2)
+		if err != nil {
+			logs.Errorf("failed to round change cvm to 2 decimal places, err: %v, demand: %+v, change cvm: %f, "+
+				"rid: %s", err, key, float64(tranferCore)/deviceCore, kt.Rid)
+			return nil, err
+		}
+
+		// 根据HCM的diskType，生成CRP的diskType和diskName
+		diskTypeName := key.Cbs.DiskType.Name()
+		diskType, err := enumor.GetCRPDiskTypeFromCRPName(diskTypeName)
+		if err != nil {
+			return nil, err
+		}
+
+		// TODO 目前转移后的机型以中转产品中的机型为准，实际应以业务提单为准；
+		//  待基准由核数调整为技术大类资源基准（如高IO的云盘数、GPU的卡数）后再做调整
+		demandItem := &cvmapi.CvmCbsPlanQueryItem{
+			// 转移中追加的目标数据sliceID给默认值，同一个修改单的updated中不能有两个相同的sliceID
+			SliceId:         uuid.UUID(),
+			ProjectName:     key.ObsProject,
+			PlanProductId:   int(subTicket.PlanProductID),
+			PlanProductName: subTicket.PlanProductName,
+			ProductId:       int(subTicket.OpProductID),
+			ProductName:     subTicket.OpProductName,
+			InstanceType:    source.InstanceType,
+			CityId:          0,
+			CityName:        key.RegionName,
+			ZoneId:          0,
+			ZoneName:        key.ZoneName,
+			InstanceModel:   source.InstanceModel,
+			UseTime:         key.ExpectTime,
+			CvmAmount:       transferCVM,
+			InstanceIO:      int(key.Cbs.DiskIo),
+			DiskType:        diskType,
+			DiskTypeName:    key.Cbs.DiskTypeName,
+			// TODO 用户的云盘需求会在这里被丢弃，避免出现一对多的情况下多次提交CBS需求
+			AllDiskAmount: 0,
+		}
+
+		allAppendData = append(allAppendData, &cvmapi.AdjustUpdatedData{
+			AdjustType:          string(enumor.CrpAdjustTypeUpdate),
+			CvmCbsPlanQueryItem: demandItem,
+		})
+	}
+
+	return allAppendData, nil
+}
+
+// constructTransferAppendData construct transfer append data. Use for transfer to pool.
+func (c *CrpTicketCreator) constructTransferAppendDataToPool(source *cvmapi.CvmCbsPlanQueryItem,
+	targetOS float64, targetCPU int64) *cvmapi.AdjustUpdatedData {
+
+	demandItem := &cvmapi.CvmCbsPlanQueryItem{
+		// 转移中追加的目标数据sliceID给默认值，同一个修改单的updated中不能有两个相同的sliceID
+		SliceId:         uuid.UUID(),
+		ProjectName:     source.ProjectName,
+		PlanProductId:   cvmapi.TransferPlanProductID,
+		PlanProductName: cvmapi.TransferPlanProductName,
+		ProductId:       cvmapi.TransferOpProductID,
+		ProductName:     cvmapi.TransferOpProductName,
+		InstanceType:    source.InstanceType,
+		CityId:          0,
+		CityName:        source.CityName,
+		ZoneId:          0,
+		ZoneName:        source.ZoneName,
+		InstanceModel:   source.InstanceModel,
+		UseTime:         source.UseTime,
+		CvmAmount:       targetOS,
+		CoreAmount:      targetCPU,
+		InstanceIO:      source.InstanceIO,
+		DiskType:        source.DiskType,
+		DiskTypeName:    source.DiskTypeName,
+		AllDiskAmount:   0,
+	}
+
+	updatedData := &cvmapi.AdjustUpdatedData{
+		AdjustType:          string(enumor.CrpAdjustTypeUpdate),
+		CvmCbsPlanQueryItem: demandItem,
+	}
+
+	return updatedData
 }

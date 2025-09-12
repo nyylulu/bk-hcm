@@ -21,6 +21,7 @@ package resplanticket
 
 import (
 	"errors"
+	"fmt"
 
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/validator"
@@ -136,7 +137,7 @@ type ResPlanDemand struct {
 }
 
 // Validate whether ResPlanDemand is valid.
-func (d *ResPlanDemand) Validate() error {
+func (d ResPlanDemand) Validate() error {
 	if err := validator.Validate.Struct(d); err != nil {
 		return err
 	}
@@ -160,6 +161,11 @@ func (d *ResPlanDemand) Validate() error {
 	return nil
 }
 
+// String returns a string representation of ResPlanDemand.
+func (d ResPlanDemand) String() string {
+	return fmt.Sprintf("origin: %+v, update: %+v", d.Original, d.Updated)
+}
+
 // Clone return a clone ResPlanDemand.
 func (d *ResPlanDemand) Clone() *ResPlanDemand {
 	newD := &ResPlanDemand{
@@ -171,6 +177,36 @@ func (d *ResPlanDemand) Clone() *ResPlanDemand {
 	if d.Original != nil {
 		newD.Original = d.Original.Clone()
 	}
+	if d.Updated != nil {
+		newD.Updated = d.Updated.Clone()
+	}
+
+	return newD
+}
+
+// CloneOriginal return a clone ResPlanDemand with only original demand.
+func (d *ResPlanDemand) CloneOriginal() *ResPlanDemand {
+	newD := &ResPlanDemand{
+		DemandClass: d.DemandClass,
+		Original:    nil,
+		Updated:     nil,
+	}
+
+	if d.Original != nil {
+		newD.Original = d.Original.Clone()
+	}
+
+	return newD
+}
+
+// CloneUpdated return a clone ResPlanDemand with only updated demand.
+func (d *ResPlanDemand) CloneUpdated() *ResPlanDemand {
+	newD := &ResPlanDemand{
+		DemandClass: d.DemandClass,
+		Original:    nil,
+		Updated:     nil,
+	}
+
 	if d.Updated != nil {
 		newD.Updated = d.Updated.Clone()
 	}
@@ -365,14 +401,15 @@ func (i *UpdatedRPDemandItem) Clone() *UpdatedRPDemandItem {
 
 // Cvm is struct of ResPlanDemandTable's Cvm.
 type Cvm struct {
-	ResMode      enumor.ResMode `json:"res_mode"`
-	DeviceType   string         `json:"device_type"`
-	DeviceClass  string         `json:"device_class" validate:"lte=64"`
-	DeviceFamily string         `json:"device_family" validate:"lte=64"`
-	CoreType     string         `json:"core_type" validate:"lte=64"`
-	Os           types.Decimal  `json:"os"`
-	CpuCore      int64          `json:"cpu_core"`
-	Memory       int64          `json:"memory"`
+	ResMode        enumor.ResMode `json:"res_mode"`
+	DeviceType     string         `json:"device_type"`
+	DeviceClass    string         `json:"device_class" validate:"lte=64"`
+	DeviceFamily   string         `json:"device_family" validate:"lte=64"`
+	TechnicalClass string         `json:"technical_class" validate:"lte=64"`
+	CoreType       string         `json:"core_type" validate:"lte=64"`
+	Os             types.Decimal  `json:"os"`
+	CpuCore        int64          `json:"cpu_core"`
+	Memory         int64          `json:"memory"`
 }
 
 // Validate whether Cvm is valid.
