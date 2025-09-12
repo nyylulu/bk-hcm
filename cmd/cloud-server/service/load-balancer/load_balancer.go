@@ -118,7 +118,7 @@ func bizService(h *rest.Handler, svc *lbSvc) {
 	h.Add("BatchModifyBizTargetPort",
 		http.MethodPatch, "/target_groups/{target_group_id}/targets/port", svc.BatchModifyBizTargetsPort)
 	h.Add("BatchModifyBizTargetsWeight", http.MethodPatch,
-		"/target_groups/{target_group_id}/targets/weight", svc.BatchModifyBizTargetsWeight)
+		"/targets/weight", svc.BatchModifyBizTargetsWeight)
 
 	h.Add("CancelFlow", http.MethodPost, "/load_balancers/{lb_id}/async_flows/terminate", svc.BizTerminateFlow)
 	h.Add("RetryTask", http.MethodPost, "/load_balancers/{lb_id}/async_tasks/retry", svc.BizRetryTask)
@@ -146,6 +146,15 @@ func bizService(h *rest.Handler, svc *lbSvc) {
 		"/vendors/{vendor}/load_balancers/operations/{operation_type}/submit", svc.ImportSubmit)
 	h.Add("ImportValidate", http.MethodPost,
 		"/vendors/{vendor}/load_balancers/operations/{operation_type}/validate", svc.ImportValidate)
+
+	// 高级检索
+	h.Add("ListTargetByTopo", http.MethodPost,
+		"/vendors/{vendor}/targets/by_topo/list", svc.ListTargetByTopo)
+	h.Add("CountTargetByTopo", http.MethodPost,
+		"/vendors/{vendor}/targets/by_topo/count", svc.CountTargetByTopo)
+	h.Add("ListListenerByTopo", http.MethodPost,
+		"/vendors/{vendor}/listeners/by_topo/list", svc.ListListenerByTopo)
+
 }
 
 func bizURLRuleService(h *rest.Handler, svc *lbSvc) {
@@ -170,6 +179,8 @@ func bizURLRuleService(h *rest.Handler, svc *lbSvc) {
 		"/vendors/{vendor}/rules/target_group/bind", svc.BizUrlRuleBindTargetGroup)
 	h.Add("CreateBizUrlRuleWithoutBinding", http.MethodPost,
 		"/vendors/{vendor}/listeners/{lbl_id}/rule/create", svc.CreateBizUrlRuleWithoutBinding)
+	h.Add("ListUrlRulesByTop", http.MethodPost,
+		"/vendors/{vendor}/url_rules/by_topo/list", svc.ListUrlRulesByTop)
 }
 
 func bizExportService(h *rest.Handler, svc *lbSvc) {
