@@ -101,13 +101,13 @@ POST  /api/v1/cloud/bizs/{bk_biz_id}/vendors/{vendor}/url_rules/by_topo/list
     "details": [
       {
         "id": "00000007",
-        "lb_vips": "127.0.0.1",
+        "lb_vips": ["127.0.0.1"],
         "lbl_protocol": "HTTP",
         "lbl_port": 8080,
         "rule_url": "/xxx",
         "rule_domain": "www.xxx.com",
         "target_count": 1,
-        "lb_id": "00000001",
+        "cloud_lb_id": "00000001",
         "cloud_lbl_id": "lbl-00000001"
       }
     ]
