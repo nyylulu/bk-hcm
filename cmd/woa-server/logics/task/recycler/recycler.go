@@ -305,8 +305,10 @@ func (r *recycler) checkRecycleAbility(kt *kit.Kit, hostBase []*cmdb.Host,
 			bizName = "业务资源池"
 		}
 		var moduleDefaultVal int64
+		var topoModule string
 		if module, ok := mapModuleIdToModule[moduleId]; ok {
 			moduleDefaultVal = module.Default
+			topoModule = module.BkModuleName
 		}
 		hasPermission := false
 		if permission, ok := mapBizPermission[bizId]; ok {
@@ -320,6 +322,7 @@ func (r *recycler) checkRecycleAbility(kt *kit.Kit, hostBase []*cmdb.Host,
 			BizID:            bizId,
 			BizName:          bizName,
 			ModuleDefaultVal: moduleDefaultVal,
+			TopoModule:       topoModule,
 			Operator:         host.Operator,
 			BakOperator:      host.BkBakOperator,
 			DeviceType:       host.SvrDeviceClass,

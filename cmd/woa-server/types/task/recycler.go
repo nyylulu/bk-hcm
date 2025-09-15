@@ -78,6 +78,7 @@ type RecycleCheckInfo struct {
 	InputTime        string `json:"input_time"`
 	Recyclable       bool   `json:"recyclable"`
 	Message          string `json:"message"`
+	TopoModule       string `json:"topo_module"`
 }
 
 // ReturnPlan resource return plan specification
