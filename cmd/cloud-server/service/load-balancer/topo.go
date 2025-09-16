@@ -989,11 +989,8 @@ func (svc *lbSvc) listUrlRulesByTopo(kt *kit.Kit, bizID int64, vendor enumor.Ven
 		logs.Errorf("list url rule topo info by req failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
 		return nil, err
 	}
-	logs.Infof("getUrlRuleTopoInfoByReq结果: Match=%v, LbMap数量=%d, LblMap数量=%d, RuleCond数量=%d, rid: %s",
-		info.Match, len(info.LbMap), len(info.LblMap), len(info.RuleCond), kt.Rid)
 
 	if !info.Match {
-		logs.Infof("拓扑信息不匹配，返回空结果, rid: %s", kt.Rid)
 		return &cslb.ListUrlRulesByTopologyResp{Count: 0, Details: make([]cslb.UrlRuleDetail, 0)}, nil
 	}
 
@@ -1001,7 +998,6 @@ func (svc *lbSvc) listUrlRulesByTopo(kt *kit.Kit, bizID int64, vendor enumor.Ven
 	ruleCond = append(ruleCond, info.RuleCond...)
 	ruleCond = append(ruleCond, req.GetRuleCond()...)
 	ruleCond = append(ruleCond, tools.RuleEqual("rule_type", enumor.Layer7RuleType))
-	logs.Infof("最终规则查询条件数量: %d, 条件: %+v, rid: %s", len(ruleCond), ruleCond, kt.Rid)
 
 	page := req.Page
 	if page == nil {
@@ -1012,7 +1008,6 @@ func (svc *lbSvc) listUrlRulesByTopo(kt *kit.Kit, bizID int64, vendor enumor.Ven
 		Filter: &filter.Expression{Op: filter.And, Rules: ruleCond},
 		Page:   page,
 	}
-	logs.Infof("开始查询URL规则, ruleReq: %+v, rid: %s", ruleReq, kt.Rid)
 
 	resp := &cloud.TCloudURLRuleListResult{}
 	switch vendor {
@@ -1025,14 +1020,11 @@ func (svc *lbSvc) listUrlRulesByTopo(kt *kit.Kit, bizID int64, vendor enumor.Ven
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", vendor)
 	}
-	logs.Infof("URL规则查询结果: Count=%d, Details数量=%d, rid: %s", resp.Count, len(resp.Details), kt.Rid)
 
 	if req.Page.Count {
-		logs.Infof("只返回数量统计: %d, rid: %s", resp.Count, kt.Rid)
 		return &cslb.ListUrlRulesByTopologyResp{Count: int(resp.Count)}, nil
 	}
 	if len(resp.Details) == 0 {
-		logs.Infof("URL规则查询结果为空, rid: %s", kt.Rid)
 		return &cslb.ListUrlRulesByTopologyResp{Count: 0, Details: make([]cslb.UrlRuleDetail, 0)}, nil
 	}
 
@@ -1047,30 +1039,23 @@ func (svc *lbSvc) listUrlRulesByTopo(kt *kit.Kit, bizID int64, vendor enumor.Ven
 func (svc *lbSvc) getUrlRuleTopoInfoByReq(kt *kit.Kit, bizID int64, vendor enumor.Vendor, req *cslb.LbTopoReq) (
 	*cslb.UrlRuleTopoInfo, error) {
 
-	logs.Infof("=== getUrlRuleTopoInfoByReq开始 ===, bizID: %d, vendor: %s, accountID: %s, rid: %s",
-		bizID, vendor, req.AccountID, kt.Rid)
-
 	commonCond := make([]filter.RuleFactory, 0)
 	commonCond = append(commonCond, tools.RuleEqual("bk_biz_id", bizID))
 	commonCond = append(commonCond, tools.RuleEqual("vendor", vendor))
 	commonCond = append(commonCond, tools.RuleEqual("account_id", req.AccountID))
-	logs.Infof("基础条件: %+v, rid: %s", commonCond, kt.Rid)
 
 	// 根据条件查询clb信息
 	lbCond := make([]filter.RuleFactory, 0)
 	lbCond = append(lbCond, commonCond...)
 	lbCond = append(lbCond, req.GetLbCond()...)
-	logs.Infof("CLB查询条件: %+v, rid: %s", lbCond, kt.Rid)
 
 	lbMap, err := svc.getLbByCond(kt, lbCond)
 	if err != nil {
 		logs.Errorf("get lb by cond failed, err: %v, lbCond: %v, rid: %s", err, lbCond, kt.Rid)
 		return nil, err
 	}
-	logs.Infof("CLB查询结果: 数量=%d, CLB IDs=%v, rid: %s", len(lbMap), maps.Keys(lbMap), kt.Rid)
 
 	if len(lbMap) == 0 {
-		logs.Infof("CLB查询结果为空，返回Match=false, rid: %s", kt.Rid)
 		return &cslb.UrlRuleTopoInfo{Match: false}, nil
 	}
 	lbIDs := maps.Keys(lbMap)
