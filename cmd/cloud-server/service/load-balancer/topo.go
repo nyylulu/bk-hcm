@@ -1242,7 +1242,6 @@ func (svc *lbSvc) getUrlRuleTargetCount(kt *kit.Kit, rules []corelb.TCloudLbUrlR
 		return nil, err
 	}
 
-	// 计算每个规则的目标数量
 	ruleTargetCountMap := make(map[string]int)
 	for _, rule := range rules {
 		ruleTargetCountMap[rule.ID] = 0
