@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 import { useResourcePlanStore } from '@/store/resource-plan';
 import { useResourcePlanTicketStore } from '@/store/ticket/resource-plan';
 import { ModelPropertySearch } from '@/model/typings';
@@ -86,6 +87,14 @@ export const properties: ModelPropertySearch[] = [
     props: {
       type: 'daterange',
       format: 'yyyy-MM-dd',
+    },
+    converter: (value) => {
+      return {
+        submit_time_range: {
+          start: dayjs(value[0]).format('YYYY-MM-DD'),
+          end: dayjs(value[1]).format('YYYY-MM-DD'),
+        },
+      };
     },
   },
 ];

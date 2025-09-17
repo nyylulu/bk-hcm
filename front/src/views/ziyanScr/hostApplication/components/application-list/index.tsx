@@ -621,7 +621,7 @@ export default defineComponent({
     return () => (
       <div class={'apply-list-container scr-application-list'}>
         <div class={'filter-container'} style={{ margin: '0 24px 20px 24px' }}>
-          <GridContainer layout='vertical' column={4} content-min-width={300} gap={[16, 60]}>
+          <GridContainer layout='vertical' column={4} content-min-width={'1fr'} gap={[16, 60]}>
             {searchFields
               // 子单号不单独作为一个搜索框，而是集成到主单号框内
               .filter((field) => field.id !== 'suborder_id')

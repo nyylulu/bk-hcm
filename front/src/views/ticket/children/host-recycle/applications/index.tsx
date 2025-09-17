@@ -287,7 +287,7 @@ export default defineComponent({
     return () => (
       <>
         <div style={{ padding: '24px 24px 0 24px' }}>
-          <GridContainer layout='vertical' column={4} content-min-width={300} gap={[16, 60]}>
+          <GridContainer layout='vertical' column={4} content-min-width={'1fr'} gap={[16, 60]}>
             {searchFields.map((field) => (
               <GridItemFormElement key={field.id} label={field.name}>
                 <HocSearch
