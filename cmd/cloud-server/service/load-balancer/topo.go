@@ -995,22 +995,27 @@ func (svc *lbSvc) getUrlRuleTopoInfoByReq(kt *kit.Kit, bizID int64, vendor enumo
 	if len(lbMap) == 0 {
 		return &cslb.UrlRuleTopoInfo{Match: false}, nil
 	}
+
 	lbIDs := maps.Keys(lbMap)
 	reqLblCond := req.GetLblCond()
 	reqTargetCond := req.GetTargetCond()
+
 	// 如果请求没有监听器和RS条件，那么可以直接返回CLB匹配的规则条件
 	if len(reqLblCond) == 0 && len(reqTargetCond) == 0 {
 		ruleCond := []filter.RuleFactory{tools.RuleIn("lb_id", lbIDs)}
 		return &cslb.UrlRuleTopoInfo{Match: true, LbMap: lbMap, RuleCond: ruleCond}, nil
 	}
+
 	tgLbRelCond := []filter.RuleFactory{tools.RuleIn("lb_id", lbIDs),
 		tools.RuleEqual("binding_status", enumor.SuccessBindingStatus)}
+
 	// 如果请求中存在监听器条件，那么需要根据条件查询监听器，进一步得到匹配的规则条件
 	if len(reqLblCond) != 0 {
 		lblCond := make([]filter.RuleFactory, 0)
 		lblCond = append(lblCond, tools.RuleIn("lb_id", lbIDs))
 		lblCond = append(lblCond, reqLblCond...)
 		lblMap, err := svc.getLblByCond(kt, vendor, lblCond)
+
 		if err != nil {
 			logs.Errorf("get lbl by cond failed, err: %v, lblCond: %v, rid: %s", err, lblCond, kt.Rid)
 			return nil, err
@@ -1024,10 +1029,12 @@ func (svc *lbSvc) getUrlRuleTopoInfoByReq(kt *kit.Kit, bizID int64, vendor enumo
 			ruleCond := []filter.RuleFactory{tools.RuleIn("lbl_id", lblIDs)}
 			return &cslb.UrlRuleTopoInfo{Match: true, LbMap: lbMap, RuleCond: ruleCond}, nil
 		}
+
 		// 注：tgLbRelCond中的vendor条件不能去掉，不同vendor的规则在不同表里，自增id不共用，不加的话可能串数据
 		tgLbRelCond = []filter.RuleFactory{tools.RuleIn("lbl_id", maps.Keys(lblMap)),
 			tools.RuleEqual("vendor", vendor), tools.RuleEqual("binding_status", enumor.SuccessBindingStatus)}
 	}
+
 	// 根据RS条件查询，得到规则条件
 	ruleCond, err := svc.getRuleCondByTargetCond(kt, tgLbRelCond, reqTargetCond)
 	if err != nil {
@@ -1038,6 +1045,7 @@ func (svc *lbSvc) getUrlRuleTopoInfoByReq(kt *kit.Kit, bizID int64, vendor enumo
 	if len(ruleCond) == 0 {
 		return &cslb.UrlRuleTopoInfo{Match: false}, nil
 	}
+
 	return &cslb.UrlRuleTopoInfo{Match: true, LbMap: lbMap, RuleCond: ruleCond}, nil
 }
 
