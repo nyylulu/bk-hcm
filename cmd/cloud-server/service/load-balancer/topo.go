@@ -1173,11 +1173,9 @@ func (svc *lbSvc) getUrlRuleTargetCount(kt *kit.Kit, vendor enumor.Vendor, rules
 	}
 	tgIDRuleIDMap := make(map[string]string)
 	tgIDs := make([]string, 0)
-	tgIDBindStatusMap := make(map[string]enumor.BindingStatus)
 	for _, tgLbRel := range tgLbRels {
 		tgIDRuleIDMap[tgLbRel.TargetGroupID] = tgLbRel.ListenerRuleID
 		tgIDs = append(tgIDs, tgLbRel.TargetGroupID)
-		tgIDBindStatusMap[tgLbRel.TargetGroupID] = tgLbRel.BindingStatus
 	}
 	targets, err := svc.getTargetByCond(kt, []filter.RuleFactory{tools.RuleIn("target_group_id", tgIDs)})
 	if err != nil {
@@ -1191,10 +1189,6 @@ func (svc *lbSvc) getUrlRuleTargetCount(kt *kit.Kit, vendor enumor.Vendor, rules
 			return nil, fmt.Errorf("target group not found, tg id: %s, target id: %s",
 				target.TargetGroupID, target.ID)
 		}
-		if tgIDBindStatusMap[target.TargetGroupID] != enumor.SuccessBindingStatus {
-			continue
-		}
-
 		ruleTargetCountMap[ruleID]++
 	}
 
