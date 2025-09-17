@@ -159,27 +159,6 @@ type GetTCloudListenerDetail struct {
 	UrlNum             int64                         `json:"url_num"`
 }
 
-// -------------------------- List URL Rule --------------------------
-
-// ListUrlRulesByTopologyResp list url rules by topology resp.
-type ListUrlRulesByTopologyResp struct {
-	Count   int             `json:"count"`
-	Details []UrlRuleDetail `json:"details"`
-}
-
-// UrlRuleDetail url rule detail.
-type UrlRuleDetail struct {
-	ID          string   `json:"id"`
-	LbVips      []string `json:"lb_vips"`
-	LblProtocol string   `json:"lbl_protocol"`
-	LblPort     int      `json:"lbl_port"`
-	RuleUrl     string   `json:"rule_url"`
-	RuleDomain  string   `json:"rule_domain"`
-	TargetCount int      `json:"target_count"`
-	CloudLblID  string   `json:"cloud_lbl_id"`
-	CloudLbID   string   `json:"cloud_lb_id"`
-}
-
 // ListTargetWeightNumReq ...
 type ListTargetWeightNumReq struct {
 	TargetGroupIDs []string `json:"target_group_ids" validate:"required,min=1"`
@@ -1023,6 +1002,24 @@ type LbTopoCond struct {
 
 // Validate ...
 func (l *LbTopoCond) Validate() error {
+	for _, lbNetworkType := range l.LbNetworkTypes {
+		if err := lbNetworkType.Validate(); err != nil {
+			return err
+		}
+	}
+
+	for _, lbIpVersion := range l.LbIpVersions {
+		if err := lbIpVersion.Validate(); err != nil {
+			return err
+		}
+	}
+
+	for _, lblProtocols := range l.LblProtocols {
+		if err := lblProtocols.Validate(); err != nil {
+			return err
+		}
+	}
+
 	return validator.Validate.Struct(l)
 }
 
@@ -1115,11 +1112,19 @@ type LbTopoReq struct {
 
 // Validate ...
 func (l *LbTopoReq) Validate() error {
-	return validator.Validate.Struct(l)
+	if err := validator.Validate.Struct(l); err != nil {
+		return err
+	}
+	if l.Page != nil {
+		if err := l.Page.Validate(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-// CvmWithTargets cvm with targets
-type CvmWithTargets struct {
+// InstWithTargets instance with targets
+type InstWithTargets struct {
 	InstID      string            `json:"inst_id"`
 	InstType    enumor.InstType   `json:"inst_type"`
 	InstName    string            `json:"inst_name"`
@@ -1180,4 +1185,31 @@ type LblTopoInfo struct {
 	Match   bool
 	LbMap   map[string]corelb.BaseLoadBalancer
 	LblCond []filter.RuleFactory
+}
+
+// ListUrlRulesByTopologyResp list url rules by topology resp.
+type ListUrlRulesByTopologyResp struct {
+	Count   int             `json:"count"`
+	Details []UrlRuleDetail `json:"details"`
+}
+
+// UrlRuleDetail url rule detail.
+type UrlRuleDetail struct {
+	ID          string   `json:"id"`
+	LbVips      []string `json:"lb_vips"`
+	LblProtocol string   `json:"lbl_protocol"`
+	LblPort     int      `json:"lbl_port"`
+	RuleUrl     string   `json:"rule_url"`
+	RuleDomain  string   `json:"rule_domain"`
+	TargetCount int      `json:"target_count"`
+	CloudLblID  string   `json:"cloud_lbl_id"`
+	CloudLbID   string   `json:"cloud_lb_id"`
+}
+
+// UrlRuleTopoInfo url rule topo info
+type UrlRuleTopoInfo struct {
+	Match    bool
+	LbMap    map[string]corelb.BaseLoadBalancer
+	LblMap   map[string]corelb.TCloudListener
+	RuleCond []filter.RuleFactory
 }
