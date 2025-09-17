@@ -975,6 +975,7 @@ func (svc *lbSvc) listUrlRulesByTopo(kt *kit.Kit, bizID int64, vendor enumor.Ven
 
 	return core.ListResultT[cslb.UrlRuleWithTopo]{Details: details}, nil
 }
+
 func (svc *lbSvc) getUrlRuleTopoInfoByReq(kt *kit.Kit, bizID int64, vendor enumor.Vendor, req *cslb.LbTopoReq) (
 	*cslb.UrlRuleTopoInfo, error) {
 
@@ -982,6 +983,7 @@ func (svc *lbSvc) getUrlRuleTopoInfoByReq(kt *kit.Kit, bizID int64, vendor enumo
 	commonCond = append(commonCond, tools.RuleEqual("bk_biz_id", bizID))
 	commonCond = append(commonCond, tools.RuleEqual("vendor", vendor))
 	commonCond = append(commonCond, tools.RuleEqual("account_id", req.AccountID))
+
 	lbCond := make([]filter.RuleFactory, 0)
 	lbCond = append(lbCond, commonCond...)
 	lbCond = append(lbCond, req.GetLbCond()...)
@@ -1092,7 +1094,7 @@ func (svc *lbSvc) getRuleCondByTargetCond(kt *kit.Kit, tgLbRelCond []filter.Rule
 func (svc *lbSvc) buildUrlRuleWithTopoInfo(kt *kit.Kit, vendor enumor.Vendor, info *cslb.UrlRuleTopoInfo,
 	urlRules []corelb.TCloudLbUrlRule) ([]cslb.UrlRuleWithTopo, error) {
 
-	ruleIDTargetCountMap, err := svc.getUrlRuleTargetCount(kt, urlRules)
+	ruleIDTargetCountMap, err := svc.getUrlRuleTargetCount(kt, vendor, urlRules)
 	if err != nil {
 		logs.Errorf("get url rule target count failed, err: %v, urlRules: %+v, rid: %s", err, urlRules, kt.Rid)
 		return nil, err
@@ -1145,7 +1147,7 @@ func (svc *lbSvc) buildUrlRuleWithTopoInfo(kt *kit.Kit, vendor enumor.Vendor, in
 }
 
 // getUrlRuleTargetCount 获取规则的RS数量
-func (svc *lbSvc) getUrlRuleTargetCount(kt *kit.Kit, rules []corelb.TCloudLbUrlRule) (map[string]int, error) {
+func (svc *lbSvc) getUrlRuleTargetCount(kt *kit.Kit, vendor enumor.Vendor, rules []corelb.TCloudLbUrlRule) (map[string]int, error) {
 	if len(rules) == 0 {
 		return make(map[string]int), nil
 	}
@@ -1154,8 +1156,9 @@ func (svc *lbSvc) getUrlRuleTargetCount(kt *kit.Kit, rules []corelb.TCloudLbUrlR
 	for _, rule := range rules {
 		ruleIDs = append(ruleIDs, rule.ID)
 	}
-
-	tgLbRels, err := svc.getTgLbRelByCond(kt, []filter.RuleFactory{tools.RuleIn("listener_rule_id", ruleIDs)})
+	tgLbRelCond := []filter.RuleFactory{tools.RuleIn("listener_rule_id", ruleIDs), tools.RuleEqual("vendor", vendor),
+		tools.RuleEqual("binding_status", enumor.SuccessBindingStatus)}
+	tgLbRels, err := svc.getTgLbRelByCond(kt, tgLbRelCond)
 	if err != nil {
 		logs.Errorf("get tg lb rel by cond failed, err: %v, ruleIDs: %+v, rid: %s", err, ruleIDs, kt.Rid)
 		return nil, err
