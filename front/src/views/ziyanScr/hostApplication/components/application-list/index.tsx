@@ -213,6 +213,7 @@ export default defineComponent({
               const modifyButton = () => {
                 const isDisabled = isIdcpm || isUpgradeCvm;
                 const tooltipsOption = {
+                  // eslint-disable-next-line no-nested-ternary
                   disabled: isDisabled ? (isIdcpm ? !isIdcpm : !isUpgradeCvm) : true,
                   content: `${resourceTypeName}不支持修改,请联系ICR(IEG资源服务助手)`,
                 };

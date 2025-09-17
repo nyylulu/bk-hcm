@@ -74,7 +74,13 @@ export const properties: ModelPropertyColumn[] = [
     type: 'string',
     align: 'right',
     render: ({ row }: { row?: IResourcePlanTicketItem }) => {
-      const type = row.ticket_type;
+      const { ticket_type: type, status } = row;
+
+      // 类型为调整且状态为部分失败时，不展示已审批数
+      if (type === 'adjust' && status === 'partial_failed') {
+        return '--';
+      }
+
       const value = row.audited_updated_info.cvm.cpu_core - row.audited_original_info.cvm.cpu_core;
       if (isNaN(value)) {
         return '--';

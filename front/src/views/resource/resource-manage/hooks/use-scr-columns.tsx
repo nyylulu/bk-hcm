@@ -2,7 +2,7 @@
 // table 字段相关信息
 import { useAccountStore } from '@/store';
 import { Info, Spinner, Share } from 'bkui-vue/lib/icon';
-import { Button, Popover, Tag, OverflowTitle } from 'bkui-vue';
+import { Button, Tag, OverflowTitle } from 'bkui-vue';
 import i18n from '@/language/i18n';
 import { type Settings } from 'bkui-vue/lib/table/props';
 import { ref } from 'vue';
