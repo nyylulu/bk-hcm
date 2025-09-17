@@ -177,7 +177,7 @@ type UrlRuleDetail struct {
 	RuleDomain  string   `json:"rule_domain"`
 	TargetCount int      `json:"target_count"`
 	CloudLblID  string   `json:"cloud_lbl_id"`
-	CloudLbID   string   `json:"cloud_lb_id"`
+	LbID        string   `json:"lb_id"`
 }
 
 // ListTargetWeightNumReq ...

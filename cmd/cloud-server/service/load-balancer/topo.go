@@ -1203,7 +1203,7 @@ func (svc *lbSvc) buildUrlRuleDetail(kt *kit.Kit, info *cslb.UrlRuleTopoInfo,
 			RuleDomain:  rule.Domain,
 			TargetCount: ruleIDTargetCountMap[rule.ID],
 			CloudLblID:  lbl.CloudID,
-			CloudLbID:   lb.CloudID,
+			LbID:        lb.ID,
 		}
 		details = append(details, detail)
 	}
@@ -1217,9 +1217,11 @@ func (svc *lbSvc) getUrlRuleTargetCount(kt *kit.Kit, rules []corelb.TCloudLbUrlR
 		return make(map[string]int), nil
 	}
 
+	ruleIDs := make([]string, 0)
 	tgIDs := make([]string, 0)
 	ruleIDTgIDMap := make(map[string]string)
 	for _, rule := range rules {
+		ruleIDs = append(ruleIDs, rule.ID)
 		if rule.TargetGroupID != "" {
 			tgIDs = append(tgIDs, rule.TargetGroupID)
 			ruleIDTgIDMap[rule.ID] = rule.TargetGroupID
@@ -1234,7 +1236,23 @@ func (svc *lbSvc) getUrlRuleTargetCount(kt *kit.Kit, rules []corelb.TCloudLbUrlR
 		return ruleTargetCountMap, nil
 	}
 
-	// 查询目标
+	tgLbRelCond := []filter.RuleFactory{
+		tools.RuleIn("listener_rule_id", ruleIDs),
+		tools.RuleEqual("binding_status", enumor.SuccessBindingStatus),
+	}
+	tgLbRels, err := svc.getTgLbRelByCond(kt, tgLbRelCond)
+	if err != nil {
+		logs.Errorf("get tg lb rel by cond failed, err: %v, tgLbRelCond: %+v, rid: %s", err, tgLbRelCond, kt.Rid)
+		return nil, err
+	}
+
+	tgIDRuleIDMap := make(map[string]string)
+	tgIDBindStatusMap := make(map[string]enumor.BindingStatus)
+	for _, tgLbRel := range tgLbRels {
+		tgIDRuleIDMap[tgLbRel.TargetGroupID] = tgLbRel.ListenerRuleID
+		tgIDBindStatusMap[tgLbRel.TargetGroupID] = tgLbRel.BindingStatus
+	}
+
 	targetCond := []filter.RuleFactory{tools.RuleIn("target_group_id", tgIDs)}
 	targets, err := svc.getTargetByCond(kt, targetCond)
 	if err != nil {
@@ -1246,10 +1264,16 @@ func (svc *lbSvc) getUrlRuleTargetCount(kt *kit.Kit, rules []corelb.TCloudLbUrlR
 	for _, rule := range rules {
 		ruleTargetCountMap[rule.ID] = 0
 	}
+
 	for _, target := range targets {
-		if ruleID, exists := ruleIDTgIDMap[target.TargetGroupID]; exists {
-			ruleTargetCountMap[ruleID]++
+		ruleID, ok := tgIDRuleIDMap[target.TargetGroupID]
+		if !ok {
+			continue
 		}
+		if tgIDBindStatusMap[target.TargetGroupID] != enumor.SuccessBindingStatus {
+			continue
+		}
+		ruleTargetCountMap[ruleID]++
 	}
 
 	return ruleTargetCountMap, nil
