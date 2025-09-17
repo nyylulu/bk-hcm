@@ -159,6 +159,27 @@ type GetTCloudListenerDetail struct {
 	UrlNum             int64                         `json:"url_num"`
 }
 
+// -------------------------- List URL Rule --------------------------
+
+// ListUrlRulesByTopologyResp list url rules by topology resp.
+type ListUrlRulesByTopologyResp struct {
+	Count   int             `json:"count"`
+	Details []UrlRuleDetail `json:"details"`
+}
+
+// UrlRuleDetail url rule detail.
+type UrlRuleDetail struct {
+	ID          string   `json:"id"`
+	LbVips      []string `json:"lb_vips"`
+	LblProtocol string   `json:"lbl_protocol"`
+	LblPort     int      `json:"lbl_port"`
+	RuleUrl     string   `json:"rule_url"`
+	RuleDomain  string   `json:"rule_domain"`
+	TargetCount int      `json:"target_count"`
+	CloudLblID  string   `json:"cloud_lbl_id"`
+	CloudLbID   string   `json:"cloud_lb_id"`
+}
+
 // ListTargetWeightNumReq ...
 type ListTargetWeightNumReq struct {
 	TargetGroupIDs []string `json:"target_group_ids" validate:"required,min=1"`
