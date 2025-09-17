@@ -159,27 +159,6 @@ type GetTCloudListenerDetail struct {
 	UrlNum             int64                         `json:"url_num"`
 }
 
-// -------------------------- List URL Rule --------------------------
-
-// ListUrlRulesByTopologyResp list url rules by topology resp.
-type ListUrlRulesByTopologyResp struct {
-	Count   int             `json:"count"`
-	Details []UrlRuleDetail `json:"details"`
-}
-
-// UrlRuleDetail url rule detail.
-type UrlRuleDetail struct {
-	ID          string   `json:"id"`
-	LbVips      []string `json:"lb_vips"`
-	LblProtocol string   `json:"lbl_protocol"`
-	LblPort     int      `json:"lbl_port"`
-	RuleUrl     string   `json:"rule_url"`
-	RuleDomain  string   `json:"rule_domain"`
-	TargetCount int      `json:"target_count"`
-	CloudLblID  string   `json:"cloud_lbl_id"`
-	LbID        string   `json:"lb_id"`
-}
-
 // ListTargetWeightNumReq ...
 type ListTargetWeightNumReq struct {
 	TargetGroupIDs []string `json:"target_group_ids" validate:"required,min=1"`
@@ -1201,17 +1180,30 @@ type ListenerWithTopo struct {
 	TargetGroupID            string                              `json:"target_group_id"`
 }
 
+// LblTopoInfo listener topo info
+type LblTopoInfo struct {
+	Match   bool
+	LbMap   map[string]corelb.BaseLoadBalancer
+	LblCond []filter.RuleFactory
+}
+
+// UrlRuleWithTopo url rule with topo
+type UrlRuleWithTopo struct {
+	ID          string   `json:"id"`
+	LbVips      []string `json:"lb_vips"`
+	LblProtocol string   `json:"lbl_protocol"`
+	LblPort     int      `json:"lbl_port"`
+	RuleUrl     string   `json:"rule_url"`
+	RuleDomain  string   `json:"rule_domain"`
+	TargetCount int      `json:"target_count"`
+	LbID        string   `json:"lb_id"`
+	CloudLblID  string   `json:"cloud_lbl_id"`
+}
+
 // UrlRuleTopoInfo url rule topo info
 type UrlRuleTopoInfo struct {
 	Match    bool
 	LbMap    map[string]corelb.BaseLoadBalancer
 	LblMap   map[string]corelb.TCloudListener
 	RuleCond []filter.RuleFactory
-}
-
-// LblTopoInfo listener topo info
-type LblTopoInfo struct {
-	Match   bool
-	LbMap   map[string]corelb.BaseLoadBalancer
-	LblCond []filter.RuleFactory
 }
