@@ -107,7 +107,7 @@ POST  /api/v1/cloud/bizs/{bk_biz_id}/vendors/{vendor}/url_rules/by_topo/list
         "rule_url": "/xxx",
         "rule_domain": "www.xxx.com",
         "target_count": 1,
-        "cloud_lb_id": "00000001",
+        "lb_id": "00000001",
         "cloud_lbl_id": "lbl-00000001"
       }
     ]
@@ -153,5 +153,5 @@ POST  /api/v1/cloud/bizs/{bk_biz_id}/vendors/{vendor}/url_rules/by_topo/list
 | rule_url     | string       | 监听器的URL  |
 | rule_domain  | string array | 监听器的域名   | 
 | target_count | int          | 监听器的RS数量 |
-| cloud_lb_id  | string       | 云负载均衡ID  |
+| lb_id        | string       | 负载均衡ID   |
 | cloud_lbl_id | string       | 云监听器ID   |
