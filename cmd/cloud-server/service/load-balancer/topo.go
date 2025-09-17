@@ -1039,12 +1039,39 @@ func (svc *lbSvc) listUrlRulesByTopo(kt *kit.Kit, bizID int64, vendor enumor.Ven
 func (svc *lbSvc) getUrlRuleTopoInfoByReq(kt *kit.Kit, bizID int64, vendor enumor.Vendor, req *cslb.LbTopoReq) (
 	*cslb.UrlRuleTopoInfo, error) {
 
+	// 查询CLB信息
+	lbMap, err := svc.getLbMapByReq(kt, bizID, vendor, req)
+	if err != nil {
+		return nil, err
+	}
+	if len(lbMap) == 0 {
+		return &cslb.UrlRuleTopoInfo{Match: false}, nil
+	}
+
+	reqLblCond := req.GetLblCond()
+	reqTargetCond := req.GetTargetCond()
+
+	// 根据不同的条件组合处理
+	if len(reqLblCond) == 0 && len(reqTargetCond) == 0 {
+		return svc.handleNoConditionsCase(kt, vendor, lbMap)
+	}
+
+	if len(reqLblCond) != 0 {
+		return svc.handleListenerConditionsCase(kt, vendor, lbMap, reqLblCond, reqTargetCond)
+	}
+
+	return svc.handleTargetConditionsCase(kt, vendor, lbMap, reqTargetCond)
+}
+
+// getLbMapByReq 根据请求条件查询CLB信息
+func (svc *lbSvc) getLbMapByReq(kt *kit.Kit, bizID int64, vendor enumor.Vendor, req *cslb.LbTopoReq) (
+	map[string]corelb.BaseLoadBalancer, error) {
+
 	commonCond := make([]filter.RuleFactory, 0)
 	commonCond = append(commonCond, tools.RuleEqual("bk_biz_id", bizID))
 	commonCond = append(commonCond, tools.RuleEqual("vendor", vendor))
 	commonCond = append(commonCond, tools.RuleEqual("account_id", req.AccountID))
 
-	// 根据条件查询clb信息
 	lbCond := make([]filter.RuleFactory, 0)
 	lbCond = append(lbCond, commonCond...)
 	lbCond = append(lbCond, req.GetLbCond()...)
@@ -1055,73 +1082,86 @@ func (svc *lbSvc) getUrlRuleTopoInfoByReq(kt *kit.Kit, bizID int64, vendor enumo
 		return nil, err
 	}
 
-	if len(lbMap) == 0 {
+	return lbMap, nil
+}
+
+// handleNoConditionsCase 处理无监听器和目标条件的情况
+func (svc *lbSvc) handleNoConditionsCase(kt *kit.Kit, vendor enumor.Vendor, lbMap map[string]corelb.BaseLoadBalancer) (
+	*cslb.UrlRuleTopoInfo, error) {
+
+	lbIDs := maps.Keys(lbMap)
+	lblCond := []filter.RuleFactory{tools.RuleIn("lb_id", lbIDs)}
+	lblMap, err := svc.getLblByCond(kt, vendor, lblCond)
+	if err != nil {
+		logs.Errorf("get lbl by cond failed, err: %v, lblCond: %v, rid: %s", err, lblCond, kt.Rid)
+		return nil, err
+	}
+	if len(lblMap) == 0 {
 		return &cslb.UrlRuleTopoInfo{Match: false}, nil
 	}
+
+	lblIDs := maps.Keys(lblMap)
+	ruleCond := []filter.RuleFactory{tools.RuleIn("lbl_id", lblIDs)}
+	return &cslb.UrlRuleTopoInfo{Match: true, LbMap: lbMap, LblMap: lblMap, RuleCond: ruleCond}, nil
+}
+
+// handleListenerConditionsCase 处理有监听器条件的情况
+func (svc *lbSvc) handleListenerConditionsCase(kt *kit.Kit, vendor enumor.Vendor, lbMap map[string]corelb.BaseLoadBalancer,
+	reqLblCond, reqTargetCond []filter.RuleFactory) (*cslb.UrlRuleTopoInfo, error) {
+
 	lbIDs := maps.Keys(lbMap)
+	lblCond := []filter.RuleFactory{tools.RuleIn("lb_id", lbIDs)}
+	lblCond = append(lblCond, reqLblCond...)
+	lblMap, err := svc.getLblByCond(kt, vendor, lblCond)
+	if err != nil {
+		logs.Errorf("get lbl by cond failed, err: %v, lblCond: %v, rid: %s", err, lblCond, kt.Rid)
+		return nil, err
+	}
+	if len(lblMap) == 0 {
+		return &cslb.UrlRuleTopoInfo{Match: false}, nil
+	}
 
-	reqLblCond := req.GetLblCond()
-	reqTargetCond := req.GetTargetCond()
-	// 如果请求没有监听器和RS条件，那么可以直接返回CLB匹配的规则条件
-	if len(reqLblCond) == 0 && len(reqTargetCond) == 0 {
-		lblCond := []filter.RuleFactory{tools.RuleIn("lb_id", lbIDs)}
-		lblMap, err := svc.getLblByCond(kt, vendor, lblCond)
-		if err != nil {
-			logs.Errorf("get lbl by cond failed, err: %v, lblCond: %v, rid: %s", err, lblCond, kt.Rid)
-			return nil, err
-		}
-		if len(lblMap) == 0 {
-			return &cslb.UrlRuleTopoInfo{Match: false}, nil
-		}
+	lblIDs := maps.Keys(lblMap)
+	ruleCond := []filter.RuleFactory{tools.RuleIn("lbl_id", lblIDs)}
 
-		lblIDs := maps.Keys(lblMap)
-		ruleCond := []filter.RuleFactory{tools.RuleIn("lbl_id", lblIDs)}
+	// 如果请求中不含RS的条件，那么可以直接返回规则条件
+	if len(reqTargetCond) == 0 {
 		return &cslb.UrlRuleTopoInfo{Match: true, LbMap: lbMap, LblMap: lblMap, RuleCond: ruleCond}, nil
 	}
 
-	tgLbRelCond := []filter.RuleFactory{tools.RuleIn("lb_id", lbIDs),
-		tools.RuleEqual("binding_status", enumor.SuccessBindingStatus)}
+	// 如果有RS条件，需要进一步过滤规则
+	ruleMap, err := svc.getRuleByCond(kt, vendor, ruleCond)
+	if err != nil {
+		logs.Errorf("get rule by cond failed, err: %v, ruleCond: %v, rid: %s", err, ruleCond, kt.Rid)
+		return nil, err
+	}
+	if len(ruleMap) == 0 {
+		return &cslb.UrlRuleTopoInfo{Match: false}, nil
+	}
 
-	// 如果请求中存在监听器条件，那么需要根据条件查询监听器，进一步得到匹配的规则条件
-	if len(reqLblCond) != 0 {
-		lblCond := []filter.RuleFactory{tools.RuleIn("lb_id", lbIDs)}
-		lblCond = append(lblCond, reqLblCond...)
-		lblMap, err := svc.getLblByCond(kt, vendor, lblCond)
-		if err != nil {
-			logs.Errorf("get lbl by cond failed, err: %v, lblCond: %v, rid: %s", err, lblCond, kt.Rid)
-			return nil, err
-		}
-		if len(lblMap) == 0 {
-			return &cslb.UrlRuleTopoInfo{Match: false}, nil
-		}
+	tgLbRelCond := []filter.RuleFactory{tools.RuleIn("listener_rule_id", maps.Keys(ruleMap)),
+		tools.RuleEqual("vendor", vendor), tools.RuleEqual("binding_status", enumor.SuccessBindingStatus)}
 
-		lblIDs := maps.Keys(lblMap)
-		ruleCond := []filter.RuleFactory{tools.RuleIn("lbl_id", lblIDs)}
+	return svc.handleTargetConditionsCase(kt, vendor, lbMap, reqTargetCond, tgLbRelCond)
+}
 
-		// 如果请求中不含RS的条件，那么可以直接返回规则条件
-		if len(reqTargetCond) == 0 {
-			return &cslb.UrlRuleTopoInfo{Match: true, LbMap: lbMap, LblMap: lblMap, RuleCond: ruleCond}, nil
-		}
-		// 如果有RS条件，需要进一步过滤规则
-		ruleMap, err := svc.getRuleByCond(kt, vendor, ruleCond)
-		if err != nil {
-			logs.Errorf("get rule by cond failed, err: %v, ruleCond: %v, rid: %s", err, ruleCond, kt.Rid)
-			return nil, err
-		}
-		if len(ruleMap) == 0 {
-			return &cslb.UrlRuleTopoInfo{Match: false}, nil
-		}
+// handleTargetConditionsCase 处理目标条件的情况
+func (svc *lbSvc) handleTargetConditionsCase(kt *kit.Kit, vendor enumor.Vendor, lbMap map[string]corelb.BaseLoadBalancer,
+	reqTargetCond []filter.RuleFactory, tgLbRelCond ...[]filter.RuleFactory) (*cslb.UrlRuleTopoInfo, error) {
 
-		// 注：tgLbRelCond中的vendor条件不能去掉，不同vendor的规则在不同表里，自增id不共用，不加的话可能串数据
-		tgLbRelCond = []filter.RuleFactory{tools.RuleIn("listener_rule_id", maps.Keys(ruleMap)),
-			tools.RuleEqual("vendor", vendor), tools.RuleEqual("binding_status", enumor.SuccessBindingStatus)}
+	if len(tgLbRelCond) == 0 {
+		lbIDs := maps.Keys(lbMap)
+		tgLbRelCond = [][]filter.RuleFactory{{
+			tools.RuleIn("lb_id", lbIDs),
+			tools.RuleEqual("binding_status", enumor.SuccessBindingStatus),
+		}}
 	}
 
 	// 根据RS条件查询，得到规则条件
-	ruleCond, err := svc.getRuleCondByTargetCond(kt, tgLbRelCond, reqTargetCond)
+	ruleCond, err := svc.getRuleCondByTargetCond(kt, tgLbRelCond[0], reqTargetCond)
 	if err != nil {
 		logs.Errorf("get rule cond by target cond failed, err: %v, tgLbRelCond: %v, reqTargetCond: %v, rid: %s", err,
-			tgLbRelCond, reqTargetCond, kt.Rid)
+			tgLbRelCond[0], reqTargetCond, kt.Rid)
 		return nil, err
 	}
 	if len(ruleCond) == 0 {
