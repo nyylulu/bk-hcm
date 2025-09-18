@@ -173,10 +173,6 @@ func NewDaoSet(opt cc.DataBase) (Set, error) {
 
 // connect to mysql
 func connect(opt cc.ResourceDB) (*sqlx.DB, error) {
-	if err := opt.TLS.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid TLS configuration: %v", err)
-	}
-
 	db, err := sqlx.Connect("mysql", uri(opt))
 	if err != nil {
 		return nil, fmt.Errorf("connect to mysql failed, err: %v", err)
@@ -185,13 +181,6 @@ func connect(opt cc.ResourceDB) (*sqlx.DB, error) {
 	db.SetMaxOpenConns(int(opt.MaxOpenConn))
 	db.SetMaxIdleConns(int(opt.MaxIdleConn))
 	db.SetConnMaxLifetime(time.Duration(opt.MaxIdleTimeoutMin) * time.Minute)
-
-	if opt.TLS.Enable() {
-		if err := verifySSLConnection(db); err != nil {
-			db.Close()
-			return nil, fmt.Errorf("SSL connection verification failed: %v", err)
-		}
-	}
 
 	return db, nil
 }
@@ -215,13 +204,13 @@ func uri(opt cc.ResourceDB) string {
 	if opt.TLS.Enable() {
 		sslParams := make([]string, 0)
 
+		sslMode := "ssl-mode=REQUIRED"
 		if opt.TLS.InsecureSkipVerify {
-			sslParams = append(sslParams, "ssl-mode=PREFERRED")
+			sslMode = "ssl-mode=PREFERRED"
 		} else if opt.TLS.CAFile != "" {
-			sslParams = append(sslParams, "ssl-mode=VERIFY_CA")
-		} else {
-			sslParams = append(sslParams, "ssl-mode=REQUIRED")
+			sslMode = "ssl-mode=VERIFY_CA"
 		}
+		sslParams = append(sslParams, sslMode)
 		// Add certificate files if specified
 		if opt.TLS.CAFile != "" {
 			sslParams = append(sslParams, "ssl-ca="+url.QueryEscape(opt.TLS.CAFile))

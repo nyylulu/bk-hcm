@@ -455,26 +455,15 @@ func (tls TLSConfig) Enable() bool {
 	return true
 }
 
-// Validate validates TLS configuration
-func (tls TLSConfig) Validate() error {
-	if tls.Enable() {
-		if len(tls.CertFile) > 0 && len(tls.KeyFile) == 0 {
-			return fmt.Errorf("client key file is required when cert file is specified")
-		}
-		if len(tls.KeyFile) > 0 && len(tls.CertFile) == 0 {
-			return fmt.Errorf("client cert file is required when key file is specified")
-		}
-	}
-	return nil
-}
-
 // validate tls configs
 func (tls TLSConfig) validate() error {
 	if !tls.Enable() {
 		return nil
 	}
 
-	// TODO: add tls config validate.
+	if (len(tls.CertFile) > 0) != (len(tls.KeyFile) > 0) {
+		return fmt.Errorf("cert file and key file must be both specified or both empty")
+	}
 
 	return nil
 }
