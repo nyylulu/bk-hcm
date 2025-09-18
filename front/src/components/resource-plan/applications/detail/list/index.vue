@@ -4,7 +4,6 @@ import { useI18n } from 'vue-i18n';
 import Panel from '@/components/panel/panel.vue';
 import type { TicketByIdResult } from '@/typings/resourcePlan';
 import { useLegacyTableSettings } from '@/hooks/use-table-settings';
-import { PropertyColumnConfig } from '@/model/typings';
 import ChangedText from './changed-text.vue';
 
 interface Props {
@@ -24,7 +23,7 @@ const sort = ref();
 const order = ref();
 // 单据资源预测详情
 
-const columns: PropertyColumnConfig[] = [
+const columns = [
   {
     label: '机型',
     field: 'updated_info.cvm.device_type',
@@ -190,8 +189,9 @@ watchEffect(() => {
     >
       <template v-for="column in columns" :key="column.label">
         <bk-table-column v-bind="column">
-          <template #default="{ row }">
-            <ChangedText :col-data="row" :field="(column.field as string)" :ticket-type="ticketType" />
+          <template #default="{ row, cell }">
+            <span v-if="column.field === 'demand_class'">{{ cell }}</span>
+            <ChangedText v-else :col-data="row" :field="(column.field as string)" :ticket-type="ticketType" />
           </template>
         </bk-table-column>
       </template>
