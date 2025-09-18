@@ -94,6 +94,7 @@ export interface SubTicketItem {
   submitted_at: string;
   created_at: string;
   updated_at: string;
+  message: string;
 }
 export type SubTicketsResult = { details: SubTicketItem[]; data: { details: SubTicketItem[] } };
 

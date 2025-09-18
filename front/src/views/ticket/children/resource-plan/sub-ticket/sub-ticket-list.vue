@@ -3,21 +3,17 @@ import Panel from '@/components/panel/panel.vue';
 import { computed, h, ref, useTemplateRef, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Button, Message } from 'bkui-vue';
-import { Spinner } from 'bkui-vue/lib/icon';
 import { timeFormatter } from '@/common/util';
 import { useTable } from '@/hooks/useResourcePlanTable';
 import { useI18n } from 'vue-i18n';
-import StatusLoading from '@/assets/image/status_loading.png';
-import StatusSuccess from '@/assets/image/success-account.png';
-import StatusFailure from '@/assets/image/failed-account.png';
-import ResultDefault from '@/assets/image/result-default.svg';
 import CopyToClipboard from '@/components/copy-to-clipboard/index.vue';
 import { IPageQuery } from '@/typings';
-import Stage from './stage.vue';
+import Stage from './components/stage.vue';
 import SubTicketDetail from './sub-ticket-detail.vue';
 import { useResSubTicketStore, SubTicketItem, STATUS_ENUM, STAGE_ENUM } from '@/store/ticket/res-sub-ticket';
 import { GLOBAL_BIZS_KEY } from '@/common/constant';
 import { debounce } from 'lodash';
+import StatusText from './components/status-text.vue';
 
 // 补全类型泛型
 const emits = defineEmits<{
@@ -44,7 +40,6 @@ const columns: any[] = [
           theme: 'primary',
           onClick: () => {
             router.replace({ query: { ...route.query, subId: row.id } });
-            detailRef.value.open(row);
           },
         },
         row.id,
@@ -54,33 +49,17 @@ const columns: any[] = [
   {
     label: '子单状态',
     field: 'status',
-    render({ cell }: { cell?: string }) {
-      let icon = ResultDefault;
+    render({ cell, row }: { cell?: string; row?: SubTicketItem }) {
+      const ICON_TYPE: Record<string, any> = {
+        init: 'loading',
+        auditing: 'loading',
+        done: 'success',
+        rejected: 'failed',
+        failed: 'failed',
+        invalid: 'default',
+      };
       const txt = STATUS_ENUM[cell] || '---';
-      switch (cell) {
-        case 'init':
-        case 'auditing':
-          icon = StatusLoading;
-          break;
-        case 'done':
-          icon = StatusSuccess;
-          break;
-        case 'rejected':
-        case 'failed':
-          icon = StatusFailure;
-          break;
-        case 'invalid':
-          icon = ResultDefault;
-          break;
-        default:
-          icon = ResultDefault;
-      }
-      return h('div', { style: { display: 'flex', alignItems: 'center' } }, [
-        icon === StatusLoading
-          ? h(Spinner, { fill: '#3A84FF', class: 'mr6', width: 14, height: 14 })
-          : h('img', { src: icon, class: 'mr6', width: 14, height: 14 }),
-        txt,
-      ]);
+      return h(StatusText, { text: txt, type: ICON_TYPE[cell], errorMessage: row.message });
     },
   },
   {
@@ -167,7 +146,7 @@ const retryBtnLoading = ref(false);
 // 数据
 const ticketLinkArr = computed(() => {
   return tableData.value.reduce((acc, cur) => {
-    if (cur.status === 'auditing') acc.push(`${cur.crp_url}\n`);
+    if (cur.status === 'auditing' && cur.crp_url) acc.push(cur.crp_url);
     return acc;
   }, []);
 });
@@ -205,8 +184,8 @@ const handleMouseLeave = () => {
 };
 
 const handleSubTicketShowById = async (id: string) => {
-  const res = await getData({ limit: 500 });
-  const subTicketItem = res.data.details.find((item) => item.id === id);
+  const list = tableData.value?.length ? tableData.value : (await getData({ limit: 500 })).data.details;
+  const subTicketItem = list.find((item) => item.id === id);
   if (subTicketItem) {
     detailRef.value.open(subTicketItem);
   }

@@ -127,12 +127,14 @@ const getCurrentStepItems = (
   return current_steps.map<ITimelineItem>(({ name, processors }) => {
     // 过滤无效审批人
     const displayProcessors = processors.filter((processor) => processor);
-
     const isAuditing = status === 'auditing';
     // auditing状态，且用户为审批人时，可以进行审批处理
     const hasApprovalBtn = showApproval && isAuditing && displayProcessors.includes(userStore.username);
-
     const comp: Component = auditType === 'admin' ? ApprovalBtnAdmin : ApprovalBtn;
+    const WNameVNodeList = getWNameVNodeList(displayProcessors);
+    // 审批人信息，若无则不显示审批中文本
+    const content = WNameVNodeList.length ? [status_name ? `${status_name}，` : '', `请联系 `, WNameVNodeList] : null;
+
     return {
       tag: h(TimelineTag, { isCurrent: true }, [
         name,
@@ -156,11 +158,7 @@ const getCurrentStepItems = (
             )
           : null,
       ]),
-      content: h(TimelineContent, null, [
-        status_name ? `${status_name}，` : '',
-        `请联系 `,
-        getWNameVNodeList(displayProcessors),
-      ]),
+      content: h(TimelineContent, null, content),
       nodeType: ITimelineNodeType.VNode,
       icon: isAuditing ? h(LoadingIcon) : undefined,
       type: isAuditing ? 'primary' : 'danger',

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, useAttrs } from 'vue';
+import { ref, useAttrs, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import useFormModel from '@/hooks/useFormModel';
 
@@ -17,6 +17,7 @@ const props = withDefaults(defineProps<IProps>(), {
 });
 const emit = defineEmits<(e: 'shown' | 'hidden') => void>();
 const attrs = useAttrs();
+const form = useTemplateRef('form');
 
 const { t } = useI18n();
 
@@ -33,6 +34,7 @@ const handleHidden = () => {
 };
 
 const handleConfirm = async () => {
+  await form.value.validate();
   isConfirmLoading.value = true;
   try {
     await props.confirmHandler(formModel);
@@ -59,12 +61,12 @@ const handleConfirm = async () => {
     {{ t('立即处理') }}
   </bk-button>
   <bk-dialog v-model:is-show="isShow" :title="t('审批')" @shown="handleShown" @hidden="handleHidden">
-    <bk-form form-type="vertical" :model="formModel">
+    <bk-form ref="form" form-type="vertical" :model="formModel">
       <bk-form-item :label="t('审批意见')" property="approval" required>
         <bk-radio v-model="formModel.approval" :label="true">{{ t('同意') }}</bk-radio>
         <bk-radio v-model="formModel.approval" :label="false">{{ t('拒绝') }}</bk-radio>
       </bk-form-item>
-      <bk-form-item :label="t('审批说明')" property="remark">
+      <bk-form-item :label="t('审批说明')" property="remark" required>
         <bk-input type="textarea" :rows="4" :resize="false" v-model="formModel.remark" />
       </bk-form-item>
     </bk-form>

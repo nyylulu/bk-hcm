@@ -10,10 +10,12 @@ import ChangedText from './changed-text.vue';
 interface Props {
   demands: TicketByIdResult['demands'];
   ticketType?: string; // 单据类型（新增，取消，调整） 外部传入
+  showCpuCount?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   demands: () => [],
+  showCpuCount: true,
 });
 
 const { t } = useI18n();
@@ -33,20 +35,9 @@ const columns: PropertyColumnConfig[] = [
     // 增加排序
     sort: true,
   },
-  // {
-  //   label: '内存总量(G)',
-  //   field: 'updated_info.cvm.memory',
-  //   isDefaultShow: true,
-  // },
-  // {
-  //   label: '云盘总量(G)',
-  //   field: 'updated_info.cbs.disk_size',
-  //   isDefaultShow: true,
-  // },
   {
     label: '预测类型',
     field: 'demand_class',
-    defaultHidden: true,
   },
   {
     label: '项目类型',
@@ -55,25 +46,25 @@ const columns: PropertyColumnConfig[] = [
   {
     label: '地域',
     field: 'updated_info.area_name',
+    defaultHidden: true,
     // filter: true,
   },
   {
     label: '城市',
     field: 'updated_info.region_name',
-    defaultHidden: true,
   },
   {
     label: '可用区',
     field: 'updated_info.zone_name',
-  },
-  {
-    label: '资源模式',
-    field: 'updated_info.cvm.res_mode',
-  },
-  {
-    label: '期望到货时间',
-    field: 'updated_info.expect_time',
     defaultHidden: true,
+  },
+  {
+    label: '核心类型',
+    field: 'updated_info.cvm.core_type',
+  },
+  {
+    label: '实例数',
+    field: 'updated_info.cvm.os',
   },
   {
     label: '机型族',
@@ -91,26 +82,37 @@ const columns: PropertyColumnConfig[] = [
     defaultHidden: true,
   },
   {
-    label: '核心类型',
-    field: 'updated_info.cvm.core_type',
-  },
-  {
-    label: '实例数',
-    field: 'updated_info.cvm.os',
-    defaultHidden: true,
+    label: '期望到货时间',
+    field: 'updated_info.expect_time',
   },
   {
     label: '单例磁盘IO(MB/s)',
     field: 'updated_info.cbs.disk_io',
+    defaultHidden: true,
   },
   {
     label: '云磁盘类型',
     field: 'updated_info.cbs.disk_type_name',
+    defaultHidden: true,
   },
+  {
+    label: '云磁盘大小(G)',
+    field: 'updated_info.cbs.disk_size',
+    defaultHidden: true,
+  },
+  // {
+  //   label: '内存总量(G)',
+  //   field: 'updated_info.cvm.memory',
+  //   isDefaultShow: true,
+  // },
+
+  // {
+  //   label: '资源模式',
+  //   field: 'updated_info.cvm.res_mode',
+  // },
   {
     label: '备注',
     field: 'updated_info.remark',
-    defaultHidden: true,
   },
 ];
 const { settings } = useLegacyTableSettings(columns);
@@ -195,7 +197,7 @@ watchEffect(() => {
       </template>
     </bk-table>
     <template #title-extra>
-      <div class="cpu-count">
+      <div v-if="showCpuCount" class="cpu-count">
         CPU总数：
         <span>{{ cpuCount }}核</span>
       </div>

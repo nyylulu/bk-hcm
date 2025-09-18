@@ -150,6 +150,7 @@ defineExpose({
           v-show="!isLoading"
           :demands="ticketDetail?.demands"
           :ticket-type="ticketDetail?.base_info?.type"
+          :show-cpu-count="false"
         />
       </section>
     </bk-loading>
