@@ -103,6 +103,7 @@ func (dao LbTCloudUrlRuleDao) BatchCreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models
 		if !ok {
 			return nil, fmt.Errorf("fail to find lb(%s) of rule(%s)", rule.LbID, rule.URL)
 		}
+
 		audits = append(audits, &tableaudit.AuditTable{
 			ResID:      rule.ID,
 			CloudResID: rule.CloudID,
