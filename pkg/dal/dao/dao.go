@@ -230,22 +230,6 @@ func uri(opt cc.ResourceDB) string {
 	return baseURI
 }
 
-// verifySSLConnection 验证MySQL连接是否使用了SSL加密
-func verifySSLConnection(db *sqlx.DB) error {
-	var variableName, value string
-	err := db.QueryRow("SHOW STATUS LIKE 'Ssl_cipher'").Scan(&variableName, &value)
-	if err != nil {
-		err = db.QueryRow("SHOW SESSION STATUS LIKE 'Ssl_cipher'").Scan(&variableName, &value)
-		if err != nil {
-			return fmt.Errorf("failed to check SSL status: %v", err)
-		}
-	}
-	if value == "" {
-		return fmt.Errorf("MySQL connection is not using SSL encryption")
-	}
-	return nil
-}
-
 type set struct {
 	idGen idgenerator.IDGenInterface
 	orm   orm.Interface
