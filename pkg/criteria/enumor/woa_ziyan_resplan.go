@@ -45,6 +45,7 @@ const (
 	// RPTicketTypeDelete is resource plan ticket status delete.
 	RPTicketTypeDelete RPTicketType = "delete"
 	// RPTicketTypeDelay is resource plan ticket status delay. Only used in sub_ticket.
+	// 该类型不返回给前端展示，仅用于内部逻辑，汇总不影响预算，可以直接发起调整的需求
 	RPTicketTypeDelay RPTicketType = "delay"
 	// RPTicketTypeTransfer is resource plan ticket status transfer. Only used in sub_ticket.
 	RPTicketTypeTransfer RPTicketType = "transfer"

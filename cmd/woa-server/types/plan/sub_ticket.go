@@ -101,7 +101,7 @@ func (r *ListResPlanSubTicketReq) GenListOption() core.ListReq {
 	rules := make([]filter.RuleFactory, 0)
 	rules = append(rules, tools.RuleEqual("ticket_id", r.TicketID))
 
-	if r.BizID != constant.AttachedAllBiz {
+	if r.BizID != 0 && r.BizID != constant.AttachedAllBiz {
 		rules = append(rules, tools.RuleEqual("bk_biz_id", r.BizID))
 	}
 
@@ -151,6 +151,7 @@ type ListResPlanSubTicketItem struct {
 	ID             string                   `json:"id"`
 	Status         enumor.RPSubTicketStatus `json:"status"`
 	StatusName     string                   `json:"status_name"`
+	Message        string                   `json:"message"`
 	SubDemands     types.JsonField          `json:"-"` // Demands 资源需求明细，目前用于后端拆单逻辑，不需要返回给前端
 	Stage          enumor.RPSubTicketStage  `json:"stage"`
 	SubTicketType  enumor.RPTicketType      `json:"sub_ticket_type"`

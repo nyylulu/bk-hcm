@@ -74,7 +74,6 @@ func (d *Dispatcher) applyResPlanDemandChange(kt *kit.Kit, ticket *ptypes.Ticket
 			kt.Rid)
 		return err
 	}
-
 	logs.Infof("aggregate demand change info start, ticketID: %s, crpSn: %s, changeDemandsMap: %+v, rid: %s",
 		ticket.ID, ticket.CrpSN, cvt.PtrToSlice(maps.Values(changeDemandsMap)), kt.Rid)
 
@@ -85,6 +84,16 @@ func (d *Dispatcher) applyResPlanDemandChange(kt *kit.Kit, ticket *ptypes.Ticket
 		logs.Errorf("failed to prepare res plan demand change req, err: %v, ticket: %s, rid: %s", err,
 			ticket.ID, kt.Rid)
 		return err
+	}
+	if len(upsertReq.CreateDemands) == 0 && len(upsertReq.UpdateDemands) == 0 {
+		// 解锁单据关联的原始预测
+		unlockErr := d.unlockTicketOriginalDemands(kt, ticket)
+		if unlockErr != nil {
+			logs.Warnf("failed to unlock ticket original demands, err: %v, id: %s, rid: %s", unlockErr,
+				ticket.ID, kt.Rid)
+		}
+		logs.Infof("no need to update res plan demand, ticket id: %s, rid: %s", ticket.ID, kt.Rid)
+		return nil
 	}
 
 	createdIDs, err := d.BatchUpsertResPlanDemand(kt, upsertReq, updatedIDs)
@@ -118,7 +127,6 @@ func (d *Dispatcher) applyResPlanDemandChange(kt *kit.Kit, ticket *ptypes.Ticket
 
 	logs.Infof("aggregate demand change info end, ticketID: %s, crpSn: %s, createdIDs: %v, updatedIDs: %v, rid: %s",
 		ticket.ID, ticket.CrpSN, createdIDs, updatedIDs, kt.Rid)
-
 	return nil
 }
 

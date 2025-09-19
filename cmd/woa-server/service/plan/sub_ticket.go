@@ -98,7 +98,27 @@ func (s *service) listResPlanSubTicket(cts *rest.Contexts, bkBizID int64, author
 		}
 	}
 
-	return s.planController.ListResPlanSubTicket(cts.Kit, req)
+	rst, err := s.planController.ListResPlanSubTicket(cts.Kit, req)
+	if err != nil {
+		logs.Errorf("failed to list resource plan sub ticket, err: %v, id: %s, applicant: %s, rid: %s", err,
+			req.TicketID, cts.Kit.User, cts.Kit.Rid)
+		return nil, err
+	}
+
+	for i := range rst.Details {
+		// 屏蔽延期类型，将其改为调整类型
+		if rst.Details[i].SubTicketType == enumor.RPTicketTypeDelay {
+			rst.Details[i].SubTicketType = enumor.RPTicketTypeAdjust
+			rst.Details[i].TicketTypeName = rst.Details[i].SubTicketType.Name()
+		}
+
+		// RPSubTicketStatusWaiting 仅用于内部状态流转，对外统一展示为待审批
+		if rst.Details[i].Status == enumor.RPSubTicketStatusWaiting {
+			rst.Details[i].Status = enumor.RPSubTicketStatusInit
+			rst.Details[i].StatusName = rst.Details[i].Status.Name()
+		}
+	}
+	return rst, nil
 }
 
 // GetResPlanSubTicketDetail get resource plan sub ticket detail
@@ -172,6 +192,12 @@ func (s *service) getResPlanSubTicketDetail(kt *kit.Kit, bizID int64, subTicketI
 	// 有业务参数时，单据业务需匹配
 	if bizID != constant.AttachedAllBiz && detail.BaseInfo.BkBizID != bizID {
 		return nil, errf.NewFromErr(errf.PermissionDenied, errors.New("no permission to access this ticket"))
+	}
+
+	// 屏蔽延期类型，将其改为调整类型
+	if detail.BaseInfo.Type == enumor.RPTicketTypeDelay {
+		detail.BaseInfo.Type = enumor.RPTicketTypeAdjust
+		detail.BaseInfo.TypeName = detail.BaseInfo.Type.Name()
 	}
 
 	// RPSubTicketStatusWaiting 仅用于内部状态流转，对外统一展示为待审批

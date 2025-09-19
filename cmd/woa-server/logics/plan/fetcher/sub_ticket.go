@@ -65,6 +65,7 @@ func genResPlanSubTicketListResp(listRst *rpproto.ResPlanSubTicketListResult) *p
 			ID:             item.ID,
 			Status:         item.Status,
 			StatusName:     item.Status.Name(),
+			Message:        cvt.PtrToVal(item.Message),
 			SubDemands:     item.SubDemands,
 			Stage:          item.Stage,
 			SubTicketType:  item.SubType,

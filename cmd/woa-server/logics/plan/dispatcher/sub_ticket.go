@@ -276,11 +276,11 @@ func (d *Dispatcher) checkSubTicket(kt *kit.Kit, ticket *ptypes.TicketInfo) erro
 			continue
 		}
 
-		allDone = allDone && subTicket.Status == enumor.RPSubTicketStatusDone
-		allFailed = allFailed && (subTicket.Status == enumor.RPSubTicketStatusRejected ||
-			subTicket.Status == enumor.RPSubTicketStatusFailed)
-		hasFailed = hasFailed || subTicket.Status == enumor.RPSubTicketStatusRejected ||
-			subTicket.Status == enumor.RPSubTicketStatusFailed
+		// 审批拒绝不认为是失败
+		allDone = allDone && (subTicket.Status == enumor.RPSubTicketStatusDone ||
+			subTicket.Status == enumor.RPSubTicketStatusRejected)
+		allFailed = allFailed && subTicket.Status == enumor.RPSubTicketStatusFailed
+		hasFailed = hasFailed || subTicket.Status == enumor.RPSubTicketStatusFailed
 	}
 	// 根据统计结果更新主单状态
 	ticketStatus := enumor.RPTicketStatusAuditing
