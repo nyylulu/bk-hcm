@@ -1186,3 +1186,24 @@ type LblTopoInfo struct {
 	LbMap   map[string]corelb.BaseLoadBalancer
 	LblCond []filter.RuleFactory
 }
+
+// UrlRuleWithTopo url rule with topo
+type UrlRuleWithTopo struct {
+	ID          string   `json:"id"`
+	LbVips      []string `json:"lb_vips"`
+	LblProtocol string   `json:"lbl_protocol"`
+	LblPort     int      `json:"lbl_port"`
+	RuleUrl     string   `json:"rule_url"`
+	RuleDomain  string   `json:"rule_domain"`
+	TargetCount int      `json:"target_count"`
+	LbID        string   `json:"lb_id"`
+	CloudLblID  string   `json:"cloud_lbl_id"`
+}
+
+// UrlRuleTopoInfo url rule topo info
+type UrlRuleTopoInfo struct {
+	Match    bool
+	LbMap    map[string]corelb.BaseLoadBalancer
+	LblMap   map[string]corelb.TCloudListener
+	RuleCond []filter.RuleFactory
+}

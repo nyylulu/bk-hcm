@@ -154,7 +154,8 @@ func bizService(h *rest.Handler, svc *lbSvc) {
 		"/vendors/{vendor}/targets/by_topo/count", svc.CountTargetByTopo)
 	h.Add("ListListenerByTopo", http.MethodPost,
 		"/vendors/{vendor}/listeners/by_topo/list", svc.ListListenerByTopo)
-
+	h.Add("ListUrlRulesByTopo", http.MethodPost,
+		"/vendors/{vendor}/url_rules/by_topo/list", svc.ListUrlRulesByTopo)
 }
 
 func bizURLRuleService(h *rest.Handler, svc *lbSvc) {

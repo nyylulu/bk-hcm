@@ -854,15 +854,13 @@ func (svc *lbSvc) getLblCondByTargetCond(kt *kit.Kit, tgLbRelCond []filter.RuleF
 		return make([]filter.RuleFactory, 0), nil
 	}
 
-	tgIDMap := make(map[string]struct{})
 	tgIDLblIDMap := make(map[string]string)
 	for _, tgLbRel := range tgLbRels {
-		tgIDMap[tgLbRel.TargetGroupID] = struct{}{}
 		tgIDLblIDMap[tgLbRel.TargetGroupID] = tgLbRel.LblID
 	}
 
 	// 根据条件查询RS
-	targetCond := []filter.RuleFactory{tools.RuleIn("target_group_id", maps.Keys(tgIDMap))}
+	targetCond := []filter.RuleFactory{tools.RuleIn("target_group_id", maps.Keys(tgIDLblIDMap))}
 	targetCond = append(targetCond, reqTargetCond...)
 	targets, err := svc.getTargetByCond(kt, targetCond)
 	if err != nil {
@@ -889,4 +887,306 @@ func (svc *lbSvc) getLblCondByTargetCond(kt *kit.Kit, tgLbRelCond []filter.RuleF
 	}
 
 	return []filter.RuleFactory{tools.RuleIn("id", lblIDs)}, nil
+}
+
+// ListUrlRulesByTopo list url rules by topo
+func (svc *lbSvc) ListUrlRulesByTopo(cts *rest.Contexts) (any, error) {
+	req := new(cslb.LbTopoReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, err
+	}
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	vendor := enumor.Vendor(cts.PathParameter("vendor").String())
+	if err := vendor.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	bizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	attribute := meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access},
+		BizID: bizID,
+	}
+	_, authorized, err := svc.authorizer.Authorize(cts.Kit, attribute)
+	if err != nil {
+		return nil, err
+	}
+	if !authorized {
+		return nil, errf.New(errf.PermissionDenied, "biz permission denied")
+	}
+
+	return svc.listUrlRulesByTopo(cts.Kit, bizID, vendor, req)
+}
+
+func (svc *lbSvc) listUrlRulesByTopo(kt *kit.Kit, bizID int64, vendor enumor.Vendor,
+	req *cslb.LbTopoReq) (any, error) {
+
+	info, err := svc.getUrlRuleTopoInfoByReq(kt, bizID, vendor, req)
+	if err != nil {
+		logs.Errorf("list url rule topo info by req failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
+		return nil, err
+	}
+
+	if !info.Match {
+		return core.ListResultT[cslb.UrlRuleWithTopo]{Details: make([]cslb.UrlRuleWithTopo, 0)}, nil
+	}
+
+	ruleCond := make([]filter.RuleFactory, 0)
+	ruleCond = append(ruleCond, info.RuleCond...)
+	ruleCond = append(ruleCond, req.GetRuleCond()...)
+	ruleCond = append(ruleCond, tools.RuleEqual("rule_type", enumor.Layer7RuleType))
+
+	ruleReq := core.ListReq{
+		Filter: &filter.Expression{Op: filter.And, Rules: ruleCond},
+		Page:   req.Page,
+	}
+
+	resp := &cloud.TCloudURLRuleListResult{}
+	switch vendor {
+	case enumor.TCloud:
+		resp, err = svc.client.DataService().TCloud.LoadBalancer.ListUrlRule(kt, &ruleReq)
+		if err != nil {
+			logs.Errorf("get url rule failed, err: %v, req: %+v, rid: %s", err, ruleReq, kt.Rid)
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("vendor: %s not support", vendor)
+	}
+
+	if req.Page.Count {
+		return core.ListResultT[cslb.UrlRuleWithTopo]{Count: resp.Count}, nil
+	}
+	if len(resp.Details) == 0 {
+		return core.ListResultT[cslb.UrlRuleWithTopo]{Details: make([]cslb.UrlRuleWithTopo, 0)}, nil
+	}
+
+	details, err := svc.buildUrlRuleWithTopoInfo(kt, vendor, info, resp.Details)
+	if err != nil {
+		logs.Errorf("build url rule with topo info failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
+		return nil, err
+	}
+
+	return core.ListResultT[cslb.UrlRuleWithTopo]{Details: details}, nil
+}
+
+func (svc *lbSvc) getUrlRuleTopoInfoByReq(kt *kit.Kit, bizID int64, vendor enumor.Vendor, req *cslb.LbTopoReq) (
+	*cslb.UrlRuleTopoInfo, error) {
+
+	commonCond := make([]filter.RuleFactory, 0)
+	commonCond = append(commonCond, tools.RuleEqual("bk_biz_id", bizID))
+	commonCond = append(commonCond, tools.RuleEqual("vendor", vendor))
+	commonCond = append(commonCond, tools.RuleEqual("account_id", req.AccountID))
+
+	lbCond := make([]filter.RuleFactory, 0)
+	lbCond = append(lbCond, commonCond...)
+	lbCond = append(lbCond, req.GetLbCond()...)
+	lbMap, err := svc.getLbByCond(kt, lbCond)
+	if err != nil {
+		logs.Errorf("get lb by cond failed, err: %v, lbCond: %v, rid: %s", err, lbCond, kt.Rid)
+		return nil, err
+	}
+	if len(lbMap) == 0 {
+		return &cslb.UrlRuleTopoInfo{Match: false}, nil
+	}
+
+	lbIDs := maps.Keys(lbMap)
+	reqLblCond := req.GetLblCond()
+	reqTargetCond := req.GetTargetCond()
+
+	// 如果请求没有监听器和RS条件，那么可以直接返回CLB匹配的规则条件
+	if len(reqLblCond) == 0 && len(reqTargetCond) == 0 {
+		ruleCond := []filter.RuleFactory{tools.RuleIn("lb_id", lbIDs)}
+		return &cslb.UrlRuleTopoInfo{Match: true, LbMap: lbMap, RuleCond: ruleCond}, nil
+	}
+
+	tgLbRelCond := []filter.RuleFactory{tools.RuleIn("lb_id", lbIDs),
+		tools.RuleEqual("binding_status", enumor.SuccessBindingStatus)}
+
+	// 如果请求中存在监听器条件，那么需要根据条件查询监听器，进一步得到匹配的规则条件
+	if len(reqLblCond) != 0 {
+		lblCond := make([]filter.RuleFactory, 0)
+		lblCond = append(lblCond, tools.RuleIn("lb_id", lbIDs))
+		lblCond = append(lblCond, reqLblCond...)
+		lblMap, err := svc.getLblByCond(kt, vendor, lblCond)
+
+		if err != nil {
+			logs.Errorf("get lbl by cond failed, err: %v, lblCond: %v, rid: %s", err, lblCond, kt.Rid)
+			return nil, err
+		}
+		if len(lblMap) == 0 {
+			return &cslb.UrlRuleTopoInfo{Match: false}, nil
+		}
+
+		if len(reqTargetCond) == 0 {
+			lblIDs := maps.Keys(lblMap)
+			ruleCond := []filter.RuleFactory{tools.RuleIn("lbl_id", lblIDs)}
+			return &cslb.UrlRuleTopoInfo{Match: true, LbMap: lbMap, RuleCond: ruleCond}, nil
+		}
+
+		// 注：tgLbRelCond中的vendor条件不能去掉，不同vendor的规则在不同表里，自增id不共用，不加的话可能串数据
+		tgLbRelCond = []filter.RuleFactory{tools.RuleIn("lbl_id", maps.Keys(lblMap)),
+			tools.RuleEqual("vendor", vendor), tools.RuleEqual("binding_status", enumor.SuccessBindingStatus)}
+	}
+
+	// 根据RS条件查询，得到规则条件
+	ruleCond, err := svc.getRuleCondByTargetCond(kt, tgLbRelCond, reqTargetCond)
+	if err != nil {
+		logs.Errorf("get rule cond by target cond failed, err: %v, tgLbRelCond: %v, reqTargetCond: %v, rid: %s", err,
+			tgLbRelCond, reqTargetCond, kt.Rid)
+		return nil, err
+	}
+	if len(ruleCond) == 0 {
+		return &cslb.UrlRuleTopoInfo{Match: false}, nil
+	}
+
+	return &cslb.UrlRuleTopoInfo{Match: true, LbMap: lbMap, RuleCond: ruleCond}, nil
+}
+
+func (svc *lbSvc) getRuleCondByTargetCond(kt *kit.Kit, tgLbRelCond []filter.RuleFactory,
+	reqTargetCond []filter.RuleFactory) ([]filter.RuleFactory, error) {
+
+	// 根据条件查询clb和目标组关系
+	tgLbRels, err := svc.getTgLbRelByCond(kt, tgLbRelCond)
+	if err != nil {
+		logs.Errorf("get tg lb rel failed, err: %v, tgLbRelCond: %v, rid: %s", err, tgLbRelCond, kt.Rid)
+		return nil, err
+	}
+	if len(tgLbRels) == 0 {
+		return make([]filter.RuleFactory, 0), nil
+	}
+
+	tgIDRuleIDMap := make(map[string]string)
+	for _, tgLbRel := range tgLbRels {
+		tgIDRuleIDMap[tgLbRel.TargetGroupID] = tgLbRel.ListenerRuleID
+	}
+
+	// 根据条件查询RS
+	targetCond := []filter.RuleFactory{tools.RuleIn("target_group_id", maps.Keys(tgIDRuleIDMap))}
+	targetCond = append(targetCond, reqTargetCond...)
+	targets, err := svc.getTargetByCond(kt, targetCond)
+	if err != nil {
+		logs.Errorf("get target by cond failed, err: %v, targetCond: %v, rid: %s", err, targetCond, kt.Rid)
+		return nil, err
+	}
+	if len(targets) == 0 {
+		return make([]filter.RuleFactory, 0), nil
+	}
+
+	// 根据RS反向推出匹配的规则条件
+	ruleIDMap := make(map[string]struct{})
+	for _, target := range targets {
+		ruleID, ok := tgIDRuleIDMap[target.TargetGroupID]
+		if !ok {
+			logs.Errorf("use target group id not found rule, tgID: %s, rid: %s", target.TargetGroupID, kt.Rid)
+			return nil, fmt.Errorf("use target group not found rule, tgID: %s", target.TargetGroupID)
+		}
+		ruleIDMap[ruleID] = struct{}{}
+	}
+	ruleIDs := maps.Keys(ruleIDMap)
+	if len(ruleIDs) == 0 {
+		return make([]filter.RuleFactory, 0), nil
+	}
+
+	return []filter.RuleFactory{tools.RuleIn("id", ruleIDs)}, nil
+}
+
+func (svc *lbSvc) buildUrlRuleWithTopoInfo(kt *kit.Kit, vendor enumor.Vendor, info *cslb.UrlRuleTopoInfo,
+	urlRules []corelb.TCloudLbUrlRule) ([]cslb.UrlRuleWithTopo, error) {
+
+	ruleIDTargetCountMap, err := svc.getUrlRuleTargetCount(kt, vendor, urlRules)
+	if err != nil {
+		logs.Errorf("get url rule target count failed, err: %v, urlRules: %+v, rid: %s", err, urlRules, kt.Rid)
+		return nil, err
+	}
+
+	// 获取监听器信息
+	lblIDMap := make(map[string]struct{})
+	for _, rule := range urlRules {
+		lblIDMap[rule.LblID] = struct{}{}
+	}
+	lblIDs := maps.Keys(lblIDMap)
+	lblMap, err := svc.getLblByCond(kt, vendor, []filter.RuleFactory{tools.RuleIn("id", lblIDs)})
+	if err != nil {
+		logs.Errorf("get lbl by cond failed, err: %v, lblIDs: %+v, rid: %s", err, lblIDs, kt.Rid)
+		return nil, err
+	}
+
+	details := make([]cslb.UrlRuleWithTopo, 0)
+	for _, rule := range urlRules {
+		lb, ok := info.LbMap[rule.LbID]
+		if !ok {
+			logs.Errorf("lb not found, lbID: %s, rid: %s", rule.LbID, kt.Rid)
+			return nil, fmt.Errorf("lb not found, lbID: %s", rule.LbID)
+		}
+
+		lbl, ok := lblMap[rule.LblID]
+		if !ok {
+			logs.Errorf("lbl not found, lblID: %s, rid: %s", rule.LblID, kt.Rid)
+			return nil, fmt.Errorf("lbl not found, lblID: %s", rule.LblID)
+		}
+
+		// 获取CLB的VIP地址
+		lbVips := getLbVips(lb)
+
+		detail := cslb.UrlRuleWithTopo{
+			ID:          rule.ID,
+			LbVips:      lbVips,
+			LblProtocol: string(lbl.Protocol),
+			LblPort:     int(lbl.Port),
+			RuleUrl:     rule.URL,
+			RuleDomain:  rule.Domain,
+			TargetCount: ruleIDTargetCountMap[rule.ID],
+			LbID:        lb.ID,
+			CloudLblID:  lbl.CloudID,
+		}
+		details = append(details, detail)
+	}
+
+	return details, nil
+}
+
+// getUrlRuleTargetCount 获取规则的RS数量
+func (svc *lbSvc) getUrlRuleTargetCount(kt *kit.Kit, vendor enumor.Vendor, rules []corelb.TCloudLbUrlRule) (map[string]int, error) {
+	if len(rules) == 0 {
+		return make(map[string]int), nil
+	}
+
+	ruleIDs := make([]string, 0)
+	for _, rule := range rules {
+		ruleIDs = append(ruleIDs, rule.ID)
+	}
+	tgLbRelCond := []filter.RuleFactory{tools.RuleIn("listener_rule_id", ruleIDs), tools.RuleEqual("vendor", vendor),
+		tools.RuleEqual("binding_status", enumor.SuccessBindingStatus)}
+	tgLbRels, err := svc.getTgLbRelByCond(kt, tgLbRelCond)
+	if err != nil {
+		logs.Errorf("get tg lb rel by cond failed, err: %v, ruleIDs: %+v, rid: %s", err, ruleIDs, kt.Rid)
+		return nil, err
+	}
+	tgIDRuleIDMap := make(map[string]string)
+	tgIDs := make([]string, 0)
+	for _, tgLbRel := range tgLbRels {
+		tgIDRuleIDMap[tgLbRel.TargetGroupID] = tgLbRel.ListenerRuleID
+		tgIDs = append(tgIDs, tgLbRel.TargetGroupID)
+	}
+	targets, err := svc.getTargetByCond(kt, []filter.RuleFactory{tools.RuleIn("target_group_id", tgIDs)})
+	if err != nil {
+		logs.Errorf("get target by cond failed, err: %v, tgIDs: %+v, rid: %s", err, tgIDs, kt.Rid)
+		return nil, err
+	}
+	ruleTargetCountMap := make(map[string]int)
+	for _, target := range targets {
+		ruleID, ok := tgIDRuleIDMap[target.TargetGroupID]
+		if !ok {
+			return nil, fmt.Errorf("target group not found, tg id: %s, target id: %s",
+				target.TargetGroupID, target.ID)
+		}
+		ruleTargetCountMap[ruleID]++
+	}
+
+	return ruleTargetCountMap, nil
 }
