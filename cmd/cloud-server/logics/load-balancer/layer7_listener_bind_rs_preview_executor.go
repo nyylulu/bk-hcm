@@ -249,12 +249,13 @@ func (l *Layer7ListenerBindRSPreviewExecutor) validateTarget(kt *kit.Kit,
 		detail.ValidateResult = append(detail.ValidateResult,
 			"Listener rule not bound to target group, will automatically create target group and bind")
 		return nil
+    
 	}
 	detail.targetGroupID = tgID
 	if detail.cvm == nil {
 		// rsType 为 ENI，会导致cvm为空
 		return nil
-	}
+  }
 	target, err := getTarget(kt, l.dataServiceCli, tgID, detail.cvm.CloudID, detail.RsPort[0])
 	if err != nil {
 		return err

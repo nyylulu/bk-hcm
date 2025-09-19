@@ -247,6 +247,7 @@ func (l *Layer4ListenerBindRSPreviewExecutor) validateTarget(kt *kit.Kit,
 			"Listener not bound to target group, will automatically create target group and bind")
 		return nil
 	}
+
 	if detail.cvm == nil {
 		// rsType 为 ENI，会导致cvm为空
 		return nil
