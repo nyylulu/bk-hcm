@@ -854,15 +854,13 @@ func (svc *lbSvc) getLblCondByTargetCond(kt *kit.Kit, tgLbRelCond []filter.RuleF
 		return make([]filter.RuleFactory, 0), nil
 	}
 
-	tgIDMap := make(map[string]struct{})
 	tgIDLblIDMap := make(map[string]string)
 	for _, tgLbRel := range tgLbRels {
-		tgIDMap[tgLbRel.TargetGroupID] = struct{}{}
 		tgIDLblIDMap[tgLbRel.TargetGroupID] = tgLbRel.LblID
 	}
 
 	// 根据条件查询RS
-	targetCond := []filter.RuleFactory{tools.RuleIn("target_group_id", maps.Keys(tgIDMap))}
+	targetCond := []filter.RuleFactory{tools.RuleIn("target_group_id", maps.Keys(tgIDLblIDMap))}
 	targetCond = append(targetCond, reqTargetCond...)
 	targets, err := svc.getTargetByCond(kt, targetCond)
 	if err != nil {
@@ -1062,15 +1060,13 @@ func (svc *lbSvc) getRuleCondByTargetCond(kt *kit.Kit, tgLbRelCond []filter.Rule
 		return make([]filter.RuleFactory, 0), nil
 	}
 
-	tgIDMap := make(map[string]struct{})
 	tgIDRuleIDMap := make(map[string]string)
 	for _, tgLbRel := range tgLbRels {
-		tgIDMap[tgLbRel.TargetGroupID] = struct{}{}
 		tgIDRuleIDMap[tgLbRel.TargetGroupID] = tgLbRel.ListenerRuleID
 	}
 
 	// 根据条件查询RS
-	targetCond := []filter.RuleFactory{tools.RuleIn("target_group_id", maps.Keys(tgIDMap))}
+	targetCond := []filter.RuleFactory{tools.RuleIn("target_group_id", maps.Keys(tgIDRuleIDMap))}
 	targetCond = append(targetCond, reqTargetCond...)
 	targets, err := svc.getTargetByCond(kt, targetCond)
 	if err != nil {
