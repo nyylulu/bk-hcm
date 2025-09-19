@@ -16,43 +16,52 @@
         <bk-button text theme="primary" @click="handleClearSelection">{{ t('一键清空') }}</bk-button>
       </div>
       <bk-collapse use-block-theme class="rs-expand" v-model="active" accordion>
-        <bk-collapse-panel class="rule-panel" v-for="(item, index) in rsList" :key="item.inst_id" :name="item.inst_id">
+        <bk-collapse-panel
+          class="rule-panel"
+          v-for="(item, index) in rsList"
+          :key="item.inst_id + item.ip"
+          :name="item.inst_id + item.ip"
+        >
           <template #header>
-            <div class="header" :class="{ 'is-selected': isExpand(item.inst_id) }">
+            <div class="header" :class="{ 'is-selected': isExpand(item.inst_id + item.ip) }">
               <bk-checkbox
                 v-if="hasSelection"
                 :checked="checkStatus[index]?.checked"
                 :indeterminate="checkStatus[index]?.indeterminate"
                 class="mr10 checked"
-                @change="(val: boolean, event: any) => handleHeadChange(val, item.inst_id, event)"
+                @change="(val: boolean, event: any) => handleHeadChange(val, item.inst_id + item.ip, event)"
               />
               <div class="arrow">
-                <AngleUpFill v-if="isExpand(item.inst_id)"></AngleUpFill>
+                <AngleUpFill v-if="isExpand(item.inst_id + item.ip)"></AngleUpFill>
                 <RightShape v-else></RightShape>
               </div>
-              <div class="info mr20 ml10">
+              <div class="info mr20 ml10" :title="`${item?.ip} ( ${item?.inst_name ?? '--'} ) `">
                 <a
                   :class="[
                     'ip',
                     {
-                      actived: allActiveIP.has(item.inst_id),
+                      actived: allActiveIP.has(item.inst_id + item.ip),
                     },
                   ]"
-                  @click="() => handleIPClick(item.inst_id)"
+                  @click="() => handleIPClick(item.inst_id + item.ip)"
                 >
-                  {{ item.ip }}
+                  {{ item?.ip ?? '--' }}
                 </a>
                 (
-                <span class="name">{{ t(item?.inst_name ?? '') }}</span>
+                <span class="name">{{ t(item?.inst_name ?? '--') }}</span>
                 )
               </div>
-              <div class="rs-num mr20">{{ t('RS数量：') }} {{ item.targets.length }}</div>
-              <div class="region mr20">{{ t('可用区：') }} {{ regionStore.getZoneName(item.zone, vendor) }}</div>
-              <div class="vpc">{{ t('所属vpc：') }} {{ item.cloud_vpc_ids.join(',') }}</div>
+              <div class="rs-num mr20" :title="item?.targets.length">{{ t('RS数量：') }} {{ item.targets.length }}</div>
+              <div class="region mr20" :title="regionStore.getZoneName(item.zone, vendor)">
+                {{ t('可用区：') }} {{ regionStore.getZoneName(item.zone, vendor) }}
+              </div>
+              <div class="vpc" :title="getVpc(item.cloud_vpc_ids)">
+                {{ t('所属vpc：') }} {{ getVpc(item.cloud_vpc_ids) }}
+              </div>
               <bk-button
                 text
                 class="single-delete-btn"
-                @click.stop="handleSingleDelete(item.inst_id)"
+                @click.stop="handleSingleDelete(item.inst_id + item.ip)"
                 v-if="type !== RsDeviceType.INFO"
               >
                 <i class="hcm-icon bkhcm-icon-minus-circle-shape"></i>
@@ -69,7 +78,7 @@
               show-overflow-tooltip
               ref="tableRef"
               :key="item.id"
-              @selection-change="({ checked }) => handleSelectionChange(item.inst_id, checked)"
+              @selection-change="({ checked }) => handleSelectionChange(item.inst_id + item.ip, checked)"
             >
               <bk-table-column v-if="hasSelection" :width="40" :min-width="40" type="selection" fixed="left" />
               <bk-table-column
@@ -177,7 +186,7 @@ const { t } = useI18n();
 const regionStore = useRegionsStore();
 
 const allActiveIP = new Set();
-const active = ref<string[]>([props.rsList[0]?.inst_id]);
+const active = ref<string[]>([props.rsList[0]?.inst_id + props.rsList[0]?.ip]);
 const count = ref<number>(0);
 const max = ref<number>(5000);
 const tableRef = ref(null);
@@ -218,7 +227,7 @@ const handleIPClick = (id: string) => {
 };
 const handleHeadChange = (val: boolean, id: string, event: any) => {
   if (!event) return;
-  const index = props.rsList.findIndex((item) => item.inst_id === id);
+  const index = props.rsList.findIndex((item) => item.inst_id + item.ip === id);
   const { targetLength, length } = getLength(index);
   const nowCount = count.value;
   const leftLength = targetLength - length;
@@ -231,7 +240,7 @@ const handleSelectionChange = (id: string, isCheck: boolean) => {
   const nowCount = count.value;
   let checked = false;
   let indeterminate = false;
-  const index = props.rsList.findIndex((item) => item.inst_id === id);
+  const index = props.rsList.findIndex((item) => item.inst_id + item.ip === id);
   const { length, targetLength } = getLength(index);
   if (length > 0) {
     checked = true;
@@ -241,8 +250,9 @@ const handleSelectionChange = (id: string, isCheck: boolean) => {
   checkStatus.value[index].indeterminate = indeterminate;
   count.value = isCheck ? nowCount + 1 : Math.max(0, nowCount - 1);
 };
-const handleSelectAll = () => props.rsList.forEach(({ inst_id }) => handleHeadChange(true, inst_id, true));
-const handleClearSelection = () => props.rsList.forEach(({ inst_id }) => handleHeadChange(false, inst_id, true));
+const handleSelectAll = () => props.rsList.forEach(({ inst_id, ip }) => handleHeadChange(true, inst_id + ip, true));
+const handleClearSelection = () =>
+  props.rsList.forEach(({ inst_id, ip }) => handleHeadChange(false, inst_id + ip, true));
 const handleSingleDelete = (id: string) => {
   emit('delete', id);
 };
@@ -253,6 +263,10 @@ const getDisplayCompProps = (column: ModelPropertyColumn, row: any) => {
   }
   return {};
 };
+const getVpc = (ids: string[]) => {
+  if (!ids.length) return '--';
+  return ids.join(',');
+};
 
 watch(
   () => props.rsList,
@@ -261,7 +275,7 @@ watch(
       checked: false,
       indeterminate: false,
     }));
-    active.value = [list[0]?.inst_id];
+    active.value = [list[0]?.inst_id + list[0]?.ip];
     count.value = 0;
   },
   {
@@ -328,7 +342,7 @@ defineExpose({ selections });
       }
     }
     .rs-num {
-      width: 80px;
+      width: 110px;
     }
     .region {
       width: 150px;

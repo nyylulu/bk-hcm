@@ -6,7 +6,7 @@ import { DisplayFieldType, DisplayFieldFactory } from '@/views/load-balancer/chi
 import { ModelPropertyColumn } from '@/model/typings';
 import usePage from '@/hooks/use-page';
 import DataList from '@/views/load-balancer/children/display/data-list.vue';
-import { ILoadBalanceDeviceCondition } from '../typing';
+import { ILoadBalanceDeviceCondition, DeviceTabEnum, IDeviceListDataLoadedEvent } from '../typing';
 import { Share } from 'bkui-vue/lib/icon';
 import routerAction from '@/router/utils/action';
 import { GLOBAL_BIZS_KEY } from '@/common/constant';
@@ -14,7 +14,7 @@ import { MENU_BUSINESS_LOAD_BALANCER_DETAILS } from '@/constants/menu-symbol';
 import qs from 'qs';
 
 const props = defineProps<{ condition: ILoadBalanceDeviceCondition }>();
-const emit = defineEmits(['getList']);
+const emit = defineEmits<IDeviceListDataLoadedEvent>();
 
 const route = useRoute();
 const urlRuleListenerStore = useLoadBalancerUrlRuleStore();
@@ -22,7 +22,7 @@ const urlRuleListenerStore = useLoadBalancerUrlRuleStore();
 const currentGlobalBusinessId = inject<ComputedRef<number>>('currentGlobalBusinessId');
 
 // data-list
-const displayFieldIds = ['ip', 'lbl_protocols', 'lbl_port', 'rule_url', 'rule_domain', 'target_count'];
+const displayFieldIds = ['lb_vips', 'lbl_protocol', 'lbl_port', 'rule_url', 'rule_domain', 'target_count'];
 const displayProperties = DisplayFieldFactory.createModel(DisplayFieldType.URL).getProperties();
 const displayConfig: Record<string, Partial<ModelPropertyColumn>> = {
   lbl_port: {
@@ -82,7 +82,12 @@ const getList = async (condition: ILoadBalanceDeviceCondition, pageParams = { so
     pagination.count = 0;
   } finally {
     loading.value = false;
-    emit('getList');
+    emit('list-data-loaded', DeviceTabEnum.URL, {
+      type: 'urlCount',
+      data: {
+        count: pagination.count,
+      },
+    });
   }
 };
 
@@ -107,7 +112,7 @@ watch(
       v-bkloading="{ loading }"
       :columns="dataListColumns"
       :list="ruleUrlList"
-      :pagination="pagination"
+      :pagination="{ ...pagination, 'limit-list': [10, 20, 50, 100, 500] }"
       :max-height="`100%`"
     ></data-list>
   </div>

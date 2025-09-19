@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ComputedRef, h, inject, onMounted, reactive, ref, watch } from 'vue';
+import { computed, ComputedRef, h, inject, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { ILoadBalancerDetails, useLoadBalancerClbStore } from '@/store/load-balancer/clb';
@@ -24,10 +24,10 @@ import Confirm from '@/components/confirm';
 import DetailsSideslider from '@/views/load-balancer/listener/details.vue';
 import BatchCopy from '@/views/load-balancer/device/main-content/children/batch-copy.vue';
 import { MENU_BUSINESS_TASK_MANAGEMENT_DETAILS } from '@/constants/menu-symbol';
-import { ILoadBalanceDeviceCondition } from '../typing';
+import { ILoadBalanceDeviceCondition, IDeviceListDataLoadedEvent, DeviceTabEnum } from '../typing';
 
 const props = defineProps<{ condition: ILoadBalanceDeviceCondition }>();
-const emit = defineEmits(['getList']);
+const emit = defineEmits<IDeviceListDataLoadedEvent>();
 const details = ref<ILoadBalancerDetails>();
 const route = useRoute();
 const { t } = useI18n();
@@ -134,7 +134,7 @@ const dataListColumns = displayFieldIds.map((id) => {
   return { ...property, ...displayConfig[id] };
 });
 
-const { pagination } = usePage();
+const { pagination, getPageParams } = usePage();
 const listenerList = ref<IListenerItem[]>([]);
 
 const isCurRowSelectEnable = (row: any) => {
@@ -150,11 +150,13 @@ const { selections, handleSelectAll, handleSelectChange } = useTableSelection({
 });
 
 const asyncSetRsWeightStat = async (list: IListenerItem[]) => {
-  const ids = list.map((item) => item.id);
-  const map = await loadBalancerListenerStore.getListenersRsWeightStat(ids, currentGlobalBusinessId.value);
-  listenerList.value.forEach((item) => {
-    const { non_zero_weight_count, zero_weight_count, total_count: totalCount } = map[item.id];
-    Object.assign(item, { non_zero_weight_count, zero_weight_count, rs_num: totalCount });
+  list.forEach((item) => {
+    const { non_zero_weight_target_count, target_count } = item;
+    Object.assign(item, {
+      non_zero_weight_count: non_zero_weight_target_count,
+      zero_weight_count: target_count - non_zero_weight_target_count,
+      rs_num: target_count,
+    });
   });
 };
 
@@ -180,25 +182,27 @@ const handleSingleDelete = (row: any) => {
 const loading = ref(false);
 
 watch(
-  () => props.condition,
-  async (condition) => {
-    // 条件变化了调用列表接口
-    getList(condition);
-  },
-  {
-    deep: true,
+  () => route.query,
+  async (query) => {
+    pagination.current = Number(query.page) || 1;
+    pagination.limit = Number(query.limit) || pagination.limit;
+
+    const sort = (query.sort || '') as string;
+    const order = (query.order || 'DESC') as string;
+
+    getList(props.condition, { sort, order });
   },
 );
 
-onMounted(() => {
-  getList(props.condition);
-});
-
-const getList = async (condition: ILoadBalanceDeviceCondition) => {
+const getList = async (condition: ILoadBalanceDeviceCondition, pageParams = { sort: '', order: 'DESC' }) => {
   if (!condition.account_id) return;
   try {
     loading.value = true;
-    const { list } = await loadBalancerListenerStore.getDeviceListenerList(condition, currentGlobalBusinessId.value);
+    const { list, count } = await loadBalancerListenerStore.getDeviceListenerList(
+      condition,
+      getPageParams(pagination, pageParams),
+      currentGlobalBusinessId.value,
+    );
     list.forEach((item) => {
       Object.entries(convertFieldIds).forEach(([key, oldKey]) => {
         item[oldKey] = item[key];
@@ -208,13 +212,20 @@ const getList = async (condition: ILoadBalanceDeviceCondition) => {
     if (list.length > 0) {
       asyncSetRsWeightStat(list);
     }
+    selections.value = [];
     listenerList.value = list;
+    pagination.count = count;
   } catch (e) {
     listenerList.value = [];
   } finally {
     loading.value = false;
     handleClearSelection();
-    emit('getList');
+    emit('list-data-loaded', DeviceTabEnum.LISTENER, {
+      type: 'listenerCount',
+      data: {
+        count: pagination.count,
+      },
+    });
   }
 };
 // 新增/编辑监听器
@@ -278,10 +289,8 @@ const handleClearSelection = () => {
       v-bkloading="{ loading }"
       :columns="dataListColumns"
       :list="listenerList"
-      :pagination="pagination"
-      :remote-pagination="false"
+      :pagination="{ ...pagination, 'limit-list': [10, 20, 50, 100, 500] }"
       has-selection
-      :across-page="true"
       :max-height="`calc(100% - ${moreData ? '96px' : '48px'})`"
       @select-all="handleSelectAll"
       @selection-change="handleSelectChange"

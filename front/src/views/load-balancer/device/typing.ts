@@ -10,6 +10,7 @@ export interface ICount {
   listenerCount: number;
   urlCount: number;
   rsCount: number;
+  [key: string]: number;
 }
 
 // 条件类型
@@ -29,4 +30,11 @@ export interface ILoadBalanceDeviceCondition {
   target_ips?: string[];
   target_ports?: number[];
   [key: string]: any;
+}
+
+export interface IDeviceListDataLoadedEvent {
+  'list-data-loaded': [
+    from: DeviceTabEnum,
+    payload: { type: 'listenerCount' | 'urlCount' | 'rsIPCount'; data: Record<string, any> },
+  ];
 }

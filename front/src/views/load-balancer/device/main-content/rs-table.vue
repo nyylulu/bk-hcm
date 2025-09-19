@@ -5,7 +5,7 @@ import { IRsItem, useLoadBalancerRsStore } from '@/store/load-balancer/rs';
 import { RsDeviceType } from '@/views/load-balancer/constants';
 import { ActionItemType } from '@/views/load-balancer/typing';
 import usePage from '@/hooks/use-page';
-import { ILoadBalanceDeviceCondition } from '../typing';
+import { ILoadBalanceDeviceCondition, IDeviceListDataLoadedEvent, DeviceTabEnum } from '../typing';
 import routeQuery from '@/router/utils/query';
 import { IAuthSign } from '@/common/auth-service';
 import { useRoute } from 'vue-router';
@@ -15,7 +15,7 @@ import BatchRsOperationDialog from '@/views/load-balancer/device/main-content/ch
 import RsBatchExportButton from '@/views/load-balancer/children/export/rs-batch-button.vue';
 
 const props = defineProps<{ condition: ILoadBalanceDeviceCondition }>();
-const emit = defineEmits(['getList']);
+const emit = defineEmits<IDeviceListDataLoadedEvent>();
 
 const route = useRoute();
 const { t } = useI18n();
@@ -106,7 +106,12 @@ const getList = async (condition: ILoadBalanceDeviceCondition, pageParams = { so
     pagination.count = 0;
   } finally {
     loading.value = false;
-    emit('getList');
+    emit('list-data-loaded', DeviceTabEnum.RS, {
+      type: 'rsIPCount',
+      data: {
+        count: pagination.count,
+      },
+    });
   }
 };
 const handlePageChange = (page: number) => {
@@ -164,6 +169,7 @@ watch(
       size="small"
       :layout="['total', 'limit', 'list']"
       align="right"
+      :limit-list="[10, 20, 50, 100, 500]"
       @change="handlePageChange"
       @limit-change="handleLimitChange"
     />
