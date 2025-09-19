@@ -164,3 +164,51 @@ func (l *logics) GetBkBizMaintainer(kt *kit.Kit, bkBizIDs []int64) (map[int64][]
 
 	return data, nil
 }
+
+// GetBkBizIDsByOpProductName get bk biz ids list by op product name.
+func (l *logics) GetBkBizIDsByOpProductName(kt *kit.Kit, opProductNames []string) (map[string][]int64, error) {
+	data := make(map[string][]int64)
+
+	opProductNames = slice.Unique(opProductNames)
+	if len(opProductNames) == 0 {
+		return data, nil
+	}
+
+	for _, split := range slice.Split(opProductNames, cmdb.BusinessSearchMaxLimit) {
+		rules := []cmdb.Rule{
+			&cmdb.AtomRule{
+				Field:    "bk_product_name",
+				Operator: cmdb.OperatorIn,
+				Value:    split,
+			},
+		}
+		expression := &cmdb.QueryFilter{Rule: &cmdb.CombinedRule{Condition: "AND", Rules: rules}}
+		params := &cmdb.SearchBizParams{
+			BizPropertyFilter: expression,
+			Fields:            []string{"bk_biz_id", "bk_biz_name", "bk_product_id", "bk_product_name"},
+			Page: cmdb.BasePage{
+				Start: 0,
+				Limit: int64(cmdb.BusinessSearchMaxLimit),
+			},
+		}
+
+		for {
+			resp, err := l.cmdbCli.SearchBusiness(kt, params)
+			if err != nil {
+				logs.Errorf("call cmdb search business api failed, err: %v, rid: %s", err, kt.Rid)
+				return nil, fmt.Errorf("call cmdb search business api failed, err: %v", err)
+			}
+
+			for _, biz := range resp.Info {
+				data[biz.BkProductName] = append(data[biz.BkProductName], biz.BizID)
+			}
+
+			if int64(len(resp.Info)) < params.Page.Limit {
+				break
+			}
+			params.Page.Start += params.Page.Limit
+		}
+	}
+
+	return data, nil
+}

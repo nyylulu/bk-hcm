@@ -338,3 +338,32 @@ func (s *service) RepairResPlanDemand(cts *rest.Contexts) (interface{}, error) {
 
 	return nil, nil
 }
+
+// SyncDemandFromCRPOrder 根据CRP订单同步资源预测需求
+func (s *service) SyncDemandFromCRPOrder(cts *rest.Contexts) (interface{}, error) {
+	req := new(ptypes.SyncCRPDemandReq)
+	if err := cts.DecodeInto(req); err != nil {
+		logs.Errorf("failed to sync res plan demand, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		logs.Errorf("failed to validate sync res plan demand parameter, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 权限校验
+	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.ZiYanResPlan, Action: meta.Update}}
+	if err := s.authorizer.AuthorizeWithPerm(cts.Kit, authRes); err != nil {
+		return nil, err
+	}
+
+	err := s.planController.SyncDemandFromCRPOrder(cts.Kit, req.CrpSN, req.PriorBizIDs)
+	if err != nil {
+		logs.Errorf("failed to sync res plan demand from crp order, err: %v, req: %+v, rid: %s", err, *req,
+			cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.Aborted, err)
+	}
+
+	return nil, nil
+}

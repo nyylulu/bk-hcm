@@ -618,6 +618,17 @@ func (c RepairRPDemandReq) Validate() error {
 	return nil
 }
 
+// SyncCRPDemandReq is sync crp demand request.
+type SyncCRPDemandReq struct {
+	CrpSN       string  `json:"crp_sn" validate:"required"`
+	PriorBizIDs []int64 `json:"prior_biz_ids" validate:"omitempty"`
+}
+
+// Validate whether SyncCRPDemandReq is valid.
+func (s SyncCRPDemandReq) Validate() error {
+	return validator.Validate.Struct(s)
+}
+
 // CalcPenaltyBaseReq is request of calc penalty base.
 type CalcPenaltyBaseReq struct {
 	BkBizIDs []int64 `json:"bk_biz_ids" validate:"omitempty,max=100"`
@@ -683,25 +694,28 @@ type DemandResource struct {
 
 // CrpOrderChangeInfo is response of crp order change info.
 type CrpOrderChangeInfo struct {
-	OrderID       string               `json:"order_id"`
-	ExpectTime    string               `json:"expect_time"`
-	ObsProject    enumor.ObsProject    `json:"obs_project"`
-	DemandResType enumor.DemandResType `json:"demand_res_type"`
-	ResMode       enumor.ResModeCode   `json:"res_mode"`
-	PlanType      enumor.PlanTypeCode  `json:"plan_type"`
-	AreaID        string               `json:"area_id"`
-	AreaName      string               `json:"area_name"`
-	RegionID      string               `json:"region_id"`
-	RegionName    string               `json:"region_name"`
-	ZoneID        string               `json:"zone_id"`
-	ZoneName      string               `json:"zone_name"`
-	DeviceFamily  string               `json:"device_family"`
-	DeviceClass   string               `json:"device_class"`
-	DeviceType    string               `json:"device_type"`
-	CoreType      string               `json:"core_type"`
-	DiskType      enumor.DiskType      `json:"disk_type"`
-	DiskTypeName  string               `json:"disk_type_name"`
-	DiskIO        int64                `json:"disk_io"`
+	OrderID         string               `json:"order_id"`
+	VirtualDeptName string               `json:"virtual_dept_name"`
+	PlanProductName string               `json:"plan_product_name"`
+	OpProductName   string               `json:"op_product_name"`
+	ExpectTime      string               `json:"expect_time"`
+	ObsProject      enumor.ObsProject    `json:"obs_project"`
+	DemandResType   enumor.DemandResType `json:"demand_res_type"`
+	ResMode         enumor.ResModeCode   `json:"res_mode"`
+	PlanType        enumor.PlanTypeCode  `json:"plan_type"`
+	AreaID          string               `json:"area_id"`
+	AreaName        string               `json:"area_name"`
+	RegionID        string               `json:"region_id"`
+	RegionName      string               `json:"region_name"`
+	ZoneID          string               `json:"zone_id"`
+	ZoneName        string               `json:"zone_name"`
+	DeviceFamily    string               `json:"device_family"`
+	DeviceClass     string               `json:"device_class"`
+	DeviceType      string               `json:"device_type"`
+	CoreType        string               `json:"core_type"`
+	DiskType        enumor.DiskType      `json:"disk_type"`
+	DiskTypeName    string               `json:"disk_type_name"`
+	DiskIO          int64                `json:"disk_io"`
 
 	ChangeOs       decimal.Decimal `json:"change_os"`
 	ChangeCpuCore  int64           `json:"change_cpu_core"`

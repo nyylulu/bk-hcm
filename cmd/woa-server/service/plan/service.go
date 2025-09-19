@@ -106,6 +106,7 @@ func (s *service) initPlanService(h *rest.Handler) {
 
 	// repair history data
 	h.Add("RepairResPlanDemand", http.MethodPost, "/plans/resources/demands/repair", s.RepairResPlanDemand)
+	h.Add("SyncDemandFromCRPOrder", http.MethodPost, "/plans/demands/sync", s.SyncDemandFromCRPOrder)
 	// penalty
 	h.Add("CalcPenaltyBase", http.MethodPost, "/plans/penalty/base/calc", s.CalcPenaltyBase)
 	h.Add("CalcAndPushPenaltyRatio", http.MethodPost, "/plans/penalty/ratio/push", s.CalcAndPushPenaltyRatio)
