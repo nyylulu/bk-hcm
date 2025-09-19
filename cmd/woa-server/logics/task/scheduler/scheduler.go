@@ -3333,8 +3333,17 @@ func (s *scheduler) ConfirmApplyModify(kt *kit.Kit, param *types.ConfirmApplyMod
 	}
 
 	// 查询主机申请单变更记录
-	modifyRecord, err := s.checkAndGetModifyRecord(kt, param, order)
+	modifyRecord, isExpire, err := s.checkAndGetModifyRecord(kt, param, order)
 	if err != nil {
+		// 该变更单已过期，需要把主机申请单，由“待确认”更新为“备货异常”
+		if isExpire && order.Stage == types.TicketStageConfirming {
+			if expireErr := s.updateApplyOrderStatus(kt, order,
+				types.TicketStageSuspend, types.ApplyStatusTerminate); expireErr != nil {
+				logs.Errorf("failed to update apply order status SUSPEND, subOrderID: %s, err: %v, param: %+v, rid: %s",
+					order.SubOrderId, expireErr, cvt.PtrToVal(param), kt.Rid)
+				return nil, expireErr
+			}
+		}
 		return nil, err
 	}
 
@@ -3419,18 +3428,18 @@ func (s *scheduler) auditApplyModifyCallback(kt *kit.Kit, param *types.ConfirmAp
 }
 
 func (s *scheduler) checkAndGetModifyRecord(kt *kit.Kit, param *types.ConfirmApplyModifyReq, order *types.ApplyOrder) (
-	*table.ModifyRecord, error) {
+	*table.ModifyRecord, bool, error) {
 
 	mrReq := &types.GetApplyModifyReq{ID: []uint64{param.ModifyID}}
 	listModify, err := s.GetApplyModify(kt, mrReq)
 	if err != nil {
 		logs.Errorf("failed to get apply modify record, err: %v, param: %+v, rid: %s", err, cvt.PtrToVal(param), kt.Rid)
-		return nil, err
+		return nil, false, err
 	}
 
 	if len(listModify.Info) != 1 {
-		return nil, fmt.Errorf("cannot confirm apply modify, subOrderID: %s, modifyID: %d, modify record count %d != 1",
-			order.SubOrderId, param.ModifyID, len(listModify.Info))
+		return nil, false, fmt.Errorf("cannot confirm apply modify, subOrderID: %s, modifyID: %d, "+
+			"modify record count %d != 1", order.SubOrderId, param.ModifyID, len(listModify.Info))
 	}
 
 	modifyRecord := listModify.Info[0]
@@ -3439,18 +3448,29 @@ func (s *scheduler) checkAndGetModifyRecord(kt *kit.Kit, param *types.ConfirmApp
 		auditStatusName := enumor.CvmModifyRecordStatusMap[modifyRecord.Status]
 		logs.Errorf("cannot confirm apply modify, subOrderID: %s, modifyID: %d, action: %s, 变更单不能重复操作，"+
 			"当前状态是: %s, rid: %s", order.SubOrderId, param.ModifyID, param.Action, auditStatusName, kt.Rid)
-		return nil, fmt.Errorf("cannot confirm apply modify, subOrderID: %s, modifyID: %d, action: %s, "+
+		return nil, false, fmt.Errorf("cannot confirm apply modify, subOrderID: %s, modifyID: %d, action: %s, "+
 			"变更单不能重复操作，当前状态是: %s", order.SubOrderId, param.ModifyID, param.Action, auditStatusName)
+	}
+
+	// 计算6小时之前的时间
+	sixHoursAgo := time.Now().Add(-6 * time.Hour)
+	// 判断modifyRecord.CreateAt是否早于6小时之前的时间
+	if modifyRecord.CreateAt.Before(sixHoursAgo) {
+		// 如果审批超过6小时，需要自动释放
+		logs.Errorf("cannot confirm apply modify, subOrderID: %s, modifyID: %d, action: %s, 该变更单已超过6小时，"+
+			"已自动释放本次修改, rid: %s", order.SubOrderId, param.ModifyID, param.Action, kt.Rid)
+		return nil, true, fmt.Errorf("cannot confirm apply modify, subOrderID: %s, modifyID: %d, action: %s, "+
+			"该变更单已超过6小时，已自动释放本次修改", order.SubOrderId, param.ModifyID, param.Action)
 	}
 
 	if modifyRecord.Details == nil || modifyRecord.Details.CurData == nil {
 		logs.Errorf("cannot confirm apply modify, subOrderID: %s, modifyID: %d, action: %s, modify record details "+
 			"is nil, rid: %s", order.SubOrderId, param.ModifyID, param.Action, kt.Rid)
-		return nil, fmt.Errorf("cannot confirm apply modify, subOrderID: %s, modifyID: %d, action: %s, modify record "+
+		return nil, false, fmt.Errorf("cannot confirm apply modify, subOrderID: %s, modifyID: %d, action: %s, modify record "+
 			"details is nil", order.SubOrderId, param.ModifyID, param.Action)
 	}
 
-	return modifyRecord, nil
+	return modifyRecord, false, nil
 }
 
 func validateConfirm(kt *kit.Kit, param *types.ConfirmApplyModifyReq, order *types.ApplyOrder) error {
