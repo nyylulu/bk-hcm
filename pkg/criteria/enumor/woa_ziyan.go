@@ -40,6 +40,8 @@ const (
 	ObsProjectMigrate ObsProject = "轻量云徙"
 	// ObsProjectRollServer is obs roll server project.
 	ObsProjectRollServer ObsProject = "滚服项目"
+	// ObsProjectShortLease is obs short lease project.
+	ObsProjectShortLease ObsProject = "短租项目"
 )
 
 // GetObsProjectMembers get ObsProject's members.
@@ -77,6 +79,11 @@ func (o ObsProject) Validate() error {
 
 // ValidateResPlan validate obs project used in resource plan.
 func (o ObsProject) ValidateResPlan() error {
+	// TODO 临时 支持同步短租项目到本地。待后续正式支持短租项目时去除此独立逻辑
+	if o == ObsProjectShortLease {
+		return nil
+	}
+
 	obsProjects := GetObsProjectMembersForResPlan()
 	obsProjectMap := converter.SliceToMap(obsProjects, func(obj ObsProject) (ObsProject, struct{}) {
 		return obj, struct{}{}
@@ -122,8 +129,10 @@ func getSpringObsProjectForResPlan() []ObsProject {
 	// 春保窗口期：12月1日～次年3月25日
 
 	// 因预测的提前性，1月1日～次年3月25日均允许提次年的春保项目预测单
-	prefixYear := strconv.Itoa(nowYear + 1)
-	projects = append(projects, ObsProject(prefixYear+"春节保障"))
+	projects = append(projects, ObsProject(strconv.Itoa(nowYear+1)+"春节保障"))
+
+	// 因预算提前一年追加，需要允许提后年的春保项目预测（在次年底即可使用，提前一年追加预测）
+	projects = append(projects, ObsProject(strconv.Itoa(nowYear+2)+"春节保障"))
 
 	// 3月25日前允许申请当年的春保项目预测单
 	ddl := time.Date(nowYear, time.March, 25, 0, 0, 0, 0, time.Local)

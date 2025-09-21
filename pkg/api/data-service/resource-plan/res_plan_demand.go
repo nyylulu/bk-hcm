@@ -190,8 +190,8 @@ func (r ResPlanDemandLockOpItem) Validate() error {
 
 // ResPlanDemandBatchUpsertReq batch upsert request
 type ResPlanDemandBatchUpsertReq struct {
-	CreateDemands []ResPlanDemandCreateReq `json:"create_demands" validate:"omitempty,max=100"`
-	UpdateDemands []ResPlanDemandUpdateReq `json:"update_demands" validate:"omitempty,max=100"`
+	CreateDemands []ResPlanDemandCreateReq `json:"create_demands" validate:"omitempty"`
+	UpdateDemands []ResPlanDemandUpdateReq `json:"update_demands" validate:"omitempty"`
 }
 
 // Validate validate

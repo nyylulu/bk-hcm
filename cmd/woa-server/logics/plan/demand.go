@@ -727,6 +727,10 @@ func convCreateResPlanDemandReqs(kt *kit.Kit, ticket *TicketInfo, demand *ptypes
 		DiskSize:        &diskSizeChange,
 		DiskIO:          demand.DiskIO,
 	}
+	if createReq.DiskType.Validate() != nil {
+		createReq.DiskType = enumor.DiskPremium
+		createReq.DiskTypeName = createReq.DiskType.Name()
+	}
 	if kt.User == constant.BackendOperationUserKey {
 		createReq.Creator = ticket.Applicant
 	}
