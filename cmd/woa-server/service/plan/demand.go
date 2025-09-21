@@ -358,7 +358,7 @@ func (s *service) SyncDemandFromCRPOrder(cts *rest.Contexts) (interface{}, error
 		return nil, err
 	}
 
-	err := s.planController.SyncDemandFromCRPOrder(cts.Kit, req.CrpSN, req.PriorBizIDs)
+	err := s.planController.SyncDemandFromCRPOrder(cts.Kit, req.CrpSN, req.PriorBizIDs, req.OpProductToBizID)
 	if err != nil {
 		logs.Errorf("failed to sync res plan demand from crp order, err: %v, req: %+v, rid: %s", err, *req,
 			cts.Kit.Rid)

@@ -27,6 +27,8 @@ import (
 	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
+	dmtypes "hcm/pkg/dal/dao/types/meta"
+	wdt "hcm/pkg/dal/table/resource-plan/woa-device-type"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/tools/slice"
@@ -35,7 +37,9 @@ import (
 )
 
 // SyncDemandFromCRPOrder 从crp订单同步预测需求，入参中的priorBizIDs允许当一个运营产品对应多个业务时，优先选择某些业务分配预测
-func (c *Controller) SyncDemandFromCRPOrder(kt *kit.Kit, crpSN string, priorBizIDs []int64) error {
+func (c *Controller) SyncDemandFromCRPOrder(kt *kit.Kit, crpSN string, priorBizIDs []int64,
+	opProdToBizID map[string]int64) error {
+
 	// 1. 根据crpSN查询并汇总crp变更记录
 	changeDemandsOri, err := c.QueryCrpOrderChangeInfo(kt, crpSN)
 	if err != nil {
@@ -57,7 +61,7 @@ func (c *Controller) SyncDemandFromCRPOrder(kt *kit.Kit, crpSN string, priorBizI
 	// 3. 把key相同的预测数据聚合，避免过大的扣减在数据库中不存在
 	// 这里预测没有业务信息，需要挑选运营产品中第一个业务作为预测业务，如果提供了 priorBizIDs，则优先使用该列表中的业务
 	changeDemandsBizMap, err := c.aggregateDemandChangeInfoByProductName(kt, changeDemandsOri, productNameBizIDMap,
-		priorBizIDs)
+		priorBizIDs, opProdToBizID)
 	if err != nil {
 		logs.Errorf("failed to aggregate demand change info, err: %v, crp_sn: %s, rid: %s", err, crpSN,
 			kt.Rid)
@@ -131,8 +135,13 @@ func (c *Controller) mockTicket(kt *kit.Kit, bkBizID int64, crpSN string) (*Tick
 	}, nil
 }
 
-func getBizIDByOpProductName(productName string, bizIDMap map[string][]int64, priorBizIDs []int64) int64 {
-	var bizID int64
+func getBizIDByOpProductName(productName string, bizIDMap map[string][]int64, priorBizIDs []int64,
+	opProdToBizID map[string]int64) int64 {
+
+	bizID, ok := opProdToBizID[productName]
+	if ok {
+		return bizID
+	}
 	if bizList, ok := bizIDMap[productName]; ok {
 		if len(bizList) > 0 {
 			bizID = bizList[0]
@@ -148,20 +157,12 @@ func getBizIDByOpProductName(productName string, bizIDMap map[string][]int64, pr
 }
 
 func (c *Controller) aggregateDemandChangeInfoByProductName(kt *kit.Kit, changeDemands []*ptypes.CrpOrderChangeInfo,
-	bizIDMap map[string][]int64, priorBizIDs []int64) (
+	bizIDMap map[string][]int64, priorBizIDs []int64, opProdToBizID map[string]int64) (
 	map[int64]map[ptypes.ResPlanDemandAggregateKey]*ptypes.CrpOrderChangeInfo, error) {
 
-	// 从 woa_zone 获取城市/地区的中英文对照
-	zoneMap, regionAreaMap, _, err := c.getMetaMaps(kt)
+	zoneNameMap, regionNameMap, deviceTypeMap, err := c.getMetas(kt)
 	if err != nil {
-		logs.Errorf("get meta maps failed, err: %v, rid: %s", err, kt.Rid)
-		return nil, err
-	}
-	zoneNameMap, regionNameMap := getMetaNameMapsFromIDMap(zoneMap, regionAreaMap)
-
-	deviceTypeMap, err := c.GetAllDeviceTypeMap(kt)
-	if err != nil {
-		logs.Errorf("get all device type maps failed, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get meta maps, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -188,7 +189,12 @@ func (c *Controller) aggregateDemandChangeInfoByProductName(kt *kit.Kit, changeD
 			return nil, err
 		}
 
-		bizID := getBizIDByOpProductName(changeDemand.OpProductName, bizIDMap, priorBizIDs)
+		bizID := getBizIDByOpProductName(changeDemand.OpProductName, bizIDMap, priorBizIDs, opProdToBizID)
+		if bizID == 0 {
+			logs.Errorf("failed to get biz id by op product name, op product name: %s, rid: %s",
+				changeDemand.OpProductName, kt.Rid)
+			continue
+		}
 		// 因为CRP的预测和本地的不一定一致，这里需要根据聚合key获取一批通配的预测需求，在范围内调整，只保证通配范围内的总数和CRP对齐
 		aggregateKey, err := changeDemand.GetAggregateKey(bizID, deviceTypeMap, expectTimeRange)
 		if err != nil {
@@ -225,4 +231,24 @@ func (c *Controller) aggregateDemandChangeInfoByProductName(kt *kit.Kit, changeD
 	}
 
 	return changeDemandBizMap, nil
+}
+
+func (c *Controller) getMetas(kt *kit.Kit) (
+	map[string]string, map[string]dmtypes.RegionArea, map[string]wdt.WoaDeviceTypeTable, error) {
+
+	// 从 woa_zone 获取城市/地区的中英文对照
+	zoneMap, regionAreaMap, _, err := c.getMetaMaps(kt)
+	if err != nil {
+		logs.Errorf("get meta maps failed, err: %v, rid: %s", err, kt.Rid)
+		return nil, nil, nil, err
+	}
+	zoneNameMap, regionNameMap := getMetaNameMapsFromIDMap(zoneMap, regionAreaMap)
+
+	deviceTypeMap, err := c.GetAllDeviceTypeMap(kt)
+	if err != nil {
+		logs.Errorf("get all device type maps failed, err: %v, rid: %s", err, kt.Rid)
+		return nil, nil, nil, err
+	}
+
+	return zoneNameMap, regionNameMap, deviceTypeMap, nil
 }

@@ -620,8 +620,9 @@ func (c RepairRPDemandReq) Validate() error {
 
 // SyncCRPDemandReq is sync crp demand request.
 type SyncCRPDemandReq struct {
-	CrpSN       string  `json:"crp_sn" validate:"required"`
-	PriorBizIDs []int64 `json:"prior_biz_ids" validate:"omitempty"`
+	CrpSN            string           `json:"crp_sn" validate:"required"`
+	PriorBizIDs      []int64          `json:"prior_biz_ids" validate:"omitempty"`
+	OpProductToBizID map[string]int64 `json:"op_product_to_biz_id" validate:"omitempty"`
 }
 
 // Validate whether SyncCRPDemandReq is valid.
