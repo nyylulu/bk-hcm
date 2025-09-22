@@ -309,6 +309,8 @@ type TCloudUrlRuleUpdate struct {
 	HealthCheck        *corelb.TCloudHealthCheckInfo `json:"health_check" validate:"omitempty"`
 	Certificate        *corelb.TCloudCertificateInfo `json:"certificate" validate:"omitempty"`
 	Memo               *string                       `json:"memo" validate:"omitempty,lte=255"`
+	BkBizID            int64                         `json:"bk_biz_id" validate:"required"`
+	AccountID          string                        `json:"account_id" validate:"required"`
 }
 
 // Validate ...
