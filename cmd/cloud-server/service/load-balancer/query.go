@@ -330,14 +330,18 @@ func (svc *lbSvc) getTCloudTargetHealth(kit *kit.Kit, tgID string, req *hcproto.
 	if len(lbResp.Details) != len(newCloudLbIDs) {
 		return nil, errors.New("some of given load balancer can not be found")
 	}
-
+	req.Region = ""
 	req.AccountID = tgInfo.AccountID
 	req.CloudLbIDs = newCloudLbIDs
-
-	if len(lbResp.Details) > 0 {
-		req.Region = lbResp.Details[0].Region
+	for _, detail := range lbResp.Details {
+		if req.Region == "" {
+			req.Region = detail.Region
+			continue
+		}
+		if req.Region != detail.Region {
+			return nil, fmt.Errorf("load balancers have different regions: %s,%s", req.Region, detail.Region)
+		}
 	}
-
 	return svc.client.HCService().TCloud.Clb.ListTargetHealth(kit, req)
 }
 
