@@ -20,14 +20,12 @@
 package plan
 
 import (
-	"sync"
-	"time"
+	"fmt"
 
 	"hcm/pkg/api/core"
 	rpproto "hcm/pkg/api/data-service/resource-plan"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
-	"hcm/pkg/dal/dao"
 	"hcm/pkg/dal/dao/tools"
 	wdt "hcm/pkg/dal/table/resource-plan/woa-device-type"
 	"hcm/pkg/kit"
@@ -36,63 +34,18 @@ import (
 	"hcm/pkg/tools/slice"
 )
 
-// DeviceTypesMap cache of device_type, reducing the pressure of MySQL.
-type DeviceTypesMap struct {
-	lock        sync.RWMutex
-	dao         dao.Set
-	DeviceTypes map[string]wdt.WoaDeviceTypeTable
-	TTL         time.Time
-}
-
-// NewDeviceTypesMap ...
-func NewDeviceTypesMap(dao dao.Set) *DeviceTypesMap {
-	return &DeviceTypesMap{
-		dao:         dao,
-		DeviceTypes: make(map[string]wdt.WoaDeviceTypeTable),
-		TTL:         time.Now(),
-	}
-}
-
-func (d *DeviceTypesMap) updateDeviceTypesMap(kt *kit.Kit) error {
-	d.lock.Lock()
-	defer d.lock.Unlock()
-
-	deviceTypeMap, err := d.dao.WoaDeviceType().GetDeviceTypeMap(kt, tools.AllExpression())
-	if err != nil {
-		logs.Errorf("failed to get device type map, err: %v, rid: %s", err, kt.Rid)
-		return err
-	}
-	d.DeviceTypes = deviceTypeMap
-	d.TTL = time.Now().Add(1 * time.Minute)
-	return nil
-}
-
-// GetDeviceTypes get device type map from cache.
-func (d *DeviceTypesMap) GetDeviceTypes(kt *kit.Kit) (map[string]wdt.WoaDeviceTypeTable, error) {
-	d.lock.RLock()
-	res := make(map[string]wdt.WoaDeviceTypeTable)
-	if time.Now().After(d.TTL) {
-		d.lock.RUnlock()
-		err := d.updateDeviceTypesMap(kt)
-		if err != nil {
-			return nil, err
-		}
-		d.lock.RLock()
-	}
-
-	defer d.lock.RUnlock()
-	for k := range d.DeviceTypes {
-		res[k] = d.DeviceTypes[k]
-	}
-	return res, nil
-}
-
 // IsDeviceMatched return whether each device type in deviceTypeSlice can use deviceType's resource plan.
 func (c *Controller) IsDeviceMatched(kt *kit.Kit, deviceTypeSlice []string, deviceType string) ([]bool, error) {
 	// get device type map.
 	deviceTypeMap, err := c.deviceTypesMap.GetDeviceTypes(kt)
 	if err != nil {
 		logs.Errorf("failed to get device type map, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	crpTechnicalClassMap, err := c.listCvmTechnicalClassFromCrp(kt)
+	if err != nil {
+		logs.Errorf("failed to list cvm technical class from crp, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -111,10 +64,9 @@ func (c *Controller) IsDeviceMatched(kt *kit.Kit, deviceTypeSlice []string, devi
 			continue
 		}
 
-		// if device family and core type of ele and device type are equal, then they are matched.
-		if deviceTypeMap[ele].DeviceFamily == deviceTypeMap[deviceType].DeviceFamily &&
+		// if technical_class of ele and core type are equal, then they are matched.
+		if deviceTypeMap[ele].TechnicalClass == crpTechnicalClassMap[deviceType] &&
 			deviceTypeMap[ele].CoreType == deviceTypeMap[deviceType].CoreType {
-
 			result[idx] = true
 		}
 	}
@@ -154,9 +106,22 @@ func (c *Controller) SyncDeviceTypesFromCRP(kt *kit.Kit, deviceTypes []string) e
 		return err
 	}
 
+	// 3. (临时) 从CRP获取技术分类
+	crpTechnicalClassMap, err := c.listCvmTechnicalClassFromCrp(kt)
+	if err != nil {
+		logs.Errorf("failed to list cvm technical class from crp, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+
 	needCreate := make([]wdt.WoaDeviceTypeTable, 0)
 	needUpdate := make([]wdt.WoaDeviceTypeTable, 0)
 	for deviceType, item := range crpDeviceTypeMap {
+		techClass, ok := crpTechnicalClassMap[deviceType]
+		if !ok {
+			return fmt.Errorf("technical class not found for device type: %s", deviceType)
+		}
+		item.TechnicalClass = techClass
+
 		if localItem, ok := localDeviceTypeMap[deviceType]; ok {
 			item.ID = localItem.ID
 			needUpdate = append(needUpdate, item)
@@ -165,7 +130,7 @@ func (c *Controller) SyncDeviceTypesFromCRP(kt *kit.Kit, deviceTypes []string) e
 		needCreate = append(needCreate, item)
 	}
 
-	// 3.本地已存在时更新
+	// 4.本地已存在时更新
 	for _, batch := range slice.Split(needUpdate, constant.BatchOperationMaxLimit) {
 		updateReq := &rpproto.WoaDeviceTypeBatchUpdateReq{
 			DeviceTypes: batch,
@@ -178,7 +143,7 @@ func (c *Controller) SyncDeviceTypesFromCRP(kt *kit.Kit, deviceTypes []string) e
 		}
 	}
 
-	// 4.本地不存在时创建
+	// 5.本地不存在时创建
 	for _, batch := range slice.Split(needCreate, constant.BatchOperationMaxLimit) {
 		createReq := &rpproto.WoaDeviceTypeBatchCreateReq{
 			DeviceTypes: batch,
@@ -235,4 +200,33 @@ func (c *Controller) listCvmInstanceTypeFromCrp(kt *kit.Kit, deviceTypes []strin
 	}
 
 	return deviceTypeMap, nil
+}
+
+// listCvmTechnicalClassFromCrp 从Crp平台获取机型
+func (c *Controller) listCvmTechnicalClassFromCrp(kt *kit.Kit) (map[string]string, error) {
+
+	req := &cvmapi.QueryTechnicalClassReq{
+		ReqMeta: cvmapi.ReqMeta{
+			Id:      cvmapi.CvmId,
+			JsonRpc: cvmapi.CvmJsonRpc,
+			Method:  cvmapi.CvmQueryTechnicalClass,
+		},
+	}
+
+	resp, err := c.crpCli.QueryTechnicalClass(kt.Ctx, kt.Header(), req)
+	if err != nil {
+		logs.Errorf("query cvm technical class failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
+		return nil, err
+	}
+	if resp.Result == nil {
+		logs.Errorf("query cvm device type error, resp: %+v, rid: %s", resp, kt.Rid)
+		return nil, fmt.Errorf("query cvm device type result is nil, rid: %s", kt.Rid)
+	}
+
+	technicalClassMap := make(map[string]string)
+	for _, item := range resp.Result {
+		technicalClassMap[item.CvmInstanceModel] = item.TechnicalClass
+	}
+
+	return technicalClassMap, nil
 }

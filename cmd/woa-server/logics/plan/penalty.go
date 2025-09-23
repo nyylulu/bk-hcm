@@ -289,18 +289,18 @@ func (c *Controller) CreatePenaltyBaseFromTicket(kt *kit.Kit, bkBizIDs []int64, 
 		listTicketRules = append(listTicketRules, tools.RuleIn("bk_biz_id", bkBizIDs))
 	}
 	listTicketFilter := tools.ExpressionAnd(listTicketRules...)
-	allTickets, err := c.listAllResPlanTicket(kt, listTicketFilter)
+	allTickets, err := c.resFetcher.ListAllResPlanTicket(kt, listTicketFilter)
 	if err != nil {
 		logs.Errorf("failed to list all res plan ticket, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 	// 从 woa_zone 获取大区和机型对应关系 metadata
-	zoneMap, regionAreaMap, deviceTypeMap, err := c.getMetaMaps(kt)
+	zoneMap, regionAreaMap, deviceTypeMap, err := c.resFetcher.GetMetaMaps(kt)
 	if err != nil {
 		logs.Errorf("get meta maps failed, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
-	_, regionNameMap := getMetaNameMapsFromIDMap(zoneMap, regionAreaMap)
+	_, regionNameMap := c.resFetcher.GetMetaNameMapsFromIDMap(zoneMap, regionAreaMap)
 	// 从订单中捞取预测内的核心总数，按业务、大区、机型族合并
 	baseCoreMap, bizOrgRelMap, err := c.calcPenaltyBaseCoreByTicket(kt, allTickets, baseTimeRange, regionNameMap,
 		deviceTypeMap)
@@ -402,10 +402,11 @@ func (c *Controller) calcPenaltyBaseCoreByTicket(kt *kit.Kit, tickets []rtypes.R
 			VirtualDeptName: ticket.VirtualDeptName,
 		}
 		bizOrgRelMap[ticket.BkBizID] = bizOrgRel
-		changes, err := c.QueryCrpOrderChangeInfo(kt, ticket.CrpSn)
+		// TODO Controller 调用 dispatcher 下的 QueryCrpOrderChangeInfo 方法不太合适，应再抽象一层
+		changes, err := c.dispatcher.QueryCrpOrderChangeInfo(kt, ticket.CrpSN)
 		if err != nil {
 			logs.Errorf("failed to query crp order change info, err: %v, ticket_id: %s, crp_cn: %s, rid: %s",
-				err, ticket.ID, ticket.CrpSn, kt.Rid)
+				err, ticket.ID, ticket.CrpSN, kt.Rid)
 			return nil, nil, err
 		}
 		for _, change := range changes {
@@ -521,7 +522,7 @@ func (c *Controller) GetBizResPlanAppliedCPUCore(kt *kit.Kit, bkBizIDs []int64, 
 	map[ptypes.DemandPenaltyBaseKey]int64, error) {
 
 	// 从 woa_zone 获取大区和机型对应关系 metadata
-	_, regionAreaMap, deviceTypeMap, err := c.getMetaMaps(kt)
+	_, regionAreaMap, deviceTypeMap, err := c.resFetcher.GetMetaMaps(kt)
 	if err != nil {
 		logs.Errorf("get meta maps failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err

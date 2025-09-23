@@ -141,6 +141,7 @@ type PlanOrderChangeItem struct {
 	ProjectName       enumor.ObsProject `json:"projectName"`
 	CityName          string            `json:"cityName"`
 	ZoneName          string            `json:"zoneName"`
+	TechnicalClass    string            `json:"technicalClass"`
 	InstanceFamily    string            `json:"instanceFamily"`
 	InstanceType      string            `json:"instanceType"`
 	InstanceModel     string            `json:"instanceModel"`
@@ -257,7 +258,7 @@ type CvmCbsPlanQueryItem struct {
 	PlanProductName    string             `json:"planProductName"`
 	ProductId          int                `json:"productId"`
 	ProductName        string             `json:"productName"`
-	ProjectName        string             `json:"projectName"`
+	ProjectName        enumor.ObsProject  `json:"projectName"`
 	OrderId            string             `json:"orderId"`
 	CityId             int                `json:"cityId"`
 	CityName           string             `json:"cityName"`
@@ -295,25 +296,26 @@ type CvmCbsPlanQueryItem struct {
 	ExpiredCoreAmount int64   `json:"expiredCoreAmount"`
 	ExpiredDiskAmount int64   `json:"expiredDiskAmount"`
 	// RealCvmAmount 未过期的未执行数
-	RealCvmAmount         float64 `json:"realCvmAmount"`
-	RealRamAmount         float64 `json:"realRamAmount"`
-	RealCoreAmount        int64   `json:"realCoreAmount"`
-	RealDiskAmount        int64   `json:"realDiskAmount"`
-	MjOrderId             string  `json:"mjOrderId"`
-	RequirementStatus     int     `json:"requirementStatus"`
-	RequirementStatusName string  `json:"requirementStatusName"`
-	RequirementWeekType   string  `json:"requirementWeekType"`
-	IsManualWeekType      int     `json:"isManualWeekType"`
-	IsInProcessing        int     `json:"isInProcessing"`
-	ProcessingOrderId     string  `json:"processingOrderId"`
-	DemandId              string  `json:"demandId"`
-	ResourcePoolType      int     `json:"resourcePoolType"`
-	ResourcePoolName      string  `json:"resourcePoolName"`
-	ResourceMode          string  `json:"resourceMode"`
-	StatisticalClass      string  `json:"statisticalClass"`
-	VagueStatus           int     `json:"vagueStatus"`
-	ReviewStatus          string  `json:"reviewStatus"`
-	GenerationType        string  `json:"generation_type"`
+	RealCvmAmount         float64                    `json:"realCvmAmount"`
+	RealRamAmount         float64                    `json:"realRamAmount"`
+	RealCoreAmount        int64                      `json:"realCoreAmount"`
+	RealDiskAmount        int64                      `json:"realDiskAmount"`
+	MjOrderId             string                     `json:"mjOrderId"`
+	RequirementStatus     int                        `json:"requirementStatus"`
+	RequirementStatusName string                     `json:"requirementStatusName"`
+	RequirementWeekType   string                     `json:"requirementWeekType"`
+	IsManualWeekType      int                        `json:"isManualWeekType"`
+	IsInProcessing        int                        `json:"isInProcessing"`
+	ProcessingOrderId     string                     `json:"processingOrderId"`
+	DemandId              string                     `json:"demandId"`
+	ResourcePoolType      int                        `json:"resourcePoolType"`
+	ResourcePoolName      string                     `json:"resourcePoolName"`
+	ResourceMode          string                     `json:"resourceMode"`
+	StatisticalClass      string                     `json:"statisticalClass"`
+	TechnicalClass        string                     `json:"technicalClass"`
+	VagueStatus           int                        `json:"vagueStatus"`
+	ReviewStatus          enumor.ResPlanReviewStatus `json:"reviewStatus"`
+	GenerationType        string                     `json:"generation_type"`
 }
 
 // Clone return a clone CvmCbsPlanQueryItem.
@@ -436,6 +438,7 @@ type PlanOrderData struct {
 	BaseInfo PlanOrderBaseInfo `json:"baseInfo"`
 }
 
+// PlanOrderStatus cvm and cbs plan order status
 type PlanOrderStatus int
 
 const (
@@ -780,4 +783,26 @@ type CvmApproveLogsRst struct {
 // RevokeCvmOrderResp ...
 type RevokeCvmOrderResp struct {
 	RespMeta `json:",inline"`
+}
+
+// QueryTechnicalClassResp ...
+type QueryTechnicalClassResp struct {
+	RespMeta `json:",inline"`
+	Result   []QueryTechnicalClassRst `json:"result"`
+}
+
+// QueryTechnicalClassRst ...
+type QueryTechnicalClassRst struct {
+	CvmInstanceModel string  `json:"cvmInstanceModel"`
+	CvmInstanceGroup string  `json:"cvmInstanceGroup"`
+	CvmInstanceType  string  `json:"cvmInstanceType"`
+	CpuAmount        int     `json:"cpuAmount"`
+	RamAmount        int     `json:"ramAmount"`
+	DiskBlockNum     int     `json:"diskBlockNum"`
+	DiskBlockSize    int     `json:"diskBlockSize"`
+	GpuType          string  `json:"gpuType"`
+	GpuCard          float64 `json:"gpuCard"`
+	TechnicalClass   string  `json:"technicalClass"`
+	TechnicalUnit    string  `json:"technicalUnit"`
+	TechnicalAmount  float64 `json:"technicalAmount"`
 }

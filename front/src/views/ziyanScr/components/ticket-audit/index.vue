@@ -6,11 +6,11 @@ import { Copy, Share } from 'bkui-vue/lib/icon';
 import CopyToClipboard from '@/components/copy-to-clipboard/index.vue';
 
 interface IProp {
-  title: string;
+  title?: string;
   loading?: boolean;
-  ticketLink: string;
+  ticketLink?: string;
   logs: ITimelineItem[];
-  copyText: string;
+  copyText?: string;
 }
 
 // 审批流信息通用模板
@@ -30,7 +30,9 @@ const { t } = useI18n();
     <div v-else class="ticket-audit-wrapper">
       <div class="header">
         <!-- title -->
-        <div class="title">{{ title }}</div>
+        <slot name="title">
+          <div class="title">{{ title }}</div>
+        </slot>
         <!-- tools slot -->
         <slot name="tools"></slot>
         <!-- copy -->
@@ -40,15 +42,23 @@ const { t } = useI18n();
             {{ copyText }}
           </bk-button>
         </copy-to-clipboard>
+        <slot name="toolkit"></slot>
         <!-- link -->
-        <bk-link class="link-wrap" theme="primary" target="_blank" :disabled="!ticketLink" :href="ticketLink">
+        <bk-link
+          v-if="ticketLink"
+          class="link-wrap"
+          theme="primary"
+          target="_blank"
+          :disabled="!ticketLink"
+          :href="ticketLink"
+        >
           <div class="link-content">
             <span>{{ t('单据详情') }}</span>
             <share width="14" height="14" class="ml6" />
           </div>
         </bk-link>
       </div>
-      <div class="content">
+      <div :class="{ content: logs.length }">
         <bk-timeline :list="logs" />
       </div>
     </div>
@@ -69,6 +79,7 @@ const { t } = useI18n();
 
     .link-wrap {
       margin-left: auto;
+
       .link-content {
         display: flex;
         align-items: center;

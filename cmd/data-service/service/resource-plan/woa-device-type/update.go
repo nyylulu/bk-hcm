@@ -46,13 +46,15 @@ func (svc *service) BatchUpdateWoaDeviceType(cts *rest.Contexts) (interface{}, e
 	_, err := svc.dao.Txn().AutoTxn(cts.Kit, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
 		for _, updateReq := range req.DeviceTypes {
 			record := &wdttable.WoaDeviceTypeTable{
-				ID:           updateReq.ID,
-				DeviceType:   updateReq.DeviceType,
-				DeviceClass:  updateReq.DeviceClass,
-				DeviceFamily: updateReq.DeviceFamily,
-				CoreType:     updateReq.CoreType,
-				CpuCore:      updateReq.CpuCore,
-				Memory:       updateReq.Memory,
+				ID:              updateReq.ID,
+				DeviceType:      updateReq.DeviceType,
+				DeviceClass:     updateReq.DeviceClass,
+				DeviceFamily:    updateReq.DeviceFamily,
+				CoreType:        updateReq.CoreType,
+				CpuCore:         updateReq.CpuCore,
+				Memory:          updateReq.Memory,
+				DeviceTypeClass: updateReq.DeviceTypeClass,
+				TechnicalClass:  updateReq.TechnicalClass,
 			}
 
 			if err := svc.dao.WoaDeviceType().Update(cts.Kit,

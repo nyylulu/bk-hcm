@@ -25,6 +25,8 @@ import (
 	resplandemand "hcm/cmd/data-service/service/resource-plan/res-plan-demand"
 	demandchangelog "hcm/cmd/data-service/service/resource-plan/res-plan-demand-changelog"
 	demandpenaltybase "hcm/cmd/data-service/service/resource-plan/res-plan-demand-penalty-base"
+	resplansubticket "hcm/cmd/data-service/service/resource-plan/res-plan-sub-ticket"
+	transferappliedrecord "hcm/cmd/data-service/service/resource-plan/res-plan-transfer-applied-record"
 	resplanweek "hcm/cmd/data-service/service/resource-plan/res-plan-week"
 )
 
@@ -34,4 +36,6 @@ func InitService(cap *capability.Capability) {
 	demandpenaltybase.InitService(cap)
 	demandchangelog.InitService(cap)
 	resplanweek.InitService(cap)
+	transferappliedrecord.InitService(cap)
+	resplansubticket.InitService(cap)
 }

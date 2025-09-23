@@ -2,7 +2,7 @@
 // table 字段相关信息
 import { useAccountStore } from '@/store';
 import { Info, Spinner, Share } from 'bkui-vue/lib/icon';
-import { Button, Popover, Tag, OverflowTitle } from 'bkui-vue';
+import { Button, Tag, OverflowTitle } from 'bkui-vue';
 import i18n from '@/language/i18n';
 import { type Settings } from 'bkui-vue/lib/table/props';
 import { ref } from 'vue';
@@ -29,7 +29,7 @@ import StatusFailure from '@/assets/image/failed-account.png';
 import { HOST_RUNNING_STATUS, HOST_SHUTDOWN_STATUS } from '../common/table/HostOperations';
 import cssModule from './use-scr-columns.module.scss';
 import { defaults } from 'lodash';
-import { timeFormatter, getValueByKey } from '@/common/util';
+import { timeFormatter } from '@/common/util';
 import { capacityLevel } from '@/utils/scr';
 import { formatDisplayNumber, getResourceTypeName, getReturnPlanName } from '@/utils';
 import {
@@ -2216,34 +2216,6 @@ export default (type: string, isSimpleShow = false) => {
     },
   ];
 
-  // 资源预测 前后变化
-  const resourcePlanChangeingRender = ({
-    cell,
-    column,
-    data,
-  }: {
-    cell: string;
-    column: { field: string };
-    data: Record<string, any>;
-  }) => {
-    const updateId = column.field;
-    const originalId = updateId.replaceAll('updated_info', 'original_info');
-    const originalVal = getValueByKey(data, originalId);
-    const updatedVal = getValueByKey(data, updateId);
-    const isChanging = originalVal !== updatedVal && data.original_info;
-    const content = isChanging ? `修改前: ${originalVal}` : `暂无修改前数据`;
-    return (
-      <Popover content={content}>
-        <div class={cssModule['resource-plan-detail-cell']}>
-          {isChanging && (
-            <Info class={[cssModule['resource-plan-detail-info'], cssModule['resource-plan-detail-text']]} />
-          )}
-          <span class={isChanging && cssModule['resource-plan-detail-text']}>{cell}</span>
-        </div>
-      </Popover>
-    );
-  };
-
   // 资源预测详情
   const adjustmentEntryColums = [
     {
@@ -2421,117 +2393,6 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '备注',
       field: 'remark',
-    },
-  ];
-
-  // 单据资源预测详情
-  const receiptForecastDemandDetailColums = [
-    {
-      label: '机型规格',
-      field: 'updated_info.cvm.device_type',
-      render: resourcePlanChangeingRender,
-      isDefaultShow: true,
-    },
-    {
-      label: '总CPU核数',
-      field: 'updated_info.cvm.cpu_core',
-      render: resourcePlanChangeingRender,
-      isDefaultShow: true,
-    },
-    {
-      label: '总内存(G)',
-      field: 'updated_info.cvm.memory',
-      render: resourcePlanChangeingRender,
-      isDefaultShow: true,
-    },
-    {
-      label: '总云盘大小(G)',
-      field: 'updated_info.cbs.disk_size',
-      render: resourcePlanChangeingRender,
-      isDefaultShow: true,
-    },
-    {
-      label: '预测类型',
-      field: 'demand_class',
-      isDefaultShow: true,
-    },
-    {
-      label: '项目类型',
-      field: 'updated_info.obs_project',
-      render: resourcePlanChangeingRender,
-      isDefaultShow: true,
-    },
-    {
-      label: '地域',
-      field: 'updated_info.area_name',
-      render: resourcePlanChangeingRender,
-      isDefaultShow: true,
-    },
-    {
-      label: '城市',
-      field: 'updated_info.region_name',
-      render: resourcePlanChangeingRender,
-      isDefaultShow: true,
-    },
-    {
-      label: '可用区',
-      field: 'updated_info.zone_name',
-      render: resourcePlanChangeingRender,
-      isDefaultShow: true,
-    },
-    {
-      label: '资源模式',
-      field: 'updated_info.cvm.res_mode',
-      render: resourcePlanChangeingRender,
-      isDefaultShow: true,
-    },
-    {
-      label: '期望到货时间',
-      field: 'updated_info.expect_time',
-      render: resourcePlanChangeingRender,
-      isDefaultShow: true,
-    },
-    {
-      label: '机型族',
-      field: 'updated_info.cvm.device_family',
-      render: resourcePlanChangeingRender,
-    },
-    {
-      label: '机型类型',
-      field: 'updated_info.cvm.device_class',
-      render: resourcePlanChangeingRender,
-    },
-    {
-      label: '资源池',
-      field: 'updated_info.cvm.res_pool',
-      render: resourcePlanChangeingRender,
-    },
-    {
-      label: '核心类型',
-      field: 'updated_info.cvm.core_type',
-      render: resourcePlanChangeingRender,
-    },
-    {
-      label: '实例数',
-      field: 'updated_info.cvm.os',
-      render: resourcePlanChangeingRender,
-    },
-    {
-      label: '单例磁盘IO(MB/s)',
-      field: 'updated_info.cbs.disk_io',
-      render: resourcePlanChangeingRender,
-      isDefaultShow: true,
-    },
-    {
-      label: '云磁盘类型',
-      field: 'updated_info.cbs.disk_type_name',
-      render: resourcePlanChangeingRender,
-      isDefaultShow: true,
-    },
-    {
-      label: '备注',
-      field: 'updated_info.remark',
-      render: resourcePlanChangeingRender,
     },
   ];
 
@@ -3493,7 +3354,6 @@ export default (type: string, isSimpleShow = false) => {
     forecastDemand: forecastDemandColumns,
     adjustmentEntry: adjustmentEntryColums,
     forecastDemandDetail: forecastDemandDetailColums,
-    receiptForecastDemandDetail: receiptForecastDemandDetailColums,
     forecastList: forecastListColums,
     account: accountColums,
     CVMApplication: CAcolumns,

@@ -18,6 +18,7 @@ import dayjs from 'dayjs';
 import Panel from '@/components/panel';
 import { isDateInRange } from '@/utils/plan';
 import CommonDialog from '@/components/common-dialog';
+import { MENU_BUSINESS_TICKET_RESOURCE_PLAN_DETAILS } from '@/constants/menu-symbol';
 
 const { FormItem } = Form;
 
@@ -130,7 +131,7 @@ export default defineComponent({
     };
 
     onBeforeRouteLeave((_to, _from, next) => {
-      if (['BizInvoiceResourceDetail'].includes(_to.name as string)) next();
+      if ([MENU_BUSINESS_TICKET_RESOURCE_PLAN_DETAILS].includes(_to.name as string)) next();
       else
         InfoBox({
           title: '确定离开当前页面?',
@@ -193,7 +194,7 @@ export default defineComponent({
         theme: 'success',
       });
       router.push({
-        path: '/business/applications/resource-plan/detail',
+        name: MENU_BUSINESS_TICKET_RESOURCE_PLAN_DETAILS,
         query: {
           id: data.id,
         },

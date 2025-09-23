@@ -49,7 +49,7 @@ func InitService(c *capability.Capability) {
 
 type service struct {
 	dao            dao.Set
-	planController *plan.Controller
+	planController plan.Logics
 	authorizer     auth.Authorizer
 	bizLogics      biz.Logics
 	client         *client.ClientSet
@@ -84,6 +84,29 @@ func (s *service) initPlanService(h *rest.Handler) {
 		"/plans/resources/tickets/{ticket_id}/approve_itsm_node", s.ApproveResPlanTicketITSMNode)
 	h.Add("ApproveBizResPlanTicketITSMNode", http.MethodPost,
 		"/bizs/{bk_biz_id}/plans/resources/tickets/{ticket_id}/approve_itsm_node", s.ApproveBizResPlanTicketITSMNode)
+	h.Add("RetryResPlanTicket", http.MethodPost,
+		"/plans/resources/tickets/{ticket_id}/retry", s.RetryResPlanTicket)
+	h.Add("RetryBizResPlanTicket", http.MethodPost,
+		"/bizs/{bk_biz_id}/plans/resources/tickets/{ticket_id}/retry", s.RetryBizResPlanTicket)
+
+	// sub_ticket
+	h.Add("ListBizResPlanSubTicket", http.MethodPost, "/bizs/{bk_biz_id}/plans/resources/sub_tickets/list",
+		s.ListBizResPlanSubTicket)
+	h.Add("ListResPlanSubTicket", http.MethodPost, "/plans/resources/sub_tickets/list",
+		s.ListResPlanSubTicket)
+	h.Add("GetResPlanSubTicketDetail", http.MethodGet, "/plans/resources/sub_tickets/{sub_ticket_id}",
+		s.GetResPlanSubTicketDetail)
+	h.Add("GetBizResPlanSubTicketDetail", http.MethodGet,
+		"/bizs/{bk_biz_id}/plans/resources/sub_tickets/{sub_ticket_id}", s.GetBizResPlanSubTicketDetail)
+	h.Add("GetResPlanSubTicketAudit", http.MethodGet, "/plans/resources/sub_tickets/{sub_ticket_id}/audit",
+		s.GetResPlanSubTicketAudit)
+	h.Add("GetBizResPlanSubTicketAudit", http.MethodGet,
+		"/bizs/{bk_biz_id}/plans/resources/sub_tickets/{sub_ticket_id}/audit", s.GetBizResPlanSubTicketAudit)
+	h.Add("ApproveResPlanTicketAdminNode", http.MethodPost,
+		"/plans/resources/sub_tickets/{sub_ticket_id}/approve_admin_node", s.ApproveResPlanSubTicketAdminNode)
+	h.Add("ApproveBizResPlanTicketAdminNode", http.MethodPost,
+		"/bizs/{bk_biz_id}/plans/resources/sub_tickets/{sub_ticket_id}/approve_admin_node",
+		s.ApproveBizResPlanSubTicketAdminNode)
 
 	// demand
 	h.Add("ListResPlanDemand", http.MethodPost, "/plans/resources/demands/list", s.ListResPlanDemand)
@@ -98,6 +121,7 @@ func (s *service) initPlanService(h *rest.Handler) {
 		s.AdjustBizResPlanDemand)
 	h.Add("CancelBizResPlanDemand", http.MethodPost, "/bizs/{bk_biz_id}/plans/resources/demands/cancel",
 		s.CancelBizResPlanDemand)
+	h.Add("BatchUpdateResPlanDemand", http.MethodPatch, "/plans/resources/demands/batch", s.BatchUpdateResPlanDemand)
 
 	// verify
 	h.Add("VerifyResPlanDemandV2", http.MethodPost, "/plans/resources/demands/verify", s.VerifyResPlanDemandV2)
@@ -122,4 +146,17 @@ func (s *service) initPlanService(h *rest.Handler) {
 	h.Add("UpdateDeviceType", http.MethodPatch, "/plans/device_types/batch", s.UpdateDeviceType)
 	h.Add("DeleteDeviceType", http.MethodDelete, "/plans/device_types/batch", s.DeleteDeviceType)
 	h.Add("SyncDeviceType", http.MethodPost, "/plans/device_types/sync", s.SyncDeviceType)
+
+	// resource plan transfer quota
+	h.Add("GetTransferQuotaConfigs", http.MethodGet,
+		"/plans/resources/transfer_quotas/configs", s.GetTransferQuotaConfigs)
+	h.Add("ListResPlanTransferQuotaSummary", http.MethodPost,
+		"/plans/resources/transfer_quotas/summary", s.ListResPlanTransferQuotaSummary)
+	h.Add("ListBizResPlanTransferQuotaSummary", http.MethodPost,
+		"/bizs/{bk_biz_id}/plans/resources/transfer_quotas/summary", s.ListBizResPlanTransferQuotaSummary)
+	// resource plan transfer applied record
+	h.Add("ListResPlanTransferAppliedRecord", http.MethodPost,
+		"/plans/resources/transfer_applied_records/list", s.ListResPlanTransferAppliedRecord)
+	h.Add("ListBizResPlanTransferAppliedRecord", http.MethodPost,
+		"/bizs/{bk_biz_id}/plans/resources/transfer_applied_records/list", s.ListBizResPlanTransferAppliedRecord)
 }

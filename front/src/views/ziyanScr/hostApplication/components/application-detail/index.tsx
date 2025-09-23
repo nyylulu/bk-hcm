@@ -11,7 +11,7 @@ import { useUserStore } from '@/store';
 import { timeFormatter } from '@/common/util';
 import { getBusinessNameById } from '@/views/ziyanScr/host-recycle/field-dictionary';
 import { GLOBAL_BIZS_KEY } from '@/common/constant';
-import { MENU_SERVICE_HOST_APPLICATION } from '@/constants/menu-symbol';
+import { MENU_SERVICE_HOST_APPLICATION, MENU_BUSINESS_TICKET_MANAGEMENT } from '@/constants/menu-symbol';
 import http from '@/http';
 
 import { Button, Table, Message, PopConfirm, OverflowTitle } from 'bkui-vue';
@@ -43,7 +43,7 @@ export default defineComponent({
     const backRoute = computed(() => {
       if (whereAmI.value === Senarios.business) {
         return {
-          name: 'ApplicationsManage',
+          name: MENU_BUSINESS_TICKET_MANAGEMENT,
           query: { [GLOBAL_BIZS_KEY]: detail.value?.bk_biz_id, type: 'host_apply' },
         };
       }

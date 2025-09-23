@@ -24,6 +24,7 @@ import (
 	dataproto "hcm/pkg/api/data-service"
 	rpproto "hcm/pkg/api/data-service/resource-plan"
 	"hcm/pkg/client/common"
+	resplan "hcm/pkg/dal/dao/types/resource-plan"
 	"hcm/pkg/kit"
 	"hcm/pkg/rest"
 )
@@ -182,6 +183,44 @@ func (b *ResourcePlanClient) DeleteResPlanWeek(kt *kit.Kit, req *dataproto.Batch
 		b.client, rest.DELETE, kt, req, "/res_plans/res_plan_weeks/batch")
 }
 
+// --- res plan sub ticket ---
+
+// ListResPlanSubTicket list resource plan sub ticket
+func (b *ResourcePlanClient) ListResPlanSubTicket(kt *kit.Kit, req *rpproto.ResPlanSubTicketListReq) (
+	*rpproto.ResPlanSubTicketListResult, error) {
+
+	return common.Request[rpproto.ResPlanSubTicketListReq, rpproto.ResPlanSubTicketListResult](
+		b.client, rest.POST, kt, req, "/res_plans/res_plan_sub_tickets/list")
+}
+
+// BatchCreateResPlanSubTicket batch create resource plan sub ticket
+func (b *ResourcePlanClient) BatchCreateResPlanSubTicket(kt *kit.Kit, req *rpproto.ResPlanSubTicketBatchCreateReq) (
+	*core.BatchCreateResult, error) {
+
+	return common.Request[rpproto.ResPlanSubTicketBatchCreateReq, core.BatchCreateResult](
+		b.client, rest.POST, kt, req, "/res_plans/res_plan_sub_tickets/batch/create")
+}
+
+// BatchUpdateResPlanSubTicket update resource plan sub ticket
+func (b *ResourcePlanClient) BatchUpdateResPlanSubTicket(kt *kit.Kit,
+	req *rpproto.ResPlanSubTicketBatchUpdateReq) error {
+	return common.RequestNoResp[rpproto.ResPlanSubTicketBatchUpdateReq](
+		b.client, rest.PATCH, kt, req, "/res_plans/res_plan_sub_tickets/batch")
+}
+
+// UpdateResPlanSubTicketStatusCAS update resource plan sub ticket status with CAS
+func (b *ResourcePlanClient) UpdateResPlanSubTicketStatusCAS(kt *kit.Kit,
+	req *rpproto.ResPlanSubTicketStatusUpdateReq) error {
+	return common.RequestNoResp[rpproto.ResPlanSubTicketStatusUpdateReq](
+		b.client, rest.PATCH, kt, req, "/res_plans/res_plan_sub_tickets/status/cas")
+}
+
+// DeleteResPlanSubTicket delete resource plan sub ticket
+func (b *ResourcePlanClient) DeleteResPlanSubTicket(kt *kit.Kit, req *dataproto.BatchDeleteReq) error {
+	return common.RequestNoResp[dataproto.BatchDeleteReq](
+		b.client, rest.DELETE, kt, req, "/res_plans/res_plan_sub_tickets/batch")
+}
+
 // --- woa device type ---
 
 // ListWoaDeviceType list woa device type
@@ -210,4 +249,44 @@ func (b *ResourcePlanClient) BatchUpdateWoaDeviceType(kt *kit.Kit, req *rpproto.
 func (b *ResourcePlanClient) BatchDeleteWoaDeviceType(kt *kit.Kit, req *dataproto.BatchDeleteReq) error {
 	return common.RequestNoResp[dataproto.BatchDeleteReq](
 		b.client, rest.DELETE, kt, req, "/res_plans/woa_device_types/batch")
+}
+
+// --- res plan transfer applied record ---
+
+// ListResPlanTransferAppliedRecord list resource plan transfer applied record
+func (b *ResourcePlanClient) ListResPlanTransferAppliedRecord(kt *kit.Kit, req *rpproto.TransferAppliedRecordListReq) (
+	*rpproto.ResPlanTransferAppliedRecordListResult, error) {
+
+	return common.Request[rpproto.TransferAppliedRecordListReq, rpproto.ResPlanTransferAppliedRecordListResult](
+		b.client, rest.POST, kt, req, "/res_plans/transfer_applied_records/list")
+}
+
+// BatchCreateResPlanTransferAppliedRecord batch create resource plan transfer applied record
+func (b *ResourcePlanClient) BatchCreateResPlanTransferAppliedRecord(kt *kit.Kit,
+	req *rpproto.TransferAppliedRecordBatchCreateReq) (*core.BatchCreateResult, error) {
+
+	return common.Request[rpproto.TransferAppliedRecordBatchCreateReq, core.BatchCreateResult](
+		b.client, rest.POST, kt, req, "/res_plans/transfer_applied_records/batch/create")
+}
+
+// BatchUpdateResPlanTransferAppliedRecord update resource plan transfer applied record
+func (b *ResourcePlanClient) BatchUpdateResPlanTransferAppliedRecord(kt *kit.Kit,
+	req *rpproto.TransferAppliedRecordBatchUpdateReq) error {
+
+	return common.RequestNoResp[rpproto.TransferAppliedRecordBatchUpdateReq](
+		b.client, rest.PATCH, kt, req, "/res_plans/transfer_applied_records/batch")
+}
+
+// DeleteResPlanTransferAppliedRecord delete resource plan transfer applied record
+func (b *ResourcePlanClient) DeleteResPlanTransferAppliedRecord(kt *kit.Kit, req *dataproto.BatchDeleteReq) error {
+	return common.RequestNoResp[dataproto.BatchDeleteReq](
+		b.client, rest.DELETE, kt, req, "/res_plans/transfer_applied_records/batch")
+}
+
+// SumResPlanTransferAppliedRecord sum resource plan transfer applied record
+func (b *ResourcePlanClient) SumResPlanTransferAppliedRecord(kt *kit.Kit, req *rpproto.TransferAppliedRecordListReq) (
+	*resplan.SumTransferAppliedRecord, error) {
+
+	return common.Request[rpproto.TransferAppliedRecordListReq, resplan.SumTransferAppliedRecord](
+		b.client, rest.POST, kt, req, "/res_plans/transfer_applied_records/sum")
 }

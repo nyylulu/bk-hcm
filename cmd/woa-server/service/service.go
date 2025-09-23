@@ -89,7 +89,7 @@ import (
 type Service struct {
 	client         *client.ClientSet
 	dao            dao.Set
-	planController *planctrl.Controller
+	planController planctrl.Logics
 	cmdbCli        cmdb.Client
 	itsmCli        itsm.Client
 	// authorizer 鉴权所需接口集合

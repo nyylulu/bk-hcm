@@ -164,6 +164,7 @@ type PlanOrderChangeReq struct {
 	Params  *PlanOrderChangeParam `json:"params"`
 }
 
+// PlanOrderChangeParam ...
 type PlanOrderChangeParam struct {
 	Page            *Page    `json:"page"`
 	Period          *Period  `json:"period,omitempty"`
@@ -236,6 +237,7 @@ type CvmCbsPlanQueryParam struct {
 	ProjectName     []string `json:"projectName,omitempty"`
 	CityName        []string `json:"cityName,omitempty"`
 	ZoneName        []string `json:"zoneName,omitempty"`
+	TechnicalClass  []string `json:"technicalClass,omitempty"`
 	NotNeedWeekType bool     `json:"notNeedWeekType,omitempty"`
 	UserName        string   `json:"userName,omitempty"`
 }
@@ -620,4 +622,10 @@ type RevokeCvmOrderReq struct {
 // RevokeCvmOrderParams ...
 type RevokeCvmOrderParams struct {
 	OrderId string `json:"order_id"`
+}
+
+// QueryTechnicalClassReq query cvm technical class request
+type QueryTechnicalClassReq struct {
+	ReqMeta `json:",inline"`
+	Params  struct{} `json:"params"`
 }
