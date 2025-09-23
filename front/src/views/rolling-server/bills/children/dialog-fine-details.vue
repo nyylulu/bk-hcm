@@ -17,10 +17,10 @@ import { getColumnName } from '@/model/utils';
 import GridContainer from '@/components/layout/grid-container/grid-container.vue';
 import GridItem from '@/components/layout/grid-container/grid-item.vue';
 import BusinessValue from '@/components/display-value/business-value.vue';
+import { MENU_BUSINESS_TICKET_MANAGEMENT } from '@/constants/menu-symbol';
 
-const props = defineProps<{ dataRow: IRollingServerBillItem }>();
 const model = defineModel<boolean>();
-
+const props = defineProps<{ dataRow: IRollingServerBillItem }>();
 const rollingServerBillsStore = useRollingServerBillsStore();
 const { pagination, pageParams, handlePageChange, handlePageSizeChange, handleSort } = usePage(false);
 
@@ -37,7 +37,7 @@ const columnConfig: Record<string, PropertyColumnConfig> = {
           onClick() {
             const searchQs = useSearchQs();
             routerAction.open({
-              name: 'ApplicationsManage',
+              name: MENU_BUSINESS_TICKET_MANAGEMENT,
               query: {
                 [GLOBAL_BIZS_KEY]: data.bk_biz_id,
                 type: 'host_apply',

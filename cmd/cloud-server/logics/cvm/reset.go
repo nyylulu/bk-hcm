@@ -189,7 +189,7 @@ func (c *cvm) createTaskDetails(kt *kit.Kit, taskID string, param *TaskManageBas
 }
 
 func (c *cvm) buildFlows(kt *kit.Kit, params *TaskManageBaseReq) ([]string, error) {
-	// 按负载均衡ID进行分组
+	// 按云厂商进行分组
 	vendorToDetails := make(map[enumor.Vendor][]*BatchCvmResetTaskDetail)
 	for _, detail := range params.taskDetails {
 		vendorToDetails[detail.Vendor] = append(vendorToDetails[detail.Vendor], detail)

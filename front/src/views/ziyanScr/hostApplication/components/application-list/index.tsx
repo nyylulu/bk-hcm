@@ -213,6 +213,7 @@ export default defineComponent({
               const modifyButton = () => {
                 const isDisabled = isIdcpm || isUpgradeCvm;
                 const tooltipsOption = {
+                  // eslint-disable-next-line no-nested-ternary
                   disabled: isDisabled ? (isIdcpm ? !isIdcpm : !isUpgradeCvm) : true,
                   content: `${resourceTypeName}不支持修改,请联系ICR(IEG资源服务助手)`,
                 };
@@ -621,7 +622,7 @@ export default defineComponent({
     return () => (
       <div class={'apply-list-container scr-application-list'}>
         <div class={'filter-container'} style={{ margin: '0 24px 20px 24px' }}>
-          <GridContainer layout='vertical' column={4} content-min-width={300} gap={[16, 60]}>
+          <GridContainer layout='vertical' column={4} content-min-width={'1fr'} gap={[16, 60]}>
             {searchFields
               // 子单号不单独作为一个搜索框，而是集成到主单号框内
               .filter((field) => field.id !== 'suborder_id')

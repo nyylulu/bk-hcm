@@ -13,10 +13,12 @@ import {
   MENU_BUSINESS_SECURITY_GROUP_MANAGEMENT,
   MENU_BUSINESS_SUBNET_MANAGEMENT,
   MENU_BUSINESS_VPC_MANAGEMENT,
+  MENU_BUSINESS_TICKET_MANAGEMENT,
 } from '@/constants/menu-symbol';
 import { operationLogBiz as operationLogBizRouteConfig } from '@/views/operation-log/route-config';
 import { loadBalancerBiz as loadBalancerBizRouteConfig } from '@/views/load-balancer/route-config';
 import taskRouteConfig from '@/views/task/route-config';
+import { ticketRoutesBiz } from '@/views/ticket/route-config';
 import Meta from '../meta';
 
 const businessMenus: RouteRecordRaw[] = [
@@ -419,33 +421,14 @@ const businessMenus: RouteRecordRaw[] = [
     children: [
       ...operationLogBizRouteConfig,
       ...taskRouteConfig,
+      ...ticketRoutesBiz,
       {
         path: '/business/applications',
         children: [
           {
             path: '',
-            name: 'ApplicationsManage',
-            component: () => import('@/views/business/applications/index'),
+            redirect: '/business/ticket',
             meta: {
-              isShowBreadcrumb: true,
-            },
-          },
-          // 资源管理下 单据管理 tab 资源预测详情
-          {
-            path: '/business/applications/resource-plan/detail',
-            name: 'BizInvoiceResourceDetail',
-            component: () => import('@/views/business/applications/resource-plan/detail'),
-            meta: {
-              activeKey: 'applications',
-              notMenu: true,
-            },
-          },
-          {
-            path: '/business/applications/detail',
-            name: '申请单据详情',
-            component: () => import('@/views/service/apply-detail/index'),
-            meta: {
-              activeKey: 'applications',
               notMenu: true,
             },
           },
@@ -457,7 +440,7 @@ const businessMenus: RouteRecordRaw[] = [
               ...new Meta({
                 activeKey: 'applications',
                 notMenu: true,
-                menu: { relative: 'ApplicationsManage' },
+                menu: { relative: MENU_BUSINESS_TICKET_MANAGEMENT },
               }),
             },
           },
@@ -490,9 +473,9 @@ const businessMenus: RouteRecordRaw[] = [
           },
         ],
         meta: {
-          title: '单据管理',
-          activeKey: 'applications',
-          icon: 'hcm-icon bkhcm-icon-my-apply',
+          ...new Meta({
+            notMenu: true,
+          }),
         },
       },
     ],

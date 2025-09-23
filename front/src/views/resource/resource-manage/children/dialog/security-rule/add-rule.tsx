@@ -5,6 +5,7 @@ import { GLOBAL_BIZS_KEY, VendorEnum } from '@/common/constant';
 import AddRuleTable from '../../components/security/add-rule/AddRuleTable';
 import { useAccountStore } from '@/store';
 import routerAction from '@/router/utils/action';
+import { MENU_BUSINESS_TICKET_DETAILS } from '@/constants/menu-symbol';
 
 export type SecurityRule = {
   name: string;
@@ -115,7 +116,7 @@ export default defineComponent({
     };
     const handleBpaasResultConfirm = () => {
       routerAction.open({
-        path: '/business/applications/detail',
+        name: MENU_BUSINESS_TICKET_DETAILS,
         query: {
           [GLOBAL_BIZS_KEY]: accountStore.bizs,
           type: 'security_group',

@@ -208,7 +208,7 @@ const handleReset = () => {
 
 <template>
   <div class="search">
-    <grid-container layout="vertical" :column="3" :content-min-width="270" :gap="[16, 24]">
+    <grid-container layout="vertical" :column="3" :content-min-width="'1fr'" :gap="[16, 24]">
       <grid-item-form-element label="地域">
         <area-selector
           ref="areaSelector"

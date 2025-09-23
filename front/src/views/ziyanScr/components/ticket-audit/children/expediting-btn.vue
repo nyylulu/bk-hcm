@@ -9,11 +9,11 @@ import CopyToClipboard from '@/components/copy-to-clipboard/index.vue';
 const props = withDefaults(
   defineProps<{
     checkPermission?: boolean; // TODO：临时字段，目前CRP的人不能到HCM审批，不应该引导用户给CRP的人添加权限
-    processors: string[];
-    processorsWithBizAccess: string[];
-    processorsWithoutBizAccess: string[];
-    copyText: string;
-    ticketLink: string;
+    processors?: string[];
+    processorsWithBizAccess?: string[];
+    processorsWithoutBizAccess?: string[];
+    copyText?: string;
+    ticketLink?: string;
     defaultShow?: boolean;
   }>(),
   {
@@ -27,6 +27,7 @@ const props = withDefaults(
     defaultShow: false,
   },
 );
+const emits = defineEmits(['show', 'hidden']);
 
 const { t } = useI18n();
 const { getBizsId } = useWhereAmI();
@@ -36,8 +37,16 @@ const currentBusinessName = getBusinessNames(getBizsId())?.[0];
 const isShow = ref(false);
 const hasNoBizAccess = computed(() => props.processors.length !== props.processorsWithBizAccess.length);
 
+const handleShow = () => {
+  isShow.value = true;
+  emits('show');
+};
+const handleHidden = () => {
+  isShow.value = false;
+  emits('hidden');
+};
 watchEffect(() => {
-  isShow.value = hasNoBizAccess.value || props.defaultShow;
+  isShow.value = props.checkPermission && (hasNoBizAccess.value || props.defaultShow);
 });
 </script>
 
@@ -49,16 +58,18 @@ watchEffect(() => {
     placement="bottom-start"
     :offset="8"
     :allow-html="true"
-    @after-show="isShow = true"
-    @after-hidden="isShow = false"
+    @after-show="handleShow"
+    @after-hidden="handleHidden"
   >
     <template #default>
-      <div class="expediting-btn-wrap" :class="{ active: isShow }">
-        <bk-button theme="primary" text>
-          <i class="hcm-icon bkhcm-icon-notice" style="margin-right: 0; font-size: 16px"></i>
-          {{ t('催单') }}
-        </bk-button>
-      </div>
+      <slot>
+        <div class="expediting-btn-wrap" :class="{ active: isShow }">
+          <bk-button theme="primary" text>
+            <i class="hcm-icon bkhcm-icon-notice" style="margin-right: 0; font-size: 16px"></i>
+            {{ t('催单') }}
+          </bk-button>
+        </div>
+      </slot>
     </template>
     <template #content>
       <div class="expediting-content">

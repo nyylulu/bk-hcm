@@ -92,20 +92,26 @@ POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/tickets/list
         "ticket_type_name": "新增",
         "original_info": {
           "cvm": {
-            "cpu": null,
+            "cpu_core": null,
             "memory": null
-          },
-          "cbs": {
-            "disk_size": null
           }
         },
         "updated_info": {
           "cvm": {
             "cpu_core": 123,
             "memory": 123
-          },
-          "cbs": {
-            "disk_size": 123
+          }
+        },
+        "audited_original_info": {
+          "cvm": {
+            "cpu_core": null,
+            "memory": null
+          }
+        },
+        "audited_updated_info": {
+          "cvm": {
+            "cpu_core": 100,
+            "memory": 100
           }
         },
         "applicant": "zhangsan",
@@ -137,46 +143,40 @@ POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/tickets/list
 
 #### data.details[n]
 
-| 参数名称              | 参数类型   | 描述                                                         |
-|-------------------|--------|------------------------------------------------------------|
-| id                | string | 资源预测需求单据ID                                                 |
-| bk_biz_id         | int    | 业务ID                                                       |
-| bk_biz_name       | string | 业务名称                                                       |
-| op_product_id     | int    | 运营产品ID                                                     |
-| op_product_name   | string | 运营产品名称                                                     |
-| plan_product_id   | int    | 规划产品ID                                                     |
-| plan_product_name | string | 规划产品名称                                                     |
-| demand_class      | string | 预测的需求类型                                                    |
-| status            | string | 单据状态（枚举值：init, auditing, rejected, done, canceled, failed） |
-| status_name       | string | 单据状态名称                                                     |
-| ticket_type       | string | 单据类型（枚举值：add, adjust, cancel）                              |
-| ticket_type_name  | string | 单据类型名称                                                     |
-| original_info     | object | 调整前的需求信息                                                   |
-| updated_info      | object | 调整后的需求信息                                                   |
-| applicant         | string | 提单人                                                        |
-| remark            | string | 备注                                                         |
-| submitted_at      | string | 提单时间，格式为YYYY-MM-DD HH:MM:SS，例如2024-01-01 13:59:30          |
-| completed_at      | string | 完成时间，格式为YYYY-MM-DD HH:MM:SS，例如2024-01-01 13:59:30          |
-| created_at        | string | 创建时间，格式为YYYY-MM-DD HH:MM:SS，例如2024-01-01 13:59:30          |
-| updated_at        | string | 更新时间，格式为YYYY-MM-DD HH:MM:SS，例如2024-01-01 13:59:30          |
+| 参数名称                  | 参数类型   | 描述                                                         |
+|-----------------------|--------|------------------------------------------------------------|
+| id                    | string | 资源预测需求单据ID                                                 |
+| bk_biz_id             | int    | 业务ID                                                       |
+| bk_biz_name           | string | 业务名称                                                       |
+| op_product_id         | int    | 运营产品ID                                                     |
+| op_product_name       | string | 运营产品名称                                                     |
+| plan_product_id       | int    | 规划产品ID                                                     |
+| plan_product_name     | string | 规划产品名称                                                     |
+| demand_class          | string | 预测的需求类型                                                    |
+| status                | string | 单据状态（枚举值：init, auditing, rejected, done, canceled, failed） |
+| status_name           | string | 单据状态名称                                                     |
+| ticket_type           | string | 单据类型（枚举值：add, adjust, cancel）                              |
+| ticket_type_name      | string | 单据类型名称                                                     |
+| original_info         | object | 调整前的需求信息 - 原始报备数                                           |
+| updated_info          | object | 调整后的需求信息 - 原始报备数                                           |
+| audited_original_info | object | 调整前的需求信息 - 已审批数                                            |
+| audited_updated_info  | object | 调整后的需求信息 - 已审批数                                            |
+| applicant             | string | 提单人                                                        |
+| remark                | string | 备注                                                         |
+| submitted_at          | string | 提单时间，格式为YYYY-MM-DD HH:MM:SS，例如2024-01-01 13:59:30          |
+| completed_at          | string | 完成时间，格式为YYYY-MM-DD HH:MM:SS，例如2024-01-01 13:59:30          |
+| created_at            | string | 创建时间，格式为YYYY-MM-DD HH:MM:SS，例如2024-01-01 13:59:30          |
+| updated_at            | string | 更新时间，格式为YYYY-MM-DD HH:MM:SS，例如2024-01-01 13:59:30          |
 
-#### data.details[n].original_info & data.details[n].updated_info
+#### data.details[n].(audited_)original_info & data.details[n].(audited_)updated_info
 
 | 参数名称 | 参数类型   | 描述       |
 |------|--------|----------|
 | cvm  | object | 申请的CVM信息 |
-| cbs  | object | 申请的CBS信息 |
 
-#### data.details[n].original_info.cvm & data.details[n].updated_info.cvm
+#### data.details[n].(audited_)original_info.cvm & data.details[n].(audited_)updated_info.cvm
 
 | 参数名称     | 参数类型 | 描述       |
 |----------|------|----------|
 | cpu_core | int  | CPU核数（核） |
 | memory   | int  | 内存总量（G）  |
-
-#### data.details[n].original_info.cbs & data.details[n].updated_info.cbs
-
-| 参数名称      | 参数类型 | 描述      |
-|-----------|------|---------|
-| disk_size | int  | 云盘总量（G） |
-

@@ -7,6 +7,7 @@ import { RollingServerRecordItem } from '@/store';
 import useSearchQs from '@/hooks/use-search-qs';
 import routerAction from '@/router/utils/action';
 import { GLOBAL_BIZS_KEY } from '@/common/constant';
+import { MENU_BUSINESS_TICKET_MANAGEMENT } from '@/constants/menu-symbol';
 
 const isShow = ref(false);
 const data = ref<RollingServerRecordItem>();
@@ -28,7 +29,7 @@ const columConfig: Record<string, PropertyColumnConfig> = {
           onClick() {
             const searchQs = useSearchQs();
             routerAction.open({
-              name: 'ApplicationsManage',
+              name: MENU_BUSINESS_TICKET_MANAGEMENT,
               query: {
                 [GLOBAL_BIZS_KEY]: data.bk_biz_id,
                 type: 'host_recycle',
@@ -83,10 +84,12 @@ defineExpose({ show });
 <style scoped lang="scss">
 .base-info {
   gap: 90px;
+
   .item {
     display: inline-flex;
     align-items: center;
     line-height: 40px;
+
     .label {
       color: #4d4f56;
     }

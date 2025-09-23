@@ -3,7 +3,7 @@ import { defineStore } from 'pinia';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
 import http from '@/http';
 import { enableCount } from '@/utils/search';
-import { IOverviewListResData, IPageQuery } from '@/typings';
+import { IOverviewListResData, IPageQuery, IListResData } from '@/typings';
 
 export enum ResourcesDemandStatus {
   CAN_APPLY = 'can_apply',
@@ -83,8 +83,21 @@ export interface IListResourcesDemandsParams {
   page: IPageQuery;
 }
 
+export interface IResourcePlanOpProductItem {
+  op_product_id: string;
+  op_product_name: string;
+}
+
+export interface IResourcePlanPlanProductItem {
+  plan_product_id: string;
+  plan_product_name: string;
+}
+
 export const useResourcePlanStore = defineStore('resource-plan', () => {
   const { getBusinessApiPath } = useWhereAmI();
+
+  const opProductList = ref<IResourcePlanOpProductItem[]>();
+  const planProductList = ref<IResourcePlanPlanProductItem[]>();
 
   const demandListLoading = ref(false);
   const getDemandList = async (params: IListResourcesDemandsParams) => {
@@ -107,8 +120,38 @@ export const useResourcePlanStore = defineStore('resource-plan', () => {
     }
   };
 
+  const getOpProductList = async () => {
+    if (opProductList.value) {
+      return opProductList.value;
+    }
+    try {
+      const res: IListResData<IResourcePlanOpProductItem[]> = await http.post('/api/v1/woa/metas/op_products/list');
+      opProductList.value = res.data.details ?? [];
+      return opProductList.value;
+    } catch (error) {
+      console.error(error);
+      return Promise.reject(error);
+    }
+  };
+
+  const getPlanProductList = async () => {
+    if (planProductList.value) {
+      return planProductList.value;
+    }
+    try {
+      const res: IListResData<IResourcePlanPlanProductItem[]> = await http.post('/api/v1/woa/metas/plan_products/list');
+      planProductList.value = res.data.details ?? [];
+      return planProductList.value;
+    } catch (error) {
+      console.error(error);
+      return Promise.reject(error);
+    }
+  };
+
   return {
     demandListLoading,
     getDemandList,
+    getOpProductList,
+    getPlanProductList,
   };
 });

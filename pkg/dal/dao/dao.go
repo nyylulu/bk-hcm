@@ -156,6 +156,7 @@ type Set interface {
 	TCloudZiyanSGRule() securitygroup.TCloudZiyanSGRule
 
 	ResPlanTicket() resplan.ResPlanTicketInterface
+	ResPlanSubTicket() resplan.ResPlanSubTicketInterface
 	ResPlanDemand() resplan.ResPlanDemandInterface
 	ResPlanDemandPenaltyBase() resplan.DemandPenaltyBaseInterface
 	ResPlanDemandChangelog() resplan.DemandChangelogInterface
@@ -165,6 +166,7 @@ type Set interface {
 	ResPlanWeek() resplan.ResPlanWeekInterface
 	WoaZone() resplan.WoaZoneInterface
 	WoaDeviceType() resplan.WoaDeviceTypeInterface
+	ResPlanTransferAppliedRecord() resplan.TransferAppliedRecordInterface
 
 	RecycleModule() module.RecycleModule
 	RecycleHost() host.RecycleHost
@@ -854,6 +856,15 @@ func (s *set) ResPlanTicket() resplan.ResPlanTicketInterface {
 	}
 }
 
+// ResPlanSubTicket resource plan sub ticket dao.
+func (s *set) ResPlanSubTicket() resplan.ResPlanSubTicketInterface {
+	return &resplan.ResPlanSubTicketDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
 // ResPlanDemand resource plan demand dao.
 func (s *set) ResPlanDemand() resplan.ResPlanDemandInterface {
 	return &resplan.ResPlanDemandDao{
@@ -929,6 +940,15 @@ func (s *set) WoaZone() resplan.WoaZoneInterface {
 // WoaDeviceType woa device type dao.
 func (s *set) WoaDeviceType() resplan.WoaDeviceTypeInterface {
 	return &resplan.WoaDeviceTypeDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
+// ResPlanTransferAppliedRecord resource plan transfer record dao.
+func (s *set) ResPlanTransferAppliedRecord() resplan.TransferAppliedRecordInterface {
+	return &resplan.TransferAppliedRecordDao{
 		Orm:   s.orm,
 		IDGen: s.idGen,
 		Audit: s.audit,

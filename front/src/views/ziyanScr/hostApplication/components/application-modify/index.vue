@@ -9,7 +9,7 @@ import { isNil } from 'lodash';
 import { CvmDeviceType, IdcpmDeviceType, SelectionType } from '@/views/ziyanScr/components/devicetype-selector/types';
 import type { IApplyOrderItem } from '@/typings/ziyanScr';
 import type { IDemandVerification } from '@/typings/plan';
-import { MENU_SERVICE_HOST_APPLICATION } from '@/constants/menu-symbol';
+import { MENU_SERVICE_HOST_APPLICATION, MENU_BUSINESS_TICKET_MANAGEMENT } from '@/constants/menu-symbol';
 import { RequirementType } from '@/store/config/requirement';
 
 // TODO: 这些翻译项，后续都要通过display组件进行优化
@@ -230,7 +230,10 @@ const handleSubmit = async () => {
 const handleBack = () => {
   const globalBusinessId = route.query[GLOBAL_BIZS_KEY];
   if (globalBusinessId) {
-    router.replace({ name: 'ApplicationsManage', query: { [GLOBAL_BIZS_KEY]: globalBusinessId, type: 'host_apply' } });
+    router.replace({
+      name: MENU_BUSINESS_TICKET_MANAGEMENT,
+      query: { [GLOBAL_BIZS_KEY]: globalBusinessId, type: 'host_apply' },
+    });
   } else {
     router.replace({ name: MENU_SERVICE_HOST_APPLICATION });
   }

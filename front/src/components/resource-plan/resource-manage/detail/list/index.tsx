@@ -12,6 +12,7 @@ import { GLOBAL_BIZS_KEY } from '@/common/constant';
 
 import { Button } from 'bkui-vue';
 import { Column } from 'bkui-vue/lib/table/props';
+import { MENU_BUSINESS_TICKET_RESOURCE_PLAN_DETAILS } from '@/constants/menu-symbol';
 
 export default defineComponent({
   props: {
@@ -36,7 +37,7 @@ export default defineComponent({
         text
         onClick={() =>
           routerAction.redirect({
-            name: 'BizInvoiceResourceDetail',
+            name: MENU_BUSINESS_TICKET_RESOURCE_PLAN_DETAILS,
             query: { id: cell, [GLOBAL_BIZS_KEY]: props.currentBusinessId },
           })
         }>

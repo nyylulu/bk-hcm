@@ -6,6 +6,7 @@ import { Message } from 'bkui-vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
+import { MENU_BUSINESS_TICKET_DETAILS } from '@/constants/menu-symbol';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 
@@ -178,7 +179,7 @@ export default (cond: Cond) => {
     if (cond.vendor === VendorEnum.HUAWEI) {
       saveData.subnet = {
         name: subnet.name,
-        gateway_ip: `${(subnet.ipv4_cidr.split('.').slice(0, 3)).join('.')}.1`,
+        gateway_ip: `${subnet.ipv4_cidr.split('.').slice(0, 3).join('.')}.1`,
         ipv4_cidr: formData.ipv4_cidr,
         ipv6_enable: subnet.ipv6_enable,
       };
@@ -202,7 +203,7 @@ export default (cond: Cond) => {
       };
     }
 
-    if(whereAmI.value === Senarios.resource) {
+    if (whereAmI.value === Senarios.resource) {
       delete saveData.bk_biz_id;
       delete saveData.bizId;
     }
@@ -228,7 +229,7 @@ export default (cond: Cond) => {
       if (isResourcePage) router.back();
       else {
         router.push({
-          path: '/business/applications/detail',
+          name: MENU_BUSINESS_TICKET_DETAILS,
           query: { id: data.id },
         });
       }

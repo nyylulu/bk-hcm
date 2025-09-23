@@ -784,8 +784,10 @@ type RollingServerReturnNotice struct {
 
 // ResPlan 资源预测相关配置
 type ResPlan struct {
-	ReportPenaltyRatio bool                `yaml:"reportPenaltyRatio"`
-	ExpireNotification ResPlanExpireNotice `yaml:"expireNotification"`
+	ReportPenaltyRatio   bool                 `yaml:"reportPenaltyRatio"`
+	ExpireNotification   ResPlanExpireNotice  `yaml:"expireNotification"`
+	RefreshTransferQuota ResPlanTransferQuota `yaml:"refreshTransferQuota"`
+	AdminAuditor         []string             `yaml:"adminAuditor"`
 }
 
 // ResPlanExpireNotice 资源预测过期通知配置
@@ -793,6 +795,13 @@ type ResPlanExpireNotice struct {
 	Enable           bool     `yaml:"enable"`
 	SendToBusiness   bool     `yaml:"sendToBusiness"`
 	DefaultReceivers []string `yaml:"defaultReceivers"`
+}
+
+// ResPlanTransferQuota 资源预测转移额度配置
+type ResPlanTransferQuota struct {
+	Enable     bool  `yaml:"enable"`
+	Quota      int64 `yaml:"quota"`
+	AuditQuota int64 `yaml:"audit_quota"`
 }
 
 // MOA 太湖/MOA api配置

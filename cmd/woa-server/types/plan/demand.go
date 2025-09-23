@@ -247,6 +247,7 @@ type ListResPlanDemandItem struct {
 	ZoneName         string               `json:"zone_name"`
 	PlanType         enumor.PlanType      `json:"plan_type"`
 	ObsProject       enumor.ObsProject    `json:"obs_project"`
+	TechnicalClass   string               `json:"technical_class"`
 	DeviceFamily     string               `json:"device_family"`
 	CoreType         enumor.CoreType      `json:"core_type"`
 	DiskType         enumor.DiskType      `json:"disk_type"`
@@ -710,6 +711,7 @@ type CrpOrderChangeInfo struct {
 	RegionName      string               `json:"region_name"`
 	ZoneID          string               `json:"zone_id"`
 	ZoneName        string               `json:"zone_name"`
+	TechnicalClass  string               `json:"technical_class"`
 	DeviceFamily    string               `json:"device_family"`
 	DeviceClass     string               `json:"device_class"`
 	DeviceType      string               `json:"device_type"`

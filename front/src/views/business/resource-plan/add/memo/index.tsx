@@ -20,7 +20,7 @@ export default defineComponent({
     const rules = {
       remark: [
         {
-          validator: (value: string) => value.length > 20,
+          validator: (value: string) => value.length >= 20,
           message: t('字数不少于20字'),
           trigger: 'change',
         },

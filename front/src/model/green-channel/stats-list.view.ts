@@ -7,6 +7,7 @@ import routerAction from '@/router/utils/action';
 import useSearchQs from '@/hooks/use-search-qs';
 import type { IStatsItem } from '@/store/green-channel/stats';
 import BusinessValue from '@/components/display-value/business-value.vue';
+import { MENU_BUSINESS_TICKET_MANAGEMENT } from '@/constants/menu-symbol';
 
 @Model('green-channel/stats-list.view')
 export class StatsListView {
@@ -21,7 +22,7 @@ export class StatsListView {
           onClick() {
             const searchQs = useSearchQs();
             routerAction.open({
-              name: 'ApplicationsManage',
+              name: MENU_BUSINESS_TICKET_MANAGEMENT,
               query: {
                 [GLOBAL_BIZS_KEY]: data.bk_biz_id,
                 type: 'host_apply',

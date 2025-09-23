@@ -2,6 +2,7 @@ import { defineComponent } from 'vue';
 import { useI18n } from 'vue-i18n';
 import cssModule from './index.module.scss';
 import { useRouter, useRoute } from 'vue-router';
+import { MENU_SERVICE_TICKET_MANAGEMENT, MENU_BUSINESS_TICKET_MANAGEMENT } from '@/constants/menu-symbol';
 
 export default defineComponent({
   props: {
@@ -20,9 +21,9 @@ export default defineComponent({
     const route = useRoute();
 
     const handleClick = () => {
-      const path = props.isBiz ? '/business/applications' : '/service/my-apply';
+      const name = props.isBiz ? MENU_BUSINESS_TICKET_MANAGEMENT : MENU_SERVICE_TICKET_MANAGEMENT;
       router.push({
-        path,
+        name,
         query: {
           ...route.query,
           type: 'resource_plan',

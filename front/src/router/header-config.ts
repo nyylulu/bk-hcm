@@ -8,25 +8,10 @@ export const headRouteConfig = [
     name: '资源管理',
     path: '/business/host',
   },
-  // {
-  //   id: 'ziyanScr',
-  //   name: '自研云资源',
-  //   path: '/ziyanScr/hostInventory',
-  // },
-  // {
-  //   id: 'resource-plan',
-  //   name: '资源预测',
-  //   path: '/resource-plan/list',
-  // },
   {
     id: 'service',
     name: '服务请求',
-    path: '/service/my-apply',
-  },
-  {
-    id: 'bill',
-    name: '账号管理',
-    path: '/bill/account-manage',
+    path: '/service/ticket',
   },
   {
     id: 'resource',
@@ -39,8 +24,23 @@ export const headRouteConfig = [
     path: '/scheme/recommendation',
   },
   {
+    id: 'bill',
+    name: '账号管理',
+    path: '/bill/account-manage',
+  },
+  {
     id: 'platform',
     name: '平台管理',
     path: '/platform',
   },
+  // {
+  //   id: 'ziyanScr',
+  //   name: '自研云资源',
+  //   path: '/ziyanScr/hostInventory',
+  // },
+  // {
+  //   id: 'resource-plan',
+  //   name: '资源预测',
+  //   path: '/resource-plan/list',
+  // },
 ];

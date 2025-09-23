@@ -1,0 +1,127 @@
+/*
+ * TencentBlueKing is pleased to support the open source community by making
+ * 蓝鲸智云 - 混合云管理平台 (BlueKing - Hybrid Cloud Management System) available.
+ * Copyright (C) 2022 THL A29 Limited,
+ * a Tencent company. All rights reserved.
+ * Licensed under the MIT License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at http://opensource.org/licenses/MIT
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ *
+ * We undertake not to change the open source license (MIT license) applicable
+ *
+ * to the current version of the project delivered to anyone in the future.
+ */
+
+// Package plan ...
+package plan
+
+import (
+	"errors"
+
+	ptypes "hcm/cmd/woa-server/types/plan"
+	cgconf "hcm/pkg/api/core/global-config"
+	datagconf "hcm/pkg/api/data-service/global_config"
+	"hcm/pkg/criteria/constant"
+	"hcm/pkg/criteria/enumor"
+	tablegconf "hcm/pkg/dal/table/global-config"
+	"hcm/pkg/kit"
+	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/cvmapi"
+	cvt "hcm/pkg/tools/converter"
+)
+
+// GetPlanTransferQuotaConfigs 获取预测转移额度配置
+func (c *Controller) GetPlanTransferQuotaConfigs(kt *kit.Kit) (ptypes.TransferQuotaConfig, error) {
+	return c.resFetcher.GetPlanTransferQuotaConfigs(kt)
+}
+
+// ListRemainTransferQuota list remain transfer quota.
+func (c *Controller) ListRemainTransferQuota(kt *kit.Kit, req *ptypes.ListResPlanTransferQuotaSummaryReq) (
+	*ptypes.ResPlanTransferQuotaSummaryResp, error) {
+
+	return c.resFetcher.ListRemainTransferQuota(kt, req)
+}
+
+// UpdatePlanTransferQuotaConfigs 更新预测转移额度配置
+func (c *Controller) UpdatePlanTransferQuotaConfigs(kt *kit.Kit,
+	req *ptypes.UpdatePlanTransferQuotaConfigsReq) error {
+
+	if err := req.Validate(); err != nil {
+		logs.Errorf("failed to validate request, err: %v, req: %+v, rid: %s", err, *req, kt.Rid)
+		return err
+	}
+
+	dbConfigs, err := c.resFetcher.GetConfigsFromData(kt, constant.ResourcePlanTransferKey)
+	if err != nil {
+		logs.Errorf("failed to get resplan transfer configs from db, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+
+	configIDMap := cvt.SliceToMap(dbConfigs, func(t tablegconf.GlobalConfigTable) (string, string) {
+		return t.ConfigKey, t.ID
+	})
+
+	dataReq := &datagconf.BatchUpdateReq{
+		Configs: make([]cgconf.GlobalConfig, 0),
+	}
+
+	if req.Quota != nil {
+		if configID, ok := configIDMap[constant.TransferQuotaKey]; ok {
+			dataReq.Configs = append(dataReq.Configs, cgconf.GlobalConfig{
+				ID:          configID,
+				ConfigValue: req.Quota,
+			})
+		}
+	}
+
+	if req.AuditQuota != nil {
+		if configID, ok := configIDMap[constant.TransferAuditQuotaKey]; ok {
+			dataReq.Configs = append(dataReq.Configs, cgconf.GlobalConfig{
+				ID:          configID,
+				ConfigValue: req.AuditQuota,
+			})
+		}
+	}
+
+	if len(dataReq.Configs) == 0 {
+		return errors.New("no global config to update")
+	}
+
+	if err = c.client.DataService().Global.GlobalConfig.BatchUpdate(kt, dataReq); err != nil {
+		logs.Errorf("failed to update resplan transfer global config, err: %v, req: %+v, rid: %s",
+			err, cvt.PtrToVal(req), kt.Rid)
+		return err
+	}
+
+	return nil
+}
+
+// QueryCrpDemandsQuota 查询crp预测额度
+func (c *Controller) QueryCrpDemandsQuota(kt *kit.Kit, obsProject []enumor.ObsProject, technicalClasses []string) (
+	[]*cvmapi.CvmCbsPlanQueryItem, error) {
+
+	// 转换 ObsProject 类型
+	obsNewProjects := make([]string, len(obsProject))
+	for i, op := range obsProject {
+		obsNewProjects[i] = string(op)
+	}
+
+	demandReq := &QueryIEGDemandsReq{
+		OpProdNames:      []string{cvmapi.TransferOpProductName},
+		ObsProjects:      obsNewProjects,
+		TechnicalClasses: technicalClasses,
+	}
+	demands, err := c.QueryIEGDemands(kt, demandReq)
+	if err != nil {
+		logs.Errorf("failed to query ieg demands from crp, err: %v, demandReq: %+v, rid: %s",
+			err, cvt.PtrToVal(demandReq), kt.Rid)
+		return nil, err
+	}
+
+	return demands, nil
+}

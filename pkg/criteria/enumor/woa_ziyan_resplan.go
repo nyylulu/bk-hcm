@@ -21,6 +21,19 @@ package enumor
 
 import "fmt"
 
+const (
+	// TicketSvcNameResPlan 资源预测在ITSM的服务
+	TicketSvcNameResPlan = "res_plan"
+	// TicketNodeNameCrpAudit 资源预测在ITSM流程中的CRP审批节点
+	TicketNodeNameCrpAudit = "crp_audit"
+	// TicketOperatorNameCrpAudit 资源预测在ITSM流程中的CRP审批节点操作人
+	TicketOperatorNameCrpAudit = "icr"
+	// AuditFlowTimeoutDay 审批流超时时间，单位天
+	AuditFlowTimeoutDay int = 28
+	// PendingTicketTraceDay 带处理的单据历史追溯时间，单位天
+	PendingTicketTraceDay int = 42
+)
+
 // RPTicketType is resource plan ticket type.
 type RPTicketType string
 
@@ -31,12 +44,24 @@ const (
 	RPTicketTypeAdjust RPTicketType = "adjust"
 	// RPTicketTypeDelete is resource plan ticket status delete.
 	RPTicketTypeDelete RPTicketType = "delete"
+	// RPTicketTypeDelay is resource plan ticket status delay. Only used in sub_ticket.
+	// 该类型不返回给前端展示，仅用于内部逻辑，汇总不影响预算，可以直接发起调整的需求
+	RPTicketTypeDelay RPTicketType = "delay"
+	// RPTicketTypeTransfer is resource plan ticket status transfer. Only used in sub_ticket.
+	RPTicketTypeTransfer RPTicketType = "transfer"
+
+	// RPTicketTypeTransferIN is resource plan ticket status transfer in.
+	// Will be modified to RPTicketTypeTransfer in sub_ticket create stage.
+	RPTicketTypeTransferIN RPTicketType = "transfer_in"
+	// RPTicketTypeTransferOUT is resource plan ticket status transfer out.
+	// Will be modified to RPTicketTypeTransfer in sub_ticket create stage.
+	RPTicketTypeTransferOUT RPTicketType = "transfer_out"
 )
 
 // Validate RPTicketType.
 func (t RPTicketType) Validate() error {
 	switch t {
-	case RPTicketTypeAdd, RPTicketTypeAdjust, RPTicketTypeDelete:
+	case RPTicketTypeAdd, RPTicketTypeAdjust, RPTicketTypeDelay, RPTicketTypeDelete, RPTicketTypeTransfer:
 	default:
 		return fmt.Errorf("unsupported resource plan type: %s", t)
 	}
@@ -46,9 +71,11 @@ func (t RPTicketType) Validate() error {
 
 // rdTicketTypeNameMap records RPTicketType's name.
 var rdTicketTypeNameMap = map[RPTicketType]string{
-	RPTicketTypeAdd:    "新增",
-	RPTicketTypeAdjust: "调整",
-	RPTicketTypeDelete: "取消",
+	RPTicketTypeAdd:      "新增",
+	RPTicketTypeAdjust:   "调整",
+	RPTicketTypeDelay:    "延期",
+	RPTicketTypeDelete:   "取消",
+	RPTicketTypeTransfer: "转移",
 }
 
 // Name return RPTicketType's name.
@@ -56,12 +83,28 @@ func (t RPTicketType) Name() string {
 	return rdTicketTypeNameMap[t]
 }
 
-// GetRPTicketTypeMembers get RPTicketType's members.
+// CanMerged returns whether the demand can be merged to a sub ticket.
+func (t RPTicketType) CanMerged() bool {
+	return t == RPTicketTypeAdd || t == RPTicketTypeDelete
+}
+
+// GetRPTicketTypeMembers get RPTicketType's members for root tickets.
 func GetRPTicketTypeMembers() []RPTicketType {
 	return []RPTicketType{
 		RPTicketTypeAdd,
 		RPTicketTypeAdjust,
 		RPTicketTypeDelete,
+	}
+}
+
+// GetPRSubTicketTypeMembers get RPTicketType's members for sub_tickets.
+func GetPRSubTicketTypeMembers() []RPTicketType {
+	return []RPTicketType{
+		RPTicketTypeAdd,
+		RPTicketTypeAdjust,
+		RPTicketTypeDelay,
+		RPTicketTypeDelete,
+		RPTicketTypeTransfer,
 	}
 }
 
@@ -79,6 +122,8 @@ const (
 	RPTicketStatusDone RPTicketStatus = "done"
 	// RPTicketStatusFailed is resource plan ticket status failed.
 	RPTicketStatusFailed RPTicketStatus = "failed"
+	// RPTicketStatusPartialFailed is resource plan ticket status partial_failed.
+	RPTicketStatusPartialFailed RPTicketStatus = "partial_failed"
 	// RPTicketStatusRevoked is resource plan ticket status revoked.
 	RPTicketStatusRevoked RPTicketStatus = "revoked"
 )
@@ -91,6 +136,7 @@ func (s RPTicketStatus) Validate() error {
 	case RPTicketStatusRejected:
 	case RPTicketStatusDone:
 	case RPTicketStatusFailed:
+	case RPTicketStatusPartialFailed:
 	case RPTicketStatusRevoked:
 	default:
 		return fmt.Errorf("unsupported resource plan status: %s", s)
@@ -99,14 +145,26 @@ func (s RPTicketStatus) Validate() error {
 	return nil
 }
 
+// IsUnfinished returns whether the status is unfinished.
+func (s RPTicketStatus) IsUnfinished() bool {
+	switch s {
+	case RPTicketStatusInit:
+	case RPTicketStatusAuditing:
+	default:
+		return false
+	}
+	return true
+}
+
 // rdTicketStatusNameMap records RPTicketStatus's name.
 var rdTicketStatusNameMap = map[RPTicketStatus]string{
-	RPTicketStatusInit:     "待审批",
-	RPTicketStatusAuditing: "审批中",
-	RPTicketStatusRejected: "审批拒绝",
-	RPTicketStatusDone:     "审批通过",
-	RPTicketStatusFailed:   "审批失败",
-	RPTicketStatusRevoked:  "已撤销",
+	RPTicketStatusInit:          "待审批",
+	RPTicketStatusAuditing:      "审批中",
+	RPTicketStatusRejected:      "审批拒绝",
+	RPTicketStatusDone:          "成功",
+	RPTicketStatusFailed:        "失败",
+	RPTicketStatusPartialFailed: "部分失败",
+	RPTicketStatusRevoked:       "已撤销",
 }
 
 // Name return RPTicketStatus's name.
@@ -122,8 +180,152 @@ func GetRPTicketStatusMembers() []RPTicketStatus {
 		RPTicketStatusRejected,
 		RPTicketStatusDone,
 		RPTicketStatusFailed,
+		RPTicketStatusPartialFailed,
 		RPTicketStatusRevoked,
 	}
+}
+
+// RPSubTicketStatus is resource plan sub_ticket status.
+type RPSubTicketStatus string
+
+const (
+	// RPSubTicketStatusInit is resource plan sub_ticket status init.
+	RPSubTicketStatusInit RPSubTicketStatus = "init"
+	// RPSubTicketStatusWaiting is resource plan sub_ticket status waiting.
+	RPSubTicketStatusWaiting RPSubTicketStatus = "waiting"
+	// RPSubTicketStatusAuditing is resource plan sub_ticket status auditing.
+	RPSubTicketStatusAuditing RPSubTicketStatus = "auditing"
+	// RPSubTicketStatusRejected is resource plan sub_ticket status rejected.
+	RPSubTicketStatusRejected RPSubTicketStatus = "rejected"
+	// RPSubTicketStatusDone is resource plan sub_ticket status done.
+	RPSubTicketStatusDone RPSubTicketStatus = "done"
+	// RPSubTicketStatusFailed is resource plan sub_ticket status failed.
+	RPSubTicketStatusFailed RPSubTicketStatus = "failed"
+	// RPSubTicketStatusInvalid is resource plan sub_ticket status invalid.
+	RPSubTicketStatusInvalid RPSubTicketStatus = "invalid"
+)
+
+// Validate RPSubTicketStatus.
+func (s RPSubTicketStatus) Validate() error {
+	switch s {
+	case RPSubTicketStatusInit:
+	case RPSubTicketStatusWaiting:
+	case RPSubTicketStatusAuditing:
+	case RPSubTicketStatusRejected:
+	case RPSubTicketStatusDone:
+	case RPSubTicketStatusFailed:
+	case RPSubTicketStatusInvalid:
+	default:
+		return fmt.Errorf("unsupported resource plan sub_ticket status: %s", s)
+	}
+
+	return nil
+}
+
+// IsUnfinished return true if RPSubTicketStatus is unfinished.
+func (s RPSubTicketStatus) IsUnfinished() bool {
+	switch s {
+	case RPSubTicketStatusInit:
+	case RPSubTicketStatusWaiting:
+	case RPSubTicketStatusAuditing:
+	default:
+		return false
+	}
+	return true
+}
+
+// rpSubTicketStatusNameMap records RPSubTicketStatus's name.
+var rpSubTicketStatusNameMap = map[RPSubTicketStatus]string{
+	RPSubTicketStatusInit:     "待审批",
+	RPSubTicketStatusWaiting:  "等待中",
+	RPSubTicketStatusAuditing: "审批中",
+	RPSubTicketStatusRejected: "审批拒绝",
+	RPSubTicketStatusDone:     "成功",
+	RPSubTicketStatusFailed:   "失败",
+	RPSubTicketStatusInvalid:  "已失效",
+}
+
+// Name return RPTicketStatus's name.
+func (s RPSubTicketStatus) Name() string {
+	return rpSubTicketStatusNameMap[s]
+}
+
+// GetRPSubTicketStatusMembers get RPSubTicketStatus's members.
+func GetRPSubTicketStatusMembers() []RPSubTicketStatus {
+	return []RPSubTicketStatus{
+		RPSubTicketStatusInit,
+		// RPSubTicketStatusWaiting 仅用于内部状态流转，不对外暴露
+		RPSubTicketStatusAuditing,
+		RPSubTicketStatusRejected,
+		RPSubTicketStatusDone,
+		RPSubTicketStatusFailed,
+		RPSubTicketStatusInvalid,
+	}
+}
+
+// RPSubTicketStage is resource plan sub_ticket stage.
+type RPSubTicketStage string
+
+const (
+	// RPSubTicketStageInit is resource plan sub_ticket stage init.
+	RPSubTicketStageInit RPSubTicketStage = "init"
+	// RPSubTicketStageAdminAudit is resource plan sub_ticket stage admin audit.
+	RPSubTicketStageAdminAudit RPSubTicketStage = "admin_audit"
+	// RPSubTicketStageCRPAudit is resource plan sub_ticket stage crp audit.
+	RPSubTicketStageCRPAudit RPSubTicketStage = "crp_audit"
+)
+
+// Validate RPSubTicketStage.
+func (s RPSubTicketStage) Validate() error {
+	switch s {
+	case RPSubTicketStageInit:
+	case RPSubTicketStageAdminAudit:
+	case RPSubTicketStageCRPAudit:
+	default:
+		return fmt.Errorf("unsupported resource plan sub_ticket stage: %s", s)
+	}
+
+	return nil
+}
+
+// RPAdminAuditStatus is resource plan admin audit status.
+type RPAdminAuditStatus string
+
+const (
+	// RPAdminAuditStatusAuditing is resource plan admin audit status auditing.
+	RPAdminAuditStatusAuditing RPAdminAuditStatus = "auditing"
+	// RPAdminAuditStatusRejected is resource plan admin audit status rejected.
+	RPAdminAuditStatusRejected RPAdminAuditStatus = "rejected"
+	// RPAdminAuditStatusDone is resource plan admin audit status done.
+	RPAdminAuditStatusDone RPAdminAuditStatus = "done"
+	// RPAdminAuditStatusSkip is resource plan admin audit status skip.
+	RPAdminAuditStatusSkip RPAdminAuditStatus = "skip"
+)
+
+// Validate RPSubTicketStage.
+func (s RPAdminAuditStatus) Validate() error {
+	switch s {
+	case RPAdminAuditStatusAuditing:
+	case RPAdminAuditStatusRejected:
+	case RPAdminAuditStatusDone:
+	case RPAdminAuditStatusSkip:
+	default:
+		return fmt.Errorf("unsupported resource plan admin audit status: %s", s)
+	}
+
+	return nil
+}
+
+// IsFinished return true if RPAdminAuditStatus is finished.
+func (s RPAdminAuditStatus) IsFinished() bool {
+	switch s {
+	case RPAdminAuditStatusSkip:
+	case RPAdminAuditStatusRejected:
+	case RPAdminAuditStatusDone:
+	default:
+		return false
+	}
+	return true
 }
 
 // DemandClass is resource plan demand class.
@@ -347,6 +549,8 @@ const (
 	CrpAdjustTypeDelay CrpAdjustType = "加急延期"
 	// CrpAdjustTypeCancel is crp adjust type cancel.
 	CrpAdjustTypeCancel CrpAdjustType = "需求取消"
+	// CrpAdjustTypeTransfer is crp adjust type transfer.
+	CrpAdjustTypeTransfer CrpAdjustType = "转移"
 )
 
 // DemandStatus is resource plan demand status.
@@ -683,4 +887,25 @@ func GetCRPDiskTypeFromCRPName(name string) (CRPDiskType, error) {
 	}
 
 	return 0, fmt.Errorf("unsupported crp disk type name: %s", name)
+}
+
+// ResPlanReviewStatus is res plan review status.
+type ResPlanReviewStatus string
+
+const (
+	// ResPlanReviewStatusPass 已评审
+	ResPlanReviewStatusPass ResPlanReviewStatus = "已评审"
+	// ResPlanReviewStatusPending 待评审
+	ResPlanReviewStatusPending ResPlanReviewStatus = "待评审"
+)
+
+// Validate ResPlanReviewStatus.
+func (r ResPlanReviewStatus) Validate() error {
+	switch r {
+	case ResPlanReviewStatusPass:
+	case ResPlanReviewStatusPending:
+	default:
+		return fmt.Errorf("unsupported res plan review status: %s", r)
+	}
+	return nil
 }
