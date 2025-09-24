@@ -67,6 +67,8 @@ const (
 	GlobalConfigTypeRegionDefaultSecGroup = "region_default_security_group"
 	// DefaultTechnicalClass 预测转移额度-默认的技术类型
 	DefaultTechnicalClass = "DEFAULT"
+	// GlobalConfigTypeCvmResetBizIDList 主机重装的业务白名单
+	GlobalConfigTypeCvmResetBizIDList = "cvm_reset_biz_id_list"
 )
 
 const (

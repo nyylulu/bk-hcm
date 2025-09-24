@@ -25,20 +25,25 @@ import (
 	"encoding/hex"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	lgccvm "hcm/cmd/cloud-server/logics/cvm"
 	cscvm "hcm/pkg/api/cloud-server/cvm"
+	"hcm/pkg/api/core"
+	corecvm "hcm/pkg/api/core/cloud/cvm"
 	protoaudit "hcm/pkg/api/data-service/audit"
 	dataproto "hcm/pkg/api/data-service/cloud"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
+	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
+	"hcm/pkg/runtime/filter"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/hooks/handler"
 	"hcm/pkg/tools/slice"
@@ -250,4 +255,121 @@ func (svc *cvmSvc) BatchSopsAsyncResetBizCvm(cts *rest.Contexts) (interface{}, e
 	}
 
 	return svc.batchResetAsyncCvm(cts, bizID, handler.BizOperateAuth, req, false)
+}
+
+// BatchUnVerifyAsyncResetBizCvm batch reset biz cvm for unverify.
+func (svc *cvmSvc) BatchUnVerifyAsyncResetBizCvm(cts *rest.Contexts) (interface{}, error) {
+	bizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+
+	req := new(cscvm.BatchUnVerifyResetCvmReq)
+	if err = cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err = req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 验证业务是否在配置名单中
+	if err = svc.checkInCvmResetBizList(cts.Kit, bizID); err != nil {
+		return nil, err
+	}
+
+	// 查询业务下的主机列表
+	cvmList, hostIPMap, err := svc.listBizCvmByIPs(cts.Kit, bizID, req.Hosts)
+	if err != nil {
+		return nil, err
+	}
+
+	// 查出来的主机列表跟传入的主机数量不一致
+	if len(cvmList) != len(req.Hosts) {
+		return nil, errf.NewFromErr(errf.InvalidParameter, fmt.Errorf("host query count not match"))
+	}
+
+	resetReq := &cscvm.BatchResetCvmReq{
+		Hosts:      make([]cscvm.BatchCvmHostItem, 0, len(req.Hosts)),
+		Pwd:        req.Pwd,
+		PwdConfirm: req.PwdConfirm,
+	}
+	for _, item := range cvmList {
+		if len(item.PrivateIPv4Addresses) < 1 {
+			continue
+		}
+		hostInfo, exists := hostIPMap[item.PrivateIPv4Addresses[0]]
+		if !exists {
+			return nil, errf.NewFromErr(errf.RecordNotFound,
+				fmt.Errorf("host not found for ip: %s", item.PrivateIPv4Addresses[0]))
+		}
+		resetReq.Hosts = append(resetReq.Hosts, cscvm.BatchCvmHostItem{
+			ID:           item.ID,
+			DeviceType:   item.MachineType,
+			ImageNameOld: item.OsName,
+			CloudImageID: hostInfo.CloudImageID,
+			ImageName:    hostInfo.ImageName,
+		})
+	}
+	return svc.batchResetAsyncCvm(cts, bizID, handler.BizOperateAuth, resetReq, false)
+}
+
+func (svc *cvmSvc) checkInCvmResetBizList(kt *kit.Kit, bizID int64) error {
+	listReq := &core.ListReq{
+		Filter: tools.ExpressionAnd(
+			tools.RuleEqual("config_type", constant.GlobalConfigTypeCvmResetBizIDList),
+			tools.RuleJSONContains("config_value.biz_ids", strconv.FormatInt(bizID, 10)),
+		),
+		Page: core.NewCountPage(),
+	}
+	list, err := svc.client.DataService().Global.GlobalConfig.List(kt, listReq)
+	if err != nil {
+		logs.Errorf("failed to get cvm reset biz list config, err: %v, bizID: %d, rid: %s", err, bizID, kt.Rid)
+		return err
+	}
+	if list.Count == 0 {
+		logs.Errorf("biz not in cvm reset biz id list, bizID: %d, rid: %s", bizID, kt.Rid)
+		return errf.NewFromErr(errf.RecordNotFound, fmt.Errorf("biz not in cvm reset biz id list"))
+	}
+	return nil
+}
+
+func (svc *cvmSvc) listBizCvmByIPs(kt *kit.Kit, bizID int64, hosts []cscvm.BatchUnVerifyCvmHostItem) (
+	[]corecvm.BaseCvm, map[string]cscvm.BatchUnVerifyCvmHostItem, error) {
+
+	if len(hosts) == 0 {
+		return nil, nil, fmt.Errorf("hosts is empty")
+	}
+
+	result := make([]corecvm.BaseCvm, 0, len(hosts))
+	hostIPMap := make(map[string]cscvm.BatchUnVerifyCvmHostItem)
+	for _, parts := range slice.Split(hosts, int(core.DefaultMaxPageLimit)) {
+		ips := make([]string, 0, len(parts))
+		lineRules := make([]*filter.AtomRule, 0)
+		for _, host := range parts {
+			trimIP := strings.TrimSpace(host.IP)
+			ips = append(ips, trimIP)
+			hostIPMap[trimIP] = host
+		}
+
+		lineRules = append(lineRules, tools.RuleEqual("bk_biz_id", bizID))
+		if len(ips) > 0 {
+			lineRules = append(lineRules, tools.RuleJsonOverlaps("private_ipv4_addresses", ips))
+		}
+		listReq := &core.ListReq{
+			Filter: tools.ExpressionAnd(lineRules...),
+			Page:   core.NewDefaultBasePage(),
+		}
+		cvm, err := svc.client.DataService().Global.Cvm.ListCvm(kt, listReq)
+		if err != nil {
+			logs.Errorf("list cvm failed, err: %v, bizID: %d, parts: %+v, rid: %s", err, bizID, parts, kt.Rid)
+			return nil, nil, err
+		}
+		if len(cvm.Details) == 0 {
+			return nil, nil, fmt.Errorf("no list cvm found, bizID: %d, parts: %+v", bizID, parts)
+		}
+		result = append(result, cvm.Details...)
+	}
+
+	return result, hostIPMap, nil
 }

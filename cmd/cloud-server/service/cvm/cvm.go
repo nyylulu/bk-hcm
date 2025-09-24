@@ -97,6 +97,8 @@ func InitCvmService(c *capability.Capability) {
 		svc.BatchResetAsyncBizCvm)
 	h.Add("BatchSopsAsyncResetBizCvm", http.MethodPost, "/bizs/{bk_biz_id}/cvms/sops/batch/reset_async",
 		svc.BatchSopsAsyncResetBizCvm)
+	h.Add("BatchUnVerifyAsyncResetBizCvm", http.MethodPost, "/bizs/{bk_biz_id}/cvms/unverify/batch/reset_async",
+		svc.BatchUnVerifyAsyncResetBizCvm)
 
 	h.Add("ListBizCvmOperateStatus", http.MethodPost, "/bizs/{bk_biz_id}/cvms/list/operate/status",
 		svc.ListBizCvmOperateStatus)

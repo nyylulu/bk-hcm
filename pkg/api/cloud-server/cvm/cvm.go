@@ -22,6 +22,7 @@ package cscvm
 import (
 	"errors"
 	"fmt"
+	"regexp"
 
 	"hcm/pkg/api/core"
 	rr "hcm/pkg/api/core/recycle-record"
@@ -365,5 +366,57 @@ type BatchAssociateSecurityGroupsReq struct {
 
 // Validate ...
 func (req BatchAssociateSecurityGroupsReq) Validate() error {
+	return validator.Validate.Struct(req)
+}
+
+// BatchUnVerifyResetCvmReq batch unverify reset cvm req.
+type BatchUnVerifyResetCvmReq struct {
+	Hosts      []BatchUnVerifyCvmHostItem `json:"hosts" validate:"required,min=1,max=500"`
+	Pwd        string                     `json:"pwd" validate:"required,min=12,max=20"`
+	PwdConfirm string                     `json:"pwd_confirm" validate:"required,min=12,max=20"`
+}
+
+// Validate batch unverify reset cvm request.
+func (req *BatchUnVerifyResetCvmReq) Validate() error {
+	for _, host := range req.Hosts {
+		if err := host.Validate(); err != nil {
+			return err
+		}
+	}
+	// 校验密码长度和字符范围
+	if matched, err := regexp.MatchString(`^[A-Za-z\d@#+_\-\[\]{}]{12,20}$`, req.Pwd); err != nil || !matched {
+		return errors.New("密码必须包含至少一个小写字母、一个大写字母、一个数字、一个特殊字符(@#+_-[]{}),且长度在12到20之间")
+	}
+	// 校验小写字母
+	if matched, err := regexp.MatchString(`[a-z]`, req.Pwd); err != nil || !matched {
+		return errors.New("密码必须包含至少一个小写字母")
+	}
+	// 校验大写字母
+	if matched, err := regexp.MatchString(`[A-Z]`, req.Pwd); err != nil || !matched {
+		return errors.New("密码必须包含至少一个大写字母")
+	}
+	// 校验数字
+	if matched, err := regexp.MatchString(`\d`, req.Pwd); err != nil || !matched {
+		return errors.New("密码必须包含至少一个数字")
+	}
+	// 校验特殊字符
+	if matched, err := regexp.MatchString(`[@#+_\-\[\]{}]`, req.Pwd); err != nil || !matched {
+		return errors.New("密码必须包含至少一个特殊字符(@#+_-[]{})")
+	}
+	if req.Pwd != req.PwdConfirm {
+		return errf.Newf(errf.InvalidParameter, "pwd and pwd_confirm require the same value")
+	}
+	return validator.Validate.Struct(req)
+}
+
+// BatchUnVerifyCvmHostItem batch unverify cvm host item.
+type BatchUnVerifyCvmHostItem struct {
+	IP           string `json:"ip" validate:"required"`
+	CloudImageID string `json:"cloud_image_id" validate:"required"`
+	ImageName    string `json:"image_name" validate:"required"`
+}
+
+// Validate batch unverify reset cvm request.
+func (req *BatchUnVerifyCvmHostItem) Validate() error {
 	return validator.Validate.Struct(req)
 }
