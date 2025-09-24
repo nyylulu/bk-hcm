@@ -141,6 +141,7 @@ func (d Dao) List(kt *kit.Kit, opt *types.ListOption) (*types.ListResult[tablegc
 	columnTypes := tablegconf.GlobalConfigTableColumns.ColumnTypes()
 	columnTypes["config_value.vpc_id"] = enumor.String
 	columnTypes["config_value.security_group_id"] = enumor.String
+	columnTypes["config_value.biz_ids"] = enumor.String
 	if err := opt.ValidateExcludeFilter(
 		filter.NewExprOption(filter.RuleFields(columnTypes)),
 		core.NewDefaultPageOption()); err != nil {
