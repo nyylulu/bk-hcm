@@ -1088,6 +1088,8 @@ resourceDissolve:
   originDate: "20240105"
   projectNames:
     - "2025机房裁撤"
+  projectIDs:
+    - 26
   syncDissolveHost: true
 
 elasticsearch:
