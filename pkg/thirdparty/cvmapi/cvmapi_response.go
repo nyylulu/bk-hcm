@@ -315,7 +315,7 @@ type CvmCbsPlanQueryItem struct {
 	TechnicalClass        string                     `json:"technicalClass"`
 	VagueStatus           int                        `json:"vagueStatus"`
 	ReviewStatus          enumor.ResPlanReviewStatus `json:"reviewStatus"`
-	ForecastType          string                     `json:"forecast_type"` // 需求类型（常规需求、年度预算）
+	ForecastType          string                     `json:"forecastType"` // 需求类型（常规需求、年度预算）
 	GenerationType        string                     `json:"generation_type"`
 }
 
