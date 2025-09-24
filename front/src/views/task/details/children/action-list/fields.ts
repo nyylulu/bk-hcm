@@ -8,11 +8,25 @@ export const baseFieldIds = ['created_at', 'updated_at', 'state', 'reason'];
 export const baseColumnConfig: Record<string, PropertyColumnConfig> = {
   created_at: {
     sort: true,
+    minWidth: 150,
+    fixed: 'left',
   },
   updated_at: {
     sort: true,
+    minWidth: 150,
+    fixed: 'left',
+  },
+  'param.clb_vip_domain': {
+    minWidth: 110,
+  },
+  'param.cloud_lb_id': {
+    minWidth: 110,
+  },
+  'param.cloud_clb_id': {
+    minWidth: 110,
   },
   state: {
+    minWidth: 110,
     sort: true,
   },
 };
@@ -101,20 +115,32 @@ const clbFieldIds = {
     'reason',
   ],
   [TaskClbType.TARGET_GROUP_MODIFY_WEIGHT]: [
-    ...clbSopsBaseFieldIds,
+    'created_at',
+    'updated_at',
+    'param.clb_vip_domain',
+    'param.cloud_lb_id',
+    'param.protocol',
+    'param.listener_port',
     'param.domain',
     'param.url',
     'param.ip',
+    'param.target_group_modify_weight_rs_port',
     'param.weight',
     'param.new_weight',
     'state',
     'reason',
   ],
   [TaskClbType.TARGET_GROUP_REMOVE_RS]: [
-    ...clbSopsBaseFieldIds,
+    'created_at',
+    'updated_at',
+    'param.clb_vip_domain',
+    'param.cloud_lb_id',
+    'param.protocol',
+    'param.listener_port',
     'param.domain',
     'param.url',
     'param.ip',
+    'param.target_group_remove_rs_rs_port',
     'param.weight',
     'state',
     'reason',
