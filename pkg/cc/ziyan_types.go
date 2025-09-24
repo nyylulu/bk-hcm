@@ -555,6 +555,7 @@ func (i ItsmFlow) validate() error {
 type ResourceDissolve struct {
 	OriginDate               string   `yaml:"originDate"`
 	ProjectNames             []string `yaml:"projectNames"`
+	ProjectIDs               []int    `yaml:"projectIDs"`
 	ListExcludedProjectNames []string `yaml:"listExcludedProjectNames"`
 	SyncDissolveHost         bool     `yaml:"syncDissolveHost"`
 }
@@ -566,6 +567,10 @@ func (r ResourceDissolve) validate() error {
 
 	if len(r.ProjectNames) == 0 {
 		return errors.New("resourceDissolve.projectNames is not set")
+	}
+
+	if len(r.ProjectIDs) == 0 {
+		return errors.New("resourceDissolve.projectIDs is not set")
 	}
 
 	return nil
