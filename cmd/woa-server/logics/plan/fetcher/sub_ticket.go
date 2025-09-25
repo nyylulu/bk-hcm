@@ -222,7 +222,7 @@ func (f *ResPlanFetcher) GetResPlanSubTicketAudit(kt *kit.Kit, bizID int64, subT
 			kt.Rid)
 		return nil, "", err
 	}
-	if detail.BkBizID != bizID {
+	if bizID != constant.AttachedAllBiz && detail.BkBizID != bizID {
 		return nil, "", errors.New("no permission to access this ticket")
 	}
 

@@ -18,7 +18,7 @@
  */
 
 /*
-    SQLVER=9999,HCMVER=v9.9.9.9
+    SQLVER=0051,HCMVER=v1.8.5.6
 
     Notes:
     1. woa_device_type 表新增数据列 technical_class、device_type_class
@@ -30,6 +30,6 @@ ALTER TABLE `woa_device_type` ADD COLUMN `technical_class` VARCHAR(64) NOT NULL 
 ALTER TABLE `woa_device_type` ADD COLUMN `device_type_class` VARCHAR(64) NOT NULL COMMENT '机型分类' AFTER `device_type`;
 
 CREATE OR REPLACE VIEW `hcm_version`(`hcm_ver`, `sql_ver`) AS
-SELECT 'v9.9.9.9' as `hcm_ver`, '9999' as `sql_ver`;
+SELECT 'v1.8.5.6' as `hcm_ver`, '0051' as `sql_ver`;
 
 COMMIT;

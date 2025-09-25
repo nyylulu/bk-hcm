@@ -158,6 +158,11 @@ func (f *ResPlanFetcher) setItsmAuditDetails(kt *kit.Kit, bkBizID int64, itsmAud
 		itsmAudit.StatusName = itsmAudit.Status.Name()
 		itsmAudit.CurrentSteps = itsmAudit.CurrentSteps[:0]
 	}
+	// 如果itsm审批流已结束，需要赋值为结束状态
+	if current.Data.CurrentStatus == string(itsm.StatusFinished) {
+		itsmAudit.Status = enumor.RPTicketStatusDone
+		itsmAudit.StatusName = itsmAudit.Status.Name()
+	}
 
 	return itsmAudit, nil
 }
