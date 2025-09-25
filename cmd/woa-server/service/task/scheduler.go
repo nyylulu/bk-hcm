@@ -19,11 +19,13 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"time"
 
 	"hcm/cmd/woa-server/model/task"
 	"hcm/cmd/woa-server/types/config"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/criteria/mapstr"
@@ -31,6 +33,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
+	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/cvmapi"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/metadata"
@@ -349,7 +352,7 @@ func (s *service) GetApplyAuditCrp(cts *rest.Contexts) (interface{}, error) {
 }
 
 // getApplyAuditItsm get apply ticket audit info
-func (s *service) getApplyAuditItsm(kt *kit.Kit, req *types.GetApplyAuditItsmReq) (any, error) {
+func (s *service) getApplyAuditItsm(kt *kit.Kit, req *types.GetApplyAuditItsmReq) (*types.GetApplyAuditItsmRst, error) {
 	rst, err := s.logics.Scheduler().GetApplyAuditItsm(kt, req)
 	if err != nil {
 		logs.Errorf("failed to get apply ticket itsm audit info, err: %v, rid: %s", err, kt.Rid)
@@ -616,7 +619,8 @@ func (s *service) validateDeviceTypeForGreenAndRoll(kt *kit.Kit, input *types.Ap
 // createApplyOrder creates apply order
 func (s *service) createApplyOrder(kt *kit.Kit, input *types.ApplyReq) (any, error) {
 	if err := s.validateDeviceTypeForGreenAndRoll(kt, input); err != nil {
-		logs.Errorf("failed to validate device type for green channel or roll server apply, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to validate device type for green channel or roll server apply, err: %v, rid: %s", err,
+			kt.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
@@ -1948,4 +1952,55 @@ func (s *service) CancelBizApplyTicketCrp(cts *rest.Contexts) (interface{}, erro
 	}
 
 	return nil, nil
+}
+
+// ListApplyAuditInfo list apply audit info
+func (s *service) ListApplyAuditInfo(cts *rest.Contexts) (interface{}, error) {
+	req := new(types.ListApplyAuditInfoReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	details := make([]types.ListApplyAuditInfo, len(req.TicketIDs))
+	for i, ticketID := range req.TicketIDs {
+		auditInfo, err := s.getApplyAuditItsm(cts.Kit, &types.GetApplyAuditItsmReq{OrderId: ticketID})
+		if err != nil {
+			logs.Errorf("failed to get apply audit itsm, err: %v, rid: %s", err, cts.Kit.Rid)
+			return nil, err
+		}
+		status := itsm.Status(auditInfo.Status)
+		if err = status.Validate(); err != nil {
+			logs.Errorf("status is invalid, err: %v, ticket id: %d, rid: %s", err, ticketID, cts.Kit.Rid)
+			return nil, fmt.Errorf("status is invalid, err: %v, ticket id: %d", err, ticketID)
+		}
+		rst, err := s.logics.Scheduler().GetApplyTicket(cts.Kit, &types.GetApplyTicketReq{OrderId: ticketID})
+		if err != nil {
+			logs.Errorf("failed to get apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+			return nil, err
+		}
+		details[i] = types.ListApplyAuditInfo{
+			TicketID:     ticketID,
+			Status:       status,
+			TicketInfo:   rst,
+			CurrentSteps: auditInfo.CurrentSteps,
+		}
+		if !status.IsFinalState() {
+			continue
+		}
+		if len(auditInfo.Logs) == 0 {
+			logs.Errorf("audit logs is empty, ticket id: %d, rid: %s", ticketID, cts.Kit.Rid)
+			return nil, fmt.Errorf("audit logs is empty, ticket id: %d", ticketID)
+		}
+		endAt, err := time.Parse(constant.DateTimeLayout, auditInfo.Logs[len(auditInfo.Logs)-1].OperateAt)
+		if err != nil {
+			logs.Errorf("failed to parse end at, err: %v, ticket id: %d, rid: %s", err, ticketID, cts.Kit.Rid)
+			return nil, fmt.Errorf("failed to parse end at, err: %v, ticket id: %d", err, ticketID)
+		}
+		details[i].EndAt = cvt.ValToPtr(endAt)
+	}
+
+	return types.ListApplyAuditInfoResp{Details: details}, nil
 }

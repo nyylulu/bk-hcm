@@ -130,6 +130,8 @@ func (s *service) initSchedulerService(h *rest.Handler) {
 
 	h.Add("CheckRollingServerHost", http.MethodPost, "/check/rolling_server/host", s.CheckRollingServerHost)
 	h.Add("GetApplyAuditCrp", http.MethodPost, "/apply/crp_ticket/audit/get", s.GetApplyAuditCrp)
+
+	h.Add("ListApplyAuditInfo", http.MethodPost, "/apply/ticket/audit/info/list", s.ListApplyAuditInfo)
 }
 
 // bizService 业务下的接口

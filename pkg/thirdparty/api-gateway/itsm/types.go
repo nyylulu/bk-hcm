@@ -24,6 +24,7 @@ import (
 	"sync"
 )
 
+// Status the status of itsm ticket
 type Status string
 
 const (
@@ -38,6 +39,21 @@ const (
 	// StatusSuspended 被挂起
 	StatusSuspended Status = "SUSPENDED"
 )
+
+// Validate validate status
+func (s Status) Validate() error {
+	switch s {
+	case StatusRunning, StatusFinished, StatusTerminated, StatusRevoked, StatusSuspended:
+		return nil
+	default:
+		return fmt.Errorf("invalid status: %s", s)
+	}
+}
+
+// IsFinalState returns true if the status is final
+func (s Status) IsFinalState() bool {
+	return s == StatusFinished || s == StatusTerminated || s == StatusSuspended || s == StatusRevoked
+}
 
 // GetTicketStatusResp get itsm ticket status response
 type GetTicketStatusResp struct {
