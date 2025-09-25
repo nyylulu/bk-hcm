@@ -297,15 +297,16 @@ func (svc *lbSvc) listTargetsHealthByTGID(cts *rest.Contexts, validHandler handl
 
 	switch basicInfo.Vendor {
 	case enumor.TCloud:
-		return svc.getTCloudTargetHealth(cts.Kit, tgID, req)
+		return svc.getTCloudTargetHealth(cts.Kit, tgID, req,
+			svc.client.HCService().TCloud.Clb.ListTargetHealth)
 	default:
 		return nil, errf.Newf(errf.Unknown, "id: %s vendor: %s not support", tgID, basicInfo.Vendor)
 	}
 }
 
 // getTCloudTargetHealth 查询目标组绑定的负载均衡的健康状态
-func (svc *lbSvc) getTCloudTargetHealth(kit *kit.Kit, tgID string, req *hcproto.TCloudTargetHealthReq) (
-	*hcproto.TCloudTargetHealthResp, error) {
+func (svc *lbSvc) getTCloudTargetHealth(kit *kit.Kit, tgID string, req *hcproto.TCloudTargetHealthReq,
+	healthFunc func(*kit.Kit, *hcproto.TCloudTargetHealthReq) (*hcproto.TCloudTargetHealthResp, error)) (*hcproto.TCloudTargetHealthResp, error) {
 
 	tgInfo, newCloudLbIDs, err := svc.checkBindGetTargetGroupInfo(kit, tgID, req.CloudLbIDs)
 	if err != nil {
@@ -331,6 +332,7 @@ func (svc *lbSvc) getTCloudTargetHealth(kit *kit.Kit, tgID string, req *hcproto.
 	if len(lbResp.Details) != len(newCloudLbIDs) {
 		return nil, errors.New("some of given load balancer can not be found")
 	}
+
 	req.Region = ""
 	req.AccountID = tgInfo.AccountID
 	req.CloudLbIDs = newCloudLbIDs
@@ -343,12 +345,8 @@ func (svc *lbSvc) getTCloudTargetHealth(kit *kit.Kit, tgID string, req *hcproto.
 			return nil, fmt.Errorf("load balancers have different regions: %s,%s", req.Region, detail.Region)
 		}
 	}
-	switch tgInfo.Vendor {
-	case enumor.TCloud:
-		return svc.client.HCService().TCloud.Clb.ListTargetHealth(kit, req)
-	default:
-		return nil, errf.Newf(errf.Unknown, "id: %s vendor: %s not support", tgID, tgInfo.Vendor)
-	}
+
+	return healthFunc(kit, req)
 }
 
 // checkBindGetTargetGroupInfo 检查目标组是否存在、是否已绑定其他监听器，给定云id可能重复，
