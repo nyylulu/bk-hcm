@@ -6,13 +6,14 @@ defineOptions({ name: 'hcm-search-string' });
 
 const model = defineModel<string | string[]>();
 const props = withDefaults(
-  defineProps<{ multiple: boolean; option: ModelProperty['option']; display?: DisplayType }>(),
+  defineProps<{ multiple: boolean; option: ModelProperty['option']; display?: DisplayType; separator: string }>(),
   {
     multiple: true,
     option: () => ({}),
     display: () => ({
       appearance: 'tag-input',
     }),
+    separator: ',',
   },
 );
 const attr = useAttrs();
@@ -24,6 +25,12 @@ const localModel = computed({
     if (props.multiple && model.value && !Array.isArray(model.value)) {
       return [model.value];
     }
+
+    // 非多选但值是数组的情况，用于手动输入自动分割的场景
+    if (!props.multiple && model.value && Array.isArray(model.value)) {
+      return model.value.join(props.separator);
+    }
+
     return model.value;
   },
   set(val) {

@@ -8,6 +8,7 @@ export type ModelPropertyType =
   | 'string'
   | 'datetime'
   | 'enum'
+  | 'list'
   | 'number'
   | 'account'
   | 'user'
@@ -33,7 +34,8 @@ export type ModelProperty = {
   name: string;
   type: ModelPropertyType;
   resource?: ResourceTypeEnum;
-  option?: Record<string, any>;
+  option?: Record<string | number, any> | (() => Promise<Record<string | number, any>>);
+  list?: Array<{ [key: string]: any }> | (() => Promise<Array<{ [key: string]: any }>>);
   meta?: ModelPropertyMeta;
   unit?: string;
   index?: number;
@@ -77,6 +79,7 @@ export type PropertySearchConfig = {
 
 export type PropertyDisplayConfig = {
   appearance?: string;
+  appearanceProps?: Record<string, any>;
   format?: (value: any) => any;
   render?: (value: any) => VNode | string;
   showOverflowTooltip?: boolean;
