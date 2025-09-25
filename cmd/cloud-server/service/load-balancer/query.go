@@ -342,7 +342,12 @@ func (svc *lbSvc) getTCloudTargetHealth(kit *kit.Kit, tgID string, req *hcproto.
 			return nil, fmt.Errorf("load balancers have different regions: %s,%s", req.Region, detail.Region)
 		}
 	}
-	return svc.client.HCService().TCloud.Clb.ListTargetHealth(kit, req)
+	switch tgInfo.Vendor {
+	case enumor.TCloud:
+		return svc.client.HCService().TCloud.Clb.ListTargetHealth(kit, req)
+	default:
+		return nil, errf.Newf(errf.Unknown, "id: %s vendor: %s not support", tgID, tgInfo.Vendor)
+	}
 }
 
 // checkBindGetTargetGroupInfo 检查目标组是否存在、是否已绑定其他监听器，给定云id可能重复，
