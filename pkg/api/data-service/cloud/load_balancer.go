@@ -552,12 +552,12 @@ type LoadBalancerTargetRsList struct {
 
 // LoadBalancerUrlRuleResult 负载均衡四层/七层规则信息
 type LoadBalancerUrlRuleResult struct {
-	LbID              string                       `json:"lb_id"`
-	CloudClbID        string                       `json:"cloud_lb_id"`
-	LblID             string                       `json:"lbl_id"`
-	CloudLblID        string                       `json:"cloud_lbl_id"`
-	TargetGroupIDs    []string                     `json:"target_group_ids"`
-	TargetGrouRuleMap map[string]DomainUrlRuleInfo `json:"target_group_rule_map"`
+	LbID               string                       `json:"lb_id"`
+	CloudClbID         string                       `json:"cloud_lb_id"`
+	LblID              string                       `json:"lbl_id"`
+	CloudLblID         string                       `json:"cloud_lbl_id"`
+	TargetGroupIDs     []string                     `json:"target_group_ids"`
+	TargetGroupRuleMap map[string]DomainUrlRuleInfo `json:"target_group_rule_map"`
 }
 
 // DomainUrlRuleInfo 负载均衡四层/七层规则信息
