@@ -22,7 +22,7 @@ export const properties: ModelPropertyColumn[] = [
         appearanceProps: {
           statusObject: {
             success: ['done'],
-            fail: ['failed', 'partial_failed', 'rejected'],
+            fail: ['failed', 'partial_failed', 'rejected', 'partial_rejected'],
             ing: ['auditing'],
             stop: ['revoked'],
           },
