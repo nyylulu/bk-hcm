@@ -203,14 +203,14 @@ func uri(opt cc.ResourceDB) string {
 	if opt.TLS.Enable() {
 		sslParams := make([]string, 0)
 
-		sslMode := "ssl-mode=REQUIRED"
+		// 根据配置设置SSL模式
 		if opt.TLS.InsecureSkipVerify {
-			sslMode = "ssl-mode=REQUIRED"
-			sslParams = append(sslParams, "tls.skip-verify=true")
-		} else if opt.TLS.CAFile != "" {
-			sslMode = "ssl-mode=VERIFY_CA"
+			// 跳过证书验证，但仍使用TLS加密
+			sslParams = append(sslParams, "tls=skip-verify")
+		} else {
+			// 有证书文件时，启用TLS连接
+			sslParams = append(sslParams, "tls=true")
 		}
-		sslParams = append(sslParams, sslMode)
 		// Add certificate files if specified
 		if opt.TLS.CAFile != "" {
 			sslParams = append(sslParams, "ssl-ca="+url.QueryEscape(opt.TLS.CAFile))

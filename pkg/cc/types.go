@@ -479,6 +479,7 @@ type TLSConfig struct {
 
 // Enable test tls if enable.
 func (tls TLSConfig) Enable() bool {
+	// 只有配置了证书相关文件才启用TLS
 	if len(tls.CertFile) == 0 &&
 		len(tls.KeyFile) == 0 &&
 		len(tls.CAFile) == 0 {
