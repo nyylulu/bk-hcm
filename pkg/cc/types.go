@@ -493,8 +493,9 @@ func (tls TLSConfig) validate() error {
 	if !tls.Enable() {
 		return nil
 	}
-
-	// TODO: add tls config validate.
+	if (len(tls.CertFile) > 0) != (len(tls.KeyFile) > 0) {
+		return fmt.Errorf("cert file and key file must be both specified or both empty")
+	}
 
 	return nil
 }
