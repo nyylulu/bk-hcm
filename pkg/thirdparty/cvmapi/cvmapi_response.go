@@ -315,6 +315,7 @@ type CvmCbsPlanQueryItem struct {
 	TechnicalClass        string                     `json:"technicalClass"`
 	VagueStatus           int                        `json:"vagueStatus"`
 	ReviewStatus          enumor.ResPlanReviewStatus `json:"reviewStatus"`
+	ForecastType          string                     `json:"forecastType"` // 需求类型（常规需求、年度预算）
 	GenerationType        string                     `json:"generation_type"`
 }
 
@@ -391,6 +392,7 @@ func (i *CvmCbsPlanQueryItem) Clone() *CvmCbsPlanQueryItem {
 		StatisticalClass:      i.StatisticalClass,
 		VagueStatus:           i.VagueStatus,
 		ReviewStatus:          i.ReviewStatus,
+		ForecastType:          i.ForecastType,
 		GenerationType:        i.GenerationType,
 	}
 }

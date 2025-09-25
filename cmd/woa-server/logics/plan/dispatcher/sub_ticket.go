@@ -265,7 +265,7 @@ func (d *Dispatcher) checkSubTicket(kt *kit.Kit, ticket *ptypes.TicketInfo) erro
 	}
 
 	// 统计子单状态
-	allDone, allFailed, hasFailed := true, true, false
+	allDone, allFailed, hasFailed, allRejected, hasRejected := true, true, false, true, false
 	for _, subTicket := range subTickets {
 		// 有子单处于非终态，继续等待
 		if subTicket.Status.IsUnfinished() {
@@ -276,26 +276,35 @@ func (d *Dispatcher) checkSubTicket(kt *kit.Kit, ticket *ptypes.TicketInfo) erro
 			continue
 		}
 
-		// 审批拒绝不认为是失败
-		allDone = allDone && (subTicket.Status == enumor.RPSubTicketStatusDone ||
-			subTicket.Status == enumor.RPSubTicketStatusRejected)
+		// 拒绝状态为最低优先级，只有全部子单均为审批拒绝时才更新主单状态为审批拒绝
+		allRejected = allRejected && subTicket.Status == enumor.RPSubTicketStatusRejected
+		hasRejected = hasRejected || subTicket.Status == enumor.RPSubTicketStatusRejected
+		// 审批拒绝不认为是失败（失败为非终态，不会触发结果汇总生效）
+		allDone = allDone && subTicket.Status == enumor.RPSubTicketStatusDone
 		allFailed = allFailed && subTicket.Status == enumor.RPSubTicketStatusFailed
 		hasFailed = hasFailed || subTicket.Status == enumor.RPSubTicketStatusFailed
 	}
-	// 根据统计结果更新主单状态
+	// 根据统计结果更新主单状态(失败优先级高于审批拒绝，当同时存在失败和审批拒绝时，以失败为最终结果)
 	ticketStatus := enumor.RPTicketStatusAuditing
-	if allDone {
-		ticketStatus = enumor.RPTicketStatusDone
-	}
-	if hasFailed {
-		ticketStatus = enumor.RPTicketStatusPartialFailed
-	}
-	if allFailed {
+	switch {
+	case allFailed:
 		ticketStatus = enumor.RPTicketStatusFailed
+	case hasFailed:
+		ticketStatus = enumor.RPTicketStatusPartialFailed
+	case allRejected:
+		ticketStatus = enumor.RPTicketStatusRejected
+	case hasRejected:
+		ticketStatus = enumor.RPTicketStatusPartialRejected
+	case allDone:
+		ticketStatus = enumor.RPTicketStatusDone
+	default:
+		logs.Warnf("invalid sub ticket status, allDone: %t, allFailed: %t, hasFailed: %t, "+
+			"allRejected: %t, hasRejected: %t, id: %s, rid: %s", allDone, allFailed, hasFailed, allRejected,
+			hasRejected, ticket.ID, kt.Rid)
 	}
 
 	// 单据成功完结，且不存在失败的子单，需要将所有子单的结果汇总生效
-	if ticketStatus == enumor.RPTicketStatusDone {
+	if !hasFailed {
 		if err := d.finishAuditFlow(kt, ticket); err != nil {
 			logs.Errorf("failed to finish audit flow, err: %v, id: %s, rid: %s", err, ticket.ID, kt.Rid)
 			return err

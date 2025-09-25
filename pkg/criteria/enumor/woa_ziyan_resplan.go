@@ -118,6 +118,8 @@ const (
 	RPTicketStatusAuditing RPTicketStatus = "auditing"
 	// RPTicketStatusRejected is resource plan ticket status rejected.
 	RPTicketStatusRejected RPTicketStatus = "rejected"
+	// RPTicketStatusPartialRejected is resource plan ticket status partial_rejected.
+	RPTicketStatusPartialRejected RPTicketStatus = "partial_rejected"
 	// RPTicketStatusDone is resource plan ticket status done.
 	RPTicketStatusDone RPTicketStatus = "done"
 	// RPTicketStatusFailed is resource plan ticket status failed.
@@ -134,6 +136,7 @@ func (s RPTicketStatus) Validate() error {
 	case RPTicketStatusInit:
 	case RPTicketStatusAuditing:
 	case RPTicketStatusRejected:
+	case RPTicketStatusPartialRejected:
 	case RPTicketStatusDone:
 	case RPTicketStatusFailed:
 	case RPTicketStatusPartialFailed:
@@ -158,13 +161,14 @@ func (s RPTicketStatus) IsUnfinished() bool {
 
 // rdTicketStatusNameMap records RPTicketStatus's name.
 var rdTicketStatusNameMap = map[RPTicketStatus]string{
-	RPTicketStatusInit:          "待审批",
-	RPTicketStatusAuditing:      "审批中",
-	RPTicketStatusRejected:      "审批拒绝",
-	RPTicketStatusDone:          "成功",
-	RPTicketStatusFailed:        "失败",
-	RPTicketStatusPartialFailed: "部分失败",
-	RPTicketStatusRevoked:       "已撤销",
+	RPTicketStatusInit:            "待审批",
+	RPTicketStatusAuditing:        "审批中",
+	RPTicketStatusRejected:        "审批拒绝",
+	RPTicketStatusPartialRejected: "部分拒绝",
+	RPTicketStatusDone:            "成功",
+	RPTicketStatusFailed:          "失败",
+	RPTicketStatusPartialFailed:   "部分失败",
+	RPTicketStatusRevoked:         "已撤销",
 }
 
 // Name return RPTicketStatus's name.
@@ -178,6 +182,7 @@ func GetRPTicketStatusMembers() []RPTicketStatus {
 		RPTicketStatusInit,
 		RPTicketStatusAuditing,
 		RPTicketStatusRejected,
+		RPTicketStatusPartialRejected,
 		RPTicketStatusDone,
 		RPTicketStatusFailed,
 		RPTicketStatusPartialFailed,

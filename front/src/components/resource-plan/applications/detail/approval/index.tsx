@@ -25,6 +25,7 @@ export default defineComponent({
         case 'auditing':
           return <bk-loading style='transform: scale(0.5)' mode='spin' theme='primary' loading></bk-loading>;
         case 'rejected':
+        case 'partial_rejected':
           return <i class='hcm-icon bkhcm-icon-38moxingshibai-01'></i>;
         case 'done':
           return <i class='hcm-icon bkhcm-icon-7chenggong-01'></i>;
