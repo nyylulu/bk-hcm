@@ -17,23 +17,9 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package capability 公共参数。
-package capability
+package constant
 
-import (
-	"hcm/pkg/async"
-	"hcm/pkg/client"
-	"hcm/pkg/dal/dao"
-	"hcm/pkg/iam/auth"
-
-	"github.com/emicklei/go-restful/v3"
+const (
+	// FlowTypePriority 不同类型flow的优先级配置
+	FlowTypePriority = "flow_type_priority"
 )
-
-// Capability defines the service's capability
-type Capability struct {
-	WebService *restful.WebService
-	ApiClient  *client.ClientSet
-	Async      async.Async
-	Dao        dao.Set
-	Authorizer auth.Authorizer
-}
