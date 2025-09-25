@@ -25,6 +25,7 @@ import (
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/criteria/validator"
 	"hcm/pkg/thirdparty/api-gateway/bkbotapproval"
+	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/tools/metadata"
 	"hcm/pkg/tools/querybuilder"
@@ -1710,4 +1711,28 @@ type ConfirmApplyModifyResp struct {
 	ResponseMsg   string                    `json:"response_msg"`   // 点击按钮后回显的信息
 	ResponseColor bkbotapproval.ButtonColor `json:"response_color"` // 点击按钮后回显的颜色
 	RequestID     string                    `json:"request_id"`
+}
+
+// ListApplyAuditInfoReq list apply audit info request
+type ListApplyAuditInfoReq struct {
+	TicketIDs []uint64 `json:"ticket_ids" validate:"required,min=1,max=100"`
+}
+
+// Validate ...
+func (l *ListApplyAuditInfoReq) Validate() error {
+	return validator.Validate.Struct(l)
+}
+
+// ListApplyAuditInfoResp list apply audit info response
+type ListApplyAuditInfoResp struct {
+	Details []ListApplyAuditInfo `json:"details"`
+}
+
+// ListApplyAuditInfo list apply audit info
+type ListApplyAuditInfo struct {
+	TicketID     uint64                `json:"ticket_id"`
+	Status       itsm.Status           `json:"status"`
+	CurrentSteps []*ApplyAuditItsmStep `json:"current_steps"`
+	TicketInfo   *GetApplyTicketRst    `json:"ticket_info"`
+	EndAt        *time.Time            `json:"end_at,omitempty"`
 }
