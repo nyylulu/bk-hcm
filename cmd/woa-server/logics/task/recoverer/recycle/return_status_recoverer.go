@@ -116,9 +116,10 @@ func (r *recycleRecoverer) recoverReturnHosts(kt *kit.Kit, returnTask *table.Ret
 		return r.recyclerIf.RecoverReturnCvm(kt, returnTask, hosts)
 	case table.ResourceTypePm:
 		msg := "failed to recover recycle, can not get pm device return task id"
-		if err := r.recyclerIf.UpdateReturnTaskInfo(kt.Ctx, returnTask, "", table.ReturnStatusFailed, msg); err != nil {
-			logs.Errorf("failed to update pm return task info, subOrderId: %s, err: %v, rid: %s", returnTask.SuborderID,
-				err, kt.Rid)
+		err := r.recyclerIf.UpdateReturnTaskStatus(kt, returnTask.SuborderID, table.ReturnStatusFailed, msg)
+		if err != nil {
+			logs.Errorf("failed to update pm return task info, subOrderId: %s, err: %v, rid: %s",
+				returnTask.SuborderID, err, kt.Rid)
 			return &event.Event{Type: event.ReturnFailed, Error: err}
 		}
 

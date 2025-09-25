@@ -132,9 +132,8 @@ type Interface interface {
 	QueryReturnStatus(kt *kit.Kit, task *table.ReturnTask, hosts []*table.RecycleHost) *event.Event
 	// UpdateOrderInfo update recycle order info
 	UpdateOrderInfo(kt *kit.Kit, orderId, handler string, success, failed, pending uint, msg string) error
-	// UpdateReturnTaskInfo update return task info
-	UpdateReturnTaskInfo(ctx context.Context, task *table.ReturnTask, taskId string, status table.ReturnStatus,
-		msg string) error
+	// UpdateReturnTaskStatus update return task status
+	UpdateReturnTaskStatus(kt *kit.Kit, suborderID string, status table.ReturnStatus, msg string) error
 
 	StartStuckCheckLoop(kt *kit.Kit)
 }
@@ -206,11 +205,9 @@ func (r *recycler) GetDispatcher() *dispatcher.Dispatcher {
 	return r.dispatcher
 }
 
-// UpdateReturnTaskInfo update return task info
-func (r *recycler) UpdateReturnTaskInfo(ctx context.Context, task *table.ReturnTask, taskId string,
-	status table.ReturnStatus, msg string) error {
-
-	return r.dispatcher.GetReturn().UpdateReturnTaskInfo(ctx, task, taskId, status, msg)
+// UpdateReturnTaskStatus update return task status
+func (r *recycler) UpdateReturnTaskStatus(kt *kit.Kit, suborderID string, status table.ReturnStatus, msg string) error {
+	return r.dispatcher.GetReturn().UpdateReturnTaskStatus(kt, suborderID, status, msg)
 }
 
 // RecycleCheck check whether hosts can be recycled or not

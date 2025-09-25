@@ -16,6 +16,7 @@ package returner
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -99,7 +100,7 @@ func (r *Returner) initReturnTask(order *table.RecycleOrder) (*table.ReturnTask,
 	}
 
 	task, err := dao.Set().ReturnTask().GetReturnTask(context.Background(), filter)
-	if err == daltypes.ErrDocumentNotFound {
+	if errors.Is(err, daltypes.ErrDocumentNotFound) {
 		now := time.Now()
 		newTask := &table.ReturnTask{
 			OrderID:      order.OrderID,
@@ -261,7 +262,7 @@ func (r *Returner) updateRecycleHostTaskInfo(kt *kit.Kit, task *table.ReturnTask
 		}
 
 		// update return task info
-		if err := r.UpdateReturnTaskInfo(sc, task, task.TaskID, task.Status, task.Message); err != nil {
+		if err := r.UpdateReturnTaskInfo(sc, task, task.Status, task.Message); err != nil {
 			logs.Errorf("recycler:logics:cvm:returnHosts:failed, failed to update return task info, suborderID: %s, "+
 				"err: %v, taskId: %s, rid: %s", task.SuborderID, err, task.TaskID, kt.Rid)
 			return err
@@ -296,19 +297,26 @@ func (r *Returner) QueryReturnStatus(kt *kit.Kit, task *table.ReturnTask, hosts 
 		}
 		return ev
 	}
-
+	ev := &event.Event{
+		Type:  event.ReturnFailed,
+		Error: fmt.Errorf("failed to query return order, for unsupported resource type %s", task.ResourceType),
+	}
 	switch task.ResourceType {
 	case table.ResourceTypeCvm:
-		return r.queryCvmOrder(kt, task, hosts)
+		ev = r.queryCvmOrder(kt, task, hosts)
 	case table.ResourceTypePm:
-		return r.queryPmOrder(kt, task, hosts)
+		ev = r.queryPmOrder(kt, task, hosts)
 	default:
-		ev := &event.Event{
-			Type:  event.ReturnFailed,
-			Error: fmt.Errorf("failed to query return order, for unsupported resource type %s", task.ResourceType),
-		}
-		return ev
+		// do nothing
 	}
+
+	err := r.UpdateReturnTaskStatus(kt, task.SuborderID, "", "")
+	if err != nil {
+		// ignore update status error
+		logs.Infof("failed to update return task status after query return status, "+
+			"err: %v, suborderID: %s, taskId: %s, rid: %s", err, task.SuborderID, task.TaskID, kt.Rid)
+	}
+	return ev
 }
 
 // UpdateOrderInfo 更新回收订单信息
@@ -340,8 +348,8 @@ func (r *Returner) UpdateOrderInfo(ctx context.Context, orderId, handler string,
 }
 
 // UpdateReturnTaskInfo 更新回收任务信息
-func (r *Returner) UpdateReturnTaskInfo(ctx context.Context, task *table.ReturnTask, taskId string,
-	status table.ReturnStatus, msg string) error {
+func (r *Returner) UpdateReturnTaskInfo(ctx context.Context, task *table.ReturnTask, status table.ReturnStatus,
+	msg string) error {
 
 	filter := mapstr.MapStr{
 		"suborder_id": task.SuborderID,
@@ -352,7 +360,7 @@ func (r *Returner) UpdateReturnTaskInfo(ctx context.Context, task *table.ReturnT
 		"status":    status,
 		"update_at": now,
 	}
-
+	taskId := task.TaskID
 	if len(taskId) > 0 && taskId != enumor.RollingServerResourcePoolTask {
 		link := ""
 		switch task.ResourceType {
@@ -371,6 +379,34 @@ func (r *Returner) UpdateReturnTaskInfo(ctx context.Context, task *table.ReturnT
 
 	if err := dao.Set().ReturnTask().UpdateReturnTask(ctx, &filter, &update); err != nil {
 		logs.Errorf("failed to update return task, order id: %s, err: %v", task.SuborderID, err)
+		return err
+	}
+
+	return nil
+}
+
+// UpdateReturnTaskStatus 更新回收任务的状态，如果状态为空字符串，只更新update_at字段
+func (r *Returner) UpdateReturnTaskStatus(kt *kit.Kit, suborderID string, status table.ReturnStatus,
+	msg string) error {
+
+	filter := mapstr.MapStr{
+		"suborder_id": suborderID,
+	}
+
+	now := time.Now()
+	update := mapstr.MapStr{
+		"update_at": now,
+	}
+	if len(status) > 0 {
+		update["status"] = status
+	}
+
+	if len(msg) > 0 {
+		update["message"] = msg
+	}
+
+	if err := dao.Set().ReturnTask().UpdateReturnTask(kt.Ctx, &filter, &update); err != nil {
+		logs.Errorf("failed to update return task status, order id: %s, err: %v, rid: %s", suborderID, err, kt.Rid)
 		return err
 	}
 

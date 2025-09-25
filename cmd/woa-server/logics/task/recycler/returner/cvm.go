@@ -207,7 +207,7 @@ func (r *Returner) RecoverReturnCvm(kt *kit.Kit, task *table.ReturnTask, hosts [
 		"resp: %+v, rid: %s", cvmNum, len(hosts), task.SuborderID, err, cvt.PtrToVal(resp), kt.Rid)
 	msg := fmt.Sprintf("%d hosts return failed, return is running or no exit cvms, subOrderId: %s", cvmNum,
 		task.SuborderID)
-	if err := r.UpdateReturnTaskInfo(kt.Ctx, task, "", table.ReturnStatusFailed, msg); err != nil {
+	if err := r.UpdateReturnTaskStatus(kt, task.SuborderID, table.ReturnStatusFailed, msg); err != nil {
 		logs.Errorf("failed to update return task info, subOrderId: %s, err: %v, rid: %s", task.SuborderID, err,
 			kt.Rid)
 		return &event.Event{Type: event.ReturnFailed, Error: err}
@@ -234,7 +234,7 @@ func (r *Returner) updateReturnSuccess(kt *kit.Kit, task *table.ReturnTask, host
 		return &event.Event{Type: event.ReturnFailed, Error: err}
 	}
 
-	if err := r.UpdateReturnTaskInfo(kt.Ctx, task, "", table.ReturnStatusSuccess, "success"); err != nil {
+	if err := r.UpdateReturnTaskInfo(kt.Ctx, task, table.ReturnStatusSuccess, "success"); err != nil {
 		logs.Errorf("failed to update return task info, subOrderId: %s, err: %v, rid: %s", task.SuborderID, err, kt.Rid)
 		return &event.Event{Type: event.ReturnFailed, Error: err}
 	}
@@ -318,7 +318,7 @@ func (r *Returner) queryCvmOrder(kt *kit.Kit, task *table.ReturnTask, hosts []*t
 			},
 		},
 	}
-	resp, err := r.cvm.QueryCvmReturnDetail(nil, nil, req)
+	resp, err := r.cvm.QueryCvmReturnDetail(kt.Ctx, kt.Header(), req)
 	if err != nil {
 		// keep loop query when error occurs until timeout
 		logs.Warnf("failed to query cvm return detail, err: %v, rid: %s", err, kt.Rid)
@@ -345,11 +345,8 @@ func (r *Returner) queryCvmOrder(kt *kit.Kit, task *table.ReturnTask, hosts []*t
 
 	successCnt, failedCnt, runningCnt, isRejected := r.parseCvmReturnDetail(kt, hosts, resp.Result.Data)
 	if runningCnt > 0 {
-		if err = r.UpdateOrderInfo(context.Background(), task.SuborderID, "AUTO", successCnt, failedCnt, runningCnt,
-			""); err != nil {
-			logs.Warnf("failed to update recycle order %s info, err: %v, rid: %s", task.SuborderID, err, kt.Rid)
-			// ignore update error and continue to query
-		}
+		_ = r.updateOrderIfChanged(kt, task, successCnt, failedCnt, runningCnt)
+		// ignore update error and continue to query
 		return &event.Event{Type: event.ReturnHandling, Error: nil}
 	}
 	if failedCnt > 0 {
@@ -361,28 +358,56 @@ func (r *Returner) queryCvmOrder(kt *kit.Kit, task *table.ReturnTask, hosts []*t
 			r.rollbackTransit(kt, hosts)
 		}
 
-		if err = r.UpdateReturnTaskInfo(context.Background(), task, "", table.ReturnStatusFailed, msg); err != nil {
+		if err = r.UpdateReturnTaskStatus(kt, task.SuborderID, table.ReturnStatusFailed, msg); err != nil {
 			logs.Errorf("failed to update return task info, order id: %s, err: %v, rid: %s",
 				task.SuborderID, err, kt.Rid)
 			return &event.Event{Type: event.ReturnFailed, Error: err}
 		}
-		if err = r.UpdateOrderInfo(context.Background(), task.SuborderID, "AUTO", successCnt, failedCnt, runningCnt,
-			msg); err != nil {
+		err = r.UpdateOrderInfo(kt.Ctx, task.SuborderID, "AUTO", successCnt, failedCnt, runningCnt, msg)
+		if err != nil {
 			logs.Warnf("failed to update recycle order %s info, err: %v, rid: %s", task.SuborderID, err, kt.Rid)
 			// ignore update error and continue to query
 		}
 		return &event.Event{Type: event.ReturnFailed, Error: nil}
 	}
-	if err = r.UpdateReturnTaskInfo(context.Background(), task, "", table.ReturnStatusSuccess, "success"); err != nil {
+	if err = r.UpdateReturnTaskStatus(kt, task.SuborderID, table.ReturnStatusSuccess, "success"); err != nil {
 		logs.Errorf("failed to update return task info, order id: %s, err: %v, rid: %s", task.SuborderID, err, kt.Rid)
 		return &event.Event{Type: event.ReturnFailed, Error: err}
 	}
-	if err = r.UpdateOrderInfo(context.Background(), task.SuborderID, "AUTO", successCnt, failedCnt, runningCnt,
+	if err = r.UpdateOrderInfo(kt.Ctx, task.SuborderID, "AUTO", successCnt, failedCnt, runningCnt,
 		"success"); err != nil {
 		logs.Warnf("failed to update recycle order %s info, err: %v, rid: %s", task.SuborderID, err, kt.Rid)
 		// ignore update error and continue to query
 	}
 	return &event.Event{Type: event.ReturnSuccess}
+}
+
+// 仅在数量变化时更新子单信息，以免干扰上层判断状态变化
+func (r *Returner) updateOrderIfChanged(kt *kit.Kit, task *table.ReturnTask, successCnt uint, failedCnt uint,
+	runningCnt uint) error {
+
+	cond := &mapstr.MapStr{
+		"suborder_id": task.SuborderID,
+	}
+	order, err := dao.Set().RecycleOrder().GetRecycleOrder(kt.Ctx, cond)
+	if err != nil {
+		logs.Errorf("failed to get recycle order for update, subOrderId: %s, err: %v, rid: %s",
+			task.SuborderID, err, kt.Rid)
+		return err
+	}
+
+	if order.SuccessNum == successCnt && order.FailedNum == failedCnt && order.PendingNum == runningCnt {
+		// no change, skip update
+		return nil
+	}
+
+	err = r.UpdateOrderInfo(kt.Ctx, task.SuborderID, "AUTO", successCnt, failedCnt, runningCnt, "")
+	if err != nil {
+		logs.Warnf("failed to update recycle order %s info, err: %v, rid: %s", task.SuborderID, err, kt.Rid)
+		// ignore update error and continue to query
+	}
+
+	return err
 }
 
 func (r *Returner) parseCvmReturnDetail(kt *kit.Kit, hosts []*table.RecycleHost, details []*cvmapi.ReturnDetail) (
