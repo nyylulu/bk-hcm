@@ -41,16 +41,17 @@ import (
 
 // TaskManageBaseReq task manage base req
 type TaskManageBaseReq struct {
-	Vendors       []enumor.Vendor
-	AccountIDs    []string
-	BkBizID       int64
-	Source        enumor.TaskManagementSource
-	Resource      enumor.TaskManagementResource
-	TaskOperation enumor.TaskOperation
-	TaskType      enumor.TaskType
-	Details       []*CvmResetTaskDetailReq
-	taskDetails   []*BatchCvmResetTaskDetail
-	UniqueID      string
+	Vendors            []enumor.Vendor
+	AccountIDs         []string
+	BkBizID            int64
+	Source             enumor.TaskManagementSource
+	Resource           enumor.TaskManagementResource
+	TaskOperation      enumor.TaskOperation
+	TaskType           enumor.TaskType
+	Details            []*CvmResetTaskDetailReq
+	taskDetails        []*BatchCvmResetTaskDetail
+	UniqueID           string
+	SkipOperatorVerify bool // 是否跳过主备负责人校验
 }
 
 // CvmResetTaskDetailReq cvm reset task detail req.
@@ -197,7 +198,7 @@ func (c *cvm) buildFlows(kt *kit.Kit, params *TaskManageBaseReq) ([]string, erro
 
 	flowIDs := make([]string, 0, len(vendorToDetails))
 	for vendor, details := range vendorToDetails {
-		flowID, err := c.buildFlow(kt, vendor, details, params.TaskType, params.UniqueID)
+		flowID, err := c.buildFlow(kt, vendor, details, params)
 		if err != nil {
 			logs.Errorf("build flow for cvm reset failed, vendor: %s, err: %v, rid: %s", vendor, err, kt.Rid)
 			detailIDs := make([]string, 0, len(details))
@@ -223,32 +224,32 @@ func (c *cvm) buildFlows(kt *kit.Kit, params *TaskManageBaseReq) ([]string, erro
 }
 
 func (c *cvm) buildFlow(kt *kit.Kit, vendor enumor.Vendor, details []*BatchCvmResetTaskDetail,
-	taskType enumor.TaskType, uniqueID string) (string, error) {
+	params *TaskManageBaseReq) (string, error) {
 
 	// 预检测
-	lockRel, err := checkResFlowRel(kt, c.client.DataService(), uniqueID, enumor.CvmCloudResType)
+	lockRel, err := checkResFlowRel(kt, c.client.DataService(), params.UniqueID, enumor.CvmCloudResType)
 	if err != nil {
 		logs.Errorf("check resource flow relation failed, err: %v, uniqueID: %s, lockRel: %+v, rid: %s",
-			err, uniqueID, cvt.PtrToVal(lockRel), kt.Rid)
+			err, params.UniqueID, cvt.PtrToVal(lockRel), kt.Rid)
 		return "", err
 	}
 
-	flowTasks, err := c.buildFlowTask(vendor, details)
+	flowTasks, err := c.buildFlowTask(vendor, details, params.SkipOperatorVerify)
 	if err != nil {
 		logs.Errorf("build flow task failed, err: %v, rid: %s", err, kt.Rid)
 		return "", err
 	}
 
-	flowID, err := c.createFlowTask(kt, flowTasks, taskType, enumor.FlowResetCvm, uniqueID)
+	flowID, err := c.createFlowTask(kt, flowTasks, params.TaskType, enumor.FlowResetCvm, params.UniqueID)
 	if err != nil {
 		logs.Errorf("create flow task failed, err: %v, rid: %s", err, kt.Rid)
 		return "", err
 	}
 
-	err = lockResFlowStatus(kt, c.client.DataService(), c.client.TaskServer(), uniqueID,
-		enumor.CvmCloudResType, flowID, taskType)
+	err = lockResFlowStatus(kt, c.client.DataService(), c.client.TaskServer(), params.UniqueID,
+		enumor.CvmCloudResType, flowID, params.TaskType)
 	if err != nil {
-		logs.Errorf("lock resource flow status failed, err: %v, uniqueID: %s, rid: %s", err, uniqueID, kt.Rid)
+		logs.Errorf("lock resource flow status failed, err: %v, uniqueID: %s, rid: %s", err, params.UniqueID, kt.Rid)
 		return "", err
 	}
 
@@ -259,16 +260,18 @@ func (c *cvm) buildFlow(kt *kit.Kit, vendor enumor.Vendor, details []*BatchCvmRe
 	return flowID, nil
 }
 
-func (c *cvm) buildFlowTask(vendor enumor.Vendor, details []*BatchCvmResetTaskDetail) ([]ts.CustomFlowTask, error) {
+func (c *cvm) buildFlowTask(vendor enumor.Vendor, details []*BatchCvmResetTaskDetail, skipOperatorVerify bool) (
+	[]ts.CustomFlowTask, error) {
+
 	switch vendor {
 	case enumor.TCloud, enumor.TCloudZiyan:
-		return c.buildTCloudFlowTask(vendor, details)
+		return c.buildTCloudFlowTask(vendor, details, skipOperatorVerify)
 	default:
 		return nil, fmt.Errorf("build flow task failed, vendor: %s not supported", vendor)
 	}
 }
 
-func (c *cvm) buildTCloudFlowTask(vendor enumor.Vendor, details []*BatchCvmResetTaskDetail) (
+func (c *cvm) buildTCloudFlowTask(vendor enumor.Vendor, details []*BatchCvmResetTaskDetail, skipOperatorVerify bool) (
 	[]ts.CustomFlowTask, error) {
 
 	result := make([]ts.CustomFlowTask, 0)
@@ -299,6 +302,7 @@ func (c *cvm) buildTCloudFlowTask(vendor enumor.Vendor, details []*BatchCvmReset
 				Vendor:              vendor,
 				ManagementDetailIDs: managementDetailIDs,
 				CvmResetList:        cvmResetList,
+				SkipOperatorVerify:  skipOperatorVerify,
 			},
 		}
 		result = append(result, tmpTask)

@@ -23,6 +23,7 @@ package cvm
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strconv"
@@ -129,7 +130,7 @@ func (svc *cvmSvc) batchResetAsyncCvm(cts *rest.Contexts, bkBizID int64, validHa
 		}
 	}
 
-	taskManagementID, err := svc.createCvmResetTaskManage(cts.Kit, bkBizID, cvmIDs, cvmIDMap, req.Pwd)
+	taskManagementID, err := svc.createCvmResetTaskManage(cts.Kit, bkBizID, cvmIDs, cvmIDMap, req.Pwd, false)
 	if err != nil {
 		logs.Errorf("create cvm reset task manage failed, err: %v, cvmIDs: %v, rid: %s", err, cvmIDs, cts.Kit.Rid)
 		return nil, err
@@ -141,7 +142,7 @@ func (svc *cvmSvc) batchResetAsyncCvm(cts *rest.Contexts, bkBizID int64, validHa
 }
 
 func (svc *cvmSvc) createCvmResetTaskManage(kt *kit.Kit, bkBizID int64, cvmIDs []string,
-	cvmIDMap map[string]cscvm.BatchCvmHostItem, pwd string) (string, error) {
+	cvmIDMap map[string]cscvm.BatchCvmHostItem, pwd string, skipOperatorVerify bool) (string, error) {
 
 	cvmList, err := svc.batchListCvmByIDs(kt, cvmIDs)
 	if err != nil {
@@ -150,14 +151,15 @@ func (svc *cvmSvc) createCvmResetTaskManage(kt *kit.Kit, bkBizID int64, cvmIDs [
 	}
 
 	taskManageReq := &lgccvm.TaskManageBaseReq{
-		Vendors:       make([]enumor.Vendor, 0),
-		AccountIDs:    make([]string, 0),
-		BkBizID:       bkBizID,
-		Source:        enumor.TaskManagementSourceAPI,
-		Resource:      enumor.TaskManagementResCVM,
-		TaskOperation: enumor.TaskCvmResetSystem,
-		TaskType:      enumor.ResetCvmTaskType,
-		Details:       make([]*lgccvm.CvmResetTaskDetailReq, 0),
+		Vendors:            make([]enumor.Vendor, 0),
+		AccountIDs:         make([]string, 0),
+		BkBizID:            bkBizID,
+		Source:             enumor.TaskManagementSourceAPI,
+		Resource:           enumor.TaskManagementResCVM,
+		TaskOperation:      enumor.TaskCvmResetSystem,
+		TaskType:           enumor.ResetCvmTaskType,
+		Details:            make([]*lgccvm.CvmResetTaskDetailReq, 0),
+		SkipOperatorVerify: skipOperatorVerify,
 	}
 
 	uniqueID, err := calCvmResetUniqueID(kt, bkBizID, cvmIDs)
@@ -263,37 +265,29 @@ func (svc *cvmSvc) BatchUnVerifyAsyncResetBizCvm(cts *rest.Contexts) (interface{
 	if err != nil {
 		return nil, err
 	}
-
 	req := new(cscvm.BatchUnVerifyResetCvmReq)
 	if err = cts.DecodeInto(req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
-
 	if err = req.Validate(); err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
-
 	// 验证业务是否在配置名单中
-	if err = svc.checkInCvmResetBizList(cts.Kit, bizID); err != nil {
+	skipOperatorVerify, err := svc.checkInCvmResetBizList(cts.Kit, bizID)
+	if err != nil {
 		return nil, err
 	}
-
 	// 查询业务下的主机列表
 	cvmList, hostIPMap, err := svc.listBizCvmByIPs(cts.Kit, bizID, req.Hosts)
 	if err != nil {
 		return nil, err
 	}
-
 	// 查出来的主机列表跟传入的主机数量不一致
 	if len(cvmList) != len(req.Hosts) {
 		return nil, errf.NewFromErr(errf.InvalidParameter, fmt.Errorf("host query count not match"))
 	}
-
-	resetReq := &cscvm.BatchResetCvmReq{
-		Hosts:      make([]cscvm.BatchCvmHostItem, 0, len(req.Hosts)),
-		Pwd:        req.Pwd,
-		PwdConfirm: req.PwdConfirm,
-	}
+	cvmIDs := make([]string, 0, len(req.Hosts))
+	cvmIDMap := make(map[string]cscvm.BatchCvmHostItem)
 	for _, item := range cvmList {
 		if len(item.PrivateIPv4Addresses) < 1 {
 			continue
@@ -303,35 +297,84 @@ func (svc *cvmSvc) BatchUnVerifyAsyncResetBizCvm(cts *rest.Contexts) (interface{
 			return nil, errf.NewFromErr(errf.RecordNotFound,
 				fmt.Errorf("host not found for ip: %s", item.PrivateIPv4Addresses[0]))
 		}
-		resetReq.Hosts = append(resetReq.Hosts, cscvm.BatchCvmHostItem{
+		cvmIDs = append(cvmIDs, item.ID)
+		cvmIDMap[item.ID] = cscvm.BatchCvmHostItem{
 			ID:           item.ID,
 			DeviceType:   item.MachineType,
 			ImageNameOld: item.OsName,
 			CloudImageID: hostInfo.CloudImageID,
 			ImageName:    hostInfo.ImageName,
-		})
+		}
 	}
-	return svc.batchResetAsyncCvm(cts, bizID, handler.BizOperateAuth, resetReq, false)
+
+	basicInfoReq := dataproto.ListResourceBasicInfoReq{
+		IDs:          cvmIDs,
+		ResourceType: enumor.CvmCloudResType,
+		Fields:       append(types.CommonBasicInfoFields, "region", "recycle_status"),
+	}
+	basicInfoMap, err := svc.client.DataService().Global.Cloud.ListResBasicInfo(cts.Kit, basicInfoReq)
+	if err != nil {
+		logs.Errorf("reset biz cvm list basic info failed, err: %v, cvmIDs: %v, rid: %s", err, cvmIDs, cts.Kit.Rid)
+		return nil, err
+	}
+	// validate biz authorize
+	err = handler.BizOperateAuth(cts, &handler.ValidWithAuthOption{
+		Authorizer: svc.authorizer, ResType: meta.Cvm, Action: meta.ResetSystem, BasicInfos: basicInfoMap})
+	if err != nil {
+		logs.Errorf("reset biz cvm auth failed, err: %v, cvmIDs: %v, rid: %s", err, cvmIDs, cts.Kit.Rid)
+		return nil, err
+	}
+	// 创建主机重装的审计记录
+	for _, ids := range slice.Split(cvmIDs, constant.BatchOperationMaxLimit) {
+		if err = svc.audit.ResBaseOperationAudit(cts.Kit, enumor.CvmAuditResType,
+			protoaudit.ResetSystem, ids); err != nil {
+			logs.Errorf("create reset biz cvm operation audit failed, err: %v, cvmIDs: %v, rid: %s",
+				err, ids, cts.Kit.Rid)
+			return nil, err
+		}
+	}
+
+	taskManagementID, err := svc.createCvmResetTaskManage(cts.Kit, bizID, cvmIDs, cvmIDMap, req.Pwd, skipOperatorVerify)
+	if err != nil {
+		logs.Errorf("create unverify biz cvm reset task manage failed, err: %v, cvmIDs: %v, rid: %s",
+			err, cvmIDs, cts.Kit.Rid)
+		return nil, err
+	}
+	return cscvm.BatchCvmOperateResp{TaskManagementID: taskManagementID}, nil
 }
 
-func (svc *cvmSvc) checkInCvmResetBizList(kt *kit.Kit, bizID int64) error {
+func (svc *cvmSvc) checkInCvmResetBizList(kt *kit.Kit, bizID int64) (bool, error) {
 	listReq := &core.ListReq{
 		Filter: tools.ExpressionAnd(
 			tools.RuleEqual("config_type", constant.GlobalConfigTypeCvmResetBizIDList),
-			tools.RuleJSONContains("config_value.biz_ids", strconv.FormatInt(bizID, 10)),
+			tools.RuleJSONContains("config_value.bk_biz_ids", strconv.FormatInt(bizID, 10)),
 		),
-		Page: core.NewCountPage(),
+		Page: core.NewDefaultBasePage(),
 	}
 	list, err := svc.client.DataService().Global.GlobalConfig.List(kt, listReq)
 	if err != nil {
 		logs.Errorf("failed to get cvm reset biz list config, err: %v, bizID: %d, rid: %s", err, bizID, kt.Rid)
-		return err
+		return false, err
 	}
-	if list.Count == 0 {
+	if len(list.Details) == 0 {
 		logs.Errorf("biz not in cvm reset biz id list, bizID: %d, rid: %s", bizID, kt.Rid)
-		return errf.NewFromErr(errf.RecordNotFound, fmt.Errorf("biz not in cvm reset biz id list"))
+		return false, errf.NewFromErr(errf.RecordNotFound, fmt.Errorf("biz not in cvm reset biz id list"))
 	}
-	return nil
+
+	cvmResetConfig := cscvm.CvmResetConfigValue{}
+	err = json.Unmarshal([]byte(list.Details[0].ConfigValue), &cvmResetConfig)
+	if err != nil {
+		logs.Errorf("failed to unmarshal global config cvm reset value, err: %v, raw: %+v, rid: %s",
+			err, list.Details, kt.Rid)
+		return false, err
+	}
+
+	// 检查当前用户是否有跳过主备负责人的权限
+	if len(cvmResetConfig.UserNames) > 0 && slice.IsItemInSlice(cvmResetConfig.UserNames, kt.User) {
+		return true, nil
+	}
+
+	return false, nil
 }
 
 func (svc *cvmSvc) listBizCvmByIPs(kt *kit.Kit, bizID int64, hosts []cscvm.BatchUnVerifyCvmHostItem) (

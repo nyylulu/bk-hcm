@@ -35,6 +35,7 @@ type BatchTaskCvmResetOption struct {
 	// ManagementDetailIDs 对应的详情行id列表，需要和批量绑定的Targets参数长度对应
 	ManagementDetailIDs []string                           `json:"management_detail_ids" validate:"required,min=1"`
 	CvmResetList        []*protocvm.TCloudBatchResetCvmReq `json:"cvm_reset_list" validate:"required,min=1,dive"`
+	SkipOperatorVerify  bool                               `json:"skip_operator_verify" validate:"omitempty"`
 }
 
 // Validate validate option.
