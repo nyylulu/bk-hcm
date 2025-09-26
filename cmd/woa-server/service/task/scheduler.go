@@ -2004,3 +2004,42 @@ func (s *service) ListApplyAuditInfo(cts *rest.Contexts) (interface{}, error) {
 
 	return types.ListApplyAuditInfoResp{Details: details}, nil
 }
+
+// ApproveApplyTicketNode approve or reject apply ticket node
+func (s *service) ApproveApplyTicketNode(cts *rest.Contexts) (any, error) {
+	req := new(types.ApproveApplyReqNode)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	auditInfo, err := s.getApplyAuditItsm(cts.Kit, &types.GetApplyAuditItsmReq{OrderId: req.TicketID})
+	if err != nil {
+		logs.Errorf("failed to get apply audit itsm, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+	status := itsm.Status(auditInfo.Status)
+	if err = status.Validate(); err != nil {
+		logs.Errorf("status is invalid, err: %v, ticket id: %d, rid: %s", err, req.TicketID, cts.Kit.Rid)
+		return nil, fmt.Errorf("status is invalid, err: %v, ticket id: %d", err, req.TicketID)
+	}
+	if status.IsFinalState() {
+		return nil, nil
+	}
+
+	param := itsm.ApproveNodeOpt{
+		SN:       auditInfo.ItsmTicketId,
+		StateId:  req.StateID,
+		Operator: req.Operator,
+		Approval: cvt.PtrToVal(req.Approval),
+		Remark:   req.Remark,
+	}
+	if err = s.itsmClient.ApproveNode(cts.Kit, &param); err != nil {
+		logs.Errorf("failed to approve itsm node, err: %v, param: %+v, rid: %s", err, req, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return nil, nil
+}

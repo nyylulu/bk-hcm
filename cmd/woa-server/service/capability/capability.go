@@ -40,7 +40,6 @@ import (
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/thirdparty"
 	"hcm/pkg/thirdparty/api-gateway/cmdb"
-	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/es"
 
 	"github.com/emicklei/go-restful/v3"
@@ -53,7 +52,6 @@ type Capability struct {
 	WebService     *restful.WebService
 	PlanController plan.Logics
 	CmdbCli        cmdb.Client
-	ItsmClient     itsm.Client
 	ThirdCli       *thirdparty.Client
 	Authorizer     auth.Authorizer
 	Conf           cc.WoaServerSetting

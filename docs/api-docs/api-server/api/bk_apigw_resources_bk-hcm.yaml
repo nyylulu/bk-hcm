@@ -747,10 +747,10 @@ paths:
           userVerifiedRequired: false
         disabledStages: [ ]
         descriptionEn:
-  /api/v1/woa/task/approve/apply/ticket:
+  /api/v1/woa/task/approve/apply/ticket/node:
     post:
-      operationId: approve_apply_ticket
-      description: 审批主机申请单据
+      operationId: approve_apply_ticket_node
+      description: 审批主机申请单据节点
       tags:
         - SCR
         - Apply
@@ -764,7 +764,7 @@ paths:
         backend:
           type: HTTP
           method: post
-          path: /api/v1/woa/task/approve/apply/ticket
+          path: /api/v1/woa/task/approve/apply/ticket/node
           matchSubpath: false
           timeout: 30
           upstreams: { }

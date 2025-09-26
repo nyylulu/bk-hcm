@@ -22,6 +22,7 @@ import (
 	"hcm/pkg/client"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/rest"
+	"hcm/pkg/thirdparty/api-gateway/itsm"
 )
 
 // InitService initial the service
@@ -33,6 +34,7 @@ func InitService(c *capability.Capability) {
 		configLogics: c.ConfigLogics,
 		planLogics:   c.PlanController,
 		authorizer:   c.Authorizer,
+		itsmClient:   c.ThirdCli.ITSM,
 	}
 	h := rest.NewHandler()
 	h.Path("/task")
@@ -57,6 +59,7 @@ type service struct {
 	configLogics config.Logics
 	planLogics   planLogics.Logics
 	authorizer   auth.Authorizer
+	itsmClient   itsm.Client
 }
 
 func (s *service) initOperationService(h *rest.Handler) {
@@ -132,6 +135,7 @@ func (s *service) initSchedulerService(h *rest.Handler) {
 	h.Add("GetApplyAuditCrp", http.MethodPost, "/apply/crp_ticket/audit/get", s.GetApplyAuditCrp)
 
 	h.Add("ListApplyAuditInfo", http.MethodPost, "/apply/ticket/audit/info/list", s.ListApplyAuditInfo)
+	h.Add("ApproveApplyTicketNode", http.MethodPost, "/approve/apply/ticket/node", s.ApproveApplyTicketNode)
 }
 
 // bizService 业务下的接口

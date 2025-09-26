@@ -189,7 +189,7 @@ POST /api/v1/woa/task/apply/ticket/audit/info/list
 
 #### ticket_info.suborders.spec.DiskObject
 | 参数名称   | 参数类型  | 描述                                                      |
-|-----------|-- -----|----------------------------------------------------------|
+|-----------|-------|----------------------------------------------------------|
 | disk_type | string | 磁盘类型，"CLOUD_SSD": SSD云硬盘, "CLOUD_PREMIUM": 高性能云盘 |
 | disk_size | int   | 磁盘大小，单位G                                             |
 | disk_num  | int   | 磁盘数量，所有磁盘数量之和不能超过20块，默认1块                  |

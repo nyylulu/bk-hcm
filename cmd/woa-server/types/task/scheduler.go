@@ -1736,3 +1736,17 @@ type ListApplyAuditInfo struct {
 	TicketInfo   *GetApplyTicketRst    `json:"ticket_info"`
 	EndAt        *time.Time            `json:"end_at,omitempty"`
 }
+
+// ApproveApplyReqNode audit apply ticket node request parameter
+type ApproveApplyReqNode struct {
+	TicketID uint64 `json:"ticket_id" validate:"required"`
+	StateID  int64  `json:"state_id" validate:"required"`
+	Operator string `json:"operator" validate:"required"`
+	Approval *bool  `json:"approval" validate:"required"`
+	Remark   string `json:"remark"`
+}
+
+// Validate ...
+func (a *ApproveApplyReqNode) Validate() error {
+	return validator.Validate.Struct(a)
+}
