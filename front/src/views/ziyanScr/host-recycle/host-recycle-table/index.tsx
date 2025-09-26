@@ -294,7 +294,10 @@ export default defineComponent({
     };
 
     const handleSearch = () => {
-      searchQs.set(searchValues.value);
+      searchQs.set({
+        ...searchValues.value,
+        bk_biz_id: searchValues.value.bk_biz_id?.length ? searchValues.value.bk_biz_id : [0],
+      });
     };
 
     const handleReset = () => {

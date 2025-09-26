@@ -500,11 +500,16 @@ export default defineComponent({
       pagination.start = 0;
 
       // 将子单号从主单号条件中分离
-      const { order_id: orderId, ...rest } = searchValues.value;
+      const { order_id: orderId, bk_biz_id: bkBizId, ...rest } = searchValues.value;
       const orderIds = orderId.filter((item: string) => /^\d+$/.test(item));
       const suborderIds = orderId.filter((item: string) => /^\d+-\d+$/.test(item));
 
-      searchQs.set({ ...rest, order_id: orderIds, suborder_id: suborderIds });
+      searchQs.set({
+        ...rest,
+        order_id: orderIds,
+        suborder_id: suborderIds,
+        bk_biz_id: bkBizId?.length ? bkBizId : [0],
+      });
     };
 
     const handleReset = () => {
