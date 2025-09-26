@@ -96,7 +96,8 @@ export const useTable = (props: IProp) => {
   let lastType: string = props.requestOption.type;
   defaults(props, { requestOption: {} });
   defaults(props.requestOption, { dataPath: 'data.details', immediate: true });
-  defaults(props.tableOptions.showPagination, true);
+  defaults(props, { tableOptions: {} });
+  defaults(props.tableOptions, { showPagination: true });
 
   const { conditionFormatterMapper, valueFormatterMapper } = props.searchOptions || {};
 
