@@ -53,10 +53,10 @@ func (svc *lbSvc) buildSubFlow(kt *kit.Kit, flowID, lbID string,
 
 	// 从Flow，负责监听主Flow的状态
 	flowWatchReq := &ts.AddTemplateFlowReq{
-		Name: enumor.FlowLoadBalancerOperateWatch,
+		Name: enumor.FlowSlaveOperateWatch,
 		Tasks: []ts.TemplateFlowTask{{
 			ActionID: "1",
-			Params: &actionflow.LoadBalancerOperateWatchOption{
+			Params: &actionflow.FlowSlaveOperateWatchOption{
 				FlowID:     flowID,
 				ResID:      lbID,
 				ResType:    enumor.LoadBalancerCloudResType,
