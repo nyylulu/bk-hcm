@@ -156,11 +156,11 @@ func (lm Limiter) validate() error {
 // trySetDefault try set the default value of limiter
 func (lm *Limiter) trySetDefault() {
 	if lm.QPS == 0 {
-		lm.QPS = 500
+		lm.QPS = 1500
 	}
 
 	if lm.Burst == 0 {
-		lm.Burst = 500
+		lm.Burst = 2000
 	}
 }
 
@@ -178,6 +178,31 @@ func (a Async) Validate() error {
 	return nil
 }
 
+// trySetDefault try set the default value of Async
+func (s *Async) trySetDefault() {
+	if s.Executor.InitQueueCapacity == 0 {
+		s.Executor.InitQueueCapacity = 25
+	}
+	if s.Executor.FastTaskWorkerRatio == 0 {
+		s.Executor.FastTaskWorkerRatio = 0.2
+	}
+	if s.Executor.FastTaskThresholdSec == 0 {
+		s.Executor.FastTaskThresholdSec = 10
+	}
+	if s.Executor.TimeWindowCapacity == 0 {
+		s.Executor.TimeWindowCapacity = 5
+	}
+	if s.Executor.TimeWindowDurationMin == 0 {
+		s.Executor.TimeWindowDurationMin = 30
+	}
+	if s.Executor.FastTaskQueueCapacity == 0 {
+		s.Executor.FastTaskQueueCapacity = 10
+	}
+	if s.Executor.SlowTaskQueueCapacity == 0 {
+		s.Executor.SlowTaskQueueCapacity = 10
+	}
+}
+
 // Parser 公共组件，负责获取分配给当前节点的任务流，并解析成任务树后，派发当前要执行的任务给executor执行
 type Parser struct {
 	WatchIntervalSec                uint `yaml:"watchIntervalSec"`
@@ -188,8 +213,16 @@ type Parser struct {
 
 // Executor 公共组件，负责执行异步任务
 type Executor struct {
-	WorkerNumber       uint `yaml:"workerNumber"`
-	TaskExecTimeoutSec uint `yaml:"taskExecTimeoutSec"`
+	WorkerNumber          uint    `yaml:"workerNumber"`
+	TaskExecTimeoutSec    uint    `yaml:"taskExecTimeoutSec"`
+	InitQueueCapacity     uint    `yaml:"initQueueCapacity"`
+	FastTaskWorkerRatio   float64 `yaml:"fastTaskWorkerRatio"`
+	FastTaskThreshold     uint    `yaml:"fastTaskThreshold"`
+	FastTaskThresholdSec  float64 `yaml:"fastTaskThresholdSec"`
+	TimeWindowCapacity    uint    `yaml:"timeWindowCapacity"`
+	TimeWindowDurationMin uint    `yaml:"timeWindowDurationMin"`
+	FastTaskQueueCapacity uint    `yaml:"fastTaskQueueCapacity"`
+	SlowTaskQueueCapacity uint    `yaml:"slowTaskQueueCapacity"`
 }
 
 // Dispatcher 主节点组件，负责派发任务
@@ -446,6 +479,7 @@ type TLSConfig struct {
 
 // Enable test tls if enable.
 func (tls TLSConfig) Enable() bool {
+	// 只有配置了证书相关文件才启用TLS
 	if len(tls.CertFile) == 0 &&
 		len(tls.KeyFile) == 0 &&
 		len(tls.CAFile) == 0 {
@@ -460,8 +494,9 @@ func (tls TLSConfig) validate() error {
 	if !tls.Enable() {
 		return nil
 	}
-
-	// TODO: add tls config validate.
+	if (len(tls.CertFile) > 0) != (len(tls.KeyFile) > 0) {
+		return fmt.Errorf("cert file and key file must be both specified or both empty")
+	}
 
 	return nil
 }
@@ -1148,4 +1183,15 @@ func (r *SyncConcurrentRule) Validate() error {
 // TenantConfig tenant config
 type TenantConfig struct {
 	Enabled bool `yaml:"enabled"`
+}
+
+// ConcurrentConfig CLB import config
+type ConcurrentConfig struct {
+	CLBImportCount int `yaml:"clbImportCount"`
+}
+
+func (c *ConcurrentConfig) trySetDefault() {
+	if c.CLBImportCount == 0 {
+		c.CLBImportCount = 10
+	}
 }

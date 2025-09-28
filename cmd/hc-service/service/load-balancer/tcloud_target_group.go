@@ -104,6 +104,7 @@ func (svc *clbSvc) BatchCreateTCloudTargets(cts *rest.Contexts) (any, error) {
 	return svc.batchAddTargetsToGroup(cts.Kit, req, lbResp.Details[0], rule)
 }
 
+// batchAddTargetsToGroup 批量添加RS到目标组
 func (svc *clbSvc) batchAddTargetsToGroup(kt *kit.Kit, req *protolb.TCloudBatchOperateTargetReq,
 	lbInfo corelb.BaseLoadBalancer, ruleInfo corelb.TCloudLbUrlRule) (*protolb.BatchCreateResult, error) {
 
@@ -147,6 +148,7 @@ func (svc *clbSvc) batchAddTargetsToGroup(kt *kit.Kit, req *protolb.TCloudBatchO
 	return &protolb.BatchCreateResult{SuccessCloudIDs: rsIDs.IDs}, nil
 }
 
+// batchCreateTargetDb 批量创建目标组绑定的RS
 func (svc *clbSvc) batchCreateTargetDb(kt *kit.Kit, req *protolb.TCloudBatchOperateTargetReq,
 	accountID, tgID, region string) (*core.BatchCreateResult, error) {
 
@@ -249,6 +251,7 @@ func (svc *clbSvc) BatchRemoveTCloudTargets(cts *rest.Contexts) (any, error) {
 	return nil, svc.batchUnRegisterTargetCloud(cts.Kit, req, tgList[0], urlRuleList)
 }
 
+// batchUnRegisterTargetCloud 批量解绑RS
 func (svc *clbSvc) batchUnRegisterTargetCloud(kt *kit.Kit, req *protolb.TCloudBatchOperateTargetReq,
 	tgInfo corelb.BaseTargetGroup, urlRuleList *dataproto.TCloudURLRuleListResult) error {
 
@@ -296,6 +299,7 @@ func (svc *clbSvc) batchUnRegisterTargetCloud(kt *kit.Kit, req *protolb.TCloudBa
 	return nil
 }
 
+// batchDeleteTargetDb 批量删除目标组绑定的RS
 func (svc *clbSvc) batchDeleteTargetDb(kt *kit.Kit, req *protolb.TCloudBatchOperateTargetReq,
 	accountID, tgID string) error {
 
@@ -392,6 +396,7 @@ func (svc *clbSvc) BatchModifyTCloudTargetsPort(cts *rest.Contexts) (any, error)
 	return nil, svc.batchModifyTargetPortCloud(cts.Kit, req, tgList[0], urlRuleList)
 }
 
+// batchModifyTargetPortCloud 批量修改RS端口
 func (svc *clbSvc) batchModifyTargetPortCloud(kt *kit.Kit, req *protolb.TCloudBatchOperateTargetReq,
 	tgInfo corelb.BaseTargetGroup, urlRuleList *dataproto.TCloudURLRuleListResult) error {
 
@@ -400,10 +405,10 @@ func (svc *clbSvc) batchModifyTargetPortCloud(kt *kit.Kit, req *protolb.TCloudBa
 		return err
 	}
 
-	rsOpt := &typelb.TCloudTargetPortUpdateOption{
-		Region: tgInfo.Region,
-	}
 	for _, ruleItem := range urlRuleList.Details {
+		rsOpt := &typelb.TCloudTargetPortUpdateOption{
+			Region: tgInfo.Region,
+		}
 		rsOpt.LoadBalancerId = ruleItem.CloudLbID
 		rsOpt.ListenerId = ruleItem.CloudLBLID
 		if ruleItem.RuleType == enumor.Layer7RuleType {
@@ -432,6 +437,7 @@ func (svc *clbSvc) batchModifyTargetPortCloud(kt *kit.Kit, req *protolb.TCloudBa
 	return nil
 }
 
+// batchUpdateTargetPortWeightDb 批量更新目标组绑定的RS端口和权重
 func (svc *clbSvc) batchUpdateTargetPortWeightDb(kt *kit.Kit, req *protolb.TCloudBatchOperateTargetReq) error {
 	// 检查RS是否已绑定该目标组
 	updateReq := &dataproto.TargetBatchUpdateReq{}
@@ -526,10 +532,10 @@ func (svc *clbSvc) batchModifyTargetWeightCloud(kt *kit.Kit, req *protolb.TCloud
 		return err
 	}
 
-	rsOpt := &typelb.TCloudTargetWeightUpdateOption{
-		Region: tgInfo.Region,
-	}
 	for _, ruleItem := range urlRuleList.Details {
+		rsOpt := &typelb.TCloudTargetWeightUpdateOption{
+			Region: tgInfo.Region,
+		}
 		rsOpt.LoadBalancerId = ruleItem.CloudLbID
 		tmpWeightRule := &typelb.TargetWeightRule{
 			ListenerId: cvt.ValToPtr(ruleItem.CloudLBLID),
@@ -545,12 +551,13 @@ func (svc *clbSvc) batchModifyTargetWeightCloud(kt *kit.Kit, req *protolb.TCloud
 			}
 			tmpRs = setTargetInstanceIDOrEniIP(rsItem.InstType, rsItem.CloudInstID, rsItem.IP, tmpRs)
 			tmpWeightRule.Targets = append(tmpWeightRule.Targets, tmpRs)
-			rsOpt.ModifyList = append(rsOpt.ModifyList, tmpWeightRule)
 		}
+		rsOpt.ModifyList = append(rsOpt.ModifyList, tmpWeightRule)
 		err = tcloudAdpt.ModifyTargetWeight(kt, rsOpt)
 		if err != nil {
-			logs.Errorf("batch modify tcloud target port api failed, err: %v, rsOpt: %+v, rid: %s", err, rsOpt, kt.Rid)
-			return errf.Newf(errf.PartialFailed, "batch modify tcloud target port api failed, err: %v", err)
+			logs.Errorf("batch modify tcloud target weight api failed, err: %v, rsOpt: %+v, rid: %s", err, rsOpt,
+				kt.Rid)
+			return errf.Newf(errf.PartialFailed, "batch modify tcloud target weight api failed, err: %v", err)
 		}
 	}
 
@@ -740,6 +747,7 @@ func (svc *clbSvc) unbindTCloudListenerTargets(kt *kit.Kit, req *protolb.TCloudB
 	return targetIDs, cloudLblIDs, nil
 }
 
+// filterListenerTargetWeightList 过滤符合条件的RS列表
 func (svc *clbSvc) filterListenerTargetList(kt *kit.Kit, lbID string, details []*dataproto.ListBatchListenerResult) (
 	[]*dataproto.ListBatchListenerResult, error) {
 

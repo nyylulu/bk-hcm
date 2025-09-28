@@ -12,7 +12,9 @@ image:
   registry: hub.bktencent.com
   pullPolicy: IfNotPresent
   pullSecrets: []
-  tag: 1.8.1
+  tag: 1.8.7-alpha.1
+
+apigwReleaseVersion: 1.0.0
 
 serviceAccount:
   create: true
@@ -281,6 +283,8 @@ cloudserver:
         targetPort: 80
         nodePort:
   port: 80
+  concurrentConfig:
+    clbImportCount: 10
 
 dataservice:
   ## 镜像
@@ -506,10 +510,24 @@ taskserver:
       canceledFlowFetcherConcurrency: 1
     # executor 公共组件，负责执行异步任务
     executor:
-      # workerNumber 负责处理异步任务的协程数量
+      # workerNumber 负责处理异步任务的协程数量，非零正整数值
       workerNumber: 5
-      # taskExecTimeoutSec 异步任务执行超时时间，是整个异步任务执行流程的总时间，包括运行、回滚、重试。
+      # taskExecTimeoutSec 异步任务执行超时时间，是整个异步任务执行流程的总时间，包括运行、回滚、重试。非零正整数值
       taskExecTimeoutSec: 120
+      # initQueueCapacity 初始化队列容量，非零正整数值
+      initQueueCapacity: 25
+      # fastTaskWorkerRatio 快任务专用协程占workerNumber的比例，0~1的浮点数
+      fastTaskWorkerRatio: 0.2
+      # fastTaskThresholdSec 快任务阈值，执行时间小于该值的任务属于快任务，会被放入到快任务队列，单位秒
+      fastTaskThresholdSec: 10
+      # timeWindowCapacity 时间窗口容量，非零正整数值
+      timeWindowCapacity: 5
+      # timeWindowDurationMin 时间窗口持续时间，单位分钟，正整数
+      timeWindowDurationMin: 30
+      # fastTaskQueueCapacity 快任务队列容量，非零正整数值
+      fastTaskQueueCapacity: 10
+      # slowTaskQueueCapacity 慢任务队列容量，非零正整数值
+      slowTaskQueueCapacity: 10
     # dispatcher 主节点组件，负责派发任务
     dispatcher:
       # watchIntervalSec 查看是否有Pending状态任务的周期
@@ -625,6 +643,8 @@ bkLoginCookieName: ""
 bkItsmUrl: http://itsm.bk.com
 # HCM 地址
 bkHCMUrl: http://hcm.bk.com
+# HCM 网关地址
+bkApigwHCMUrl: http://hcm.bk.com
 # 中英文持久化设置cookie使用，一般设置为 .域名
 bkDomain: .bk.com
 # 蓝鲸配置平台创建业务页面跳转链接
@@ -649,25 +669,51 @@ crypto:
     ##
     nonce:
 
-## APIGateway Sync
-apigwSync:
-  enabled: true
+## 网关自动注册配置
+apigwRegister:
+  enabled: false
   image:
-    repository: blueking/bk-hcm-apigwsync
-    tag: 1.0.2
+    repository: blueking/bk-hcm-apigwregister
+    tag:
   ## 需注册的网关名
   apigwName: "bk-hcm"
   ## 蓝鲸 APIGateway url模板
   bkApiUrlTmpl: "http://bkapi.example.com/api/{api_name}"
   ## 网关负责人，多个使用英文逗号分隔
-  bkApigwManagers: "admin"
+  maintainer: "admin"
+  stageName: "prod"
+  stageDescription: "正式环境"
+  stageDescriptionEn: "Production Environment"
+  releaseTitle: "title"
+  releaseComment: "comment"
+  apiUrlPathPrefix: ""
+  extraEnv:
+  # ENV_1: "value1"
+  # ENV_2: "value2"
   ## Pod
   resources:
     limits:
       cpu: 200m
-      memory: 1024Mi
-    requests:
       memory: 512Mi
+    requests:
+      memory: 20Mi
+      cpu: 200m
+
+# 权限中心自动注册配置
+authRegister:
+  # 是否启用权限中心自动注册job
+  enabled: false
+  # job的镜像参数配置
+  image:
+    repository: blueking/bk-hcm-authregister
+    tag:
+  userName: "bk-hcm"
+  resources:
+    limits:
+      cpu: 200m
+      memory: 512Mi
+    requests:
+      memory: 20Mi
       cpu: 200m
 
 ## Migrate DB

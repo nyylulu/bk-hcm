@@ -5,28 +5,25 @@ import {
   createWebHashHistory,
   RouteLocationNormalized,
 } from 'vue-router';
-import { MENU_BUSINESS } from '@/constants/menu-symbol';
-import { businessViews } from '@/views';
+import { MENU_BUSINESS, MENU_BUSINESS_HOST_MANAGEMENT, MENU_SERVICE } from '@/constants/menu-symbol';
+import { businessViews, serviceViews } from '@/views';
 import common from './module/common';
 import resource from './module/resource';
 import resourceInside from './module/resource-inside';
-import service from './module/service';
+// import service from './module/service';
 import serviceInside from './module/service-inside';
 // import business from './module/business';
 import scheme from './module/scheme';
 import bill from './module/bill';
-import i18n from '@/language/i18n';
 import { useCommonStore } from '@/store';
 import { useVerify } from '@/hooks';
 import { isArray, isRegExp, isString } from 'lodash';
-
-const { t } = i18n.global;
 
 const routes: RouteRecordRaw[] = [
   ...common,
   ...resource,
   ...resourceInside,
-  ...service,
+  // ...service,
   ...serviceInside,
   ...scheme,
   ...bill,
@@ -34,8 +31,7 @@ const routes: RouteRecordRaw[] = [
     path: '/',
     redirect: '/business/host',
     meta: {
-      activeKey: 'businessHost',
-      breadcrumb: [t('计算'), t('主机')],
+      activeKey: MENU_BUSINESS_HOST_MANAGEMENT,
     },
   },
   {
@@ -46,6 +42,11 @@ const routes: RouteRecordRaw[] = [
     name: MENU_BUSINESS,
     path: '/business',
     children: businessViews,
+  },
+  {
+    name: MENU_SERVICE,
+    path: '/service',
+    children: serviceViews,
   },
 ];
 

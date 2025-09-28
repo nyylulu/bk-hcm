@@ -100,6 +100,7 @@ func (cli *client) Cvm(kt *kit.Kit, params *SyncBaseParams, opt *SyncCvmOption) 
 	return new(SyncResult), nil
 }
 
+// createCvm ...
 func (cli *client) createCvm(kt *kit.Kit, accountID string, region string,
 	addSlice []typescvm.AwsCvm) error {
 
@@ -135,6 +136,7 @@ func (cli *client) createCvm(kt *kit.Kit, accountID string, region string,
 	return nil
 }
 
+// buildCvmBatchCreateList build cvm batch create list
 func buildCvmBatchCreateList(addSlice []typescvm.AwsCvm, accountID, region string, vpcMap map[string]*common.VpcDB,
 	subnetMap map[string]string, imageMap map[string]string) (
 	[]protocloud.CvmBatchCreate[corecvm.AwsCvmExtension], error) {
@@ -149,18 +151,7 @@ func buildCvmBatchCreateList(addSlice []typescvm.AwsCvm, accountID, region strin
 			return nil, fmt.Errorf("cvm %s can not find subnet", converter.PtrToVal(one.InstanceId))
 		}
 
-		privateIPv4Addresses := make([]string, 0)
-		if one.PrivateIpAddress != nil {
-			privateIPv4Addresses = append(privateIPv4Addresses, converter.PtrToVal(one.PrivateIpAddress))
-		}
-		publicIPv4Addresses := make([]string, 0)
-		if one.PublicIpAddress != nil {
-			publicIPv4Addresses = append(publicIPv4Addresses, converter.PtrToVal(one.PublicIpAddress))
-		}
-		publicIPv6Addresses := make([]string, 0)
-		if one.Ipv6Address != nil {
-			publicIPv6Addresses = append(publicIPv6Addresses, converter.PtrToVal(one.Ipv6Address))
-		}
+		privateIPv4Addresses, publicIPv4Addresses, publicIPv6Addresses := getIPAddress(one)
 
 		sgIDs := make([]string, 0)
 		if len(one.SecurityGroups) > 0 {
@@ -197,6 +188,7 @@ func buildCvmBatchCreateList(addSlice []typescvm.AwsCvm, accountID, region strin
 	return lists, nil
 }
 
+// buildAwsCvmCreateReq builds a cvm create request for AWS
 func buildAwsCvmCreateReq(one typescvm.AwsCvm, accountID, region, vpcID, subnetID, imageID string,
 	privateIPv4Addresses, publicIPv4Addresses, publicIPv6Addresses, sgIDs []string,
 	awsBlockDeviceMapping []corecvm.AwsBlockDeviceMapping) protocloud.CvmBatchCreate[corecvm.AwsCvmExtension] {
@@ -231,37 +223,13 @@ func buildAwsCvmCreateReq(one typescvm.AwsCvm, accountID, region, vpcID, subnetI
 		CloudLaunchedTime: times.ConvStdTimeFormat(converter.PtrToVal(one.LaunchTime)),
 		// 云上不支持该字段
 		CloudExpiredTime: "",
-		Extension: &corecvm.AwsCvmExtension{
-			CpuOptions: &corecvm.AwsCpuOptions{
-				CoreCount:      one.CpuOptions.CoreCount,
-				ThreadsPerCore: one.CpuOptions.ThreadsPerCore,
-			},
-			Platform:              one.Platform,
-			DnsName:               one.PublicDnsName,
-			EbsOptimized:          one.EbsOptimized,
-			CloudSecurityGroupIDs: sgIDs,
-			PrivateDnsName:        one.PrivateDnsName,
-			PrivateDnsNameOptions: nil,
-			CloudRamDiskID:        one.RamdiskId,
-			RootDeviceName:        one.RootDeviceName,
-			RootDeviceType:        one.RootDeviceType,
-			SourceDestCheck:       one.SourceDestCheck,
-			SriovNetSupport:       one.SriovNetSupport,
-			VirtualizationType:    one.VirtualizationType,
-			BlockDeviceMapping:    awsBlockDeviceMapping,
-		},
+		Extension:        convAwsExtension(one, sgIDs, awsBlockDeviceMapping),
 	}
 
-	if one.PrivateDnsNameOptions != nil {
-		cvm.Extension.PrivateDnsNameOptions = &corecvm.AwsPrivateDnsNameOptions{
-			EnableResourceNameDnsAAAARecord: one.PrivateDnsNameOptions.EnableResourceNameDnsAAAARecord,
-			EnableResourceNameDnsARecord:    one.PrivateDnsNameOptions.EnableResourceNameDnsARecord,
-			HostnameType:                    one.PrivateDnsNameOptions.HostnameType,
-		}
-	}
 	return cvm
 }
 
+// updateCvm ...
 func (cli *client) updateCvm(kt *kit.Kit, accountID string, region string,
 	updateMap map[string]typescvm.AwsCvm) error {
 
@@ -281,11 +249,11 @@ func (cli *client) updateCvm(kt *kit.Kit, accountID string, region string,
 	}
 
 	for id, one := range updateMap {
-		if _, exsit := vpcMap[converter.PtrToVal(one.VpcId)]; !exsit {
+		if _, exists := vpcMap[converter.PtrToVal(one.VpcId)]; !exists {
 			return fmt.Errorf("cvm %s can not find vpc", converter.PtrToVal(one.InstanceId))
 		}
 
-		if _, exsit := subnetMap[converter.PtrToVal(one.SubnetId)]; !exsit {
+		if _, exists := subnetMap[converter.PtrToVal(one.SubnetId)]; !exists {
 			return fmt.Errorf("cvm %s can not find subnet", converter.PtrToVal(one.InstanceId))
 		}
 
@@ -333,7 +301,7 @@ func buildCvmUpdateReqWithAwsExtension(id string, one typescvm.AwsCvm, vpcMap ma
 		}
 	}
 	imageID := ""
-	if id, exsit := imageMap[converter.PtrToVal(one.ImageId)]; exsit {
+	if id, exists := imageMap[converter.PtrToVal(one.ImageId)]; exists {
 		imageID = id
 	}
 	privateIPv4Addresses, publicIPv4Addresses, publicIPv6Addresses := parseIPInfo(one)
@@ -360,32 +328,7 @@ func buildCvmUpdateReqWithAwsExtension(id string, one typescvm.AwsCvm, vpcMap ma
 			// 云上不支持该字段
 			CloudExpiredTime: "",
 		},
-		Extension: &corecvm.AwsCvmExtension{
-			CpuOptions: &corecvm.AwsCpuOptions{
-				CoreCount:      one.CpuOptions.CoreCount,
-				ThreadsPerCore: one.CpuOptions.ThreadsPerCore,
-			},
-			Platform:              one.Platform,
-			DnsName:               one.PublicDnsName,
-			EbsOptimized:          one.EbsOptimized,
-			CloudSecurityGroupIDs: sgIDs,
-			PrivateDnsName:        one.PrivateDnsName,
-			PrivateDnsNameOptions: nil,
-			CloudRamDiskID:        one.RamdiskId,
-			RootDeviceName:        one.RootDeviceName,
-			RootDeviceType:        one.RootDeviceType,
-			SourceDestCheck:       one.SourceDestCheck,
-			SriovNetSupport:       one.SriovNetSupport,
-			VirtualizationType:    one.VirtualizationType,
-			BlockDeviceMapping:    awsBlockDeviceMapping,
-		},
-	}
-	if one.PrivateDnsNameOptions != nil {
-		req.Extension.PrivateDnsNameOptions = &corecvm.AwsPrivateDnsNameOptions{
-			EnableResourceNameDnsAAAARecord: one.PrivateDnsNameOptions.EnableResourceNameDnsAAAARecord,
-			EnableResourceNameDnsARecord:    one.PrivateDnsNameOptions.EnableResourceNameDnsARecord,
-			HostnameType:                    one.PrivateDnsNameOptions.HostnameType,
-		}
+		Extension: convAwsExtension(one, sgIDs, awsBlockDeviceMapping),
 	}
 	return req
 }
@@ -403,114 +346,7 @@ func parseIPInfo(one typescvm.AwsCvm) (privateIPv4Addresses, publicIPv4Addresses
 	return
 }
 
-func (cli *client) getCvmRelResMaps(kt *kit.Kit, accountID string, region string,
-	cloudDataSlice []typescvm.AwsCvm) (map[string]*common.VpcDB, map[string]string, map[string]string, error) {
-
-	cloudVpcIDs := make([]string, 0)
-	cloudSubnetIDs := make([]string, 0)
-	cloudImageIDs := make([]string, 0)
-	for _, one := range cloudDataSlice {
-		cloudVpcIDs = append(cloudVpcIDs, converter.PtrToVal(one.VpcId))
-		cloudSubnetIDs = append(cloudSubnetIDs, converter.PtrToVal(one.SubnetId))
-		cloudImageIDs = append(cloudImageIDs, converter.PtrToVal(one.ImageId))
-	}
-
-	vpcMap, err := cli.getVpcMap(kt, accountID, region, cloudVpcIDs)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	subnetMap, err := cli.getSubnetMap(kt, accountID, region, cloudSubnetIDs)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	imageMap, err := cli.getImageMap(kt, accountID, region, cloudImageIDs)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	return vpcMap, subnetMap, imageMap, nil
-}
-
-func (cli *client) getVpcMap(kt *kit.Kit, accountID string, region string,
-	cloudVpcIDs []string) (map[string]*common.VpcDB, error) {
-
-	vpcMap := make(map[string]*common.VpcDB)
-
-	elems := slice.Split(cloudVpcIDs, constant.CloudResourceSyncMaxLimit)
-	for _, parts := range elems {
-		vpcParams := &SyncBaseParams{
-			AccountID: accountID,
-			Region:    region,
-			CloudIDs:  parts,
-		}
-		vpcFromDB, err := cli.listVpcFromDB(kt, vpcParams)
-		if err != nil {
-			return vpcMap, err
-		}
-
-		for _, vpc := range vpcFromDB {
-			vpcMap[vpc.CloudID] = &common.VpcDB{
-				VpcCloudID: vpc.CloudID,
-				VpcID:      vpc.ID,
-			}
-		}
-	}
-
-	return vpcMap, nil
-}
-
-func (cli *client) getSubnetMap(kt *kit.Kit, accountID string, region string,
-	cloudSubnetsIDs []string) (map[string]string, error) {
-
-	subnetMap := make(map[string]string)
-
-	elems := slice.Split(cloudSubnetsIDs, constant.CloudResourceSyncMaxLimit)
-	for _, parts := range elems {
-		subnetParams := &SyncBaseParams{
-			AccountID: accountID,
-			Region:    region,
-			CloudIDs:  parts,
-		}
-		subnetFromDB, err := cli.listSubnetFromDB(kt, subnetParams)
-		if err != nil {
-			return subnetMap, err
-		}
-
-		for _, subnet := range subnetFromDB {
-			subnetMap[subnet.CloudID] = subnet.ID
-		}
-	}
-
-	return subnetMap, nil
-}
-
-func (cli *client) getImageMap(kt *kit.Kit, accountID string, region string,
-	cloudImageIDs []string) (map[string]string, error) {
-
-	imageMap := make(map[string]string)
-
-	elems := slice.Split(cloudImageIDs, constant.CloudResourceSyncMaxLimit)
-	for _, parts := range elems {
-		imageParams := &SyncBaseParams{
-			AccountID: accountID,
-			Region:    region,
-			CloudIDs:  parts,
-		}
-		imageFromDB, err := cli.listImageFromDBForCvm(kt, imageParams)
-		if err != nil {
-			return imageMap, err
-		}
-
-		for _, image := range imageFromDB {
-			imageMap[image.CloudID] = image.ID
-		}
-	}
-
-	return imageMap, nil
-}
-
+// deleteCvm ...
 func (cli *client) deleteCvm(kt *kit.Kit, accountID string, region string, delCloudIDs []string) error {
 	if len(delCloudIDs) <= 0 {
 		return fmt.Errorf("cvm delCloudIDs is <= 0, not delete")
@@ -547,6 +383,7 @@ func (cli *client) deleteCvm(kt *kit.Kit, accountID string, region string, delCl
 	return nil
 }
 
+// listCvmFromCloud ...
 func (cli *client) listCvmFromCloud(kt *kit.Kit, params *SyncBaseParams) ([]typescvm.AwsCvm, error) {
 	if err := params.Validate(); err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
@@ -568,46 +405,6 @@ func (cli *client) listCvmFromCloud(kt *kit.Kit, params *SyncBaseParams) ([]type
 	}
 
 	return result, nil
-}
-
-func (cli *client) listCvmFromDB(kt *kit.Kit, params *SyncBaseParams) (
-	[]corecvm.Cvm[cvm.AwsCvmExtension], error) {
-
-	if err := params.Validate(); err != nil {
-		return nil, errf.NewFromErr(errf.InvalidParameter, err)
-	}
-
-	req := &protocloud.CvmListReq{
-		Filter: &filter.Expression{
-			Op: filter.And,
-			Rules: []filter.RuleFactory{
-				&filter.AtomRule{
-					Field: "account_id",
-					Op:    filter.Equal.Factory(),
-					Value: params.AccountID,
-				},
-				&filter.AtomRule{
-					Field: "cloud_id",
-					Op:    filter.In.Factory(),
-					Value: params.CloudIDs,
-				},
-				&filter.AtomRule{
-					Field: "region",
-					Op:    filter.Equal.Factory(),
-					Value: params.Region,
-				},
-			},
-		},
-		Page: core.NewDefaultBasePage(),
-	}
-	result, err := cli.dbCli.Aws.Cvm.ListCvmExt(kt.Ctx, kt.Header(), req)
-	if err != nil {
-		logs.Errorf("[%s] list cvm from db failed, err: %v, account: %s, req: %v, rid: %s", enumor.Aws,
-			err, params.AccountID, req, kt.Rid)
-		return nil, err
-	}
-
-	return result.Details, nil
 }
 
 // RemoveCvmDeleteFromCloud ...
@@ -678,6 +475,7 @@ func (cli *client) RemoveCvmDeleteFromCloud(kt *kit.Kit, accountID string, regio
 	return nil
 }
 
+// listRemoveCvmID ...
 func (cli *client) listRemoveCvmID(kt *kit.Kit, params *SyncBaseParams) ([]string, error) {
 	if err := params.Validate(); err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
@@ -747,18 +545,7 @@ func isCvmChange(cloud typescvm.AwsCvm, db corecvm.Cvm[cvm.AwsCvmExtension]) boo
 		return true
 	}
 
-	privateIPv4Addresses := make([]string, 0)
-	if cloud.PrivateIpAddress != nil {
-		privateIPv4Addresses = append(privateIPv4Addresses, converter.PtrToVal(cloud.PrivateIpAddress))
-	}
-	publicIPv4Addresses := make([]string, 0)
-	if cloud.PublicIpAddress != nil {
-		publicIPv4Addresses = append(publicIPv4Addresses, converter.PtrToVal(cloud.PublicIpAddress))
-	}
-	publicIPv6Addresses := make([]string, 0)
-	if cloud.Ipv6Address != nil {
-		publicIPv6Addresses = append(publicIPv6Addresses, converter.PtrToVal(cloud.Ipv6Address))
-	}
+	privateIPv4Addresses, publicIPv4Addresses, publicIPv6Addresses := getIPAddress(cloud)
 
 	if !assert.IsStringSliceEqual(privateIPv4Addresses, db.PrivateIPv4Addresses) {
 		return true
@@ -780,73 +567,105 @@ func isCvmChange(cloud typescvm.AwsCvm, db corecvm.Cvm[cvm.AwsCvmExtension]) boo
 		return true
 	}
 
-	if !assert.IsPtrStringEqual(db.Extension.Platform, cloud.Platform) {
+	if isCvmExtensionChange(cloud, db.Extension) {
+		return false
+	}
+
+	return false
+}
+
+func isCvmExtensionChange(cloud typescvm.AwsCvm, dbExt *corecvm.AwsCvmExtension) bool {
+	if !assert.IsPtrStringEqual(dbExt.Platform, cloud.Platform) {
 		return true
 	}
 
-	if !assert.IsPtrStringEqual(db.Extension.DnsName, cloud.PublicDnsName) {
+	if !assert.IsPtrStringEqual(dbExt.DnsName, cloud.PublicDnsName) {
 		return true
 	}
 
-	if !assert.IsPtrBoolEqual(db.Extension.EbsOptimized, cloud.EbsOptimized) {
+	if !assert.IsPtrBoolEqual(dbExt.EbsOptimized, cloud.EbsOptimized) {
 		return true
 	}
 
-	if !assert.IsPtrStringEqual(db.Extension.PrivateDnsName, cloud.PrivateDnsName) {
+	if !assert.IsPtrStringEqual(dbExt.PrivateDnsName, cloud.PrivateDnsName) {
 		return true
 	}
 
-	if !assert.IsPtrStringEqual(db.Extension.CloudRamDiskID, cloud.RamdiskId) {
+	if !assert.IsPtrStringEqual(dbExt.CloudRamDiskID, cloud.RamdiskId) {
 		return true
 	}
 
-	if !assert.IsPtrStringEqual(db.Extension.RootDeviceName, cloud.RootDeviceName) {
+	if !assert.IsPtrStringEqual(dbExt.RootDeviceName, cloud.RootDeviceName) {
 		return true
 	}
 
-	if !assert.IsPtrStringEqual(db.Extension.PrivateDnsName, cloud.PrivateDnsName) {
+	if !assert.IsPtrStringEqual(dbExt.PrivateDnsName, cloud.PrivateDnsName) {
 		return true
 	}
 
-	if !assert.IsPtrStringEqual(db.Extension.RootDeviceType, cloud.RootDeviceType) {
+	if !assert.IsPtrStringEqual(dbExt.RootDeviceType, cloud.RootDeviceType) {
 		return true
 	}
 
-	if !assert.IsPtrBoolEqual(db.Extension.SourceDestCheck, cloud.SourceDestCheck) {
+	if !assert.IsPtrBoolEqual(dbExt.SourceDestCheck, cloud.SourceDestCheck) {
 		return true
 	}
 
-	if !assert.IsPtrStringEqual(db.Extension.SriovNetSupport, cloud.SriovNetSupport) {
+	if !assert.IsPtrStringEqual(dbExt.SriovNetSupport, cloud.SriovNetSupport) {
 		return true
 	}
 
-	if !assert.IsPtrStringEqual(db.Extension.VirtualizationType, cloud.VirtualizationType) {
+	if !assert.IsPtrStringEqual(dbExt.VirtualizationType, cloud.VirtualizationType) {
 		return true
 	}
 
-	if !assert.IsPtrInt64Equal(db.Extension.CpuOptions.CoreCount, cloud.CpuOptions.CoreCount) {
+	if !assert.IsPtrInt64Equal(dbExt.CpuOptions.CoreCount, cloud.CpuOptions.CoreCount) {
 		return true
 	}
 
-	if !assert.IsPtrInt64Equal(db.Extension.CpuOptions.ThreadsPerCore, cloud.CpuOptions.ThreadsPerCore) {
+	if !assert.IsPtrInt64Equal(dbExt.CpuOptions.ThreadsPerCore, cloud.CpuOptions.ThreadsPerCore) {
 		return true
 	}
 
-	if !assert.IsPtrBoolEqual(db.Extension.PrivateDnsNameOptions.EnableResourceNameDnsAAAARecord,
+	if !assert.IsPtrBoolEqual(dbExt.PrivateDnsNameOptions.EnableResourceNameDnsAAAARecord,
 		cloud.PrivateDnsNameOptions.EnableResourceNameDnsAAAARecord) {
 		return true
 	}
 
-	if !assert.IsPtrBoolEqual(db.Extension.PrivateDnsNameOptions.EnableResourceNameDnsARecord,
+	if !assert.IsPtrBoolEqual(dbExt.PrivateDnsNameOptions.EnableResourceNameDnsARecord,
 		cloud.PrivateDnsNameOptions.EnableResourceNameDnsARecord) {
 		return true
 	}
 
-	if !assert.IsPtrStringEqual(db.Extension.PrivateDnsNameOptions.HostnameType,
-		cloud.PrivateDnsNameOptions.HostnameType) {
+	if !assert.IsPtrStringEqual(dbExt.PrivateDnsNameOptions.HostnameType, cloud.PrivateDnsNameOptions.HostnameType) {
 		return true
 	}
 
+	if isCvmSecurityGroupChange(cloud, dbExt) {
+		return true
+	}
+
+	if isAwsVolumeChange(cloud.BlockDeviceMappings, dbExt.BlockDeviceMapping) {
+		return true
+	}
+
+	return false
+}
+
+func isAwsVolumeChange(cloud []*ec2.InstanceBlockDeviceMapping, db []corecvm.AwsBlockDeviceMapping) bool {
+
+	dbVolumeIDs := slice.Map(db, func(one corecvm.AwsBlockDeviceMapping) *string {
+		return one.CloudVolumeID
+	})
+	cloudVolumeIDs := slice.Map(cloud, func(one *ec2.InstanceBlockDeviceMapping) *string {
+		return one.Ebs.VolumeId
+	})
+	if !assert.IsPtrStringSliceEqual(dbVolumeIDs, cloudVolumeIDs) {
+		return true
+	}
+	return false
+}
+func isCvmSecurityGroupChange(cloud typescvm.AwsCvm, dbExt *corecvm.AwsCvmExtension) bool {
 	sgIDs := make([]string, 0)
 	if len(cloud.SecurityGroups) > 0 {
 		for _, sg := range cloud.SecurityGroups {
@@ -855,19 +674,57 @@ func isCvmChange(cloud typescvm.AwsCvm, db corecvm.Cvm[cvm.AwsCvmExtension]) boo
 			}
 		}
 	}
-	if !assert.IsStringSliceEqual(db.Extension.CloudSecurityGroupIDs, sgIDs) {
+	if !assert.IsStringSliceEqual(dbExt.CloudSecurityGroupIDs, sgIDs) {
 		return true
 	}
-
-	dbVolumeIDs := slice.Map(db.Extension.BlockDeviceMapping, func(one corecvm.AwsBlockDeviceMapping) *string {
-		return one.CloudVolumeID
-	})
-	cloudVolumeIDs := slice.Map(cloud.BlockDeviceMappings, func(one *ec2.InstanceBlockDeviceMapping) *string {
-		return one.Ebs.VolumeId
-	})
-	if !assert.IsPtrStringSliceEqual(dbVolumeIDs, cloudVolumeIDs) {
-		return true
-	}
-
 	return false
+}
+
+func convAwsExtension(one typescvm.AwsCvm, sgIDs []string,
+	awsBlockDeviceMapping []corecvm.AwsBlockDeviceMapping) *corecvm.AwsCvmExtension {
+
+	extension := &corecvm.AwsCvmExtension{
+		CpuOptions: &corecvm.AwsCpuOptions{
+			CoreCount:      one.CpuOptions.CoreCount,
+			ThreadsPerCore: one.CpuOptions.ThreadsPerCore,
+		},
+		Platform:              one.Platform,
+		DnsName:               one.PublicDnsName,
+		EbsOptimized:          one.EbsOptimized,
+		CloudSecurityGroupIDs: sgIDs,
+		PrivateDnsName:        one.PrivateDnsName,
+		PrivateDnsNameOptions: nil,
+		CloudRamDiskID:        one.RamdiskId,
+		RootDeviceName:        one.RootDeviceName,
+		RootDeviceType:        one.RootDeviceType,
+		SourceDestCheck:       one.SourceDestCheck,
+		SriovNetSupport:       one.SriovNetSupport,
+		VirtualizationType:    one.VirtualizationType,
+		BlockDeviceMapping:    awsBlockDeviceMapping,
+	}
+
+	if one.PrivateDnsNameOptions != nil {
+		extension.PrivateDnsNameOptions = &corecvm.AwsPrivateDnsNameOptions{
+			EnableResourceNameDnsAAAARecord: one.PrivateDnsNameOptions.EnableResourceNameDnsAAAARecord,
+			EnableResourceNameDnsARecord:    one.PrivateDnsNameOptions.EnableResourceNameDnsARecord,
+			HostnameType:                    one.PrivateDnsNameOptions.HostnameType,
+		}
+	}
+	return extension
+}
+
+func getIPAddress(one typescvm.AwsCvm) (privateIPv4Addresses, publicIPv4Addresses, publicIPv6Addresses []string) {
+	privateIPv4Addresses = make([]string, 0)
+	if one.PrivateIpAddress != nil {
+		privateIPv4Addresses = append(privateIPv4Addresses, converter.PtrToVal(one.PrivateIpAddress))
+	}
+	publicIPv4Addresses = make([]string, 0)
+	if one.PublicIpAddress != nil {
+		publicIPv4Addresses = append(publicIPv4Addresses, converter.PtrToVal(one.PublicIpAddress))
+	}
+	publicIPv6Addresses = make([]string, 0)
+	if one.Ipv6Address != nil {
+		publicIPv6Addresses = append(publicIPv6Addresses, converter.PtrToVal(one.Ipv6Address))
+	}
+	return privateIPv4Addresses, publicIPv4Addresses, publicIPv6Addresses
 }

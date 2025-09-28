@@ -1,5 +1,6 @@
 import type { VNode } from 'vue';
-import type { Column as TableColumn } from 'bkui-vue/lib/table/props';
+import type { IFilterPropShape, Column as TableColumn } from 'bkui-vue/lib/table/props';
+import { type PrimaryTableCol } from '@blueking/tdesign-ui';
 import { RulesItem, QueryRuleOPEnum, QueryRuleOPEnumLegacy } from '@/typings';
 import type { ResourceTypeEnum } from '@/common/resource-constant';
 
@@ -7,6 +8,7 @@ export type ModelPropertyType =
   | 'string'
   | 'datetime'
   | 'enum'
+  | 'list'
   | 'number'
   | 'account'
   | 'user'
@@ -32,7 +34,8 @@ export type ModelProperty = {
   name: string;
   type: ModelPropertyType;
   resource?: ResourceTypeEnum;
-  option?: Record<string, any>;
+  option?: Record<string | number, any> | (() => Promise<Record<string | number, any>>);
+  list?: Array<{ [key: string]: any }> | (() => Promise<Array<{ [key: string]: any }>>);
   meta?: ModelPropertyMeta;
   unit?: string;
   index?: number;
@@ -42,11 +45,13 @@ export type ModelProperty = {
 export type PropertyColumnConfig = {
   sort?: boolean;
   align?: 'left' | 'center' | 'right';
+  cell?: PrimaryTableCol['cell'];
   render?: (args: {
     cell?: any;
     data?: any;
     row?: any;
-    column: TableColumn;
+    column?: TableColumn;
+    col?: TableColumn;
     index: number;
     rows?: any[];
   }) => VNode | boolean | number | string;
@@ -54,6 +59,9 @@ export type PropertyColumnConfig = {
   minWidth?: number | string;
   defaultHidden?: boolean;
   showOverflowTooltip?: boolean;
+  fixed?: 'left' | 'right';
+  filter?: IFilterPropShape;
+  ellipsis?: PrimaryTableCol['ellipsis'];
 };
 
 export type PropertyFormConfig = {
@@ -66,11 +74,15 @@ export type PropertySearchConfig = {
   format?: (value: any) => any;
   converter?: (value: any) => Record<string, any>;
   enableEmpty?: boolean;
+  props?: Record<string, any>;
 };
 
 export type PropertyDisplayConfig = {
   appearance?: string;
+  appearanceProps?: Record<string, any>;
   format?: (value: any) => any;
+  render?: (value: any) => VNode | string;
+  showOverflowTooltip?: boolean;
 };
 
 // 与列展示场景相关，联合列的配置属性

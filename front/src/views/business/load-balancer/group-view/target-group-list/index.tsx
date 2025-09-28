@@ -1,21 +1,25 @@
-import { defineComponent, onMounted, onUnmounted, ref, watch } from 'vue';
+import { ComputedRef, defineComponent, inject, onMounted, onUnmounted, ref, watch, nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { Input, Message, OverflowTitle } from 'bkui-vue';
-import Confirm from '@/components/confirm';
 import { useLoadBalancerStore, useAccountStore, useBusinessStore, ITargetGroupDetail } from '@/store';
 import useMoreActionDropdown from '@/hooks/useMoreActionDropdown';
 import { useSingleList } from '@/hooks/useSingleList';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
-import bus from '@/common/bus';
-import { LBRouteName } from '@/constants';
 import { QueryRuleOPEnum } from '@/typings';
+import { MENU_BUSINESS_TARGET_GROUP_DETAILS, MENU_BUSINESS_TARGET_GROUP_OVERVIEW } from '@/constants/menu-symbol';
+import { IAuthSign } from '@/common/auth-service';
+import bus from '@/common/bus';
+
+import { Input, Message, OverflowTitle } from 'bkui-vue';
 import allIcon from '@/assets/image/all-lb.svg';
 import mubiaoIcon from '@/assets/image/mubiao.svg';
+import Confirm from '@/components/confirm';
 import './index.scss';
 
 export default defineComponent({
   name: 'TargetGroupList',
   setup() {
+    const clbCreateAuthSign = inject<ComputedRef<IAuthSign | IAuthSign[]>>('clbCreateAuthSign');
+    const clbOperationAuthSign = inject<ComputedRef<IAuthSign | IAuthSign[]>>('clbOperationAuthSign');
     // use hooks
     const { getBusinessApiPath } = useWhereAmI();
     const router = useRouter();
@@ -27,7 +31,7 @@ export default defineComponent({
 
     // 搜索相关
     const searchValue = ref('');
-
+    const targetGroupListRef = ref(null);
     const activeTargetGroupId = ref(''); // 当前选中的目标组id
     const allTargetGroupsItem = { type: 'all', isDropdownListShow: false }; // 全部目标组item
 
@@ -37,7 +41,19 @@ export default defineComponent({
       url: `/api/v1/cloud/${getBusinessApiPath()}target_groups/list`,
       rules: () => rules.value,
       immediate: !loadBalancerStore.tgSearchTarget,
+      rollRequestConfig: { enabled: true, limit: 500 },
+      success: () => handleListLoaded(),
     });
+
+    const handleListLoaded = () => {
+      nextTick(() => {
+        const target = targetGroupListRef.value.getElementsByClassName('selected')[0];
+        target?.parentNode?.scrollTo({
+          top: target?.offsetTop - 200,
+          behavior: 'auto',
+        });
+      });
+    };
 
     // handler - 切换目标组
     const handleTypeChange = (targetGroup?: ITargetGroupDetail) => {
@@ -49,7 +65,7 @@ export default defineComponent({
       loadBalancerStore.setTargetGroupId(id);
       // 导航
       router.push({
-        name: id ? LBRouteName.tg : LBRouteName.allTgs,
+        name: id ? MENU_BUSINESS_TARGET_GROUP_DETAILS : MENU_BUSINESS_TARGET_GROUP_OVERVIEW,
         query: { ...route.query, type: id ? route.query.type : undefined, vendor },
         params: { id: id || undefined },
       });
@@ -125,7 +141,7 @@ export default defineComponent({
     });
 
     return () => (
-      <div class='target-group-list'>
+      <div class='target-group-list' ref={targetGroupListRef}>
         <div class='search-wrap'>
           <Input
             v-model={searchValue.value}
@@ -146,9 +162,15 @@ export default defineComponent({
             </div>
             <div class='ext-info'>
               <div class='count'>{pagination.count}</div>
-              <div class='more-action' onClick={(e) => showDropdownList(e, allTargetGroupsItem)}>
-                <i class='hcm-icon bkhcm-icon-more-fill'></i>
-              </div>
+              <hcm-auth class='more-action' sign={clbCreateAuthSign.value}>
+                {{
+                  default: ({ noPerm }: { noPerm: boolean }) => (
+                    <bk-button text disabled={noPerm} onClick={(e: Event) => showDropdownList(e, allTargetGroupsItem)}>
+                      <i class='hcm-icon bkhcm-icon-more-fill'></i>
+                    </bk-button>
+                  ),
+                }}
+              </hcm-auth>
             </div>
           </div>
           <div class='group-list' onScroll={handleScroll}>
@@ -164,9 +186,18 @@ export default defineComponent({
                   </OverflowTitle>
                   <div class={`ext-info${currentPopBoundaryNodeKey.value === item.id ? ' show-dropdown' : ''}`}>
                     <div class='count'>{item.count}</div>
-                    <div class='more-action' onClick={(e) => showDropdownList(e, { type: 'specific', ...item })}>
-                      <i class='hcm-icon bkhcm-icon-more-fill'></i>
-                    </div>
+                    <hcm-auth class='more-action' sign={clbOperationAuthSign.value}>
+                      {{
+                        default: ({ noPerm }: { noPerm: boolean }) => (
+                          <bk-button
+                            text
+                            disabled={noPerm}
+                            onClick={(e: Event) => showDropdownList(e, { type: 'specific', ...item })}>
+                            <i class='hcm-icon bkhcm-icon-more-fill'></i>
+                          </bk-button>
+                        ),
+                      }}
+                    </hcm-auth>
                   </div>
                 </div>
               );

@@ -188,11 +188,18 @@ type TCloudLbUrlRule struct {
 	Domain             string          `json:"domain"`
 	URL                string          `json:"url"`
 	Scheduler          string          `json:"scheduler"`
+	AccountID          string          `json:"account_id"`
+	BkBizID            int64           `json:"bk_biz_id"`
 
 	SessionType   string                 `json:"session_type"`
 	SessionExpire int64                  `json:"session_expire"`
 	HealthCheck   *TCloudHealthCheckInfo `json:"health_check"`
 	Certificate   *TCloudCertificateInfo `json:"certificate"`
+
+	// 以下三个字段 都来自 监听器表，通过join的方式查询出来
+	LblName  string              `json:"lbl_name"`
+	Protocol enumor.ProtocolType `json:"protocol"`
+	Port     int64               `json:"port"`
 
 	Memo           *string `json:"memo"`
 	*core.Revision `json:",inline"`

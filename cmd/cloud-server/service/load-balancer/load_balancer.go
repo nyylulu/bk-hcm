@@ -63,7 +63,7 @@ func InitService(c *capability.Capability) {
 	bizH.Path("/bizs/{bk_biz_id}")
 	bizService(bizH, svc)
 	bizURLRuleService(bizH, svc)
-	bizSopService(bizH, svc)
+	bizExportService(bizH, svc)
 
 	h.Load(c.WebService)
 	bizH.Load(c.WebService)
@@ -118,8 +118,7 @@ func bizService(h *rest.Handler, svc *lbSvc) {
 	h.Add("BatchModifyBizTargetPort",
 		http.MethodPatch, "/target_groups/{target_group_id}/targets/port", svc.BatchModifyBizTargetsPort)
 	h.Add("BatchModifyBizTargetsWeight", http.MethodPatch,
-		"/target_groups/{target_group_id}/targets/weight", svc.BatchModifyBizTargetsWeight)
-	h.Add("BatchDeleteBizRule", http.MethodDelete, "/rule/batch", svc.BatchDeleteBizRule)
+		"/targets/weight", svc.BatchModifyBizTargetsWeight)
 
 	h.Add("CancelFlow", http.MethodPost, "/load_balancers/{lb_id}/async_flows/terminate", svc.BizTerminateFlow)
 	h.Add("RetryTask", http.MethodPost, "/load_balancers/{lb_id}/async_tasks/retry", svc.BizRetryTask)
@@ -136,6 +135,8 @@ func bizService(h *rest.Handler, svc *lbSvc) {
 	h.Add("DeleteBizListener", http.MethodDelete, "/listeners/batch", svc.DeleteBizListener)
 	h.Add("UpdateBizDomainAttr", http.MethodPatch, "/listeners/{lbl_id}/domains", svc.UpdateBizDomainAttr)
 	h.Add("ListBizListenerWithTargets", http.MethodPost, "/listeners/with/targets/list", svc.ListBizListenerWithTargets)
+	h.Add("ListBizListenerByCond", http.MethodPost, "/listeners/list_by_cond", svc.ListBizListenerByCond)
+	h.Add("ListBizTargetByCond", http.MethodPost, "/targets/list_by_cond", svc.ListBizTargetByCond)
 
 	h.Add("ListBizListenerTargetWeightStat", http.MethodPost, "/listeners/rs_weight_stat",
 		svc.ListBizListenerTargetWeightStat)
@@ -147,6 +148,16 @@ func bizService(h *rest.Handler, svc *lbSvc) {
 		"/vendors/{vendor}/load_balancers/operations/{operation_type}/submit", svc.ImportSubmit)
 	h.Add("ImportValidate", http.MethodPost,
 		"/vendors/{vendor}/load_balancers/operations/{operation_type}/validate", svc.ImportValidate)
+
+	// 高级检索
+	h.Add("ListTargetByTopo", http.MethodPost,
+		"/vendors/{vendor}/targets/by_topo/list", svc.ListTargetByTopo)
+	h.Add("CountTargetByTopo", http.MethodPost,
+		"/vendors/{vendor}/targets/by_topo/count", svc.CountTargetByTopo)
+	h.Add("ListListenerByTopo", http.MethodPost,
+		"/vendors/{vendor}/listeners/by_topo/list", svc.ListListenerByTopo)
+	h.Add("ListUrlRulesByTopo", http.MethodPost,
+		"/vendors/{vendor}/url_rules/by_topo/list", svc.ListUrlRulesByTopo)
 }
 
 func bizURLRuleService(h *rest.Handler, svc *lbSvc) {
@@ -165,22 +176,19 @@ func bizURLRuleService(h *rest.Handler, svc *lbSvc) {
 		"/vendors/{vendor}/listeners/{lbl_id}/rules/batch", svc.BatchDeleteBizUrlRule)
 	h.Add("BatchDeleteBizUrlRuleByDomain", http.MethodDelete,
 		"/vendors/{vendor}/listeners/{lbl_id}/rules/by/domains/batch", svc.BatchDeleteBizUrlRuleByDomain)
-	h.Add("ListRuleBindingStatus", http.MethodPost,
-		"/vendors/{vendor}/listeners/{lbl_id}/rules/binding_status/list", svc.ListRuleBindingStatus)
+	h.Add("ListBizRuleBindingStatus", http.MethodPost,
+		"/vendors/{vendor}/listeners/{lbl_id}/rules/binding_status/list", svc.ListBizRuleBindingStatus)
+	h.Add("BizUrlRuleBindTargetGroup", http.MethodPost,
+		"/vendors/{vendor}/rules/target_group/bind", svc.BizUrlRuleBindTargetGroup)
+	h.Add("CreateBizUrlRuleWithoutBinding", http.MethodPost,
+		"/vendors/{vendor}/listeners/{lbl_id}/rule/create", svc.CreateBizUrlRuleWithoutBinding)
 }
 
-func bizSopService(h *rest.Handler, svc *lbSvc) {
-	// 标准运维
-	h.Add("BatchBizAddTargetGroupRS", http.MethodPost,
-		"/sops/target_groups/targets/create", svc.BatchBizAddTargetGroupRS)
-	h.Add("BatchBizRemoveTargetGroupRS", http.MethodDelete,
-		"/sops/target_groups/targets/batch", svc.BatchBizRemoveTargetGroupRS)
-	h.Add("BatchBizModifyWeightTargetGroup", http.MethodPatch,
-		"/sops/target_groups/targets/weight", svc.BatchBizModifyWeightTargetGroup)
-	h.Add("BatchBizRuleOnline", http.MethodPost,
-		"/sops/rule/online", svc.BatchBizRuleOnline)
-	h.Add("BatchBizRuleOffline", http.MethodDelete,
-		"/sops/rule/offline", svc.BatchBizRuleOffline)
+func bizExportService(h *rest.Handler, svc *lbSvc) {
+	h.Add("ExportBizListenerPreCheck", http.MethodPost,
+		"/vendors/{vendor}/listeners/export/pre_check", svc.PreCheckExportBizListener)
+	h.Add("ExportBizListener", http.MethodPost, "/vendors/{vendor}/listeners/export", svc.ExportBizListener)
+	h.Add("ExportBizTarget", http.MethodPost, "/vendors/{vendor}/targets/export", svc.ExportBizTarget)
 }
 
 type lbSvc struct {

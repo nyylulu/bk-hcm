@@ -8,6 +8,8 @@ import { SITE_TYPE_MAP } from '@/common/constant';
 import { timeFormatter } from '@/common/util';
 import { useVerify } from '@/hooks';
 import PermissionDialog from '@/components/permission-dialog';
+import { MENU_SERVICE_TICKET_DETAILS } from '@/constants/menu-symbol';
+import routerAction from '@/router/utils/action';
 
 export default defineComponent({
   props: {
@@ -59,7 +61,12 @@ export default defineComponent({
               theme='primary'
               text
               onClick={() => {
-                window.open(`/#/service/my-apply/detail?id=${data.id}`);
+                routerAction.open({
+                  name: MENU_SERVICE_TICKET_DETAILS,
+                  query: {
+                    id: data.id,
+                  },
+                });
               }}>
               链接
             </Button>
@@ -68,7 +75,7 @@ export default defineComponent({
         theme: 'success',
       });
       // router.push({
-      //   path: '/service/my-apply/detail',
+      //   path: '/service/ticket/detail',
       //   query: {
       //     ...route.query,
       //     id: data.id,

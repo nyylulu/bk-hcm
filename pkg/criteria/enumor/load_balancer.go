@@ -21,6 +21,7 @@ package enumor
 
 import (
 	"errors"
+	"fmt"
 )
 
 // RuleType 负载均衡类型
@@ -66,10 +67,27 @@ const (
 	FailedBindingStatus BindingStatus = "failed"
 	// PartialFailedBindingStatus 部分失败
 	PartialFailedBindingStatus BindingStatus = "partial_failed"
+	// UnBindingStatus 未绑定
+	UnBindingStatus BindingStatus = "unbinding"
 )
 
 // ProtocolType 协议类型
 type ProtocolType string
+
+// Validate ProtocolType.
+func (p ProtocolType) Validate() error {
+	switch p {
+	case HttpProtocol:
+	case HttpsProtocol:
+	case TcpProtocol:
+	case UdpProtocol:
+	case TcpSslProtocol:
+	case QuicProtocol:
+	default:
+		return fmt.Errorf("unsupported protocol type: %s", p)
+	}
+	return nil
+}
 
 // 目标组类型
 const (
@@ -91,6 +109,16 @@ func (p ProtocolType) IsLayer7Protocol() bool {
 // IsLayer4Protocol 是否4层规则类型
 func (p ProtocolType) IsLayer4Protocol() bool {
 	return p == TcpProtocol || p == UdpProtocol || p == TcpSslProtocol || p == QuicProtocol
+}
+
+// GetLayer7Protocol 获取七层协议类型
+func GetLayer7Protocol() []ProtocolType {
+	return []ProtocolType{HttpProtocol, HttpsProtocol}
+}
+
+// GetLayer4Protocol 获取四层协议类型
+func GetLayer4Protocol() []ProtocolType {
+	return []ProtocolType{TcpProtocol, UdpProtocol, TcpSslProtocol, QuicProtocol}
 }
 
 // SniType SNI类型
@@ -203,4 +231,14 @@ const (
 
 	// NoMatchTaskManageResult 未匹配时的任务管理结果
 	NoMatchTaskManageResult = "NO_MATCHING_OR_HAS_DONE"
+)
+
+// ListenerHealthCheckStr 健康检查类型
+type ListenerHealthCheckStr string
+
+const (
+	// EnableListenerHealthCheck 开启监听器健康检查
+	EnableListenerHealthCheck ListenerHealthCheckStr = "enable"
+	// DisableListenerHealthCheck 关闭监听器健康检查
+	DisableListenerHealthCheck ListenerHealthCheckStr = "disable"
 )

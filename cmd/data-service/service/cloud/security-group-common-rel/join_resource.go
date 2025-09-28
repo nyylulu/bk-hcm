@@ -20,6 +20,8 @@
 package sgcomrel
 
 import (
+	"strconv"
+
 	corecloud "hcm/pkg/api/core/cloud"
 	corecvm "hcm/pkg/api/core/cloud/cvm"
 	corelb "hcm/pkg/api/core/cloud/load-balancer"
@@ -27,6 +29,7 @@ import (
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/types"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 )
@@ -147,4 +150,56 @@ func (svc *sgComRelSvc) ListWithLBSummary(cts *rest.Contexts) (interface{}, erro
 	}
 
 	return &protocloud.SGCommonRelWithLBListResp{Details: details}, nil
+}
+
+// CountSGRelatedResBizInfo 统计安全组关联的资源 所属业务情况, 例如 绑定的cvm有多少个在某个业务下
+func (svc *sgComRelSvc) CountSGRelatedResBizInfo(cts *rest.Contexts) (interface{}, error) {
+	req := new(protocloud.SGCommonRelCountBizInfoReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	switch req.ResType {
+	case enumor.CvmCloudResType:
+		resp, err := svc.dao.SGCommonRel().CountCVMRelatedResGroupByBiz(cts.Kit, req.SgID)
+		if err != nil {
+			logs.Errorf("count cvm related res group by biz failed, err: %v, sgID: %s, rid: %s",
+				err, req.SgID, cts.Kit.Rid)
+			return nil, err
+		}
+		return convertCountResult(cts.Kit, resp)
+	case enumor.LoadBalancerCloudResType:
+		resp, err := svc.dao.SGCommonRel().CountLoadBalancerRelatedResGroupByBiz(cts.Kit, req.SgID)
+		if err != nil {
+			logs.Errorf("count load balancer related res group by biz failed, err: %v, sgID: %s, rid: %s",
+				err, req.SgID, cts.Kit.Rid)
+			return nil, err
+		}
+		return convertCountResult(cts.Kit, resp)
+	default:
+		return nil, errf.Newf(errf.InvalidParameter,
+			"unsupported resource type: %s for count sg related res biz info", req.ResType)
+	}
+
+}
+
+func convertCountResult(kt *kit.Kit, items []types.CountResult) (*protocloud.SGCommonRelCountBizInfoResp, error) {
+	result := &protocloud.SGCommonRelCountBizInfoResp{}
+	for _, item := range items {
+		bkBizID, err := strconv.ParseInt(item.GroupField, 0, 64)
+		if err != nil {
+			logs.Errorf("parse int failed, err: %v, BkBizID: %s, rid: %s",
+				err, item.GroupField, kt.Rid)
+			return nil, err
+		}
+		result.Items = append(result.Items, protocloud.ListSGRelBusinessItem{
+			BkBizID:  bkBizID,
+			ResCount: int64(item.Count),
+		})
+	}
+	return result, nil
 }

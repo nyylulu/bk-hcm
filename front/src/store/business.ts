@@ -38,8 +38,8 @@ export const useBusinessStore = defineStore({
     list(data: any, type: string, config = {}) {
       return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/${getBusinessApiPath()}${type}/list`, data, config);
     },
-    getCommonList(data: any, url: string) {
-      return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/${getBusinessApiPath()}${url}`, data);
+    getCommonList(data: any, url: string, config = {}) {
+      return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/${getBusinessApiPath()}${url}`, data, config);
     },
     /**
      * 根据id获取对应资源详情信息
@@ -47,8 +47,8 @@ export const useBusinessStore = defineStore({
      * @param id 资源id
      * @returns 资源详情信息
      */
-    detail(type: string, id: number | string) {
-      return http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/${getBusinessApiPath()}${type}/${id}`);
+    detail(type: string, id: number | string, config = {}) {
+      return http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/${getBusinessApiPath()}${type}/${id}`, config);
     },
     /**
      * common-批量删除资源
@@ -346,18 +346,6 @@ export const useBusinessStore = defineStore({
       );
     },
     /**
-     * 业务下批量修改RS port/weight
-     * @param target_group_id 目标组id
-     * @param type port | weight
-     */
-    batchUpdateRs(
-      target_group_id: string,
-      type: string,
-      data: { target_ids: string[]; new_port?: number; new_weight?: number },
-    ) {
-      return http.patch(`/api/v1/cloud/${getBusinessApiPath()}target_groups/${target_group_id}/targets/${type}`, data);
-    },
-    /**
      * 查询操作记录异步记录指定批次的子任务列表
      * @param data
      * @returns
@@ -415,10 +403,7 @@ export const useBusinessStore = defineStore({
      * 业务下给指定目标组移除RS
      * @param data
      */
-    batchDeleteTargets(data: {
-      account_id: string;
-      target_groups: { target_group_id: string; target_ids: string[] }[];
-    }) {
+    batchDeleteTargets(data: { account_id: string; target_ids: string[] }) {
       return http.delete(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/${getBusinessApiPath()}target_groups/targets/batch`, {
         data,
       });

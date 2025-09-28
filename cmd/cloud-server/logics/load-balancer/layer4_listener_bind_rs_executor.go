@@ -22,6 +22,7 @@ package lblogic
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	actionlb "hcm/cmd/task-server/logics/action/load-balancer"
 	actionflow "hcm/cmd/task-server/logics/flow"
@@ -37,6 +38,7 @@ import (
 	tableasync "hcm/pkg/dal/table/async"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/classifier"
 	"hcm/pkg/tools/converter"
 	"hcm/pkg/tools/counter"
 	"hcm/pkg/tools/slice"
@@ -185,13 +187,12 @@ func (c *Layer4ListenerBindRSExecutor) buildFlows(kt *kit.Kit) ([]string, error)
 }
 
 // buildFlow 构建异步任务flow
-func (c *Layer4ListenerBindRSExecutor) buildFlow(kt *kit.Kit, lb corelb.BaseLoadBalancer,
+func (c *Layer4ListenerBindRSExecutor) buildFlow(kt *kit.Kit, lb corelb.LoadBalancerRaw,
 	details []*layer4ListenerBindRSTaskDetail) (string, error) {
 
-	// 将details根据targetGroupID进行分组，以targetGroupID的纬度创建flowTask
-	tgToDetails, tgToListenerCloudIDs, err := c.createTaskDetailsGroupByTargetGroup(kt, lb.ID, lb.CloudID, details)
+	listenerToDetails, err := c.getTaskDetailsGroupByListener(details)
 	if err != nil {
-		logs.Errorf("create task details group by target group failed, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("create task details group by listener failed, err: %v, rid: %s", err, kt.Rid)
 		return "", err
 	}
 
@@ -200,8 +201,8 @@ func (c *Layer4ListenerBindRSExecutor) buildFlow(kt *kit.Kit, lb corelb.BaseLoad
 		// 操作前触发同步
 		buildSyncClbFlowTask(c.vendor, lb.CloudID, c.accountID, lb.Region, actionIDGenerator),
 	}
-	for targetGroupID, detailList := range tgToDetails {
-		tmpTask, err := c.buildFlowTask(kt, lb, targetGroupID, detailList, actionIDGenerator, tgToListenerCloudIDs)
+	for _, detailList := range listenerToDetails {
+		tmpTask, err := c.buildFlowTask(kt, lb, detailList, actionIDGenerator)
 		if err != nil {
 			return "", err
 		}
@@ -215,7 +216,7 @@ func (c *Layer4ListenerBindRSExecutor) buildFlow(kt *kit.Kit, lb corelb.BaseLoad
 		logs.Errorf("check resource flow relation failed, lbID: %s, err: %v, rid: %s", lb.ID, err, kt.Rid)
 		return "", err
 	}
-	flowID, err := c.createFlowTask(kt, lb.ID, converter.MapKeyToSlice(tgToDetails), flowTasks)
+	flowID, err := c.createFlowTask(kt, lb.ID, flowTasks)
 	if err != nil {
 		return "", err
 	}
@@ -226,7 +227,7 @@ func (c *Layer4ListenerBindRSExecutor) buildFlow(kt *kit.Kit, lb corelb.BaseLoad
 		return "", err
 	}
 
-	for _, taskDetails := range tgToDetails {
+	for _, taskDetails := range listenerToDetails {
 		for _, detail := range taskDetails {
 			detail.flowID = flowID
 		}
@@ -234,34 +235,23 @@ func (c *Layer4ListenerBindRSExecutor) buildFlow(kt *kit.Kit, lb corelb.BaseLoad
 	return flowID, nil
 }
 
-func (c *Layer4ListenerBindRSExecutor) createTaskDetailsGroupByTargetGroup(kt *kit.Kit, lbID string, lbCloudID string,
-	details []*layer4ListenerBindRSTaskDetail) (map[string][]*layer4ListenerBindRSTaskDetail, map[string]string,
-	error) {
+func (c *Layer4ListenerBindRSExecutor) getTaskDetailsGroupByListener(details []*layer4ListenerBindRSTaskDetail,
+) (map[string][]*layer4ListenerBindRSTaskDetail, error) {
 
-	tgToDetails := make(map[string][]*layer4ListenerBindRSTaskDetail)
-	tgToListenerCloudID := make(map[string]string)
+	listenerToDetails := make(map[string][]*layer4ListenerBindRSTaskDetail)
+
 	for _, detail := range details {
-		listener, err := getListener(kt, c.dataServiceCli, c.accountID, lbCloudID, detail.Protocol,
-			detail.ListenerPort[0], c.bkBizID, c.vendor)
-		if err != nil {
-			return nil, nil, err
+		if len(detail.listenerCloudID) == 0 {
+			return nil, fmt.Errorf("loadbalancer(%s) listener(%v) not found",
+				detail.CloudClbID, detail.listenerCloudID)
 		}
-		if listener == nil {
-			return nil, nil, fmt.Errorf("loadbalancer(%s) listener(%v) not found",
-				detail.CloudClbID, detail.ListenerPort)
-		}
-
-		targetGroupID, err := getTargetGroupID(kt, c.dataServiceCli, lbID, listener.CloudID)
-		if err != nil {
-			return nil, nil, err
-		}
-		tgToListenerCloudID[targetGroupID] = listener.CloudID
-		tgToDetails[targetGroupID] = append(tgToDetails[targetGroupID], detail)
+		listenerToDetails[detail.listenerCloudID] = append(listenerToDetails[detail.listenerCloudID], detail)
 	}
-	return tgToDetails, tgToListenerCloudID, nil
+
+	return listenerToDetails, nil
 }
 
-func (c *Layer4ListenerBindRSExecutor) createFlowTask(kt *kit.Kit, lbID string, tgIDs []string,
+func (c *Layer4ListenerBindRSExecutor) createFlowTask(kt *kit.Kit, lbID string,
 	flowTasks []ts.CustomFlowTask) (string, error) {
 
 	addReq := &ts.AddCustomFlowReq{
@@ -285,12 +275,10 @@ func (c *Layer4ListenerBindRSExecutor) createFlowTask(kt *kit.Kit, lbID string, 
 		Tasks: []ts.TemplateFlowTask{{
 			ActionID: "1",
 			Params: &actionflow.LoadBalancerOperateWatchOption{
-				FlowID:     flowID,
-				ResID:      lbID,
-				ResType:    enumor.LoadBalancerCloudResType,
-				SubResIDs:  tgIDs,
-				SubResType: enumor.TargetGroupCloudResType,
-				TaskType:   enumor.AddRSTaskType,
+				FlowID:   flowID,
+				ResID:    lbID,
+				ResType:  enumor.LoadBalancerCloudResType,
+				TaskType: enumor.AddRSTaskType,
 			},
 		}},
 	}
@@ -304,66 +292,60 @@ func (c *Layer4ListenerBindRSExecutor) createFlowTask(kt *kit.Kit, lbID string, 
 	return flowID, nil
 }
 
-func (c *Layer4ListenerBindRSExecutor) buildFlowTask(kt *kit.Kit, lb corelb.BaseLoadBalancer,
-	targetGroupID string, details []*layer4ListenerBindRSTaskDetail, generator func() (cur string, prev string),
-	tgToListenerCloudIDs map[string]string) ([]ts.CustomFlowTask, error) {
+func (c *Layer4ListenerBindRSExecutor) buildFlowTask(kt *kit.Kit, lb corelb.LoadBalancerRaw,
+	details []*layer4ListenerBindRSTaskDetail, generator func() (cur string, prev string)) ([]ts.CustomFlowTask, error) {
 
 	switch c.vendor {
 	case enumor.TCloud:
-		return c.buildTCloudFlowTask(kt, lb, targetGroupID, details, generator, tgToListenerCloudIDs)
+		return c.buildTCloudFlowTask(kt, lb, details, generator)
 	default:
 		return nil, fmt.Errorf("not support vendor: %s", c.vendor)
 	}
 }
 
-func (c *Layer4ListenerBindRSExecutor) buildTCloudFlowTask(kt *kit.Kit, lb corelb.BaseLoadBalancer,
-	targetGroupID string, details []*layer4ListenerBindRSTaskDetail,
-	generator func() (cur string, prev string), tgToListenerCloudIDs map[string]string) ([]ts.CustomFlowTask, error) {
+func (c *Layer4ListenerBindRSExecutor) buildTCloudFlowTask(kt *kit.Kit, lb corelb.LoadBalancerRaw,
+	details []*layer4ListenerBindRSTaskDetail, generator func() (cur string, prev string)) ([]ts.CustomFlowTask, error) {
 
-	tCloudLB, err := getTCloudLoadBalancer(kt, c.dataServiceCli, lb.ID)
-	if err != nil {
-		return nil, err
-	}
 	result := make([]ts.CustomFlowTask, 0)
 	for _, taskDetails := range slice.Split(details, constant.BatchTaskMaxLimit) {
 		cur, prev := generator()
 
 		targets := make([]*hclb.RegisterTarget, 0, len(taskDetails))
-		managementDetailIDs := make([]string, 0, len(taskDetails))
 		for _, detail := range taskDetails {
 			target := &hclb.RegisterTarget{
 				TargetType: detail.InstType,
 				Port:       int64(detail.RsPort[0]),
-				Weight:     converter.ValToPtr(int64(converter.PtrToVal(detail.Weight))),
+				Weight:     converter.ValToPtr(converter.PtrToVal(detail.Weight)),
 			}
 			if detail.InstType == enumor.EniInstType {
 				target.EniIp = detail.RsIp
-			}
-
-			if detail.InstType == enumor.CvmInstType {
-				cvm, err := validateCvmExist(kt,
-					c.dataServiceCli, detail.RsIp, c.vendor, c.bkBizID, c.accountID, tCloudLB)
-				if err != nil {
-					logs.Errorf("validate cvm exist failed, ip: %s, err: %v, rid: %s", detail.RsIp, err, kt.Rid)
-					return nil, err
+			} else if detail.InstType == enumor.CvmInstType {
+				if detail.cvm == nil {
+					return nil, fmt.Errorf("rs ip(%s) not found", detail.RsIp)
 				}
 
-				target.CloudInstID = cvm.CloudID
-				target.InstName = cvm.Name
-				target.PrivateIPAddress = cvm.PrivateIPv4Addresses
-				target.PublicIPAddress = cvm.PublicIPv4Addresses
-				target.Zone = cvm.Zone
+				target.CloudInstID = detail.cvm.CloudID
+				target.InstName = detail.cvm.Name
+				target.PrivateIPAddress = detail.cvm.PrivateIPv4Addresses
+				target.PublicIPAddress = detail.cvm.PublicIPv4Addresses
+				target.Zone = detail.cvm.Zone
 			}
 			targets = append(targets, target)
-			managementDetailIDs = append(managementDetailIDs, detail.taskDetailID)
 		}
 
+		if len(taskDetails) == 0 {
+			logs.Errorf("taskDetails is empty, skip this batch, rid: %s", kt.Rid)
+			continue
+		}
+		firstDetail := taskDetails[0]
 		req := &hclb.BatchRegisterTCloudTargetReq{
-			CloudListenerID: tgToListenerCloudIDs[targetGroupID],
-			TargetGroupID:   targetGroupID,
+			CloudListenerID: firstDetail.listenerCloudID,
 			RuleType:        enumor.Layer4RuleType,
 			Targets:         targets,
 		}
+		managementDetailIDs := slice.Map(taskDetails, func(detail *layer4ListenerBindRSTaskDetail) string {
+			return detail.taskDetailID
+		})
 		tmpTask := ts.CustomFlowTask{
 			ActionID:   action.ActIDType(cur),
 			ActionName: enumor.ActionBatchTaskTCloudBindTarget,
@@ -467,21 +449,31 @@ func (c *Layer4ListenerBindRSExecutor) updateTaskDetails(kt *kit.Kit) error {
 	if len(c.taskDetails) == 0 {
 		return nil
 	}
-	updateItems := make([]task.UpdateTaskDetailField, 0, len(c.taskDetails))
-	for _, detail := range c.taskDetails {
-		updateItems = append(updateItems, task.UpdateTaskDetailField{
-			ID:            detail.taskDetailID,
-			FlowID:        detail.flowID,
-			TaskActionIDs: []string{detail.actionID},
-		})
-	}
-	updateDetailsReq := &task.UpdateDetailReq{
-		Items: updateItems,
-	}
-	err := c.dataServiceCli.Global.TaskDetail.Update(kt, updateDetailsReq)
-	if err != nil {
-		logs.Errorf("update task details failed, err: %v, rid: %s", err, kt.Rid)
-		return err
+	// group by flowID and actionID
+	classifySlice := classifier.ClassifySlice(c.taskDetails, func(detail *layer4ListenerBindRSTaskDetail) string {
+		return fmt.Sprintf("%s/%s", detail.flowID, detail.actionID)
+	})
+	for key, details := range classifySlice {
+		split := strings.Split(key, "/")
+		if len(split) != 2 {
+			return fmt.Errorf("invalid key: %s", key)
+		}
+		flowID, actionID := split[0], split[1]
+		for _, batch := range slice.Split(details, constant.BatchOperationMaxLimit) {
+			ids := slice.Map(batch, func(detail *layer4ListenerBindRSTaskDetail) string {
+				return detail.taskDetailID
+			})
+			updateDetailsReq := &task.BatchUpdateTaskDetailReq{
+				IDs:           ids,
+				FlowID:        flowID,
+				TaskActionIDs: []string{actionID},
+			}
+			err := c.dataServiceCli.Global.TaskDetail.BatchUpdate(kt, updateDetailsReq)
+			if err != nil {
+				logs.Errorf("update task details failed, err: %v, req: %+v, rid: %s", err, updateDetailsReq, kt.Rid)
+				return err
+			}
+		}
 	}
 	return nil
 }

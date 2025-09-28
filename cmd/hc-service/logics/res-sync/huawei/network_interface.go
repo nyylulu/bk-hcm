@@ -93,6 +93,7 @@ func (opt syncNIOption) Validate() error {
 	return validator.Validate.Struct(opt)
 }
 
+// syncNetworkInterface 同步网络接口
 func (cli *client) syncNetworkInterface(kt *kit.Kit, opt *syncNIOption) (*SyncResult, error) {
 	if err := opt.Validate(); err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
@@ -136,6 +137,7 @@ func (cli *client) syncNetworkInterface(kt *kit.Kit, opt *syncNIOption) (*SyncRe
 	return nil, nil
 }
 
+// deleteNetworkInterface 删除网络接口
 func (cli *client) deleteNetworkInterface(kt *kit.Kit, delCloudIDs []string, opt *syncNIOption) error {
 
 	if err := opt.Validate(); err != nil {
@@ -146,6 +148,7 @@ func (cli *client) deleteNetworkInterface(kt *kit.Kit, delCloudIDs []string, opt
 		return fmt.Errorf("delete network interfaces, network interfaces id is required")
 	}
 
+	// 查询云端网络接口，判断是否存在
 	niLists, err := cli.listNetworkInterfaceFromCloud(kt, opt.Region, opt.CloudCvmID)
 	if err != nil {
 		return err
@@ -175,6 +178,7 @@ func (cli *client) deleteNetworkInterface(kt *kit.Kit, delCloudIDs []string, opt
 	return nil
 }
 
+// updateNetworkInterface 更新网络接口
 func (cli *client) updateNetworkInterface(kt *kit.Kit, accountID string, updateMap map[string]typesni.HuaWeiNI) error {
 
 	if len(updateMap) <= 0 {
@@ -205,45 +209,7 @@ func (cli *client) updateNetworkInterface(kt *kit.Kit, accountID string, updateM
 			InstanceID:    converter.PtrToVal(item.InstanceID),
 		}
 		if item.Extension != nil {
-			tmpRes.Extension = &datani.HuaWeiNICreateExt{
-				// MacAddr 网卡Mac地址信息。
-				MacAddr: item.Extension.MacAddr,
-				// NetId 网卡端口所属网络ID。
-				NetId: item.Extension.NetId,
-				// PortState 网卡端口状态。
-				PortState: item.Extension.PortState,
-				// DeleteOnTermination 卸载网卡时，是否删除网卡。
-				DeleteOnTermination: item.Extension.DeleteOnTermination,
-				// DriverMode 从guest os中，网卡的驱动类型。可选值为virtio和hinic，默认为virtio
-				DriverMode: item.Extension.DriverMode,
-				// MinRate 网卡带宽下限。
-				MinRate: item.Extension.MinRate,
-				// MultiqueueNum 网卡多队列个数。
-				MultiqueueNum: item.Extension.MultiqueueNum,
-				// PciAddress 弹性网卡在Linux GuestOS里的BDF号
-				PciAddress:            item.Extension.PciAddress,
-				IpV6:                  item.Extension.IpV6,
-				Addresses:             (*datani.EipNetwork)(item.Extension.Addresses),
-				CloudSecurityGroupIDs: slice.Unique(item.Extension.CloudSecurityGroupIDs),
-			}
-			// 网卡私网IP信息列表
-			var tmpFixIps []datani.ServerInterfaceFixedIp
-			for _, fixIpItem := range item.Extension.FixedIps {
-				tmpFixIps = append(tmpFixIps, datani.ServerInterfaceFixedIp{
-					IpAddress: fixIpItem.IpAddress,
-					SubnetId:  fixIpItem.SubnetId,
-				})
-			}
-			tmpRes.Extension.FixedIps = tmpFixIps
-
-			var tmpVirtualIps []datani.NetVirtualIP
-			for _, virtualIpItem := range item.Extension.VirtualIPList {
-				tmpVirtualIps = append(tmpVirtualIps, datani.NetVirtualIP{
-					IP:           virtualIpItem.IP,
-					ElasticityIP: virtualIpItem.ElasticityIP,
-				})
-			}
-			tmpRes.Extension.VirtualIPList = tmpVirtualIps
+			tmpRes.Extension = convertHuaweiNIExtension(item)
 		}
 
 		lists = append(lists, tmpRes)
@@ -264,6 +230,7 @@ func (cli *client) updateNetworkInterface(kt *kit.Kit, accountID string, updateM
 	return nil
 }
 
+// completeNetworkInterfaceUpdateInfo 补全网络接口更新信息
 func (cli *client) completeNetworkInterfaceUpdateInfo(kt *kit.Kit, niMap map[string]typesni.HuaWeiNI) error {
 	subnetCloudIDMap := make(map[string]struct{}, 0)
 	for _, ni := range niMap {
@@ -290,6 +257,7 @@ func (cli *client) completeNetworkInterfaceUpdateInfo(kt *kit.Kit, niMap map[str
 	return nil
 }
 
+// completeNetworkInterfaceCreateInfo 补全网络接口创建信息
 func (cli *client) completeNetworkInterfaceCreateInfo(kt *kit.Kit, nis []typesni.HuaWeiNI) error {
 	subnetCloudIDMap := make(map[string]struct{}, 0)
 	for _, ni := range nis {
@@ -338,6 +306,7 @@ func (cli *client) getSubnetMapByCloudID(kt *kit.Kit, cloudIDs []string) (map[st
 	return subnetMap, nil
 }
 
+// createNetworkInterface 创建网络接口
 func (cli *client) createNetworkInterface(kt *kit.Kit, accountID string, cvm *corecvm.BaseCvm,
 	addSlice []typesni.HuaWeiNI) error {
 
@@ -370,45 +339,7 @@ func (cli *client) createNetworkInterface(kt *kit.Kit, accountID string, cvm *co
 			BkBizID:       cvm.BkBizID,
 		}
 		if item.Extension != nil {
-			tmpRes.Extension = &datani.HuaWeiNICreateExt{
-				// MacAddr 网卡Mac地址信息。
-				MacAddr: item.Extension.MacAddr,
-				// NetId 网卡端口所属网络ID。
-				NetId: item.Extension.NetId,
-				// PortState 网卡端口状态。
-				PortState: item.Extension.PortState,
-				// DeleteOnTermination 卸载网卡时，是否删除网卡。
-				DeleteOnTermination: item.Extension.DeleteOnTermination,
-				// DriverMode 从guest os中，网卡的驱动类型。可选值为virtio和hinic，默认为virtio
-				DriverMode: item.Extension.DriverMode,
-				// MinRate 网卡带宽下限。
-				MinRate: item.Extension.MinRate,
-				// MultiqueueNum 网卡多队列个数。
-				MultiqueueNum: item.Extension.MultiqueueNum,
-				// PciAddress 弹性网卡在Linux GuestOS里的BDF号
-				PciAddress:            item.Extension.PciAddress,
-				IpV6:                  item.Extension.IpV6,
-				Addresses:             (*datani.EipNetwork)(item.Extension.Addresses),
-				CloudSecurityGroupIDs: slice.Unique(item.Extension.CloudSecurityGroupIDs),
-			}
-			// 网卡私网IP信息列表
-			var tmpFixIps []datani.ServerInterfaceFixedIp
-			for _, fixIpItem := range item.Extension.FixedIps {
-				tmpFixIps = append(tmpFixIps, datani.ServerInterfaceFixedIp{
-					IpAddress: fixIpItem.IpAddress,
-					SubnetId:  fixIpItem.SubnetId,
-				})
-			}
-			tmpRes.Extension.FixedIps = tmpFixIps
-
-			var tmpVirtualIps []datani.NetVirtualIP
-			for _, virtualIpItem := range item.Extension.VirtualIPList {
-				tmpVirtualIps = append(tmpVirtualIps, datani.NetVirtualIP{
-					IP:           virtualIpItem.IP,
-					ElasticityIP: virtualIpItem.ElasticityIP,
-				})
-			}
-			tmpRes.Extension.VirtualIPList = tmpVirtualIps
+			tmpRes.Extension = convertHuaweiNIExtension(item)
 		}
 
 		lists = append(lists, tmpRes)
@@ -463,6 +394,7 @@ func (cli *client) listNetworkInterfaceFromCloud(kt *kit.Kit, region, cloudCvmID
 	return result.Details, nil
 }
 
+// listNetworkInterfaceFromDB 从数据库中查询网络接口
 func (cli *client) listNetworkInterfaceFromDB(kt *kit.Kit, opt *syncNIOption) (
 	[]coreni.NetworkInterface[coreni.HuaWeiNIExtension], *corecvm.BaseCvm, error) {
 
@@ -536,6 +468,7 @@ func (cli *client) listNetworkInterfaceFromDB(kt *kit.Kit, opt *syncNIOption) (
 	return result.Details, &cvmResult.Details[0], nil
 }
 
+// isNIChange 判断网络接口是否有变更
 func isNIChange(item typesni.HuaWeiNI, dbInfo coreni.NetworkInterface[coreni.HuaWeiNIExtension]) bool {
 
 	if dbInfo.Name != converter.PtrToVal(item.Name) {
@@ -641,4 +574,47 @@ func isNIExtChange(item typesni.HuaWeiNI, dbInfo coreni.NetworkInterface[coreni.
 		}
 	}
 	return false
+}
+
+func convertHuaweiNIExtension(item typesni.HuaWeiNI) *datani.HuaWeiNICreateExt {
+	ext := &datani.HuaWeiNICreateExt{
+		// MacAddr 网卡Mac地址信息。
+		MacAddr: item.Extension.MacAddr,
+		// NetId 网卡端口所属网络ID。
+		NetId: item.Extension.NetId,
+		// PortState 网卡端口状态。
+		PortState: item.Extension.PortState,
+		// DeleteOnTermination 卸载网卡时，是否删除网卡。
+		DeleteOnTermination: item.Extension.DeleteOnTermination,
+		// DriverMode 从guest os中，网卡的驱动类型。可选值为virtio和hinic，默认为virtio
+		DriverMode: item.Extension.DriverMode,
+		// MinRate 网卡带宽下限。
+		MinRate: item.Extension.MinRate,
+		// MultiqueueNum 网卡多队列个数。
+		MultiqueueNum: item.Extension.MultiqueueNum,
+		// PciAddress 弹性网卡在Linux GuestOS里的BDF号
+		PciAddress:            item.Extension.PciAddress,
+		IpV6:                  item.Extension.IpV6,
+		Addresses:             (*datani.EipNetwork)(item.Extension.Addresses),
+		CloudSecurityGroupIDs: slice.Unique(item.Extension.CloudSecurityGroupIDs),
+	}
+	// 网卡私网IP信息列表
+	var tmpFixIps []datani.ServerInterfaceFixedIp
+	for _, fixIpItem := range item.Extension.FixedIps {
+		tmpFixIps = append(tmpFixIps, datani.ServerInterfaceFixedIp{
+			IpAddress: fixIpItem.IpAddress,
+			SubnetId:  fixIpItem.SubnetId,
+		})
+	}
+	ext.FixedIps = tmpFixIps
+
+	var tmpVirtualIps []datani.NetVirtualIP
+	for _, virtualIpItem := range item.Extension.VirtualIPList {
+		tmpVirtualIps = append(tmpVirtualIps, datani.NetVirtualIP{
+			IP:           virtualIpItem.IP,
+			ElasticityIP: virtualIpItem.ElasticityIP,
+		})
+	}
+	ext.VirtualIPList = tmpVirtualIps
+	return ext
 }

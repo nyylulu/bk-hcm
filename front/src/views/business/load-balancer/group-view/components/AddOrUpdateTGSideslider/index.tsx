@@ -3,7 +3,8 @@ import { defineComponent, onMounted, onUnmounted, ref, PropType, reactive, compu
 import { Alert, Button, Form, Message } from 'bkui-vue';
 import CommonSideslider from '@/components/common-sideslider';
 // import stores
-import { useAccountStore, useBusinessStore, useLoadBalancerStore } from '@/store';
+import { useBusinessStore, useLoadBalancerStore } from '@/store';
+import { useLoadBalancerRsStore } from '@/store/load-balancer/rs';
 // import custom hooks
 import useAddOrUpdateTGForm from './useAddOrUpdateTGForm';
 import useChangeScene from './useChangeScene';
@@ -11,6 +12,9 @@ import useChangeScene from './useChangeScene';
 import bus from '@/common/bus';
 import { goAsyncTaskDetail } from '@/utils';
 import { TargetGroupOperationScene, TG_OPERATION_SCENE_MAP } from '@/constants';
+import { MENU_BUSINESS_TASK_MANAGEMENT_DETAILS } from '@/constants/menu-symbol';
+import { ResourceTypeEnum } from '@/common/constant';
+import routerAction from '@/router/utils/action';
 
 const { FormItem } = Form;
 
@@ -23,9 +27,9 @@ export default defineComponent({
   },
   setup(props) {
     // use stores
-    const accountStore = useAccountStore();
     const businessStore = useBusinessStore();
     const loadBalancerStore = useLoadBalancerStore();
+    const loadBalancerRsStore = useLoadBalancerRsStore();
 
     const isShow = ref(false);
     const isSubmitLoading = ref(false);
@@ -50,7 +54,6 @@ export default defineComponent({
     // 表单相关
     const getDefaultFormData = () => ({
       id: '',
-      bk_biz_id: accountStore.bizs,
       account_id: '',
       name: '',
       protocol: '',
@@ -69,8 +72,15 @@ export default defineComponent({
     };
     const formData = reactive<Record<string, any>>(getDefaultFormData());
     const { updateCount } = useChangeScene(isShow, formData);
-    const { formItemOptions, canUpdateRegionOrVpc, formRef, rules, deletedRsList, regionVpcSelectorRef } =
-      useAddOrUpdateTGForm(formData, updateCount, isEdit, lbDetail);
+    const {
+      formItemOptions,
+      canUpdateRegionOrVpc,
+      formRef,
+      rules,
+      deletedRsList,
+      regionVpcSelectorRef,
+      currentGlobalBusinessId,
+    } = useAddOrUpdateTGForm(formData, updateCount, isEdit, lbDetail);
 
     // click-handler - 新建目标组
     const handleAddTargetGroup = () => {
@@ -79,8 +89,6 @@ export default defineComponent({
       isShow.value = true;
       isEdit.value = false;
       nextTick(async () => {
-        // 侧边栏显示后, 刷新 vpc 列表, 支持编辑的时候默认选中 vpc
-        await regionVpcSelectorRef.value.handleRefresh();
         formRef.value.clearValidate();
       });
     };
@@ -134,7 +142,7 @@ export default defineComponent({
 
     // 处理参数 - add
     const resolveFormDataForAdd = () => ({
-      bk_biz_id: formData.bk_biz_id,
+      bk_biz_id: currentGlobalBusinessId.value,
       account_id: formData.account_id,
       name: formData.name,
       protocol: formData.protocol,
@@ -156,7 +164,7 @@ export default defineComponent({
     // 处理参数 - edit
     const resolveFormDataForEdit = () => ({
       id: formData.id,
-      bk_biz_id: formData.bk_biz_id,
+      bk_biz_id: currentGlobalBusinessId.value,
       account_id: formData.account_id,
       name: formData.name,
       protocol: formData.protocol,
@@ -188,23 +196,26 @@ export default defineComponent({
     });
     const resolveFormDataForSingleUpdateRs = () => {
       const type = TargetGroupOperationScene.SINGLE_UPDATE_PORT === loadBalancerStore.currentScene ? 'port' : 'weight';
+      const account_id = type === 'weight' ? formData.account_id : undefined;
       const target = formData.rs_list.find(
         (item: any) => item.id === loadBalancerStore.targetGroupOperateLockState.singleUpdateRsId,
       );
-      return { target_ids: [target.id], [`new_${type}`]: +target[type] };
+      return { target_ids: [target.id], [`new_${type}`]: +target[type], account_id };
     };
     // 处理参数 - 批量修改端口/权重
     const resolveFormDataForBatchUpdateRs = () => {
       const type = TargetGroupOperationScene.BATCH_UPDATE_PORT === loadBalancerStore.currentScene ? 'port' : 'weight';
+      const account_id = type === 'weight' ? formData.account_id : undefined;
       return {
         target_ids: formData.rs_list.map(({ id }: any) => id),
         [`new_${type}`]: +formData.rs_list[0][type],
+        account_id,
       };
     };
     // 处理参数 - 批量移除rs
     const resolveFormDataForBatchDeleteRs = () => ({
       account_id: formData.account_id,
-      target_groups: [{ target_group_id: formData.id, target_ids: deletedRsList.value.map((item) => item.id) }],
+      target_ids: deletedRsList.value.map((item) => item.id),
     });
 
     // check-status - 查询异步任务执行状态
@@ -250,22 +261,40 @@ export default defineComponent({
           asyncTaskMessage: 'RS添加异步任务已提交',
         },
         [TargetGroupOperationScene.SINGLE_UPDATE_PORT]: {
-          promise: () => businessStore.batchUpdateRs(formData.id, 'port', resolveFormDataForSingleUpdateRs()),
+          promise: () =>
+            loadBalancerRsStore.batchUpdatePort(
+              formData.id,
+              resolveFormDataForSingleUpdateRs() as { target_ids: string[]; new_port: number; account_id?: string },
+              currentGlobalBusinessId.value,
+            ),
           message: '修改单个端口成功',
           asyncTaskMessage: '修改单个端口异步任务已提交',
         },
         [TargetGroupOperationScene.SINGLE_UPDATE_WEIGHT]: {
-          promise: () => businessStore.batchUpdateRs(formData.id, 'weight', resolveFormDataForSingleUpdateRs()),
+          promise: () =>
+            loadBalancerRsStore.batchUpdateWeight(
+              resolveFormDataForSingleUpdateRs() as { target_ids: string[]; new_weight: number; account_id: string },
+              currentGlobalBusinessId.value,
+            ),
           message: '修改单个权重成功',
           asyncTaskMessage: '修改单个权重异步任务已提交',
         },
         [TargetGroupOperationScene.BATCH_UPDATE_PORT]: {
-          promise: () => businessStore.batchUpdateRs(formData.id, 'port', resolveFormDataForBatchUpdateRs()),
+          promise: () =>
+            loadBalancerRsStore.batchUpdatePort(
+              formData.id,
+              resolveFormDataForBatchUpdateRs() as { target_ids: string[]; new_port: number; account_id?: string },
+              currentGlobalBusinessId.value,
+            ),
           message: '批量修改端口成功',
           asyncTaskMessage: '批量修改端口异步任务已提交',
         },
         [TargetGroupOperationScene.BATCH_UPDATE_WEIGHT]: {
-          promise: () => businessStore.batchUpdateRs(formData.id, 'weight', resolveFormDataForBatchUpdateRs()),
+          promise: () =>
+            loadBalancerRsStore.batchUpdateWeight(
+              resolveFormDataForBatchUpdateRs() as { target_ids: string[]; new_weight: number; account_id: string },
+              currentGlobalBusinessId.value,
+            ),
           message: '批量修改权重成功',
           asyncTaskMessage: '批量修改权重异步任务已提交',
         },
@@ -295,12 +324,17 @@ export default defineComponent({
                   class='ml4'
                   text
                   theme='primary'
-                  onClick={() => goAsyncTaskDetail(businessStore.list, data?.flow_id, formData.bk_biz_id)}
-                >
+                  onClick={() => goAsyncTaskDetail(businessStore.list, data?.flow_id, currentGlobalBusinessId.value)}>
                   查看当前任务
                 </Button>
               </>
             ),
+          });
+        } else if (data?.task_management_id) {
+          routerAction.redirect({
+            name: MENU_BUSINESS_TASK_MANAGEMENT_DETAILS,
+            query: { bizs: currentGlobalBusinessId.value },
+            params: { resourceType: ResourceTypeEnum.CLB, id: data.task_management_id },
           });
         } else {
           Message({ theme: 'success', message });
@@ -370,8 +404,7 @@ export default defineComponent({
         isSubmitLoading={isSubmitLoading.value}
         isSubmitDisabled={isSubmitDisabled.value}
         onHandleSubmit={handleAddOrUpdateTargetGroupSubmit}
-        handleClose={handleClose}
-      >
+        handleClose={handleClose}>
         <bk-container margin={0}>
           <Form formType='vertical' model={formData} ref={formRef} rules={rules}>
             {/* 异步任务提示 */}
@@ -390,8 +423,7 @@ export default defineComponent({
                     <Button
                       text
                       theme='primary'
-                      onClick={() => goAsyncTaskDetail(businessStore.list, flowId, formData.bk_biz_id)}
-                    >
+                      onClick={() => goAsyncTaskDetail(businessStore.list, flowId, currentGlobalBusinessId.value)}>
                       查看任务
                     </Button>
                     。
@@ -404,8 +436,7 @@ export default defineComponent({
                   <Button
                     text
                     theme='primary'
-                    onClick={() => goAsyncTaskDetail(businessStore.list, flowId, formData.bk_biz_id)}
-                  >
+                    onClick={() => goAsyncTaskDetail(businessStore.list, flowId, currentGlobalBusinessId.value)}>
                     查看任务
                   </Button>
                   。
