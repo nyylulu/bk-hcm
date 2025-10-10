@@ -20,6 +20,7 @@ POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/tickets/create
 |------------------|--------------|----|---------------------------------------------------|
 | obs_project      | string       | 是  | OBS项目类型                                           |
 | expect_time      | string       | 是  | 期望交付时间，格式为YYYY-MM-DD，例如2024-01-01                 |
+| return_plan_time | string       | 否  | 预期退回时间，格式为YYYY-MM-DD。当OBS项目类型为"短租项目"时，该字段必填       |
 | region_id        | string       | 是  | 地区/城市ID                                           |
 | zone_id          | string       | 否  | 可用区ID                                             |
 | demand_source    | string       | 否  | 需求分类/变更原因                                         |
@@ -55,6 +56,7 @@ POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/tickets/create
     {
       "obs_project": "常规项目",
       "expect_time": "2024-11-12",
+      "return_plan_time": "2025-01-01",
       "region_id": "ap-shanghai",
       "zone_id": "ap-shanghai-2",
       "demand_source": "指标变化",
