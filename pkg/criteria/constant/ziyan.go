@@ -69,6 +69,8 @@ const (
 	DefaultTechnicalClass = "DEFAULT"
 	// GlobalConfigTypeCvmResetBizIDList 主机重装的业务白名单
 	GlobalConfigTypeCvmResetBizIDList = "cvm_reset_biz_id_list"
+	// GlobalConfigTypeCLBBandwidthPackageRecommend CLB带宽推荐
+	GlobalConfigTypeCLBBandwidthPackageRecommend = "clb_bandwidth_package_recommend"
 )
 
 const (

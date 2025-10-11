@@ -22,6 +22,7 @@ package csbwpkg
 import (
 	"encoding/json"
 
+	"hcm/pkg/adaptor/types"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/validator"
 )
@@ -36,5 +37,27 @@ type ListTCloudBwPkgOption struct {
 
 // Validate ...
 func (opt *ListTCloudBwPkgOption) Validate() error {
+	return validator.Validate.Struct(opt)
+}
+
+// ListTCloudBwPkgResp ...
+type ListTCloudBwPkgResp struct {
+	TotalCount uint64                  `json:"total_count"`
+	Packages   []ListTCloudBwPkgResult `json:"packages"`
+}
+
+// ListTCloudBwPkgResult ...
+type ListTCloudBwPkgResult struct {
+	types.TCloudBandwidthPackage `json:",inline"`
+	Recommend                    bool `json:"recommend"`
+}
+
+// UpdateBandwidthPackageRecommendOption ...
+type UpdateBandwidthPackageRecommendOption struct {
+	PackageIDs []string `json:"package_ids" validate:"required,max=100"`
+}
+
+// Validate ...
+func (opt *UpdateBandwidthPackageRecommendOption) Validate() error {
 	return validator.Validate.Struct(opt)
 }

@@ -941,3 +941,7 @@ func genRollingServerManageResource(*meta.ResourceAttribute) (client.ActionID, [
 func genGreenChannelResource(*meta.ResourceAttribute) (client.ActionID, []client.Resource, error) {
 	return sys.GreenChannel, make([]client.Resource, 0), nil
 }
+
+func genGlobalConfigResource(*meta.ResourceAttribute) (client.ActionID, []client.Resource, error) {
+	return sys.GlobalConfiguration, make([]client.Resource, 0), nil
+}

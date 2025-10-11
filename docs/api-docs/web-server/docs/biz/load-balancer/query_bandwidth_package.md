@@ -6,7 +6,7 @@
 
 ### URL
 
-POST /api/v1/cloud/bandwidth_packages/query
+POST /api/v1/cloud/bizs/{bk_biz_id}/bandwidth_packages/query
 
 ### 输入参数
 
@@ -14,6 +14,7 @@ POST /api/v1/cloud/bandwidth_packages/query
 
 | 参数名称            | 参数类型         | 必选 | 描述                                    |
 |-----------------|--------------|----|---------------------------------------|
+| bk_biz_id       | int          | 是  | 业务ID                                  |
 | account_id      | string       | 是  | 账号ID                                  |
 | region          | string       | 是  | 地域                                    |
 | page            | Page         | 是  | 分页信息                                  |

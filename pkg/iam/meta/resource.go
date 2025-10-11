@@ -142,4 +142,7 @@ const (
 
 	// CosBucket cos桶
 	CosBucket ResourceType = "cos_bucket"
+
+	// GlobalConfig 全局配置
+	GlobalConfig ResourceType = "global_config"
 )

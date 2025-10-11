@@ -102,6 +102,7 @@ var genResourceFuncMap = map[meta.ResourceType]genResourceFunc{
 	meta.ZiyanResInventory:      genZiyanResInventoryResource,
 	meta.RollingServerManage:    genRollingServerManageResource,
 	meta.GreenChannel:           genGreenChannelResource,
+	meta.GlobalConfig:           genGlobalConfigResource,
 }
 
 func genApplicationResources(a *meta.ResourceAttribute) (client.ActionID, []client.Resource, error) {
