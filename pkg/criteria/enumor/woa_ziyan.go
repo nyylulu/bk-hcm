@@ -55,7 +55,7 @@ func GetObsProjectMembers() []ObsProject {
 // GetObsProjectMembersForResPlan get ObsProject's members for resource plan.
 // 顺序为： 常规项目、滚服项目、春节保障、机房裁撤、改造复用、轻量云徙
 func GetObsProjectMembersForResPlan() []ObsProject {
-	obsProjects := []ObsProject{ObsProjectNormal, ObsProjectRollServer}
+	obsProjects := []ObsProject{ObsProjectNormal, ObsProjectShortLease, ObsProjectRollServer}
 	obsProjects = append(obsProjects, getSpringObsProjectForResPlan()...)
 	obsProjects = append(obsProjects, getDissolveObsProjectForResPlan()...)
 	obsProjects = append(obsProjects, []ObsProject{ObsProjectReuse, ObsProjectMigrate}...)
@@ -180,6 +180,8 @@ const (
 	RequireTypeGreenChannel RequireType = 7
 	// RequireTypeSpringResPool 春保资源池
 	RequireTypeSpringResPool RequireType = 8
+	// RequireTypeShortLease 短租项目
+	RequireTypeShortLease RequireType = 9
 )
 
 var requireTypeNameMap = map[RequireType]string{
@@ -189,6 +191,7 @@ var requireTypeNameMap = map[RequireType]string{
 	RequireTypeRollServer:    "滚服项目",
 	RequireTypeGreenChannel:  "小额绿通",
 	RequireTypeSpringResPool: "春保资源池",
+	RequireTypeShortLease:    "短租项目",
 }
 
 // GetName get name of RequireType.
@@ -294,6 +297,7 @@ var RequireTypeObsProjectMap = map[RequireType]ObsProject{
 	RequireTypeDissolve:     getDissolveObsProject(),
 	// "春保资源池"使用"常规项目"的 obs project
 	RequireTypeSpringResPool: ObsProjectNormal,
+	RequireTypeShortLease:    ObsProjectShortLease,
 }
 
 // CrpOrderStatus is crp order status.
