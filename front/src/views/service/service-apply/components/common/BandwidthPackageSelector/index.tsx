@@ -30,6 +30,7 @@ export interface IBandwidthPackage {
     resource_id: string;
     address_ip: string;
   }[];
+  recommend: boolean;
 }
 
 /**
@@ -77,7 +78,8 @@ export default defineComponent({
           },
         );
 
-        bandwidthPackageList.value = res.data.packages;
+        const sortedPackages = res.data.packages.sort((a, b) => Number(b.recommend) - Number(a.recommend));
+        bandwidthPackageList.value = sortedPackages;
         totalCount.value = res.data.total_count;
       } finally {
         isDataLoad.value = false;
@@ -155,16 +157,25 @@ export default defineComponent({
         onUpdate:modelValue={(val) => emit('update:modelValue', val)}>
         {{
           default: () =>
-            bandwidthPackageList.value.map(({ id, name, charge_type, network_type, status, egress }) => (
-              <Option
-                key={id}
-                id={id}
-                name={`${name}(${id}) (${BANDWIDTH_PACKAGE_CHARGE_TYPE_MAP[charge_type] || charge_type} ${
-                  BANDWIDTH_PACKAGE_NETWORK_TYPE_MAP[network_type]
-                })`}
-                disabled={status !== BANDWIDTH_PACKAGE_STATUS.CREATED || !checkBandwidthPackageAvailable(egress)}
-              />
-            )),
+            bandwidthPackageList.value.map(({ id, name, charge_type, network_type, status, egress, recommend }) => {
+              const text = `${name}(${id}) (${BANDWIDTH_PACKAGE_CHARGE_TYPE_MAP[charge_type] || charge_type} ${
+                BANDWIDTH_PACKAGE_NETWORK_TYPE_MAP[network_type]
+              })`;
+              return (
+                <Option
+                  key={id}
+                  id={id}
+                  name={text}
+                  disabled={status !== BANDWIDTH_PACKAGE_STATUS.CREATED || !checkBandwidthPackageAvailable(egress)}>
+                  {text}
+                  {recommend && (
+                    <bk-tag theme='success' class='ml4' size='small'>
+                      推荐
+                    </bk-tag>
+                  )}
+                </Option>
+              );
+            }),
           extension: () => (
             <div style='width: 100%; color: #63656E; padding: 0 12px;'>
               <div style='display: flex; align-items: center;justify-content: center;'>
