@@ -33,12 +33,12 @@ const OperateWatchTimeout = 5 * time.Minute
 
 // FlowLoadBalancerOperateWatchTpl define flow load balancer operate watch template.
 var FlowLoadBalancerOperateWatchTpl = action.FlowTemplate{
-	Name:      enumor.FlowLoadBalancerOperateWatch,
+	Name:      enumor.FlowSlaveOperateWatch,
 	ShareData: tableasync.NewShareData(nil),
 	Tasks: []action.TaskTemplate{
 		{
 			ActionID:   "1",
-			ActionName: enumor.ActionLoadBalancerOperateWatch,
+			ActionName: enumor.ActionFlowSlaveOperateWatch,
 			Retry: &tableasync.Retry{
 				Enable: true,
 				Policy: &tableasync.RetryPolicy{

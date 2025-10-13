@@ -72,19 +72,19 @@ func (v FlowName) ValidateDefault() error {
 
 // 负载均衡相关的FlowName
 var loadBalancerFlowNameMap = map[FlowName]struct{}{
-	FlowTargetGroupAddRS:               {},
-	FlowTargetGroupRemoveRS:            {},
-	FlowTargetGroupModifyPort:          {},
-	FlowTargetGroupModifyWeight:        {},
-	FlowLoadBalancerOperateWatch:       {},
-	FlowApplyTargetGroupToListenerRule: {},
-	FlowDeleteLoadBalancer:             {},
-	FlowLoadBalancerDeleteRule:         {},
-	FlowLoadBalancerCreateListener:     {},
-	FlowLoadBalancerCreateUrlRule:      {},
-	FlowBatchTaskListenerUnBindTarget:  {},
+	FlowTargetGroupAddRS:                {},
+	FlowTargetGroupRemoveRS:             {},
+	FlowTargetGroupModifyPort:           {},
+	FlowTargetGroupModifyWeight:         {},
+	FlowSlaveOperateWatch:               {},
+	FlowApplyTargetGroupToListenerRule:  {},
+	FlowDeleteLoadBalancer:              {},
+	FlowLoadBalancerDeleteRule:          {},
+	FlowLoadBalancerCreateListener:      {},
+	FlowLoadBalancerCreateUrlRule:       {},
+	FlowBatchTaskListenerUnBindTarget:   {},
 	FlowBatchTaskListenerModifyRsWeight: {},
-	FlowBatchTaskDeleteListener:        {},
+	FlowBatchTaskDeleteListener:         {},
 }
 
 // ValidateLoadBalancer validate load balancer FlowName.
@@ -137,8 +137,8 @@ const (
 
 // Flow 相关Flow
 const (
-	// FlowLoadBalancerOperateWatch 负载均衡操作查询
-	FlowLoadBalancerOperateWatch FlowName = "load_balancer_operate_watch"
+	// FlowSlaveOperateWatch 从FLow的操作查询
+	FlowSlaveOperateWatch FlowName = "flow_slave_operate_watch"
 )
 
 // 负载均衡相关Flow
