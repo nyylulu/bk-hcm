@@ -1,5 +1,6 @@
 import type { VNode } from 'vue';
 import type { IFilterPropShape, Column as TableColumn } from 'bkui-vue/lib/table/props';
+import { type PrimaryTableCol } from '@blueking/tdesign-ui';
 import { RulesItem, QueryRuleOPEnum, QueryRuleOPEnumLegacy } from '@/typings';
 import type { ResourceTypeEnum } from '@/common/resource-constant';
 
@@ -46,11 +47,13 @@ export type ModelProperty = {
 export type PropertyColumnConfig = {
   sort?: boolean;
   align?: 'left' | 'center' | 'right';
+  cell?: PrimaryTableCol['cell'];
   render?: (args: {
     cell?: any;
     data?: any;
     row?: any;
-    column: TableColumn;
+    column?: TableColumn;
+    col?: TableColumn;
     index: number;
     rows?: any[];
   }) => VNode | boolean | number | string;
@@ -60,6 +63,7 @@ export type PropertyColumnConfig = {
   showOverflowTooltip?: boolean;
   fixed?: 'left' | 'right';
   filter?: IFilterPropShape;
+  ellipsis?: PrimaryTableCol['ellipsis'];
 };
 
 export type PropertyFormConfig = {

@@ -30,6 +30,7 @@ import (
 	"hcm/pkg/async/action/run"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
+	"hcm/pkg/criteria/validator"
 	"hcm/pkg/dal/dao/orm"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
@@ -56,16 +57,16 @@ type FlowSlaveOperateWatchOption struct {
 	// 资源类型
 	ResType enumor.CloudResourceType `json:"res_type" validate:"required"`
 	// 子资源ID数组，比如目标组ID
-	SubResIDs []string `json:"sub_res_ids" validate:"required"`
+	SubResIDs []string `json:"sub_res_ids" validate:"omitempty"`
 	// 子资源类型
-	SubResType enumor.CloudResourceType `json:"sub_res_type" validate:"required"`
+	SubResType enumor.CloudResourceType `json:"sub_res_type" validate:"omitempty"`
 	// 任务类型
 	TaskType enumor.TaskType `json:"task_type" validate:"required"`
 }
 
 // Validate FlowSlaveOperateWatchOption.
 func (opt FlowSlaveOperateWatchOption) Validate() error {
-	return opt.Validate()
+	return validator.Validate.Struct(opt)
 }
 
 // ParameterNew return request params.

@@ -91,6 +91,7 @@ func register() {
 	action.RegisterAction(actionlb.ModifyTargetWeightAction{})
 
 	action.RegisterAction(actionlb.ListenerRuleAddTargetAction{})
+	action.RegisterAction(actionlb.ListenerRuleUpdateHealthCheckAction{})
 	action.RegisterAction(actionlb.DeleteLoadBalancerAction{})
 
 	action.RegisterAction(actionbilldailypull.PullDailyBillAction{})
