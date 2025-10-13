@@ -103,6 +103,7 @@ func (dao LbTCloudUrlRuleDao) BatchCreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models
 		if !ok {
 			return nil, fmt.Errorf("fail to find lb(%s) of rule(%s)", rule.LbID, rule.URL)
 		}
+
 		audits = append(audits, &tableaudit.AuditTable{
 			ResID:      rule.ID,
 			CloudResID: rule.CloudID,
@@ -277,8 +278,10 @@ func (dao LbTCloudUrlRuleDao) ListJoinListener(kt *kit.Kit, opt *types.ListOptio
 		return nil, errf.New(errf.InvalidParameter, "list options is nil")
 	}
 
-	if err := opt.Validate(filter.NewExprOption(filter.RuleFields(tablelb.TCloudLbUrlRuleColumns.ColumnTypes())),
-		core.NewDefaultPageOption()); err != nil {
+	expr := filter.NewExprOption(
+		filter.RuleFields(tablelb.TCloudLbUrlRuleColumns.ColumnTypes()),
+	)
+	if err := opt.Validate(expr, core.NewDefaultPageOption()); err != nil {
 		return nil, err
 	}
 

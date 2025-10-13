@@ -202,7 +202,7 @@ func (l *Layer7ListenerBindRSPreviewExecutor) validateWithDB(kt *kit.Kit, cloudI
 		})
 	if concurrentErr != nil {
 		logs.Errorf("validate concurrent failed, err: %v, rid: %s", concurrentErr, kt.Rid)
-		return err
+		return concurrentErr
 	}
 	if err = l.validateDetailsTarget(kt); err != nil {
 		logs.Errorf("validate details target failed, err: %v, rid: %s", err, kt.Rid)
@@ -230,7 +230,7 @@ func (l *Layer7ListenerBindRSPreviewExecutor) validateDetailsTarget(kt *kit.Kit)
 		})
 	if concurrentErr != nil {
 		logs.Errorf("validate details target failed, err: %v, rid: %s", concurrentErr, kt.Rid)
-		return err
+		return concurrentErr
 	}
 	return nil
 }
@@ -239,19 +239,22 @@ func (l *Layer7ListenerBindRSPreviewExecutor) validateDetailsTarget(kt *kit.Kit)
 func (l *Layer7ListenerBindRSPreviewExecutor) validateTarget(kt *kit.Kit,
 	detail *Layer7ListenerBindRSDetail, ruleCloudIDsToTGIDMap map[string]string) error {
 
-	if detail.urlRuleCloudID == "" || detail.cvm == nil {
+	if detail.urlRuleCloudID == "" {
 		detail.Status.SetNotExecutable()
-		detail.ValidateResult = append(detail.ValidateResult, "url rule not found or rs not found")
+		detail.ValidateResult = append(detail.ValidateResult, "url rule not found")
 		return nil
 	}
 	tgID, ok := ruleCloudIDsToTGIDMap[detail.urlRuleCloudID]
 	if !ok {
-		detail.Status.SetNotExecutable()
 		detail.ValidateResult = append(detail.ValidateResult,
-			fmt.Sprintf("target group not found for url rule cloud id: %s", detail.urlRuleCloudID))
+			"Listener rule not bound to target group, will automatically create target group and bind")
 		return nil
 	}
 	detail.targetGroupID = tgID
+	if detail.cvm == nil {
+		// rsType 为 ENI，会导致cvm为空
+		return nil
+	}
 	target, err := getTarget(kt, l.dataServiceCli, tgID, detail.cvm.CloudID, detail.RsPort[0])
 	if err != nil {
 		return err
@@ -275,6 +278,10 @@ func (l *Layer7ListenerBindRSPreviewExecutor) validateTarget(kt *kit.Kit,
 func (l *Layer7ListenerBindRSPreviewExecutor) validateRS(kt *kit.Kit, curDetail *Layer7ListenerBindRSDetail,
 	lb corelb.LoadBalancerRaw) error {
 
+	if curDetail.InstType == enumor.EniInstType {
+		// ENI 不做校验
+		return nil
+	}
 	isCrossRegionV1, isCrossRegionV2, targetCloudVpcID, lbTargetRegion, err := parseSnapInfoTCloudLBExtension(kt,
 		lb.Extension)
 	if err != nil {
@@ -399,8 +406,9 @@ type Layer7ListenerBindRSDetail struct {
 	// targetGroupID 在 validateTarget 阶段填充, 后续submit阶段会重复使用到,
 	// 如果为空, 那就意味着当前detail的条件无法匹配到对应的targetGroup, 可以认为targetGroup not found
 	targetGroupID string
-	// cvm 在 validateRS 阶段填充, 在validateTarget和submit阶段会使用,
-	// 如果为空, 代表了rs not found
+	// cvm字段在validateRS阶段填充，在validateTarget和submit阶段使用。
+	// 当RSType为ENI时，该值为空
+	// 当RSType为CVM时，为空表示rs not found。
 	cvm *cvmInfo
 }
 

@@ -191,10 +191,9 @@ func (c *Layer7ListenerBindRSExecutor) buildFlows(kt *kit.Kit) ([]string, error)
 func (c *Layer7ListenerBindRSExecutor) buildFlow(kt *kit.Kit, lb corelb.LoadBalancerRaw,
 	details []*layer7ListenerBindRSTaskDetail) (string, error) {
 
-	// 将details根据targetGroupID进行分组，以targetGroupID的纬度创建flowTask
-	tgToDetails, tgToListenerCloudIDs, tgToCloudRuleIDs, err := c.taskDetailsGroupByTargetGroup(details)
+	listenerRuleToDetails, err := c.getTaskDetailsGroupByListenerAndRule(details)
 	if err != nil {
-		logs.Errorf("create task details group by target group failed, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("create task details group by listener and rule failed, err: %v, rid: %s", err, kt.Rid)
 		return "", err
 	}
 
@@ -203,9 +202,8 @@ func (c *Layer7ListenerBindRSExecutor) buildFlow(kt *kit.Kit, lb corelb.LoadBala
 		// 操作前触发同步
 		buildSyncClbFlowTask(c.vendor, lb.CloudID, c.accountID, lb.Region, actionIDGenerator),
 	}
-	for targetGroupID, detailList := range tgToDetails {
-		tmpTask, err := c.buildFlowTask(kt, lb, targetGroupID, detailList, actionIDGenerator,
-			tgToListenerCloudIDs, tgToCloudRuleIDs)
+	for _, detailList := range listenerRuleToDetails {
+		tmpTask, err := c.buildFlowTask(kt, lb, detailList, actionIDGenerator)
 		if err != nil {
 			logs.Errorf("build flow task failed, err: %v, rid: %s", err, kt.Rid)
 			return "", err
@@ -220,7 +218,7 @@ func (c *Layer7ListenerBindRSExecutor) buildFlow(kt *kit.Kit, lb corelb.LoadBala
 		logs.Errorf("check resource flow relation failed, lbID: %s, err: %v, rid: %s", lb.ID, err, kt.Rid)
 		return "", err
 	}
-	flowID, err := c.createFlowTask(kt, lb.ID, converter.MapKeyToSlice(tgToDetails), flowTasks)
+	flowID, err := c.createFlowTask(kt, lb.ID, flowTasks)
 	if err != nil {
 		logs.Errorf("create flow task failed, err: %v, rid: %s", err, kt.Rid)
 		return "", err
@@ -232,7 +230,7 @@ func (c *Layer7ListenerBindRSExecutor) buildFlow(kt *kit.Kit, lb corelb.LoadBala
 		return "", err
 	}
 
-	for _, taskDetails := range tgToDetails {
+	for _, taskDetails := range listenerRuleToDetails {
 		for _, detail := range taskDetails {
 			detail.flowID = flowID
 		}
@@ -240,40 +238,33 @@ func (c *Layer7ListenerBindRSExecutor) buildFlow(kt *kit.Kit, lb corelb.LoadBala
 	return flowID, nil
 }
 
-// taskDetailsGroupByTargetGroup 将taskDetails根据targetGroup进行分组
-func (c *Layer7ListenerBindRSExecutor) taskDetailsGroupByTargetGroup(details []*layer7ListenerBindRSTaskDetail) (
-	map[string][]*layer7ListenerBindRSTaskDetail, map[string]string, map[string]string, error) {
+// getTaskDetailsGroupByListenerAndRule 将taskDetails根据监听器和规则进行分组
+func (c *Layer7ListenerBindRSExecutor) getTaskDetailsGroupByListenerAndRule(details []*layer7ListenerBindRSTaskDetail) (
+	map[string][]*layer7ListenerBindRSTaskDetail, error) {
 
-	tgToDetails := make(map[string][]*layer7ListenerBindRSTaskDetail)
-	tgToListenerCloudID := make(map[string]string)
-	tgToCloudRuleIDs := make(map[string]string)
+	listenerRuleToDetails := make(map[string][]*layer7ListenerBindRSTaskDetail)
+
 	for _, detail := range details {
-		tgToListenerCloudID[detail.targetGroupID] = detail.listenerCloudID
-		tgToCloudRuleIDs[detail.targetGroupID] = detail.urlRuleCloudID
-		tgToDetails[detail.targetGroupID] = append(tgToDetails[detail.targetGroupID], detail)
+		groupKey := fmt.Sprintf("%s_%s", detail.listenerCloudID, detail.urlRuleCloudID)
+		listenerRuleToDetails[groupKey] = append(listenerRuleToDetails[groupKey], detail)
 	}
-	return tgToDetails, tgToListenerCloudID, tgToCloudRuleIDs, nil
+
+	return listenerRuleToDetails, nil
 }
 
 func (c *Layer7ListenerBindRSExecutor) buildFlowTask(kt *kit.Kit, lb corelb.LoadBalancerRaw,
-	targetGroupID string, details []*layer7ListenerBindRSTaskDetail,
-	generator func() (cur string, prev string), tgToListenerCloudIDs map[string]string,
-	tgToCloudRuleIDs map[string]string) ([]ts.CustomFlowTask, error) {
+	details []*layer7ListenerBindRSTaskDetail, generator func() (cur string, prev string)) ([]ts.CustomFlowTask, error) {
 
 	switch c.vendor {
 	case enumor.TCloud:
-		return c.buildTCloudFlowTask(kt, lb, targetGroupID, details, generator, tgToListenerCloudIDs, tgToCloudRuleIDs)
-	case enumor.TCloudZiyan:
-		return c.buildTCloudZiyanFlowTask(kt, lb, targetGroupID, details, generator, tgToListenerCloudIDs,
-			tgToCloudRuleIDs)
+		return c.buildTCloudFlowTask(kt, lb, details, generator)
 	default:
 		return nil, fmt.Errorf("layer7 listener bind rs validate, not support vendor: %s", c.vendor)
 	}
 }
 
 func (c *Layer7ListenerBindRSExecutor) buildTCloudFlowTask(kt *kit.Kit, lb corelb.LoadBalancerRaw,
-	targetGroupID string, details []*layer7ListenerBindRSTaskDetail, generator func() (cur string, prev string),
-	tgToListenerCloudIDs map[string]string, tgToCloudRuleIDs map[string]string) ([]ts.CustomFlowTask, error) {
+	details []*layer7ListenerBindRSTaskDetail, generator func() (cur string, prev string)) ([]ts.CustomFlowTask, error) {
 
 	result := make([]ts.CustomFlowTask, 0)
 	for _, taskDetails := range slice.Split(details, constant.BatchTaskMaxLimit) {
@@ -302,10 +293,14 @@ func (c *Layer7ListenerBindRSExecutor) buildTCloudFlowTask(kt *kit.Kit, lb corel
 			targets = append(targets, target)
 		}
 
+		if len(taskDetails) == 0 {
+			logs.Errorf("taskDetails is empty, skip this batch, rid: %s", kt.Rid)
+			continue
+		}
+		firstDetail := taskDetails[0]
 		req := &hclb.BatchRegisterTCloudTargetReq{
-			CloudListenerID: tgToListenerCloudIDs[targetGroupID],
-			CloudRuleID:     tgToCloudRuleIDs[targetGroupID],
-			TargetGroupID:   targetGroupID,
+			CloudListenerID: firstDetail.listenerCloudID,
+			CloudRuleID:     firstDetail.urlRuleCloudID,
 			RuleType:        enumor.Layer7RuleType,
 			Targets:         targets,
 		}
@@ -336,7 +331,7 @@ func (c *Layer7ListenerBindRSExecutor) buildTCloudFlowTask(kt *kit.Kit, lb corel
 	return result, nil
 }
 
-func (c *Layer7ListenerBindRSExecutor) createFlowTask(kt *kit.Kit, lbID string, tgIDs []string,
+func (c *Layer7ListenerBindRSExecutor) createFlowTask(kt *kit.Kit, lbID string,
 	flowTasks []ts.CustomFlowTask) (string, error) {
 
 	addReq := &ts.AddCustomFlowReq{
@@ -360,12 +355,10 @@ func (c *Layer7ListenerBindRSExecutor) createFlowTask(kt *kit.Kit, lbID string, 
 		Tasks: []ts.TemplateFlowTask{{
 			ActionID: "1",
 			Params: &actionflow.FlowSlaveOperateWatchOption{
-				FlowID:     flowID,
-				ResID:      lbID,
-				ResType:    enumor.LoadBalancerCloudResType,
-				SubResIDs:  tgIDs,
-				SubResType: enumor.TargetGroupCloudResType,
-				TaskType:   enumor.AddRSTaskType,
+				FlowID:   flowID,
+				ResID:    lbID,
+				ResType:  enumor.LoadBalancerCloudResType,
+				TaskType: enumor.AddRSTaskType,
 			},
 		}},
 	}
@@ -464,6 +457,7 @@ func (c *Layer7ListenerBindRSExecutor) updateTaskDetails(kt *kit.Kit) error {
 	for key, details := range classifySlice {
 		split := strings.Split(key, "/")
 		if len(split) != 2 {
+			logs.Errorf("invalid key: %s, rid: %s", key, kt.Rid)
 			return fmt.Errorf("invalid key: %s", key)
 		}
 		flowID, actionID := split[0], split[1]

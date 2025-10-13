@@ -31,6 +31,7 @@ const displayValue = computed(() => {
   const vals = Array.isArray(props.value) ? props.value : [props.value];
   return vals.map((val) => localOption.value?.[val] || val).join(', ') || '--';
 });
+
 const appearanceComps: Partial<Record<AppearanceType, any>> = {
   status: Status,
   'cvm-status': CvmStatus,
