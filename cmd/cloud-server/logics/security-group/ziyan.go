@@ -106,6 +106,13 @@ func (s *securityGroup) updateTCloudZiyanMgmtAttr(kt *kit.Kit, mgmtAttrs []proto
 			return fmt.Errorf("failed to generate biz tag, err: %w", err)
 		}
 
+		// 如果标签为空，跳过打标签操作
+		if len(tags) == 0 {
+			logs.Infof("skip tagging for sg due to empty tags, biz: %d, sg_ids: %v, rid: %s",
+				tagStr.BizID, sgIDs, kt.Rid)
+			continue
+		}
+
 		resources := make([]apitag.TCloudResourceInfo, 0, len(sgIDs))
 		for _, sgID := range sgIDs {
 			resources = append(resources, apitag.TCloudResourceInfo{
