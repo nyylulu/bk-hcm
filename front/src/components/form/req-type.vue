@@ -5,6 +5,8 @@ import { useConfigRequirementStore, type IRequirementItem } from '@/store/config
 
 defineOptions({ name: 'hcm-form-req-type' });
 
+const model = defineModel<number | number[] | string | string[]>();
+
 const props = withDefaults(
   defineProps<{
     multiple?: boolean;
@@ -19,7 +21,6 @@ const props = withDefaults(
   },
 );
 
-const model = defineModel<number | number[] | string | string[]>();
 const emit = defineEmits<(e: 'change', val: number, oldVal: number) => void>();
 
 const formItem = useFormItem();
@@ -107,6 +108,7 @@ const handleSelect = (item: IRequirementItem) => {
 .req-type-card {
   display: flex;
   gap: 12px;
+  flex-wrap: wrap;
 
   .card-item {
     position: relative;
@@ -131,6 +133,7 @@ const handleSelect = (item: IRequirementItem) => {
     &.selected {
       padding: 11px;
       border: 2px solid #3a84ff;
+
       .recommend-tag {
         top: -2px;
         right: -2px;
@@ -139,6 +142,7 @@ const handleSelect = (item: IRequirementItem) => {
 
     .type-icon {
       line-height: normal;
+
       .req-type-icon {
         font-size: 18px;
         color: #699df4;
@@ -169,6 +173,7 @@ const handleSelect = (item: IRequirementItem) => {
     display: flex;
     gap: 6px;
     margin-top: auto;
+
     .tag-item {
       display: flex;
       height: 22px;
