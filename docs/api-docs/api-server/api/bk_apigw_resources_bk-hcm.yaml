@@ -773,3 +773,29 @@ paths:
           userVerifiedRequired: false
         disabledStages: [ ]
         descriptionEn:
+  /api/v1/woa/task/find/approve_node/result:
+    post:
+      operationId: get_approve_node_result
+      description: 获取审批节点结果
+      tags:
+        - SCR
+        - Apply
+      responses:
+        default:
+          description: ''
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: true
+        matchSubpath: false
+        backend:
+          type: HTTP
+          method: post
+          path: /api/v1/woa/task/find/approve_node/result
+          matchSubpath: false
+          timeout: 30
+          upstreams: { }
+          transformHeaders: { }
+        authConfig:
+          userVerifiedRequired: false
+        disabledStages: [ ]
+        descriptionEn:

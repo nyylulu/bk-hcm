@@ -1737,8 +1737,8 @@ type ListApplyAuditInfo struct {
 	EndAt        *time.Time            `json:"end_at,omitempty"`
 }
 
-// ApproveApplyReqNode audit apply ticket node request parameter
-type ApproveApplyReqNode struct {
+// ApproveApplyTicketNodeReq audit apply ticket node request parameter
+type ApproveApplyTicketNodeReq struct {
 	TicketID uint64 `json:"ticket_id" validate:"required"`
 	StateID  int64  `json:"state_id" validate:"required"`
 	Operator string `json:"operator" validate:"required"`
@@ -1747,6 +1747,17 @@ type ApproveApplyReqNode struct {
 }
 
 // Validate ...
-func (a *ApproveApplyReqNode) Validate() error {
+func (a *ApproveApplyTicketNodeReq) Validate() error {
 	return validator.Validate.Struct(a)
+}
+
+// FindApproveNodeResultReq find approve node result request
+type FindApproveNodeResultReq struct {
+	TicketID uint64 `json:"ticket_id" validate:"required"`
+	StateID  int64  `json:"state_id" validate:"required"`
+}
+
+// Validate ...
+func (g *FindApproveNodeResultReq) Validate() error {
+	return validator.Validate.Struct(g)
 }

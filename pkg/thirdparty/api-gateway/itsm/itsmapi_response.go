@@ -126,3 +126,11 @@ type Choice struct {
 	Key  string `json:"key"`
 	Name string `json:"name"`
 }
+
+// ApproveNodeResult defines the itsm ticket approve node result response
+type ApproveNodeResult struct {
+	Name          string `json:"name"`
+	ProcessedUser string `json:"processed_user"`
+	ApproveResult bool   `json:"approve_result"`
+	ApproveRemark string `json:"approve_remark"`
+}

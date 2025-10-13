@@ -68,6 +68,8 @@ type Client interface {
 	ApproveNode(kt *kit.Kit, param *ApproveNodeOpt) error
 	// GetItsmConfig 获取itsm配置
 	GetItsmConfig() *cc.ApiGateway
+	// GetApproveNodeResult gets the result of an approval node
+	GetApproveNodeResult(kt *kit.Kit, sn string, stateID int64) (*ApproveNodeResult, error)
 }
 
 // NewClient initialize a new itsm client
@@ -187,4 +189,14 @@ func (i *itsm) GetTicketLog(kt *kit.Kit, id string) (*GetTicketLogResp, error) {
 		Into(resp)
 
 	return resp, err
+}
+
+// GetApproveNodeResult gets the result of the approve node
+func (i *itsm) GetApproveNodeResult(kt *kit.Kit, sn string, stateID int64) (*ApproveNodeResult, error) {
+	params := map[string]string{
+		"sn":       sn,
+		"state_id": fmt.Sprintf("%d", stateID),
+	}
+	return apigateway.ApiGatewayCallWithoutReq[ApproveNodeResult](i.client, i.config, rest.GET, kt, params,
+		"/get_approve_node_result")
 }

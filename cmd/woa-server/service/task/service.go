@@ -136,6 +136,7 @@ func (s *service) initSchedulerService(h *rest.Handler) {
 
 	h.Add("ListApplyAuditInfo", http.MethodPost, "/apply/ticket/audit/info/list", s.ListApplyAuditInfo)
 	h.Add("ApproveApplyTicketNode", http.MethodPost, "/approve/apply/ticket/node", s.ApproveApplyTicketNode)
+	h.Add("FindApproveNodeResult", http.MethodPost, "/find/approve_node/result", s.FindApproveNodeResult)
 }
 
 // bizService 业务下的接口

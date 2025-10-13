@@ -1981,6 +1981,10 @@ func (s *service) ListApplyAuditInfo(cts *rest.Contexts) (interface{}, error) {
 			logs.Errorf("failed to get apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
 			return nil, err
 		}
+		if rst == nil || rst.ApplyTicket == nil {
+			logs.Errorf("can not find apply ticket, ticket id: %d, rid: %s", ticketID, cts.Kit.Rid)
+			return nil, fmt.Errorf("can not find apply ticket, ticket id: %d", ticketID)
+		}
 		details[i] = types.ListApplyAuditInfo{
 			TicketID:     ticketID,
 			Status:       status,
@@ -2007,7 +2011,7 @@ func (s *service) ListApplyAuditInfo(cts *rest.Contexts) (interface{}, error) {
 
 // ApproveApplyTicketNode approve or reject apply ticket node
 func (s *service) ApproveApplyTicketNode(cts *rest.Contexts) (any, error) {
-	req := new(types.ApproveApplyReqNode)
+	req := new(types.ApproveApplyTicketNodeReq)
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
@@ -2042,4 +2046,34 @@ func (s *service) ApproveApplyTicketNode(cts *rest.Contexts) (any, error) {
 	}
 
 	return nil, nil
+}
+
+// FindApproveNodeResult find approve node result
+func (s *service) FindApproveNodeResult(cts *rest.Contexts) (any, error) {
+	req := new(types.FindApproveNodeResultReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	rst, err := s.logics.Scheduler().GetApplyTicket(cts.Kit, &types.GetApplyTicketReq{OrderId: req.TicketID})
+	if err != nil {
+		logs.Errorf("failed to get apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+	if rst == nil || rst.ApplyTicket == nil {
+		logs.Errorf("can not find apply ticket, ticket id: %d, rid: %s", req.TicketID, cts.Kit.Rid)
+		return nil, fmt.Errorf("can not find apply ticket, ticket id: %d", req.TicketID)
+	}
+
+	result, err := s.itsmClient.GetApproveNodeResult(cts.Kit, rst.ItsmTicketId, req.StateID)
+	if err != nil {
+		logs.Errorf("failed to find approve node result, err: %v, ticket id: %s, state id: %d, rid: %s",
+			err, rst.ItsmTicketId, req.StateID, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return result, nil
 }
