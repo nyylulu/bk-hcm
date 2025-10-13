@@ -42,6 +42,7 @@ var TableColumnDescriptor = utils.ColumnDescriptors{
 	{Column: "bk_biz_id", NamedC: "bk_biz_id", Type: enumor.Numeric},
 	{Column: "bk_host_id", NamedC: "bk_host_id", Type: enumor.Numeric},
 	{Column: "bk_cloud_id", NamedC: "bk_cloud_id", Type: enumor.Numeric},
+	{Column: "bk_asset_id", NamedC: "bk_asset_id", Type: enumor.String},
 	{Column: "account_id", NamedC: "account_id", Type: enumor.String},
 	{Column: "region", NamedC: "region", Type: enumor.String},
 	{Column: "zone", NamedC: "zone", Type: enumor.String},
@@ -79,6 +80,7 @@ type Table struct {
 	BkBizID              int64             `db:"bk_biz_id" json:"bk_biz_id"`
 	BkHostID             int64             `db:"bk_host_id" json:"bk_host_id"`
 	BkCloudID            *int64            `db:"bk_cloud_id" json:"bk_cloud_id"`
+	BkAssetID            string            `db:"bk_asset_id" validate:"lte=64" json:"bk_asset_id"`
 	AccountID            string            `db:"account_id" validate:"lte=64" json:"account_id"`
 	Region               string            `db:"region" validate:"lte=20" json:"region"`
 	Zone                 string            `db:"zone" validate:"lte=64" json:"zone"`

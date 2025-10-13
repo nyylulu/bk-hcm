@@ -137,6 +137,7 @@ func convTableToBaseCvm(one *tablecvm.Table) *corecvm.BaseCvm {
 		BkBizID:              one.BkBizID,
 		BkHostID:             one.BkHostID,
 		BkCloudID:            converter.PtrToVal(one.BkCloudID),
+		BkAssetID:            one.BkAssetID,
 		AccountID:            one.AccountID,
 		Region:               one.Region,
 		Zone:                 one.Zone,
