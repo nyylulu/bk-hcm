@@ -22,6 +22,7 @@ package fetcher
 
 import (
 	"hcm/cmd/woa-server/logics/biz"
+	demandtime "hcm/cmd/woa-server/logics/plan/demand-time"
 	"hcm/cmd/woa-server/types/device"
 	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/cc"
@@ -73,6 +74,7 @@ type Fetcher interface {
 	// GetCrpApproveLogs get crp approve logs
 	GetCrpApproveLogs(kt *kit.Kit, orderID string) ([]*ptypes.CrpAuditLog, error)
 	// QueryCRPTransferPoolDemands query crp transfer pool demands
+	// Notice: Need to focus on the Year of the data
 	QueryCRPTransferPoolDemands(kt *kit.Kit, obsProjects []enumor.ObsProject, technicalClasses []string) (
 		[]*cvmapi.CvmCbsPlanQueryItem, error)
 
@@ -96,6 +98,7 @@ type Fetcher interface {
 type ResPlanFetcher struct {
 	resPlanCfg   cc.ResPlan
 	dao          dao.Set
+	demandTime   demandtime.DemandTime
 	bizLogics    biz.Logics
 	client       *client.ClientSet
 	crpAuditNode cc.StateNode
@@ -106,8 +109,8 @@ type ResPlanFetcher struct {
 }
 
 // New create Fetcher
-func New(dao dao.Set, client *client.ClientSet, crpCli cvmapi.CVMClientInterface, itsmCli itsm.Client,
-	bizLogics biz.Logics, deviceTypesMap *device.DeviceTypesMap) Fetcher {
+func New(dao dao.Set, demandTime demandtime.DemandTime, client *client.ClientSet, crpCli cvmapi.CVMClientInterface,
+	itsmCli itsm.Client, bizLogics biz.Logics, deviceTypesMap *device.DeviceTypesMap) Fetcher {
 
 	var itsmFlowCfg cc.ItsmFlow
 	for _, itsmFlow := range cc.WoaServer().ItsmFlows {
@@ -127,6 +130,7 @@ func New(dao dao.Set, client *client.ClientSet, crpCli cvmapi.CVMClientInterface
 	return &ResPlanFetcher{
 		resPlanCfg:     cc.WoaServer().ResPlan,
 		dao:            dao,
+		demandTime:     demandTime,
 		bizLogics:      bizLogics,
 		client:         client,
 		crpAuditNode:   crpAuditNode,

@@ -202,8 +202,9 @@ func New(sd serviced.State, client *client.ClientSet, dao dao.Set, cmsiCli cmsi.
 		}
 	}
 
+	demandTimeCli := demandtime.NewDemandTimeFromTable(client)
 	deviceTypesMap := device.NewDeviceTypesMap(dao)
-	fetch := fetcher.New(dao, client, crpCli, itsmCli, bizLogic, deviceTypesMap)
+	fetch := fetcher.New(dao, demandTimeCli, client, crpCli, itsmCli, bizLogic, deviceTypesMap)
 
 	ctx := context.Background()
 	// new dispatcher
@@ -225,7 +226,7 @@ func New(sd serviced.State, client *client.ClientSet, dao dao.Set, cmsiCli cmsi.
 		crpCli:         crpCli,
 		bizLogics:      bizLogic,
 		deviceTypesMap: deviceTypesMap,
-		demandTime:     demandtime.NewDemandTimeFromTable(client),
+		demandTime:     demandTimeCli,
 		ctx:            ctx,
 		resFetcher:     fetch,
 		dispatcher:     dispatch,

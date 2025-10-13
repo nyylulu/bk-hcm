@@ -29,18 +29,20 @@ import (
 	"hcm/pkg/thirdparty/cvmapi"
 )
 
-// queryCRPDemands 查询CRP中的预测，按照项目类型和技术大类
+// queryTransferCRPDemands 查询CRP中转产品中可转移的预测，按照项目类型和技术大类
 func (c *CrpTicketCreator) queryTransferCRPDemands(kt *kit.Kit, obsProjects []enumor.ObsProject,
 	technicalClasses []string) error {
 
-	crpDemand, err := c.resFetcher.QueryCRPTransferPoolDemands(kt, obsProjects, technicalClasses)
+	crpDemands, err := c.resFetcher.QueryCRPTransferPoolDemands(kt, obsProjects, technicalClasses)
 	if err != nil {
 		logs.Errorf("failed to query transfer pool demands, err: %v, obs_project: %v, technical_classes: %v, rid: %s",
 			err, obsProjects, technicalClasses, kt.Rid)
 		return err
 	}
 
-	c.transferAbleDemands = crpDemand
+	for _, demand := range crpDemands {
+		c.transferAbleDemands[demand.Year] = append(c.transferAbleDemands[demand.Year], demand)
+	}
 	return nil
 }
 

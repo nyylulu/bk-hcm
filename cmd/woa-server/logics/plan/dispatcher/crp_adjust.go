@@ -22,6 +22,7 @@ package dispatcher
 import (
 	"errors"
 	"fmt"
+	"strconv"
 
 	"hcm/cmd/woa-server/logics/plan/fetcher"
 	ptypes "hcm/cmd/woa-server/types/plan"
@@ -59,8 +60,8 @@ type CrpTicketCreator struct {
 	appendUpdateDemand []*cvmapi.AdjustUpdatedData
 	// adjustAbleDemands 记录每个本地预测需求对应的，CRP中可修改的原有预测
 	adjustAbleDemands map[string][]*cvmapi.CvmCbsPlanQueryItem
-	// transferAbleDemands 记录CRP中可转移的预测（来自中转产品）
-	transferAbleDemands []*cvmapi.CvmCbsPlanQueryItem
+	// transferAbleDemands 记录CRP中可转移的预测（来自中转产品），按预测所属年份分组
+	transferAbleDemands map[int][]*cvmapi.CvmCbsPlanQueryItem
 }
 
 // NewCrpTicketCreator new CrpTicketCreator
@@ -71,7 +72,7 @@ func NewCrpTicketCreator(fetch fetcher.Fetcher, crpCli cvmapi.CVMClientInterface
 		adjCRPDemandsRst:    make(map[string]*AdjustAbleRemainObj),
 		appendUpdateDemand:  make([]*cvmapi.AdjustUpdatedData, 0),
 		adjustAbleDemands:   make(map[string][]*cvmapi.CvmCbsPlanQueryItem),
-		transferAbleDemands: make([]*cvmapi.CvmCbsPlanQueryItem, 0),
+		transferAbleDemands: make(map[int][]*cvmapi.CvmCbsPlanQueryItem),
 	}
 }
 
@@ -530,9 +531,15 @@ func (c *CrpTicketCreator) prePrepareTransferableData(kt *kit.Kit, id string, de
 	}
 
 	needDemand := demand.Updated
+	expectYear, err := strconv.Atoi(needDemand.ExpectTime[:4])
+	if err != nil {
+		logs.Errorf("failed to parse expect year, err: %v, expect_time: %s, rid: %s", err, needDemand.ExpectTime,
+			kt.Rid)
+		return err
+	}
 	// 遍历可用于调减的crp预测，凑齐调减总量
 	needCpuCores := demand.Updated.Cvm.CpuCore
-	for _, transAbleD := range c.transferAbleDemands {
+	for _, transAbleD := range c.transferAbleDemands[expectYear] {
 		if needCpuCores <= 0 {
 			break
 		}

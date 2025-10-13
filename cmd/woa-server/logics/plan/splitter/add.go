@@ -22,6 +22,7 @@ package splitter
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	ptypes "hcm/cmd/woa-server/types/plan"
@@ -146,14 +147,16 @@ func (s *SubTicketSplitter) canTransferByQuota(kt *kit.Kit, obsProjects []enumor
 func (s *SubTicketSplitter) queryTransferCRPDemands(kt *kit.Kit, obsProjects []enumor.ObsProject,
 	technicalClasses []string) error {
 
-	crpDemand, err := s.resFetcher.QueryCRPTransferPoolDemands(kt, obsProjects, technicalClasses)
+	crpDemands, err := s.resFetcher.QueryCRPTransferPoolDemands(kt, obsProjects, technicalClasses)
 	if err != nil {
 		logs.Errorf("failed to query transfer pool demands, err: %v, obs_project: %v, technical_classes: %v, rid: %s",
 			err, obsProjects, technicalClasses, kt.Rid)
 		return err
 	}
 
-	s.transferAbleDemands = crpDemand
+	for _, demand := range crpDemands {
+		s.transferAbleDemands[demand.Year] = append(s.transferAbleDemands[demand.Year], demand)
+	}
 	return nil
 }
 
@@ -167,9 +170,15 @@ func (s *SubTicketSplitter) matchTransferCRPDemands(kt *kit.Kit, ticketID string
 	}
 
 	needDemand := demand.Updated
+	expectYear, err := strconv.Atoi(needDemand.ExpectTime[:4])
+	if err != nil {
+		logs.Errorf("failed to parse expect year, err: %v, expect_time: %s, rid: %s", err, needDemand.ExpectTime,
+			kt.Rid)
+		return transferableCore, nonTransferableCore, err
+	}
 	// 1. 计算可转移的预测量，将转移的消耗记录到 transferCRPDemandRst
 	needCpuCores := needDemand.Cvm.CpuCore
-	for _, transAbleD := range s.transferAbleDemands {
+	for _, transAbleD := range s.transferAbleDemands[expectYear] {
 		if needCpuCores <= 0 {
 			break
 		}

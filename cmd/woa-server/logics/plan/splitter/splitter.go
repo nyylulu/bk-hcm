@@ -56,8 +56,8 @@ type SubTicketSplitter struct {
 	// adjSplitGroupDemands 记录预测需求的拆分结果，按照子单的类型分组
 	adjSplitGroupDemands map[enumor.RPTicketType][]*rpt.ResPlanDemand
 
-	// transferAbleDemands 记录CRP中可转移的预测（来自中转产品）
-	transferAbleDemands []*cvmapi.CvmCbsPlanQueryItem
+	// transferAbleDemands 记录CRP中可转移的预测（来自中转产品），按预测所属年份分组
+	transferAbleDemands map[int][]*cvmapi.CvmCbsPlanQueryItem
 	// transferCRPDemandRst 记录对CRP中可转移的预测，已被转移使用的部分，用于解决多条需求共用一个可转移预测的场景
 	transferCRPDemandRst map[string]*AdjustAbleRemainObj
 }
@@ -85,7 +85,7 @@ func New(dao dao.Set, cli *client.ClientSet, crpCli cvmapi.CVMClientInterface, r
 		adjustAbleDemands:    make(map[string][]*cvmapi.CvmCbsPlanQueryItem),
 		adjCRPDemandsRst:     make(map[string]*AdjustAbleRemainObj),
 		adjSplitGroupDemands: make(map[enumor.RPTicketType][]*rpt.ResPlanDemand),
-		transferAbleDemands:  make([]*cvmapi.CvmCbsPlanQueryItem, 0),
+		transferAbleDemands:  make(map[int][]*cvmapi.CvmCbsPlanQueryItem),
 		transferCRPDemandRst: make(map[string]*AdjustAbleRemainObj),
 	}
 }
