@@ -187,6 +187,8 @@ const (
 	WoaZoneTable = "woa_zone"
 	// WoaDeviceTypeTable is woa_device_type table's name.
 	WoaDeviceTypeTable = "woa_device_type"
+	// WoaDeviceTypePhysicalRelTable is woa_device_type_physical_rel table's name.
+	WoaDeviceTypePhysicalRelTable = "woa_device_type_physical_rel"
 	// ResPlanCrpDemandTable is res_plan_crp_demand table's name.
 	ResPlanCrpDemandTable = "res_plan_crp_demand"
 	// ResPlanPenaltyTable is res_plan_penalty table's name.
@@ -394,6 +396,7 @@ var TableMap = map[Name]TableConfig{
 	ResPlanTicketStatusTable:          {},
 	WoaZoneTable:                      {},
 	WoaDeviceTypeTable:                {},
+	WoaDeviceTypePhysicalRelTable:     {},
 	ResPlanCrpDemandTable:             {},
 	ResPlanPenaltyTable:               {},
 	ResPlanDemandPenaltyBaseTable:     {},

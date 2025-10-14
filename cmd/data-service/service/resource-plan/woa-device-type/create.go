@@ -27,6 +27,7 @@ import (
 	rpproto "hcm/pkg/api/data-service/resource-plan"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/orm"
+	woadevicetype "hcm/pkg/dal/table/resource-plan/woa-device-type"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 	"hcm/pkg/tools/util"
@@ -60,6 +61,48 @@ func (svc *service) BatchCreateWoaDeviceType(cts *rest.Contexts) (interface{}, e
 	if err != nil {
 		logs.Errorf("batch create woa device type but return ids type not []string, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, fmt.Errorf("batch create woa device type but return ids type not []string, err: %v", err)
+	}
+
+	return &core.BatchCreateResult{IDs: ids}, nil
+}
+
+// BatchCreateWoaDeviceTypePhysicalRel batch create woa device type physical rel records.
+func (svc *service) BatchCreateWoaDeviceTypePhysicalRel(cts *rest.Contexts) (interface{}, error) {
+	req := new(rpproto.WoaDeviceTypePhysicalRelBatchCreateReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	newIDs, err := svc.dao.Txn().AutoTxn(cts.Kit, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
+		// Convert to dao models
+		models := make([]woadevicetype.WoaDeviceTypePhysicalRelTable, len(req.Records))
+		for i, record := range req.Records {
+			models[i] = woadevicetype.WoaDeviceTypePhysicalRelTable{
+				DeviceType:           record.DeviceType,
+				PhysicalDeviceFamily: record.PhysicalDeviceFamily,
+			}
+		}
+		ids, err := svc.dao.WoaDeviceTypePhysicalRel().CreateWithTx(cts.Kit, txn, models)
+		if err != nil {
+			return nil, err
+		}
+		return ids, nil
+	})
+	if err != nil {
+		logs.Errorf("batch create woa device type physical rel failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+	ids, err := util.GetStrSliceByInterface(newIDs)
+	if err != nil {
+		logs.Errorf("create woa device type physical rel but return ids type invalid, err: %v, rid: %s", err,
+			cts.Kit.Rid)
+		return nil, fmt.Errorf("create woa device type physical rel but return ids type invalid, "+
+			"err: %v", err)
 	}
 
 	return &core.BatchCreateResult{IDs: ids}, nil

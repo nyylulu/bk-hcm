@@ -43,6 +43,15 @@ func InitService(cap *capability.Capability) {
 	h.Add("BatchDeleteWoaDeviceType", http.MethodDelete, "/res_plans/woa_device_types/batch",
 		svc.BatchDeleteWoaDeviceType)
 
+	h.Add("ListWoaDeviceTypePhysicalRel", http.MethodPost, "/res_plans/woa_device_type_physical_rels/list",
+		svc.ListWoaDeviceTypePhysicalRel)
+	h.Add("BatchCreateWoaDeviceTypePhysicalRel", http.MethodPost, "/res_plans/woa_device_type_physical_rels/batch/create",
+		svc.BatchCreateWoaDeviceTypePhysicalRel)
+	h.Add("BatchUpdateWoaDeviceTypePhysicalRel", http.MethodPatch, "/res_plans/woa_device_type_physical_rels/batch",
+		svc.BatchUpdateWoaDeviceTypePhysicalRel)
+	h.Add("DeleteWoaDeviceTypePhysicalRel", http.MethodDelete, "/res_plans/woa_device_type_physical_rels/batch",
+		svc.DeleteWoaDeviceTypePhysicalRel)
+
 	h.Load(cap.WebService)
 }
 

@@ -73,3 +73,36 @@ func (svc *service) BatchUpdateWoaDeviceType(cts *rest.Contexts) (interface{}, e
 
 	return nil, nil
 }
+
+// BatchUpdateWoaDeviceTypePhysicalRel batch update woa device type physical rel records.
+func (svc *service) BatchUpdateWoaDeviceTypePhysicalRel(cts *rest.Contexts) (interface{}, error) {
+	req := new(rpproto.WoaDeviceTypePhysicalRelBatchUpdateReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, err
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	_, err := svc.dao.Txn().AutoTxn(cts.Kit, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
+		for _, record := range req.Records {
+			model := &wdttable.WoaDeviceTypePhysicalRelTable{
+				DeviceType:           record.DeviceType,
+				PhysicalDeviceFamily: record.PhysicalDeviceFamily,
+			}
+			if err := svc.dao.WoaDeviceTypePhysicalRel().UpdateWithTx(cts.Kit, txn,
+				tools.EqualExpression("id", record.ID), model); err != nil {
+				logs.Errorf("update woa device type physical rel loop failed, id: %s, err: %v, rid: %s",
+					record.ID, err, cts.Kit.Rid)
+				return nil, err
+			}
+		}
+		return nil, nil
+	})
+	if err != nil {
+		logs.Errorf("update woa device type physical rel failed, err: %v, rid: %v", err, cts.Kit.Rid)
+		return nil, err
+	}
+	return nil, nil
+}
