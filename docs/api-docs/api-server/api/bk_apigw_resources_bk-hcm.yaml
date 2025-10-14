@@ -775,7 +775,7 @@ paths:
         descriptionEn:
   /api/v1/woa/task/find/approve_node/result:
     post:
-      operationId: get_approve_node_result
+      operationId: find_approve_node_result
       description: 获取审批节点结果
       tags:
         - SCR
