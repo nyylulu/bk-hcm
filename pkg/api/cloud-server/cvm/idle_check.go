@@ -24,8 +24,9 @@ import (
 
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/pkg"
+	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/validator"
-	"hcm/pkg/tools/metadata"
+	"hcm/pkg/dal/dao/types"
 )
 
 // BatchIdleCheckReq ...
@@ -45,15 +46,25 @@ func (req BatchIdleCheckReq) Validate() error {
 	return nil
 }
 
-// IdleCheckResultRst ...
-type IdleCheckResultRst struct {
-	Page metadata.BasePage `json:"page"`
+// IdleCheckResultReq ...
+type IdleCheckResultReq struct {
+	Page *core.BasePage `json:"page" validate:"required"`
+}
+
+// Validate validate IdleCheckResultReq
+func (req IdleCheckResultReq) Validate() error {
+	if err := validator.Validate.Struct(req); err != nil {
+		return err
+	}
+
+	if err := req.Page.Validate(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // IdleCheckResultRsp ...
-type IdleCheckResultRsp struct {
-	Details []IdleCheckResultRspItem `json:"details"`
-}
+type IdleCheckResultRsp types.ListResult[*IdleCheckResultRspItem]
 
 // IdleCheckResultRspItem ...
 type IdleCheckResultRspItem struct {

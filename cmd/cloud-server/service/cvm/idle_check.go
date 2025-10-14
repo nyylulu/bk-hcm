@@ -121,10 +121,11 @@ func (svc *cvmSvc) GetIdleCheckCvmResult(cts *rest.Contexts) (interface{}, error
 	if len(suborderID) == 0 {
 		return nil, errf.NewFromErr(errf.InvalidParameter, fmt.Errorf("suborder_id is empty"))
 	}
-	req := new(proto.IdleCheckResultRst)
+	req := new(proto.IdleCheckResultReq)
 	if err = cts.DecodeInto(req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
+
 	page := req.Page
 	err = svc.validateGetIdleCheckCvmResultReq(cts, bizID, suborderID, page)
 	if err != nil {
@@ -144,7 +145,8 @@ func (svc *cvmSvc) GetIdleCheckCvmResult(cts *rest.Contexts) (interface{}, error
 
 // validateGetIdleCheckCvmResultReq 校验GetIdleCheckCvmResult请求参数
 func (svc *cvmSvc) validateGetIdleCheckCvmResultReq(cts *rest.Contexts, bizID int64, suborderID string,
-	page metadata.BasePage) error {
+	page *core.BasePage) error {
+
 	orders, err := svc.client.WoaServer().Task.ListRecycleOrder(cts.Kit, &types.GetRecycleOrderReq{
 		SuborderID: []string{suborderID},
 		BizID:      []int64{bizID},
@@ -156,21 +158,29 @@ func (svc *cvmSvc) validateGetIdleCheckCvmResultReq(cts *rest.Contexts, bizID in
 		return errf.NewFromErr(errf.InvalidParameter, fmt.Errorf("no order found by "+
 			"suborder_id: %s, bizID: %d", suborderID, bizID))
 	}
-	if _, err := page.Validate(false); err != nil {
-		return errf.NewFromErr(errf.InvalidParameter, err)
-	}
+
 	// 1台待空闲检查的主机->1个detectTask->10个detectStep，因为500/10=50，所以限制查询主机数为50
-	if err := page.ValidateLimit(table.DetectTaskMaxPageLimit); err != nil {
+	validateOpt := &core.PageOption{
+		MaxLimit: table.DetectTaskMaxPageLimit,
+	}
+	if err := page.Validate(validateOpt); err != nil {
 		return errf.NewFromErr(errf.InvalidParameter, err)
 	}
 	return nil
 }
 
 // getIdleCheckCvmResult 构建空闲检查结果
-func (svc *cvmSvc) getIdleCheckCvmResult(kt *kit.Kit, suborderID string, page metadata.BasePage) ([]*proto.IdleCheckResultRspItem, error) {
+func (svc *cvmSvc) getIdleCheckCvmResult(kt *kit.Kit, suborderID string, page *core.BasePage) (
+	*proto.IdleCheckResultRsp, error) {
+
 	listDetectTaskReq := &types.GetRecycleDetectReq{
 		SuborderID: []string{suborderID},
-		Page:       page,
+		Page: metadata.BasePage{
+			Sort:        page.Sort,
+			Limit:       int(page.Limit),
+			Start:       int(page.Start),
+			EnableCount: page.Count,
+		},
 	}
 	tasks, err := svc.client.WoaServer().Task.ListDetectTask(kt, listDetectTaskReq)
 	if err != nil {
@@ -178,7 +188,11 @@ func (svc *cvmSvc) getIdleCheckCvmResult(kt *kit.Kit, suborderID string, page me
 		return nil, err
 	}
 
-	rsp := make([]*proto.IdleCheckResultRspItem, 0, len(tasks.Info))
+	if page.Count {
+		return &proto.IdleCheckResultRsp{Count: uint64(tasks.Count)}, nil
+	}
+
+	details := make([]*proto.IdleCheckResultRspItem, 0, len(tasks.Info))
 	// 根据taskID取得对应空闲检查任务执行结果的响应结构体
 	taskIDToRspItem := make(map[string]*proto.IdleCheckResultRspItem)
 	for _, task := range tasks.Info {
@@ -194,7 +208,7 @@ func (svc *cvmSvc) getIdleCheckCvmResult(kt *kit.Kit, suborderID string, page me
 			DetectTask: converter.PtrToVal(task),
 		}
 		taskIDToRspItem[task.TaskID] = rspItem
-		rsp = append(rsp, rspItem)
+		details = append(details, rspItem)
 	}
 	listDetectStepReq := &types.GetDetectStepReq{
 		SuborderID: []string{suborderID},
@@ -220,5 +234,5 @@ func (svc *cvmSvc) getIdleCheckCvmResult(kt *kit.Kit, suborderID string, page me
 		taskIDToRspItem[step.TaskID].DetectSteps = append(taskIDToRspItem[step.TaskID].DetectSteps,
 			converter.PtrToVal(step))
 	}
-	return rsp, nil
+	return &proto.IdleCheckResultRsp{Details: details}, nil
 }

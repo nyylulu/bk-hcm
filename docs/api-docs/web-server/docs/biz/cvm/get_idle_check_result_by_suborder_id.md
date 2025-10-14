@@ -27,6 +27,7 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/cvms/idle_check/result/{suborder_id}
 ### 调用示例
 
 #### 获取空闲检查结果请求示例
+
 ```json
 {
   "page": {
@@ -36,7 +37,6 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/cvms/idle_check/result/{suborder_id}
   }
 }
 ```
-
 
 ### 响应示例
 
@@ -48,6 +48,7 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/cvms/idle_check/result/{suborder_id}
   "code": 0,
   "message": "success",
   "data": {
+    "count": 0,
     "details": [
       {
         "detect_task": {
@@ -132,9 +133,11 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/cvms/idle_check/result/{suborder_id}
 
 | 参数名称    | 参数类型         | 描述                                                       |
 |---------|--------------|----------------------------------------------------------|
+| count   | uint64       | 当前规则能匹配到的总记录条数                                           |
 | details | object array | 本次查询的每台机器的整体检查结果及其对应的每个检查步骤的详细执行情况,长度为本次查询的机器数，小于等于limit |
 
 #### data.details[i]
+
 查询到的第i个执行空闲检查任务的机器对应的空闲检查任务整体执行信息，以及每个空闲检查步骤的执行详情
 1台待空闲检查主机->1个detect_task->10个detect_step
 
@@ -164,6 +167,7 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/cvms/idle_check/result/{suborder_id}
 | update_at	  | string | 空闲检查任务步骤记录最后更新时间                             |
 
 #### detect_steps[i]
+
 | 字段名称        | 类型     | 描述                                           |
 |-------------|--------|----------------------------------------------|
 | id          | string | 步骤ID                                         |
