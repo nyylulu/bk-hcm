@@ -12,9 +12,6 @@ export const properties: ModelPropertySearch[] = [
     id: 'bk_biz_ids',
     name: '业务',
     type: 'business',
-    props: {
-      showAll: true,
-    },
   },
   {
     id: 'op_product_ids',
