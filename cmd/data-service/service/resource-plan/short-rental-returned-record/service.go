@@ -17,27 +17,37 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package resourceplan ...
-package resourceplan
+// Package shortrentalreturnedrecord ...
+package shortrentalreturnedrecord
 
 import (
+	"net/http"
+
 	"hcm/cmd/data-service/service/capability"
-	resplandemand "hcm/cmd/data-service/service/resource-plan/res-plan-demand"
-	demandchangelog "hcm/cmd/data-service/service/resource-plan/res-plan-demand-changelog"
-	demandpenaltybase "hcm/cmd/data-service/service/resource-plan/res-plan-demand-penalty-base"
-	resplansubticket "hcm/cmd/data-service/service/resource-plan/res-plan-sub-ticket"
-	transferappliedrecord "hcm/cmd/data-service/service/resource-plan/res-plan-transfer-applied-record"
-	resplanweek "hcm/cmd/data-service/service/resource-plan/res-plan-week"
-	shortrentalreturnedrecord "hcm/cmd/data-service/service/resource-plan/short-rental-returned-record"
+	"hcm/pkg/dal/dao"
+	"hcm/pkg/rest"
 )
 
-// InitService initial the resource plan service.
+// InitService initializes the short rental returned record service.
 func InitService(cap *capability.Capability) {
-	resplandemand.InitService(cap)
-	demandpenaltybase.InitService(cap)
-	demandchangelog.InitService(cap)
-	resplanweek.InitService(cap)
-	transferappliedrecord.InitService(cap)
-	resplansubticket.InitService(cap)
-	shortrentalreturnedrecord.InitService(cap)
+	svc := &service{
+		dao: cap.Dao,
+	}
+	h := rest.NewHandler()
+	h.Add("BatchCreateShortRentalReturnedRecord", http.MethodPost,
+		"/short_rental/returned_records/batch/create", svc.BatchCreateShortRentalReturnedRecord)
+	h.Add("BatchUpdateShortRentalReturnedRecord", http.MethodPatch,
+		"/short_rental/returned_records/batch", svc.BatchUpdateShortRentalReturnedRecord)
+	h.Add("DeleteShortRentalReturnedRecord", http.MethodDelete,
+		"/short_rental/returned_records/batch", svc.DeleteShortRentalReturnedRecord)
+	h.Add("ListShortRentalReturnedRecord", http.MethodPost,
+		"/short_rental/returned_records/list", svc.ListShortRentalReturnedRecord)
+	h.Add("SumShortRentalReturnedCore", http.MethodPost,
+		"/short_rental/returned_records/sum", svc.SumShortRentalReturnedCore)
+
+	h.Load(cap.WebService)
+}
+
+type service struct {
+	dao dao.Set
 }

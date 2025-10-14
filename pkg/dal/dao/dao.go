@@ -67,6 +67,7 @@ import (
 	recyclerecord "hcm/pkg/dal/dao/recycle-record"
 	resplan "hcm/pkg/dal/dao/resource-plan"
 	rollingserver "hcm/pkg/dal/dao/rolling-server"
+	shortrental "hcm/pkg/dal/dao/short-rental"
 	"hcm/pkg/dal/dao/task"
 	"hcm/pkg/dal/dao/tenant"
 	daouser "hcm/pkg/dal/dao/user"
@@ -168,6 +169,7 @@ type Set interface {
 	WoaDeviceType() resplan.WoaDeviceTypeInterface
 	WoaDeviceTypePhysicalRel() resplan.WoaDeviceTypePhysicalRelInterface
 	ResPlanTransferAppliedRecord() resplan.TransferAppliedRecordInterface
+	ShortRentalReturnedRecord() shortrental.ShortRentalReturnedRecordInterface
 
 	RecycleModule() module.RecycleModule
 	RecycleHost() host.RecycleHost
@@ -959,6 +961,15 @@ func (s *set) WoaDeviceTypePhysicalRel() resplan.WoaDeviceTypePhysicalRelInterfa
 // ResPlanTransferAppliedRecord resource plan transfer record dao.
 func (s *set) ResPlanTransferAppliedRecord() resplan.TransferAppliedRecordInterface {
 	return &resplan.TransferAppliedRecordDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
+// ShortRentalReturnedRecord ...
+func (s *set) ShortRentalReturnedRecord() shortrental.ShortRentalReturnedRecordInterface {
+	return &shortrental.ShortRentalReturnedRecordDao{
 		Orm:   s.orm,
 		IDGen: s.idGen,
 		Audit: s.audit,

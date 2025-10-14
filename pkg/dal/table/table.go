@@ -203,6 +203,8 @@ const (
 	ResPlanTransferAppliedRecordTable = "res_plan_transfer_applied_record"
 	// ResPlanSubTicketTable is res_plan_sub_ticket table's name.
 	ResPlanSubTicketTable = "res_plan_sub_ticket"
+	// ShortRentalReturnedRecordTable is short_rental_returned_record table's name.
+	ShortRentalReturnedRecordTable = "short_rental_returned_record"
 
 	// MainAccountTable is main_account table's name
 	MainAccountTable Name = "main_account"
@@ -404,6 +406,7 @@ var TableMap = map[Name]TableConfig{
 	ResPlanWeekTable:                  {},
 	ResPlanTransferAppliedRecordTable: {},
 	ResPlanSubTicketTable:             {},
+	ShortRentalReturnedRecordTable:    {},
 
 	MainAccountTable: {EnableTenant: true},
 	RootAccountTable: {EnableTenant: true},
