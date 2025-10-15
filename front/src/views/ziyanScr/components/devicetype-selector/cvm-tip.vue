@@ -2,12 +2,7 @@
   <bk-alert>
     <template #title>
       <p>所选机型为{{ info.device_type }}，CPU为{{ info.cpu_amount }}核，内存为{{ info.ram_amount }}G。</p>
-      <p>
-        注意：
-        <span style="color: red">
-          交付机型可能和所选不同，公司交付策略为同机型有资源优先交付，模糊机型范围为S4m、S5、S5t、S6、S6t、SA2、SA3、SA5t、SA5、SA6、SA9、S9
-        </span>
-      </p>
+      <slot></slot>
       <p v-if="helperText">{{ helperText }}</p>
     </template>
   </bk-alert>
@@ -37,5 +32,3 @@ const helperText = computed(() => {
   return '';
 });
 </script>
-
-<style scoped></style>

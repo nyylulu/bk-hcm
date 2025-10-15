@@ -16,10 +16,10 @@ import AreaSelector from '@/views/ziyanScr/hostApplication/components/AreaSelect
 import ZoneSelector from '@/views/ziyanScr/hostApplication/components/ZoneSelector';
 import DevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/index.vue';
 import { type ICondition } from '../../typings';
-import { deviceGroups } from '../../constants';
+import { deviceGroupsMap } from '../../constants';
 
 interface Props {
-  requireType: number;
+  requireType?: RequirementType;
   bizId?: number;
   initialCondition?: ICondition;
 }
@@ -34,6 +34,7 @@ const { pagination, pageParams, handlePageChange, handlePageSizeChange, handleSo
 
 const cvmDeviceStore = useCvmDeviceStore();
 
+const deviceGroups = computed(() => deviceGroupsMap[props.requireType] || deviceGroupsMap.default);
 const defaultSearchValues: () => ICondition = () => ({
   // 小额绿通和春保资源池使用常规项目查询，春保资源池暂已下线
   require_type: [RequirementType.GreenChannel, RequirementType.SpringResPool].includes(props.requireType)
@@ -41,7 +42,7 @@ const defaultSearchValues: () => ICondition = () => ({
     : props.requireType,
   region: [],
   zone: [],
-  device_families: [deviceGroups[0]],
+  device_families: [deviceGroups.value[0]],
   ...props.initialCondition,
 });
 
@@ -148,6 +149,7 @@ const cvmDevicetypeParams = computed(() => {
   const { region, zone, device_families } = searchValues.value;
   return { region_ids: region, zone_ids: zone, device_group: device_families, enable_capacity: true };
 });
+const isGreenChannel = computed(() => props.requireType === RequirementType.GreenChannel);
 
 const deviceList = ref<ICvmDeviceItem[]>([]);
 const cpuList = ref<number[]>([]);
@@ -157,30 +159,56 @@ watch(pageParams, () => {
   getList();
 });
 
+const getSearchAndFields = () => {
+  const fields = [...searchFields];
+  const cpuItem = fields.find((item) => item.id === 'cpu');
+
+  if (isGreenChannel.value && !searchValues.value.cpu) {
+    cpuItem.op = QueryRuleOPEnumLegacy.LESS_OR_EQUAL;
+  } else {
+    cpuItem.op = QueryRuleOPEnumLegacy.EQ;
+  }
+
+  return fields;
+};
+
+const getSearchParams = () => {
+  const params = { ...searchValues.value };
+  if (isGreenChannel.value && !params.cpu) {
+    params.cpu = cpuList.value.at(-1);
+  }
+
+  return params;
+};
+
 const getList = async () => {
+  const fields = getSearchAndFields();
+  const params = getSearchParams();
   const { list, count } = await cvmDeviceStore.getDeviceList({
-    filter: transformSimpleCondition(searchValues.value, searchFields, true),
+    filter: transformSimpleCondition(params, fields, true),
     page: pageParams.value,
   });
 
   deviceList.value = list;
-
   pagination.count = count;
 };
 
 const getOptions = async () => {
   const { cpu, mem } = await apiService.getRestrict();
-  cpuList.value = cpu;
+  cpuList.value = !isGreenChannel.value ? cpu : cpu.filter((v: number) => v <= 16);
   memList.value = mem;
 };
 
-onMounted(() => {
-  getOptions();
+onMounted(async () => {
+  await getOptions();
   getList();
 });
 
 const handleDeviceGroupChange = () => {
   searchValues.value.device_type = [];
+  if (isGreenChannel.value) {
+    searchValues.value.device_families = ['标准型'];
+  }
 };
 const handleAreaChange = () => {
   searchValues.value.zone = [];
@@ -235,7 +263,7 @@ const handleReset = () => {
         <bk-select
           v-model="searchValues.device_families"
           multiple
-          clearable
+          :clearable="false"
           collapse-tags
           @change="handleDeviceGroupChange"
         >
