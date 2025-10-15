@@ -18,11 +18,13 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"slices"
 	"strconv"
 	"time"
 
 	"hcm/cmd/woa-server/model/task"
 	"hcm/cmd/woa-server/types/config"
+	gctypes "hcm/cmd/woa-server/types/green-channel"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
 	"hcm/pkg/criteria/constant"
@@ -603,9 +605,33 @@ func (s *service) validateDeviceTypeForGreenAndRoll(kt *kit.Kit, input *types.Ap
 		logs.Errorf("failed to get device type info, err: %v, deviceTypes: %v, rid: %s", err, deviceTypes, kt.Rid)
 		return err
 	}
+
+	// 获取小额绿通的配置
+	cvmApplyConfigs := gctypes.CvmApplyConfig{}
+	if input.RequireType == enumor.RequireTypeGreenChannel {
+		gcConfigs, err := s.gcLogics.GetConfigs(kt)
+		if err != nil {
+			logs.Errorf("get green channel configs failed, err: %v, rid: %s", err, kt.Rid)
+			return err
+		}
+		cvmApplyConfigs = gcConfigs.CvmApplyConfig
+	}
+
 	var unsupportedTypes []string
 	for _, item := range resp.Info {
 		if item.DeviceTypeClass == cvmapi.SpecialType {
+			unsupportedTypes = append(unsupportedTypes, item.DeviceType)
+		}
+		// 小额绿通只能申请[标准型]、[16核以下]的机型
+		if !(input.RequireType == enumor.RequireTypeGreenChannel && cvmApplyConfigs.Enabled) {
+			continue
+		}
+		deviceGroupIf, ok := item.Label["device_group"]
+		if !ok {
+			continue
+		}
+		deviceGroup := util.GetStrByInterface(deviceGroupIf)
+		if !(slices.Contains(cvmApplyConfigs.DeviceGroups, deviceGroup) && item.Cpu <= cvmApplyConfigs.CpuMaxLimit) {
 			unsupportedTypes = append(unsupportedTypes, item.DeviceType)
 		}
 	}
