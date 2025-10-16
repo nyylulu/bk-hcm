@@ -230,6 +230,13 @@ func (l *listenerExporter) getRuleCount(kt *kit.Kit, rule *filter.AtomRule) (uin
 			return 0, err
 		}
 		return resp.Count, nil
+	case enumor.TCloudZiyan:
+		resp, err := l.client.DataService().TCloudZiyan.LoadBalancer.ListUrlRule(kt, &req)
+		if err != nil {
+			logs.Errorf("get listener rule count failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
+			return 0, err
+		}
+		return resp.Count, nil
 	default:
 		return 0, errf.New(errf.InvalidParameter, "不支持该厂商的导出")
 	}
@@ -339,7 +346,7 @@ func (l *listenerExporter) Export(kt *kit.Kit) (string, error) {
 	}(zipOperator)
 
 	switch l.vendor {
-	case enumor.TCloud:
+	case enumor.TCloud, enumor.TCloudZiyan:
 		err = l.exportTCloud(kt, zipOperator)
 	default:
 		return "", errf.Newf(errf.InvalidParameter, "unsupported vendor: %s", l.vendor)
@@ -458,6 +465,13 @@ func (l *listenerExporter) getTCloudListenersByProtocol(kt *kit.Kit, lbIDs []str
 						req, kt.Rid)
 					return nil, err
 				}
+			case enumor.TCloudZiyan:
+				resp, err = l.client.DataService().TCloudZiyan.LoadBalancer.ListListener(kt, &req)
+				if err != nil {
+					logs.Errorf("get listener by lb id failed, err: %v, vendor: %s, req: %+v, rid: %s", err, l.vendor,
+						req, kt.Rid)
+					return nil, err
+				}
 			default:
 				return nil, fmt.Errorf("unsupported vendor: %s", l.vendor)
 			}
@@ -482,6 +496,13 @@ func (l *listenerExporter) getTCloudListenersByProtocol(kt *kit.Kit, lbIDs []str
 			switch l.vendor {
 			case enumor.TCloud:
 				resp, err = l.client.DataService().TCloud.LoadBalancer.ListListener(kt, &req)
+				if err != nil {
+					logs.Errorf("get listener by listener id failed, err: %v, vendor: %s, req: %+v, rid: %s", err,
+						l.vendor, req, kt.Rid)
+					return nil, err
+				}
+			case enumor.TCloudZiyan:
+				resp, err = l.client.DataService().TCloudZiyan.LoadBalancer.ListListener(kt, &req)
 				if err != nil {
 					logs.Errorf("get listener by listener id failed, err: %v, vendor: %s, req: %+v, rid: %s", err,
 						l.vendor, req, kt.Rid)
@@ -687,6 +708,13 @@ func (l *listenerExporter) getTCloudRulesByRuleType(kt *kit.Kit, lbIDs []string,
 						kt.Rid)
 					return nil, err
 				}
+			case enumor.TCloudZiyan:
+				resp, err = l.client.DataService().TCloudZiyan.LoadBalancer.ListUrlRule(kt, &req)
+				if err != nil {
+					logs.Errorf("get rule by lb id failed, err: %v, vendor: %s, req: %+v, rid: %s", err, l.vendor, req,
+						kt.Rid)
+					return nil, err
+				}
 			default:
 				return nil, fmt.Errorf("not support vendor: %s", l.vendor)
 			}
@@ -711,6 +739,13 @@ func (l *listenerExporter) getTCloudRulesByRuleType(kt *kit.Kit, lbIDs []string,
 			switch l.vendor {
 			case enumor.TCloud:
 				resp, err = l.client.DataService().TCloud.LoadBalancer.ListUrlRule(kt, &req)
+				if err != nil {
+					logs.Errorf("get rule by listener id failed, err: %v, vendor: %s, req: %+v, rid: %s", err, l.vendor,
+						req, kt.Rid)
+					return nil, err
+				}
+			case enumor.TCloudZiyan:
+				resp, err = l.client.DataService().TCloudZiyan.LoadBalancer.ListUrlRule(kt, &req)
 				if err != nil {
 					logs.Errorf("get rule by listener id failed, err: %v, vendor: %s, req: %+v, rid: %s", err, l.vendor,
 						req, kt.Rid)

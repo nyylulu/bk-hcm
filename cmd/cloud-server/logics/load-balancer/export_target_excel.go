@@ -77,7 +77,7 @@ func (t *targetExporter) Export(kt *kit.Kit) (string, error) {
 	}(zipOperator)
 
 	switch t.vendor {
-	case enumor.TCloud:
+	case enumor.TCloud, enumor.TCloudZiyan:
 		err = t.exportTCloud(kt, zipOperator)
 	default:
 		return "", errf.Newf(errf.InvalidParameter, "unsupported vendor: %s", t.vendor)
@@ -239,7 +239,15 @@ func (t *targetExporter) getRuleByIDs(kt *kit.Kit, ids []string) (map[string]cor
 			for _, rule := range resp.Details {
 				ruleMap[rule.ID] = rule
 			}
-
+		case enumor.TCloudZiyan:
+			resp, err := t.client.DataService().TCloudZiyan.LoadBalancer.ListUrlRule(kt, &req)
+			if err != nil {
+				logs.Errorf("list rule failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
+				return nil, err
+			}
+			for _, rule := range resp.Details {
+				ruleMap[rule.ID] = rule
+			}
 		default:
 			return nil, fmt.Errorf("unsupported vendor: %s", t.vendor)
 		}
@@ -261,6 +269,15 @@ func (t *targetExporter) getLblByIDs(kt *kit.Kit, ids []string) (map[string]core
 		switch t.vendor {
 		case enumor.TCloud:
 			resp, err := t.client.DataService().TCloud.LoadBalancer.ListListener(kt, &req)
+			if err != nil {
+				logs.Errorf("list listener failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
+				return nil, err
+			}
+			for _, lbl := range resp.Details {
+				lblMap[lbl.ID] = lbl
+			}
+		case enumor.TCloudZiyan:
+			resp, err := t.client.DataService().TCloudZiyan.LoadBalancer.ListListener(kt, &req)
 			if err != nil {
 				logs.Errorf("list listener failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
 				return nil, err

@@ -1106,13 +1106,16 @@ func (l *LbTopoCond) GetTargetCond() []filter.RuleFactory {
 
 // LbTopoReq lb topo request
 type LbTopoReq struct {
-	LbTopoCond `json:",inline" validate:"required,dive,required"`
+	LbTopoCond `json:",inline" validate:"required"`
 	Page       *core.BasePage `json:"page" validate:"required"`
 }
 
 // Validate ...
 func (l *LbTopoReq) Validate() error {
 	if err := validator.Validate.Struct(l); err != nil {
+		return err
+	}
+	if err := validator.Validate.Struct(l.LbTopoCond); err != nil {
 		return err
 	}
 	if l.Page != nil {

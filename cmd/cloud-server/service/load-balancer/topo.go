@@ -418,6 +418,12 @@ func (svc *lbSvc) getLblByCond(kt *kit.Kit, vendor enumor.Vendor, lblCond []filt
 				logs.Errorf("get lbl failed, err: %v, req: %+v, rid: %s", err, lblReq, kt.Rid)
 				return nil, err
 			}
+		case enumor.TCloudZiyan:
+			resp, err = svc.client.DataService().TCloudZiyan.LoadBalancer.ListListener(kt, &lblReq)
+			if err != nil {
+				logs.Errorf("get lbl failed, err: %v, req: %+v, rid: %s", err, lblReq, kt.Rid)
+				return nil, err
+			}
 		default:
 			return nil, fmt.Errorf("vendor: %s not support", vendor)
 		}
@@ -453,6 +459,12 @@ func (svc *lbSvc) getRuleByCond(kt *kit.Kit, vendor enumor.Vendor, ruleCond []fi
 		switch vendor {
 		case enumor.TCloud:
 			resp, err = svc.client.DataService().TCloud.LoadBalancer.ListUrlRule(kt, &ruleReq)
+			if err != nil {
+				logs.Errorf("get rule failed, err: %v, req: %+v, rid: %s", err, ruleReq, kt.Rid)
+				return nil, err
+			}
+		case enumor.TCloudZiyan:
+			resp, err = svc.client.DataService().TCloudZiyan.LoadBalancer.ListUrlRule(kt, &ruleReq)
 			if err != nil {
 				logs.Errorf("get rule failed, err: %v, req: %+v, rid: %s", err, ruleReq, kt.Rid)
 				return nil, err
@@ -616,6 +628,12 @@ func (svc *lbSvc) listListenerByTopo(kt *kit.Kit, bizID int64, vendor enumor.Ven
 	switch vendor {
 	case enumor.TCloud:
 		resp, err = svc.client.DataService().TCloud.LoadBalancer.ListListener(kt, &lblReq)
+		if err != nil {
+			logs.Errorf("get lbl failed, err: %v, req: %+v, rid: %s", err, lblReq, kt.Rid)
+			return nil, err
+		}
+	case enumor.TCloudZiyan:
+		resp, err = svc.client.DataService().TCloudZiyan.LoadBalancer.ListListener(kt, &lblReq)
 		if err != nil {
 			logs.Errorf("get lbl failed, err: %v, req: %+v, rid: %s", err, lblReq, kt.Rid)
 			return nil, err
@@ -954,6 +972,12 @@ func (svc *lbSvc) listUrlRulesByTopo(kt *kit.Kit, bizID int64, vendor enumor.Ven
 			logs.Errorf("get url rule failed, err: %v, req: %+v, rid: %s", err, ruleReq, kt.Rid)
 			return nil, err
 		}
+	case enumor.TCloudZiyan:
+		resp, err = svc.client.DataService().TCloudZiyan.LoadBalancer.ListUrlRule(kt, &ruleReq)
+		if err != nil {
+			logs.Errorf("get url rule failed, err: %v, req: %+v, rid: %s", err, ruleReq, kt.Rid)
+			return nil, err
+		}
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", vendor)
 	}
@@ -1151,7 +1175,9 @@ func (svc *lbSvc) buildUrlRuleWithTopoInfo(kt *kit.Kit, vendor enumor.Vendor, in
 }
 
 // getUrlRuleTargetCount 获取规则的RS数量
-func (svc *lbSvc) getUrlRuleTargetCount(kt *kit.Kit, vendor enumor.Vendor, rules []corelb.TCloudLbUrlRule) (map[string]int, error) {
+func (svc *lbSvc) getUrlRuleTargetCount(kt *kit.Kit, vendor enumor.Vendor, rules []corelb.TCloudLbUrlRule) (
+	map[string]int, error) {
+
 	if len(rules) == 0 {
 		return make(map[string]int), nil
 	}
