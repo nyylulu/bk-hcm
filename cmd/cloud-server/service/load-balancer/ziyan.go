@@ -79,3 +79,27 @@ func (svc *lbSvc) listUrlRuleByCondForTCloudZiyan(kt *kit.Kit, req cslb.TargetQu
 
 	return result, ruleMap, nil
 }
+
+func (svc *lbSvc) listUrlRuleMapByIDsForTCloudZiyan(kt *kit.Kit, ids []string) (map[string]urlRuleInfo, error) {
+	result := make(map[string]urlRuleInfo, 0)
+	for _, batch := range slice.Split(ids, int(core.DefaultMaxPageLimit)) {
+		listReq := &core.ListReq{
+			Filter: tools.ContainersExpression("id", batch),
+			Page:   core.NewDefaultBasePage(),
+		}
+		resp, err := svc.client.DataService().TCloudZiyan.LoadBalancer.ListUrlRule(kt, listReq)
+		if err != nil {
+			return nil, err
+		}
+		for _, detail := range resp.Details {
+			result[detail.ID] = urlRuleInfo{
+				domain:     detail.Domain,
+				url:        detail.URL,
+				lblID:      detail.LblID,
+				cloudLblID: detail.CloudLBLID,
+				cloudLBID:  detail.CloudLbID,
+			}
+		}
+	}
+	return result, nil
+}

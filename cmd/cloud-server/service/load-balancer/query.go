@@ -640,6 +640,8 @@ func (svc *lbSvc) listUrlRuleMapByIDs(kt *kit.Kit, vendor enumor.Vendor, ids []s
 	switch vendor {
 	case enumor.TCloud:
 		return svc.listUrlRuleMapByIDsForTCloud(kt, ids)
+	case enumor.TCloudZiyan:
+		return svc.listUrlRuleMapByIDsForTCloudZiyan(kt, ids)
 	default:
 		return nil, fmt.Errorf("unsupported vendor: %s for listUrlRuleMapByIDs", vendor)
 	}
