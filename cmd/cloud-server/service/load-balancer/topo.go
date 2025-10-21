@@ -969,13 +969,13 @@ func (svc *lbSvc) listUrlRulesByTopo(kt *kit.Kit, bizID int64, vendor enumor.Ven
 	case enumor.TCloud:
 		resp, err = svc.client.DataService().TCloud.LoadBalancer.ListUrlRule(kt, &ruleReq)
 		if err != nil {
-			logs.Errorf("get url rule failed, err: %v, req: %+v, rid: %s", err, ruleReq, kt.Rid)
+			logs.Errorf("get rule failed, err: %v, req: %+v, rid: %s", err, ruleReq, kt.Rid)
 			return nil, err
 		}
 	case enumor.TCloudZiyan:
 		resp, err = svc.client.DataService().TCloudZiyan.LoadBalancer.ListUrlRule(kt, &ruleReq)
 		if err != nil {
-			logs.Errorf("get url rule failed, err: %v, req: %+v, rid: %s", err, ruleReq, kt.Rid)
+			logs.Errorf("get rule failed, err: %v, req: %+v, rid: %s", err, ruleReq, kt.Rid)
 			return nil, err
 		}
 	default:

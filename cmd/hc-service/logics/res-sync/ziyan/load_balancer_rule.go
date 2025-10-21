@@ -49,11 +49,12 @@ func (cli *client) loadBalancerRule(kt *kit.Kit, params *SyncBaseParams, opt *Sy
 		}
 		l4Listeners = append(l4Listeners, listener)
 	}
-	_, err := cli.LoadBalancerLayer4Rule(kt, opt.LBID, l4Listeners)
+	_, err := cli.LoadBalancerLayer4Rule(kt, params, opt, l4Listeners)
 	if err != nil {
 		return nil, err
 	}
 	l7Opt := &SyncLayer7RuleOption{
+		BkBizID:         opt.BizID,
 		LBID:            opt.LBID,
 		CloudLBID:       opt.CloudLBID,
 		ListenerID:      "",
@@ -93,11 +94,11 @@ func (cli *client) loadBalancerRule(kt *kit.Kit, params *SyncBaseParams, opt *Sy
 }
 
 // LoadBalancerLayer4Rule 同步负载均衡下的4层监听器规则，四层规则一次同步
-func (cli *client) LoadBalancerLayer4Rule(kt *kit.Kit, lbID string, l4Listeners []typeslb.TCloudListener) (
+func (cli *client) LoadBalancerLayer4Rule(kt *kit.Kit, params *SyncBaseParams, opt *SyncListenerOption, l4Listeners []typeslb.TCloudListener) (
 	*SyncResult, error) {
 
 	cloudIDs := slice.Map(l4Listeners, typeslb.TCloudListener.GetCloudID)
-	dbRules, err := cli.listL4RuleFromDB(kt, lbID, cloudIDs)
+	dbRules, err := cli.listL4RuleFromDB(kt, opt.LBID, cloudIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +112,7 @@ func (cli *client) LoadBalancerLayer4Rule(kt *kit.Kit, lbID string, l4Listeners 
 		l4Listeners, dbRules, isLayer4RuleChange)
 
 	// 更新变更监听器，更新对应四层/七层 规则
-	if err = cli.updateLayer4Rule(kt, updateMap); err != nil {
+	if err = cli.updateLayer4Rule(kt, params, opt, updateMap); err != nil {
 		return nil, err
 	}
 
@@ -149,12 +150,12 @@ func (cli *client) ListenerLayer7Rule(kt *kit.Kit, params *SyncBaseParams, opt *
 		}
 	}
 	if len(updateMap) != 0 {
-		if err = cli.updateLayer7Rule(kt, params.Region, updateMap); err != nil {
+		if err = cli.updateLayer7Rule(kt, params, opt, updateMap); err != nil {
 			return nil, err
 		}
 	}
 	if len(addSlice) != 0 {
-		if _, err = cli.createLayer7Rule(kt, params.Region, opt, addSlice); err != nil {
+		if _, err = cli.createLayer7Rule(kt, params, opt, addSlice); err != nil {
 			return nil, err
 		}
 	}
@@ -215,7 +216,7 @@ func (cli *client) listL7RuleFromDB(kt *kit.Kit, listenerID string) ([]corelb.TC
 	return rules, nil
 }
 
-func (cli *client) updateLayer4Rule(kt *kit.Kit, updateMap map[string]typeslb.TCloudListener) error {
+func (cli *client) updateLayer4Rule(kt *kit.Kit, params *SyncBaseParams, opt *SyncListenerOption, updateMap map[string]typeslb.TCloudListener) error {
 
 	if len(updateMap) == 0 {
 		return nil
@@ -231,6 +232,8 @@ func (cli *client) updateLayer4Rule(kt *kit.Kit, updateMap map[string]typeslb.TC
 			SessionExpire: listener.SessionExpireTime,
 			HealthCheck:   convHealthCheck(listener.HealthCheck),
 			Certificate:   convCert(listener.Certificate),
+			BkBizID:       opt.BizID,
+			AccountID:     params.AccountID,
 		})
 	}
 	for _, updateBatch := range slice.Split(urlRules, constant.BatchOperationMaxLimit) {
@@ -289,7 +292,7 @@ func (cli *client) deleteLayer7Rule(kt *kit.Kit, lblID string, cloudIds []string
 	return nil
 }
 
-func (cli *client) createLayer7Rule(kt *kit.Kit, region string, opt *SyncLayer7RuleOption,
+func (cli *client) createLayer7Rule(kt *kit.Kit, params *SyncBaseParams, opt *SyncLayer7RuleOption,
 	addSlice []typeslb.TCloudUrlRule) ([]string, error) {
 
 	if len(addSlice) == 0 {
@@ -311,7 +314,7 @@ func (cli *client) createLayer7Rule(kt *kit.Kit, region string, opt *SyncLayer7R
 				CloudID:    cloud.GetCloudID(),
 				RuleType:   enumor.Layer7RuleType,
 
-				Region:    region,
+				Region:    params.Region,
 				Domain:    cvt.PtrToVal(cloud.Domain),
 				URL:       cvt.PtrToVal(cloud.Url),
 				Scheduler: cvt.PtrToVal(cloud.Scheduler),
@@ -319,6 +322,8 @@ func (cli *client) createLayer7Rule(kt *kit.Kit, region string, opt *SyncLayer7R
 				SessionExpire: cvt.PtrToVal(cloud.SessionExpireTime),
 				HealthCheck:   convHealthCheck(cloud.HealthCheck),
 				Certificate:   convCert(cloud.Certificate),
+				AccountID:     params.AccountID,
+				BkBizID:       opt.BkBizID,
 			})
 		}
 
@@ -335,7 +340,7 @@ func (cli *client) createLayer7Rule(kt *kit.Kit, region string, opt *SyncLayer7R
 	return createdIDs, nil
 }
 
-func (cli *client) updateLayer7Rule(kt *kit.Kit, region string, updateMap map[string]typeslb.TCloudUrlRule) error {
+func (cli *client) updateLayer7Rule(kt *kit.Kit, params *SyncBaseParams, opt *SyncLayer7RuleOption, updateMap map[string]typeslb.TCloudUrlRule) error {
 
 	if len(updateMap) == 0 {
 		return nil
@@ -346,13 +351,15 @@ func (cli *client) updateLayer7Rule(kt *kit.Kit, region string, updateMap map[st
 
 		updates = append(updates, &dataproto.TCloudUrlRuleUpdate{
 			ID:            id,
-			Region:        region,
+			Region:        params.Region,
 			Domain:        cvt.PtrToVal(rule.Domain),
 			URL:           cvt.PtrToVal(rule.Url),
 			Scheduler:     cvt.PtrToVal(rule.Scheduler),
 			SessionExpire: rule.SessionExpireTime,
 			HealthCheck:   convHealthCheck(rule.HealthCheck),
 			Certificate:   convCert(rule.Certificate),
+			BkBizID:       opt.BkBizID,
+			AccountID:     params.AccountID,
 		})
 	}
 
@@ -448,6 +455,7 @@ func isLayer7RuleChange(cloud typeslb.TCloudUrlRule, db corelb.TCloudLbUrlRule) 
 
 // SyncLayer7RuleOption 同步7层规则选项，包含 监听器信息
 type SyncLayer7RuleOption struct {
+	BkBizID int64 `json:"bk_biz_id" validate:"required"`
 
 	// 对应的负载均衡
 	LBID      string `json:"lb_id" validate:"required"`

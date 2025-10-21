@@ -281,6 +281,8 @@ func (cli *client) createLayer7Rule(kt *kit.Kit, params *SyncBaseParams, opt *Sy
 				SessionExpire: cvt.PtrToVal(cloud.SessionExpireTime),
 				HealthCheck:   convHealthCheck(cloud.HealthCheck),
 				Certificate:   convCert(cloud.Certificate),
+				AccountID:     params.AccountID,
+				BkBizID:       opt.BizID,
 			})
 		}
 
