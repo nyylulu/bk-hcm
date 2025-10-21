@@ -164,6 +164,16 @@ func (svc *clbSvc) BatchRemoveTCloudZiyanTargets(cts *rest.Contexts) (any, error
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
+	// 检查CLB是否存在
+	clbInfo, err := svc.dataCli.TCloud.LoadBalancer.Get(cts.Kit, req.LbID)
+	if err != nil {
+		logs.Errorf("get tcloud lb info failed, lbID: %s, err: %v, rid: %s", req.LbID, err, cts.Kit.Rid)
+		return nil, err
+	}
+	if clbInfo == nil {
+		return nil, errf.Newf(errf.RecordNotFound, "get tcloud lb info empty, lbID: %s", req.LbID)
+	}
+
 	tgList, err := svc.getTargetGroupByID(cts.Kit, tgID)
 	if err != nil {
 		return nil, err
@@ -204,11 +214,12 @@ func (svc *clbSvc) BatchRemoveTCloudZiyanTargets(cts *rest.Contexts) (any, error
 	}
 
 	// 调用云端批量解绑四七层后端服务接口
-	return nil, svc.batchUnRegisterZiyanTargetCloud(cts.Kit, req, tgList[0], urlRuleList)
+	return nil, svc.batchUnRegisterZiyanTargetCloud(cts.Kit, req, tgList[0], urlRuleList, clbInfo)
 }
 
 func (svc *clbSvc) batchUnRegisterZiyanTargetCloud(kt *kit.Kit, req *protolb.TCloudBatchOperateTargetReq,
-	tgInfo corelb.BaseTargetGroup, urlRuleList *dataproto.TCloudURLRuleListResult) error {
+	tgInfo corelb.BaseTargetGroup, urlRuleList *dataproto.TCloudURLRuleListResult,
+	clbInfo *corelb.LoadBalancer[corelb.TCloudClbExtension]) error {
 
 	tcloudAdpt, err := svc.ad.TCloudZiyan(kt, tgInfo.AccountID)
 	if err != nil {
@@ -217,7 +228,7 @@ func (svc *clbSvc) batchUnRegisterZiyanTargetCloud(kt *kit.Kit, req *protolb.TCl
 
 	cloudLBExists := make(map[string]struct{}, 0)
 	rsOpt := &typelb.TCloudRegisterTargetsOption{
-		Region: tgInfo.Region,
+		Region: clbInfo.Region,
 	}
 	for _, ruleItem := range urlRuleList.Details {
 		if _, ok := cloudLBExists[ruleItem.CloudLbID]; !ok {
@@ -271,6 +282,16 @@ func (svc *clbSvc) BatchModifyTCloudZiyanTargetsPort(cts *rest.Contexts) (any, e
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
+	// 检查CLB是否存在
+	clbInfo, err := svc.dataCli.TCloudZiyan.LoadBalancer.Get(cts.Kit, req.LbID)
+	if err != nil {
+		logs.Errorf("get tcloud-ziyan lb info failed, lbID: %s, err: %v, rid: %s", tgID, err, cts.Kit.Rid)
+		return nil, err
+	}
+	if clbInfo == nil {
+		return nil, errf.Newf(errf.RecordNotFound, "get tcloud-ziyan lb info empty, lbID: %s", req.LbID)
+	}
+
 	tgList, err := svc.getTargetGroupByID(cts.Kit, tgID)
 	if err != nil {
 		return nil, err
@@ -311,11 +332,12 @@ func (svc *clbSvc) BatchModifyTCloudZiyanTargetsPort(cts *rest.Contexts) (any, e
 	}
 
 	// 调用云端批量解绑四七层后端服务接口
-	return nil, svc.batchModifyZiyanTargetPortCloud(cts.Kit, req, tgList[0], urlRuleList)
+	return nil, svc.batchModifyZiyanTargetPortCloud(cts.Kit, req, tgList[0], urlRuleList, clbInfo)
 }
 
 func (svc *clbSvc) batchModifyZiyanTargetPortCloud(kt *kit.Kit, req *protolb.TCloudBatchOperateTargetReq,
-	tgInfo corelb.BaseTargetGroup, urlRuleList *dataproto.TCloudURLRuleListResult) error {
+	tgInfo corelb.BaseTargetGroup, urlRuleList *dataproto.TCloudURLRuleListResult,
+	clbInfo *corelb.LoadBalancer[corelb.TCloudClbExtension]) error {
 
 	tcloudAdpt, err := svc.ad.TCloudZiyan(kt, tgInfo.AccountID)
 	if err != nil {
@@ -323,7 +345,7 @@ func (svc *clbSvc) batchModifyZiyanTargetPortCloud(kt *kit.Kit, req *protolb.TCl
 	}
 
 	rsOpt := &typelb.TCloudTargetPortUpdateOption{
-		Region: tgInfo.Region,
+		Region: clbInfo.Region,
 	}
 	for _, ruleItem := range urlRuleList.Details {
 		rsOpt.LoadBalancerId = ruleItem.CloudLbID
@@ -372,6 +394,16 @@ func (svc *clbSvc) BatchModifyTCloudZiyanTargetsWeight(cts *rest.Contexts) (any,
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
+	// 检查CLB是否存在
+	clbInfo, err := svc.dataCli.TCloudZiyan.LoadBalancer.Get(cts.Kit, req.LbID)
+	if err != nil {
+		logs.Errorf("get tcloud-ziyan lb info failed, lbID: %s, err: %v, rid: %s", tgID, err, cts.Kit.Rid)
+		return nil, err
+	}
+	if clbInfo == nil {
+		return nil, errf.Newf(errf.RecordNotFound, "get tcloud-ziyan lb info empty, lbID: %s", req.LbID)
+	}
+
 	tgList, err := svc.getTargetGroupByID(cts.Kit, tgID)
 	if err != nil {
 		return nil, err
@@ -412,11 +444,12 @@ func (svc *clbSvc) BatchModifyTCloudZiyanTargetsWeight(cts *rest.Contexts) (any,
 	}
 
 	// 批量修改监听器绑定的后端机器的转发权重
-	return nil, svc.batchModifyZiyanTargetWeightCloud(cts.Kit, req, tgList[0], urlRuleList)
+	return nil, svc.batchModifyZiyanTargetWeightCloud(cts.Kit, req, tgList[0], urlRuleList, clbInfo)
 }
 
 func (svc *clbSvc) batchModifyZiyanTargetWeightCloud(kt *kit.Kit, req *protolb.TCloudBatchOperateTargetReq,
-	tgInfo corelb.BaseTargetGroup, urlRuleList *dataproto.TCloudURLRuleListResult) error {
+	tgInfo corelb.BaseTargetGroup, urlRuleList *dataproto.TCloudURLRuleListResult,
+	clbInfo *corelb.LoadBalancer[corelb.TCloudClbExtension]) error {
 
 	tcloudAdpt, err := svc.ad.TCloudZiyan(kt, tgInfo.AccountID)
 	if err != nil {
@@ -424,7 +457,7 @@ func (svc *clbSvc) batchModifyZiyanTargetWeightCloud(kt *kit.Kit, req *protolb.T
 	}
 
 	rsOpt := &typelb.TCloudTargetWeightUpdateOption{
-		Region: tgInfo.Region,
+		Region: clbInfo.Region,
 	}
 	for _, ruleItem := range urlRuleList.Details {
 		rsOpt.LoadBalancerId = ruleItem.CloudLbID
