@@ -260,31 +260,119 @@ func (t *Transit) DealTransitTask2Transit(order *table.RecycleOrder, hosts []*ta
 
 	kt := core.NewBackendKit()
 	kt.Ctx = t.ctx
+
+	// 先看是否在原业务
+	if t.isHostInBiz(kt, hostIds, order.BizID) {
+		logs.Infof("hosts in original biz %d, execute first transit", order.BizID)
+		if ev := t.executeFirstTransit(kt, order, hosts); ev != nil {
+			return ev
+		}
+		return t.executeSecondTransit(kt, order, hosts)
+	}
+	// 看是否在reborn业务
+	if t.isHostInBiz(kt, hostIds, recovertask.RebornBizId) {
+		logs.Infof("hosts in reborn biz %d, execute second transit directly", recovertask.RebornBizId)
+		return t.executeSecondTransit(kt, order, hosts)
+	}
+	// 看是否已在目标模块
+	if t.isHostInTargetModule(kt, hostIds, order.BizID) {
+		logs.Infof("hosts already in target module of biz %d, treat as completed", order.BizID)
+		return &event.Event{Type: event.TransitSuccess, Error: nil}
+	}
+	// 未知状态，失败处理
+	if errUpdate := t.UpdateHostInfo(order, table.RecycleStageTransit,
+		table.RecycleStatusTransitFailed); errUpdate != nil {
+		logs.Errorf("failed to update recycle host info, err: %v", errUpdate)
+	}
+	return &event.Event{Type: event.TransitFailed, Error: fmt.Errorf("hosts transit state unknown")}
+}
+
+// isHostInBiz 检查主机是否在指定业务下
+func (t *Transit) isHostInBiz(kt *kit.Kit, hostIds []int64, bizID int64) bool {
+	listResult, err := t.getBizHost(kt, bizID, hostIds)
+	if err != nil {
+		logs.Errorf("failed to check if hosts are in biz %d, err: %v", bizID, err)
+		return false
+	}
+	return listResult.Count > 0
+}
+
+// isHostInTargetModule 检查主机是否在目标业务的目标模块下
+func (t *Transit) isHostInTargetModule(kt *kit.Kit, hostIds []int64, bizID int64) bool {
+	listResult, err := t.getBizHost(kt, bizID, hostIds)
+	if err != nil {
+		logs.Errorf("failed to check if hosts are in target biz %d, err: %v", bizID, err)
+		return false
+	}
+
+	// 如果主机不在目标业务下，直接返回false
+	if listResult.Count == 0 {
+		logs.Infof("no hosts found in target biz %d", bizID)
+		return false
+	}
+
+	// 获取目标模块ID
+	targetModuleID, err := t.cc.GetBizInternalModuleID(kt, bizID)
+	if err != nil {
+		logs.Errorf("failed to get target module ID for biz %d, err: %v", bizID, err)
+		return false
+	}
+
+	// 获取主机的拓扑关系信息，检查是否在目标模块下
+	req := &cmdb.HostModuleRelationParams{
+		HostID: hostIds,
+	}
+
+	resp, err := t.cc.FindHostBizRelations(kt, req)
+	if err != nil {
+		logs.Errorf("failed to get host topo info for biz %d, err: %v", bizID, err)
+		return false
+	}
+
+	relations := cvt.SliceToPtr(cvt.PtrToVal(resp))
+
+	// 检查是否有主机在目标业务的目标模块下
+	for _, rel := range relations {
+		if rel.BizID == bizID && rel.BkModuleID == targetModuleID {
+			logs.Infof("host %d is in target module %d of biz %d", rel.HostID, targetModuleID, bizID)
+			return true
+		}
+	}
+
+	return false
+}
+
+// executeFirstTransit 执行第一次中转：原业务 -> reborn
+func (t *Transit) executeFirstTransit(kt *kit.Kit, order *table.RecycleOrder, hosts []*table.RecycleHost) *event.Event {
+	hostIds := make([]int64, 0)
+	ips := make([]string, 0)
+	for _, host := range hosts {
+		hostIds = append(hostIds, host.HostID)
+		ips = append(ips, host.IP)
+	}
+
 	// transfer hosts to reborn-_CR中转
 	if err := t.transferHost2CrTransit(kt, hostIds, order.BizID); err != nil {
-		logs.Errorf("recycler:logics:cvm:dealTransitTask2Transit:failed, failed to transfer host to "+
-			"CR transit module, err: %v", err)
+		logs.Errorf("recycler:logics:cvm:executeFirstTransit:failed to transfer host to CR transit module, err: %v", err)
 		if errUpdate := t.UpdateHostInfo(order, table.RecycleStageTransit,
 			table.RecycleStatusTransitFailed); errUpdate != nil {
 			logs.Errorf("failed to update recycle host info, err: %v", errUpdate)
-			ev := &event.Event{
+			return &event.Event{
 				Type:  event.TransitFailed,
 				Error: fmt.Errorf("failed to update recycle host info, err: %v", errUpdate),
 			}
-			return ev
 		}
 
-		ev := &event.Event{
+		return &event.Event{
 			Type:  event.TransitFailed,
 			Error: fmt.Errorf("failed to transfer host to CR transit module, err: %v", err),
 		}
-		return ev
 	}
 
 	// shield TMP alarms
 	if err := t.shieldTMPAlarm(ips); err != nil {
 		// add shield config may fail, ignore it
-		logs.Warnf("recycler:logics:cvm:dealTransitTask2Transit:failed, failed to add shield TMP alarm config, "+
+		logs.Warnf("recycler:logics:cvm:executeFirstTransit:failed to add shield TMP alarm config, "+
 			"err: %v, ips: %v", err, ips)
 	}
 
@@ -293,29 +381,32 @@ func (t *Transit) DealTransitTask2Transit(order *table.RecycleOrder, hosts []*ta
 
 	// wait 10 seconds to avoid cmdb data mess
 	time.Sleep(time.Second * 10)
+	return &event.Event{Type: event.TransitSuccess, Error: nil}
+}
+
+// executeSecondTransit 执行第二次中转：reborn -> 原业务
+func (t *Transit) executeSecondTransit(kt *kit.Kit, order *table.RecycleOrder, hosts []*table.RecycleHost) *event.Event {
 	// transfer hosts from reborn-_CR中转 to destBiz-CR_IEG_资源服务系统专用退回中转勿改勿删
 	// reborn biz id is 213, the id of its module "_CR中转" is 5069670
 	srcBizId := recovertask.RebornBizId
 	srcModuleId := recovertask.CrRelayModuleId
 
 	if err := t.TransferHost2BizTransit(kt, hosts, srcBizId, srcModuleId, order.BizID); err != nil {
-		logs.Errorf("recycler:logics:cvm:dealTransitTask2Transit:failed, failed to transfer host to biz's "+
+		logs.Errorf("recycler:logics:cvm:executeSecondTransit:failed,failed to transfer host to biz's "+
 			"CR transit module in CMDB, err: %v, srcBizId: %d, bizID: %d", err, srcBizId, order.BizID)
 		if errUpdate := t.UpdateHostInfo(order, table.RecycleStageTransit,
 			table.RecycleStatusTransitFailed); errUpdate != nil {
 			logs.Errorf("failed to update recycle host info, err: %v", errUpdate)
-			ev := &event.Event{
+			return &event.Event{
 				Type:  event.TransitFailed,
 				Error: fmt.Errorf("failed to update recycle host info, err: %v", errUpdate),
 			}
-			return ev
 		}
 
-		ev := &event.Event{
+		return &event.Event{
 			Type:  event.TransitFailed,
 			Error: fmt.Errorf("failed to transfer host to biz's CR transit module in CMDB, err: %v", err),
 		}
-		return ev
 	}
 	return &event.Event{Type: event.TransitSuccess, Error: nil}
 }
