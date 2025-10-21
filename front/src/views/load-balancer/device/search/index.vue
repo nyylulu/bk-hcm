@@ -9,6 +9,7 @@ import { ILoadBalanceDeviceCondition } from '../typing';
 import { VendorEnum, ResourceTypeEnum, TARGET_GROUP_PROTOCOLS } from '@/common/constant';
 import { ModelPropertySearch } from '@/model/typings';
 import { LB_NETWORK_TYPE_MAP } from '@/constants';
+import { IAccountOption } from '@/components/account-selector/index-new.vue';
 
 defineOptions({ name: 'device-condition' });
 
@@ -39,7 +40,16 @@ const hasAnyCondition = computed(
 );
 const disabled = computed(() => (!hasSaved.value && !hasChange.value) || !hasAnyCondition.value);
 
-const handleAccountChange = (item: IAccountItem) => {
+const handleAccountChange = (
+  item: IAccountItem,
+  oldItem: IAccountItem,
+  vendorAccountMap: Map<VendorEnum, IAccountOption[]>,
+) => {
+  // 账号选择器会立即触发一次change，此时item为空，这里优先取得自研云账号作为默认值
+  if (!item) {
+    const defaultAccount = vendorAccountMap.get(VendorEnum.ZIYAN)?.[0] || vendorAccountMap.values().next().value?.[0];
+    formModel.account_id = defaultAccount?.id || '';
+  }
   formModel.vendor = item?.vendor;
   formModel.lb_regions = [];
 };
@@ -100,7 +110,8 @@ const conditionField: ModelPropertySearch[] = [
     name: '云账号',
     props: {
       bizId: businessId.value,
-      autoSelect: true,
+      autoSelect: false,
+      autoSelectSingle: false,
       resourceType: ResourceTypeEnum.CLB,
       onChange: handleAccountChange,
     },
