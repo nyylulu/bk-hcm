@@ -340,7 +340,6 @@ func (c *CreateLayer7ListenerPreviewExecutor) validateCert(kt *kit.Kit, curDetai
 			curDetail.Status.SetNotExecutable()
 			curDetail.ValidateResult = append(curDetail.ValidateResult, fmt.Sprintf("cert(%s) not found", cloudID))
 		}
-		return fmt.Errorf("certificate(%s) not found in business", cloudID)
 	}
 	return nil
 }
