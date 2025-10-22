@@ -34,6 +34,7 @@ export default defineComponent({
       requireType: '',
       suborderId: '',
       dateRange: applicationTime(),
+      assetId: '',
     });
 
     const { CommonTable, getListData, isLoading, dataList, pagination } = useTable({
@@ -76,6 +77,7 @@ export default defineComponent({
               ['ip', 'in', ipArray.value],
               ['update_at', 'd>=', timeFormatter(formModel.dateRange[0], 'YYYY-MM-DD')],
               ['update_at', 'd<=', timeFormatter(formModel.dateRange[1], 'YYYY-MM-DD')],
+              ['asset_id', '=', formModel.assetId],
             ]),
             page: { start: 0, limit: 10 },
           },
@@ -140,6 +142,9 @@ export default defineComponent({
                 autosize
                 resize={false}
               />
+            </FormItem>
+            <FormItem label='固资号'>
+              <bk-input v-model={formModel.assetId} clearable placeholder='请输入固资号'></bk-input>
             </FormItem>
           </Form>
           <div class='btn-container'>

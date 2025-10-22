@@ -35,6 +35,7 @@ export default defineComponent({
       requireType: '',
       suborderId: '',
       dateRange: applicationTime(),
+      assetId: '',
     });
 
     const { selections, handleSelectionChange } = useSelection();
@@ -82,6 +83,7 @@ export default defineComponent({
               ['ip', 'in', formModel.ip],
               ['update_at', 'd>=', formModel.dateRange[0]],
               ['update_at', 'd<=', formModel.dateRange[1]],
+              ['asset_id', '=', formModel.assetId],
             ]),
             page: { start: 0, limit: 10 },
           },
@@ -162,6 +164,10 @@ export default defineComponent({
                   placeholder='输入合法的 IP 地址'
                 />
               ),
+            },
+            {
+              title: t('固资号'),
+              content: <Input v-model={formModel.assetId} clearable placeholder={t('请输入固资号')} />,
             },
           ]}
         />

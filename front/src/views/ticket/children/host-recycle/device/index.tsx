@@ -39,6 +39,7 @@ export default defineComponent({
       stage: [] as any[],
       bk_username: [userStore.username],
       dateRange: applicationTime(),
+      bk_asset_id: [] as string[],
     });
 
     const { formModel, resetForm } = useFormModel(defaultDeviceForm());
@@ -222,6 +223,10 @@ export default defineComponent({
             {
               title: t('完成时间'),
               content: <ScrDatePicker class='full-width' v-model={formModel.dateRange} />,
+            },
+            {
+              title: t('固资号'),
+              content: <FloatInput v-model={formModel.bk_asset_id} placeholder={t('请输入固资号，多个换行分割')} />,
             },
           ]}
         />
