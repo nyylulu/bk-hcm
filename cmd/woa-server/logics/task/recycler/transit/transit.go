@@ -263,22 +263,25 @@ func (t *Transit) DealTransitTask2Transit(order *table.RecycleOrder, hosts []*ta
 
 	// 先看是否在原业务
 	if t.isHostInBiz(kt, hostIds, order.BizID) {
-		logs.Infof("hosts in original biz %d, execute first transit", order.BizID)
-		if ev := t.executeFirstTransit(kt, order, hosts); ev != nil {
+		// 看是否已在目标模块
+		if t.isHostInTargetModule(kt, hostIds, order.BizID) {
+			logs.Infof("hosts already in target module of biz %d, treat as completed", order.BizID)
+			return &event.Event{Type: event.TransitSuccess, Error: nil}
+		}
+		if ev := t.transferToRebornBiz(kt, order, hosts); ev != nil {
 			return ev
 		}
-		return t.executeSecondTransit(kt, order, hosts)
+		return t.transferToOriginBiz(kt, order, hosts)
 	}
 	// 看是否在reborn业务
 	if t.isHostInBiz(kt, hostIds, recovertask.RebornBizId) {
-		logs.Infof("hosts in reborn biz %d, execute second transit directly", recovertask.RebornBizId)
-		return t.executeSecondTransit(kt, order, hosts)
+		if t.isHostInTargetModule(kt, hostIds, order.BizID) {
+			logs.Infof("hosts already in target module of biz %d, treat as completed", order.BizID)
+			return &event.Event{Type: event.TransitSuccess, Error: nil}
+		}
+		return t.transferToOriginBiz(kt, order, hosts)
 	}
-	// 看是否已在目标模块
-	if t.isHostInTargetModule(kt, hostIds, order.BizID) {
-		logs.Infof("hosts already in target module of biz %d, treat as completed", order.BizID)
-		return &event.Event{Type: event.TransitSuccess, Error: nil}
-	}
+
 	// 未知状态，失败处理
 	if errUpdate := t.UpdateHostInfo(order, table.RecycleStageTransit,
 		table.RecycleStatusTransitFailed); errUpdate != nil {
@@ -330,20 +333,17 @@ func (t *Transit) isHostInTargetModule(kt *kit.Kit, hostIds []int64, bizID int64
 	}
 
 	relations := cvt.SliceToPtr(cvt.PtrToVal(resp))
-
-	// 检查是否有主机在目标业务的目标模块下
+	inTargetModuleCount := 0
 	for _, rel := range relations {
 		if rel.BizID == bizID && rel.BkModuleID == targetModuleID {
-			logs.Infof("host %d is in target module %d of biz %d", rel.HostID, targetModuleID, bizID)
-			return true
+			inTargetModuleCount++
 		}
 	}
-
-	return false
+	return inTargetModuleCount == len(hostIds)
 }
 
 // executeFirstTransit 执行第一次中转：原业务 -> reborn
-func (t *Transit) executeFirstTransit(kt *kit.Kit, order *table.RecycleOrder, hosts []*table.RecycleHost) *event.Event {
+func (t *Transit) transferToRebornBiz(kt *kit.Kit, order *table.RecycleOrder, hosts []*table.RecycleHost) *event.Event {
 	hostIds := make([]int64, 0)
 	ips := make([]string, 0)
 	for _, host := range hosts {
@@ -385,7 +385,7 @@ func (t *Transit) executeFirstTransit(kt *kit.Kit, order *table.RecycleOrder, ho
 }
 
 // executeSecondTransit 执行第二次中转：reborn -> 原业务
-func (t *Transit) executeSecondTransit(kt *kit.Kit, order *table.RecycleOrder, hosts []*table.RecycleHost) *event.Event {
+func (t *Transit) transferToOriginBiz(kt *kit.Kit, order *table.RecycleOrder, hosts []*table.RecycleHost) *event.Event {
 	// transfer hosts from reborn-_CR中转 to destBiz-CR_IEG_资源服务系统专用退回中转勿改勿删
 	// reborn biz id is 213, the id of its module "_CR中转" is 5069670
 	srcBizId := recovertask.RebornBizId
