@@ -734,6 +734,7 @@ type QueryCvmInstanceTypeItem struct {
 	GPUAmount             float64           `json:"gpuAmount"`             // GPU卡数量
 	InstanceClass         string            `json:"instanceClass"`         // 实例类型
 	CoreType              int               `json:"coreType"`              // 1.2.3 分别标识，小核心，中核心，大核心
+	CvmInstanceTypeClass  string            `json:"cvmInstanceTypeClass"`  //技术分类
 }
 
 // GetApproveLogResp get approve log response
@@ -785,26 +786,4 @@ type CvmApproveLogsRst struct {
 // RevokeCvmOrderResp ...
 type RevokeCvmOrderResp struct {
 	RespMeta `json:",inline"`
-}
-
-// QueryTechnicalClassResp ...
-type QueryTechnicalClassResp struct {
-	RespMeta `json:",inline"`
-	Result   []QueryTechnicalClassRst `json:"result"`
-}
-
-// QueryTechnicalClassRst ...
-type QueryTechnicalClassRst struct {
-	CvmInstanceModel string  `json:"cvmInstanceModel"`
-	CvmInstanceGroup string  `json:"cvmInstanceGroup"`
-	CvmInstanceType  string  `json:"cvmInstanceType"`
-	CpuAmount        int     `json:"cpuAmount"`
-	RamAmount        int     `json:"ramAmount"`
-	DiskBlockNum     int     `json:"diskBlockNum"`
-	DiskBlockSize    int     `json:"diskBlockSize"`
-	GpuType          string  `json:"gpuType"`
-	GpuCard          float64 `json:"gpuCard"`
-	TechnicalClass   string  `json:"technicalClass"`
-	TechnicalUnit    string  `json:"technicalUnit"`
-	TechnicalAmount  float64 `json:"technicalAmount"`
 }

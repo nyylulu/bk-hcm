@@ -146,9 +146,6 @@ const (
 	AdjustTypeDelay = "加急延期"
 	// AdjustTypeCancel 预测调整类型-需求取消
 	AdjustTypeCancel = "需求取消"
-
-	// CvmQueryTechnicalClass 查询CVM技术类型
-	CvmQueryTechnicalClass = "queryCvmTypeList"
 )
 
 // 资源预测相关方法

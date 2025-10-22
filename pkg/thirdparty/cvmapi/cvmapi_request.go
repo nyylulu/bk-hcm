@@ -623,9 +623,3 @@ type RevokeCvmOrderReq struct {
 type RevokeCvmOrderParams struct {
 	OrderId string `json:"order_id"`
 }
-
-// QueryTechnicalClassReq query cvm technical class request
-type QueryTechnicalClassReq struct {
-	ReqMeta `json:",inline"`
-	Params  struct{} `json:"params"`
-}
