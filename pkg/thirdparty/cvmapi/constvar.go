@@ -67,6 +67,8 @@ const (
 
 	// CvmSeparateCampus 分Campus
 	CvmSeparateCampus = "cvm_separate_campus"
+	// CvmZoneAll 所有可用区
+	CvmZoneAll = "all"
 
 	// CvmApiKey CVM API key
 	CvmApiKey = "api_key"

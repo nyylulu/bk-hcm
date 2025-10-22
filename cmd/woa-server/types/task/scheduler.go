@@ -747,7 +747,7 @@ func (req *ApplyReq) Validate() error {
 	}
 
 	for _, suborder := range req.Suborders {
-		if _, err := suborder.Validate(); err != nil {
+		if err := suborder.Validate(); err != nil {
 			return err
 		}
 	}
@@ -793,29 +793,29 @@ type Suborder struct {
 // Validate whether Suborder is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (s *Suborder) Validate() (errKey string, err error) {
+func (s *Suborder) Validate() error {
 	if util.InArray(s.ResourceType, AllResourceType) != true {
-		return "resource_type", fmt.Errorf("unkown resource_type")
+		return fmt.Errorf("unkown resource_type")
 	}
 
 	if s.Replicas <= 0 {
-		return "replicas", fmt.Errorf("invalid replicas <= 0")
+		return fmt.Errorf("invalid replicas <= 0")
 	}
 	// replicas limit 1000
 	if s.Replicas > ApplyLimit {
-		return "replicas", fmt.Errorf("exceed apply limit: %d", ApplyLimit)
+		return fmt.Errorf("replicas exceed apply limit: %d", ApplyLimit)
 	}
 
 	remarkLimit := 256
 	if len(s.Remark) > remarkLimit {
-		return "remark", fmt.Errorf("exceed size limit %d", remarkLimit)
+		return fmt.Errorf("remark exceed size limit %d", remarkLimit)
 	}
 
-	if key, err := s.Spec.Validate(s.ResourceType); err != nil {
-		return fmt.Sprintf("spec.%s", key), err
+	if err := s.Spec.Validate(s.ResourceType); err != nil {
+		return err
 	}
 
-	return "", nil
+	return nil
 }
 
 // ResourceSpec resource specifications
@@ -850,85 +850,104 @@ type ResourceSpec struct {
 	FailedZoneIDs []string          `json:"failed_zone_ids" bson:"failed_zone_ids"`
 	SystemDisk    enumor.DiskSpec   `json:"system_disk" bson:"system_disk"`
 	DataDisk      []enumor.DiskSpec `json:"data_disk" bson:"data_disk"`
+	Zones         []string          `json:"zones" bson:"zones"` //  多可用区
+	// ResAssign 资源分配方式（1表示“有资源区域优先”、2表示“分Campus生产”）
+	ResAssign enumor.ResAssign `json:"res_assign" bson:"res_assign"`
 }
 
 // Validate whether ResourceSpec is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (s *ResourceSpec) Validate(resType ResourceType) (errKey string, err error) {
+func (s *ResourceSpec) Validate(resType ResourceType) error {
 	if len(s.Region) == 0 {
-		return "region", fmt.Errorf("region cannot be empty")
+		return fmt.Errorf("spec.region cannot be empty")
 	}
 
 	if len(s.Vpc) > 0 && len(s.Subnet) == 0 {
-		return "subnet", fmt.Errorf("subnet cannot be empty while vpc is set")
+		return fmt.Errorf("spec.subnet cannot be empty while vpc is set")
 	}
 
 	if len(s.DeviceType) == 0 {
-		return "device_type", fmt.Errorf("device_type cannot be empty")
+		return fmt.Errorf("spec.device_type cannot be empty")
 	}
 
 	// 磁盘校验
-	if errKey, err = s.ValidateDisk(); err != nil {
-		return errKey, err
+	if err := s.ValidateDisk(); err != nil {
+		return err
 	}
 
 	switch resType {
 	case ResourceTypeCvm:
 		if len(s.ImageId) == 0 {
-			return "image_id", fmt.Errorf("image_id cannot be empty")
+			return fmt.Errorf("spec.image_id cannot be empty")
 		}
 	}
 
 	// 计费模式校验
 	if len(s.ChargeType) > 0 {
-		if err = s.ChargeType.Validate(); err != nil {
-			return "charge_type", err
+		if err := s.ChargeType.Validate(); err != nil {
+			return err
 		}
 
 		// 包年包月时，计费时长必传
 		if s.ChargeType == cvmapi.ChargeTypePrePaid && s.ChargeMonths < 1 {
-			return "charge_months", fmt.Errorf("charge_months invalid value < 1")
+			return fmt.Errorf("spec.charge_months invalid value < 1")
 		}
 	}
 
-	return "", nil
+	// 可用区校验
+	if len(s.Zone) == 0 && len(s.Zones) == 0 {
+		return fmt.Errorf("spec.zone or spec.zones cannot be empty")
+	}
+
+	// 如果是多可用区或“全部”可用区，那么Vpc和Subnet不能指定，必须为空
+	if (len(s.Zones) == 1 && s.Zones[0] == cvmapi.CvmZoneAll) || len(s.Zones) > 1 {
+		// 资源分配方式校验
+		if err := s.ResAssign.Validate(); err != nil {
+			return err
+		}
+		// VPC、子网校验
+		if len(s.Vpc) > 0 || len(s.Subnet) > 0 {
+			return fmt.Errorf("spec.vpc and spec.subnet cannot be set at multiple spec.zones num > 1")
+		}
+	}
+
+	return nil
 }
 
 // ValidateDisk validate disk spec
-func (s *ResourceSpec) ValidateDisk() (string, error) {
+func (s *ResourceSpec) ValidateDisk() error {
 	// 兼容旧的数据盘校验
 	if len(s.DataDisk) == 0 {
 		if s.DiskSize < 0 {
-			return "disk_size", fmt.Errorf("disk_size invalid value < 0")
+			return fmt.Errorf("spec.disk_size invalid value < 0")
 		}
 
 		diskLimit := int64(constant.DataDiskMaxSize)
 		if s.DiskSize > diskLimit {
-			return "disk_size", fmt.Errorf("disk_size exceed limit %d", diskLimit)
+			return fmt.Errorf("spec.disk_size exceed limit %d", diskLimit)
 		}
 
 		// 规格为 10 的倍数
 		diskUnit := int64(constant.DataDiskMultiple)
 		modDisk := s.DiskSize % diskUnit
 		if modDisk != 0 {
-			return "disk_size", fmt.Errorf("disk_size must be in multiples of %d", diskUnit)
+			return fmt.Errorf("spec.disk_size must be in multiples of %d", diskUnit)
 		}
 	}
 
 	// 系统盘类型校验
 	if len(s.SystemDisk.DiskType) > 0 {
 		if err := s.SystemDisk.Validate(); err != nil {
-			return "system_disk", err
+			return err
 		}
 		if s.SystemDisk.DiskSize < constant.SystemDiskMinSize || s.SystemDisk.DiskSize > constant.SystemDiskMaxSize {
-			return "system_disk.disk_size", fmt.Errorf("system_disk_size invalid value, must be in range [%d, %d]",
+			return fmt.Errorf("spec.system_disk_size invalid value, must be in range [%d, %d]",
 				constant.SystemDiskMinSize, constant.SystemDiskMaxSize)
 		}
 		// 系统盘大小必须是50的倍数
 		if s.SystemDisk.DiskSize%constant.SystemDiskMultiple != 0 {
-			return "system_disk.disk_size", fmt.Errorf("system_disk_size must be a multiple of %d",
-				constant.SystemDiskMultiple)
+			return fmt.Errorf("spec.system_disk_size must be a multiple of %d", constant.SystemDiskMultiple)
 		}
 	}
 
@@ -936,26 +955,24 @@ func (s *ResourceSpec) ValidateDisk() (string, error) {
 	dataDiskTotalNum := uint(0)
 	for _, dd := range s.DataDisk {
 		if err := dd.Validate(); err != nil {
-			return "data_disk", err
+			return err
 		}
 		if dd.DiskSize < constant.DataDiskMinSize || dd.DiskSize > constant.DataDiskMaxSize {
-			return "data_disk.disk_size", fmt.Errorf("data_disk_size invalid value, must be in range [%d, %d]",
+			return fmt.Errorf("spec.data_disk_size invalid value, must be in range [%d, %d]",
 				constant.DataDiskMinSize, constant.DataDiskMaxSize)
 		}
 		// 数据盘大小必须是10的倍数
 		if dd.DiskSize%constant.DataDiskMultiple != 0 {
-			return "data_disk.disk_size", fmt.Errorf("data_disk_size must be a multiple of %d",
-				constant.DataDiskMultiple)
+			return fmt.Errorf("spec.data_disk_size must be a multiple of %d", constant.DataDiskMultiple)
 		}
 		dataDiskTotalNum += dd.DiskNum
 	}
 	// 数据盘总数量不能超过20块
 	if dataDiskTotalNum < 0 || dataDiskTotalNum > constant.DataDiskTotalNum {
-		return "data_disk.disk_total_num", fmt.Errorf("data_disk_total_num invalid value, must be in range [0, %d]",
-			constant.DataDiskTotalNum)
+		return fmt.Errorf("spec.data_disk_total_num invalid value, must be in range [0, %d]", constant.DataDiskTotalNum)
 	}
 
-	return "", nil
+	return nil
 }
 
 // CreateApplyOrderResult result of create apply order
@@ -1533,16 +1550,16 @@ type ModifyApplyReq struct {
 // Validate whether ModifyApplyReq is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *ModifyApplyReq) Validate() (errKey string, err error) {
+func (param *ModifyApplyReq) Validate() error {
 	if len(param.SuborderID) == 0 {
-		return "suborder_id", fmt.Errorf("suborder_id should be set")
+		return fmt.Errorf("suborder_id should be set")
 	}
 
-	if key, err := param.Spec.Validate(ResourceTypeCvm); err != nil {
-		return fmt.Sprintf("spec.%s", key), err
+	if err := param.Spec.Validate(ResourceTypeCvm); err != nil {
+		return err
 	}
 
-	return "", nil
+	return nil
 }
 
 // RecommendApplyReq get apply order modification recommendation request

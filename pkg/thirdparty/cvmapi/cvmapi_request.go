@@ -67,6 +67,7 @@ type OrderCreateParams struct {
 	ChargeType        ChargeType      `json:"chargeType,omitempty"`
 	ChargeMonths      uint            `json:"chargeMonths,omitempty"`
 	InheritInstanceId string          `json:"inheritInstanceId,omitempty"`
+	FuzzyZone         []FuzzyZoneItem `json:"fuzzy_zone"` // 可用区模糊申领，传入多个可用区+vpc+子网
 }
 
 // ResourceType 申请类型
@@ -622,4 +623,11 @@ type RevokeCvmOrderReq struct {
 // RevokeCvmOrderParams ...
 type RevokeCvmOrderParams struct {
 	OrderId string `json:"order_id"`
+}
+
+// FuzzyZoneItem fuzzy zone item
+type FuzzyZoneItem struct {
+	Zone     string `json:"zone"`
+	VpcID    string `json:"vpcId"`
+	SubnetID string `json:"subnetId"`
 }

@@ -55,4 +55,7 @@ type ModifyData struct {
 	Subnet      string            `json:"subnet" bson:"subnet"`
 	SystemDisk  enumor.DiskSpec   `json:"system_disk" bson:"system_disk"`
 	DataDisk    []enumor.DiskSpec `json:"data_disk" bson:"data_disk"`
+	Zones       []string          `json:"zones" bson:"zones"` //  多可用区
+	// ResAssign 资源分配方式（1表示“有资源区域优先”、2表示“分Campus生产”）
+	ResAssign enumor.ResAssign `json:"res_assign" bson:"res_assign"`
 }

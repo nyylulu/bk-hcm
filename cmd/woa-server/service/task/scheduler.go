@@ -1627,9 +1627,8 @@ func (s *service) modifyApplyOrder(cts *rest.Contexts, bkBizIDMap map[int64]stru
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
-	if err != nil {
-		logs.Errorf("failed to modify apply order, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+	if err := input.Validate(); err != nil {
+		logs.Errorf("failed to modify apply order, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(pkg.CCErrCommParamsIsInvalid, err)
 	}
 
@@ -1762,6 +1761,31 @@ func (s *service) GetApplyModify(cts *rest.Contexts) (any, error) {
 	if err != nil {
 		logs.Errorf("failed to get apply order modify record, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
+	}
+
+	// 转换旧版可用区到新版可用区，方便前端统一展示
+	for _, modifyItem := range rst.Info {
+		if modifyItem.Details == nil {
+			continue
+		}
+
+		if modifyItem.Details.PreData != nil {
+			modifyItem.Details.PreData.Zones = []string{modifyItem.Details.PreData.Zone}
+			// 分Campus
+			if modifyItem.Details.PreData.Zone == cvmapi.CvmSeparateCampus {
+				modifyItem.Details.PreData.Zones = []string{cvmapi.CvmZoneAll}
+				modifyItem.Details.PreData.ResAssign = enumor.CampusResAssign
+			}
+		}
+
+		if modifyItem.Details.CurData != nil {
+			modifyItem.Details.CurData.Zones = []string{modifyItem.Details.CurData.Zone}
+			// 分Campus
+			if modifyItem.Details.CurData.Zone == cvmapi.CvmSeparateCampus {
+				modifyItem.Details.CurData.Zones = []string{cvmapi.CvmZoneAll}
+				modifyItem.Details.CurData.ResAssign = enumor.CampusResAssign
+			}
+		}
 	}
 
 	return rst, nil

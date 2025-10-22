@@ -491,6 +491,8 @@ type GetCapacityParam struct {
 	// IgnorePrediction 获取容量时，是否忽略预测
 	IgnorePrediction bool  `json:"ignore_prediction"`
 	BizID            int64 `json:"bk_biz_id"`
+	// 多可用区
+	Zones []string `json:"zones"`
 }
 
 // Validate whether GetCapacityParam is valid

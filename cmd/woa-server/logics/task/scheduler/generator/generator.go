@@ -32,6 +32,7 @@ import (
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
 	"hcm/pkg/cc"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/dal"
@@ -44,6 +45,7 @@ import (
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/metadata"
 	"hcm/pkg/tools/querybuilder"
+	"hcm/pkg/tools/slice"
 	utils "hcm/pkg/tools/util"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -133,23 +135,84 @@ func (g *Generator) GenerateCVM(kt *kit.Kit, order *types.ApplyOrder) error {
 
 	logs.Infof("apply order %s existing device number: %d", order.SubOrderId, existCount)
 
+	// 获取该申请单的可用区
+	orderZones, err := g.getApplyOrderMultiZones(kt, order)
+	if err != nil {
+		logs.Errorf("failed to get apply order zone list, subOrderID: %s, err: %v, rid: %s",
+			order.SubOrderId, err, kt.Rid)
+		return err
+	}
+
 	// for given zone case
-	if order.Spec.Zone != "" && order.Spec.Zone != cvmapi.CvmSeparateCampus {
-		if err := g.generateCVMConcentrate(kt, order, existDevices); err != nil {
-			logs.Errorf("failed to generate cvm in zone %s, suborder id: %s", order.Spec.Zone, order.SubOrderId)
+	if !isCVMSeparateCampus(order) {
+		if err = g.generateCVMConcentrate(kt, order, existDevices, orderZones); err != nil {
+			logs.Errorf("failed to generate cvm in zone %s, subOrderID: %s, rid: %s",
+				order.Spec.Zone, order.SubOrderId, kt.Rid)
 			return err
 		}
 		return nil
 	}
 
 	// for cvm_separate_campus case
-	if err := g.generateCVMSeparate(kt, order, existDevices); err != nil {
-		logs.Errorf("failed to generate cvm in separate zones in region %s, suborder id: %s", order.Spec.Region,
-			order.SubOrderId)
+	if err = g.generateCVMSeparate(kt, order, existDevices, orderZones); err != nil {
+		logs.Errorf("failed to generate cvm in separate zones in region %s, subOrderID: %s, rid: %s",
+			order.Spec.Region, order.SubOrderId, kt.Rid)
 		return err
 	}
 
 	return nil
+}
+
+// isCVMSeparateCampus 是否分Campus生产
+func isCVMSeparateCampus(order *types.ApplyOrder) bool {
+	if order.Spec.ResAssign == enumor.CampusResAssign || order.Spec.Zone == cvmapi.CvmSeparateCampus {
+		return true
+	}
+	return false
+}
+
+// getApplyOrderMultiZones 获取多可用区
+func (g *Generator) getApplyOrderMultiZones(kt *kit.Kit, order *types.ApplyOrder) ([]string, error) {
+	if order.Spec == nil {
+		return nil, fmt.Errorf("order spec is nil")
+	}
+
+	// V2版本选了“全部” 或者 V1版本选了“分Campus生产”，则需要后端获取该地域所有的可用区
+	if (len(order.Spec.Zones) == 1 && order.Spec.Zones[0] == cvmapi.CvmZoneAll) ||
+		(len(order.Spec.Zone) > 0 && order.Spec.Zone == cvmapi.CvmSeparateCampus) {
+
+		// 选择了“全部”则需要后端获取该地域所有的可用区
+		allZones, err := g.getZoneList(kt, order.Spec.Region)
+		if err != nil {
+			return nil, err
+		}
+
+		orderZones := make([]string, 0)
+		for _, zone := range allZones {
+			orderZones = append(orderZones, zone.Zone)
+		}
+
+		if len(orderZones) == 0 {
+			return nil, fmt.Errorf("get order all zone is nil, region: %s", order.Spec.Region)
+		}
+		return orderZones, nil
+	}
+
+	// V2版本获取可用区的方式
+	if len(order.Spec.Zones) > 0 {
+		// 分Campus生产时，可用区数量需要大于1个
+		if order.Spec.ResAssign == enumor.CampusResAssign && len(order.Spec.Zones) == 1 {
+			return nil, fmt.Errorf("[分Campus生产]可用区数量需要大于1个")
+		}
+		return slice.Unique(order.Spec.Zones), nil
+	}
+
+	// V1版本获取可用区的方式
+	if len(order.Spec.Zone) > 0 && order.Spec.Zone != cvmapi.CvmSeparateCampus {
+		return []string{order.Spec.Zone}, nil
+	}
+
+	return nil, fmt.Errorf("both order spec zones and zone fields are empty or invalid")
 }
 
 // retryMatchDevice retry to match generated devices
@@ -184,8 +247,8 @@ func (g *Generator) retryMatchDevice(devices []*types.DeviceInfo) error {
 }
 
 // generateCVMConcentrate generates cvm devices in certain zone
-func (g *Generator) generateCVMConcentrate(kt *kit.Kit, order *types.ApplyOrder,
-	existDevices []*types.DeviceInfo) error {
+func (g *Generator) generateCVMConcentrate(kt *kit.Kit, order *types.ApplyOrder, existDevices []*types.DeviceInfo,
+	orderZones []string) error {
 
 	replicas := order.TotalNum - uint(len(existDevices))
 
@@ -193,7 +256,7 @@ func (g *Generator) generateCVMConcentrate(kt *kit.Kit, order *types.ApplyOrder,
 	errs := make([]error, 0)
 	switch order.ResourceType {
 	case types.ResourceTypeCvm:
-		genRecordIds, errs = g.batchLaunchCvm(kt, order, order.Spec.Zone, replicas)
+		genRecordIds, errs = g.batchLaunchCvm(kt, order, orderZones, replicas)
 	case types.ResourceTypeUpgradeCvm:
 		genRecordId, _, err := g.batchUpgradeCvm(kt, order, replicas)
 		if err != nil {
@@ -211,7 +274,9 @@ func (g *Generator) generateCVMConcentrate(kt *kit.Kit, order *types.ApplyOrder,
 }
 
 // generateCVMSeparate generates cvm devices in separate zones
-func (g *Generator) generateCVMSeparate(kt *kit.Kit, order *types.ApplyOrder, existDevices []*types.DeviceInfo) error {
+func (g *Generator) generateCVMSeparate(kt *kit.Kit, order *types.ApplyOrder, existDevices []*types.DeviceInfo,
+	orderZones []string) error {
+
 	// 1. sum up each zone created devices
 	createdTotalCount := uint(0)
 	zoneCreatedCount := make(map[string]uint, 0)
@@ -221,13 +286,13 @@ func (g *Generator) generateCVMSeparate(kt *kit.Kit, order *types.ApplyOrder, ex
 	}
 
 	// 2. get available zones
-	availZones, err := g.getAvailableZoneInfo(kt, order.RequireType, order.Spec.DeviceType, order.Spec.Region)
+	availZonesMap, err := g.getAvailableZoneInfo(kt, order.RequireType, order.Spec.DeviceType, order.Spec.Region)
 	if err != nil {
 		logs.Errorf("failed to generate cvm, for get available zones err: %v, order id: %s, rid: %s",
 			err, order.SubOrderId, kt.Rid)
 		return fmt.Errorf("failed to generate cvm, for get available zones err: %v", err)
 	}
-	if len(availZones) == 0 {
+	if len(availZonesMap) == 0 {
 		logs.Errorf("failed to generate cvm, for get no available zones, order id: %s, rid: %s",
 			order.SubOrderId, kt.Rid)
 		return fmt.Errorf("failed to generate cvm, for get no available zones")
@@ -249,9 +314,19 @@ func (g *Generator) generateCVMSeparate(kt *kit.Kit, order *types.ApplyOrder, ex
 
 	logs.Infof("generateCVMSeparate campus start, subOrderID: %s, createdTotalCount: %d, zoneCapacity: %+v, "+
 		"zoneCreatedCount: %v, availZones: %+v, failedZoneMap: %+v, rid: %s", order.SubOrderId, createdTotalCount,
-		zoneCapacity, zoneCreatedCount, cvt.PtrToSlice(availZones), failedZoneMap, kt.Rid)
+		zoneCapacity, zoneCreatedCount, availZonesMap, failedZoneMap, kt.Rid)
 
-	// 4. for each zone, calculate replicas and launch cvm
+	// 4. 分Campus生产
+	genRecordIds, errs := g.generateCvmAcrossCampus(kt, order, orderZones, availZonesMap, createdTotalCount,
+		zoneCapacity, zoneCreatedCount, failedZoneMap)
+
+	return g.checkLaunchCvmResult(kt, order.ResourceType, order.SubOrderId, genRecordIds, errs)
+}
+
+func (g *Generator) generateCvmAcrossCampus(kt *kit.Kit, order *types.ApplyOrder, orderZones []string,
+	availZonesMap map[string]*cfgtypes.Zone, createdTotalCount uint, zoneCapacity map[string]int64,
+	zoneCreatedCount map[string]uint, failedZoneMap map[string]struct{}) ([]uint64, []error) {
+
 	mutex := sync.Mutex{}
 	wg := sync.WaitGroup{}
 	errs := make([]error, 0)
@@ -268,50 +343,42 @@ func (g *Generator) generateCVMSeparate(kt *kit.Kit, order *types.ApplyOrder, ex
 	}
 	maxCount := math.Ceil(float64(order.TotalNum) / 2)
 	failedSkipNum := 0
-	for _, zone := range availZones {
-		// 已经失败过的可用区，直接跳过
-		if _, ok := failedZoneMap[zone.Zone]; ok {
-			// 记录失败跳过的数量
-			failedSkipNum++
-			logs.Warnf("generateCVMSeparate campus loop skip has failed zone, subOrderID: %s, hasFailedZone: %+v, "+
-				"maxCount: %f, createdTotalCount: %d, zoneCapacity: %+v, zoneCreatedCount: %v, availZonesNum: %d, "+
-				"rid: %s", order.SubOrderId, cvt.PtrToVal(zone), maxCount, createdTotalCount, zoneCapacity,
-				zoneCreatedCount, len(availZones), kt.Rid)
+	var isSkip bool
+	for _, zone := range orderZones {
+		failedSkipNum, isSkip = checkZoneAvailability(kt, order.SubOrderId, availZonesMap,
+			failedZoneMap, zone, failedSkipNum)
+		if isSkip {
 			continue
 		}
-
 		replicas := uint(0)
-		if len(availZones) > 1 {
+		// 该地域下可用区的数量
+		if len(availZonesMap) > 1 {
 			// 一个城市有大于一个campus的话，该campus最多只能生产需求数量的一半
 			// 若单据无法完成，则剩余不生产，等人工介入处理
-			campusMax := math.Max(
-				maxCount-float64(zoneCreatedCount[zone.Zone]),
-				0)
-			replicas = uint(math.Min(
-				math.Min(float64(order.TotalNum-createdTotalCount), float64(zoneCapacity[zone.Zone])),
+			campusMax := math.Max(maxCount-float64(zoneCreatedCount[zone]), 0)
+			replicas = uint(math.Min(math.Min(float64(order.TotalNum-createdTotalCount), float64(zoneCapacity[zone])),
 				campusMax))
 		} else {
 			// 一个城市只有一个campus的话，全部生产
-			replicas = uint(math.Min(
-				math.Min(float64(order.TotalNum-createdTotalCount), float64(zoneCapacity[zone.Zone])),
+			replicas = uint(math.Min(math.Min(float64(order.TotalNum-createdTotalCount), float64(zoneCapacity[zone])),
 				maxCount))
 		}
 
 		logs.Infof("generateCVMSeparate campus loop, subOrderID: %s, maxCount: %d, createdTotalCount: %d, "+
-			"zoneCapacity: %+v, zoneCreatedCount: %v, zoneInfo: %+v, availZonesNum: %d, replicas: %d, rid: %s",
-			order.SubOrderId, maxCount, createdTotalCount, zoneCapacity, zoneCreatedCount, cvt.PtrToVal(zone),
-			len(availZones), replicas, kt.Rid)
+			"zoneCapacity: %+v, zoneCreatedCount: %v, zoneInfo: %s, availZonesNum: %d, replicas: %d, rid: %s",
+			order.SubOrderId, maxCount, createdTotalCount, zoneCapacity, zoneCreatedCount, zone,
+			len(orderZones), replicas, kt.Rid)
 		if replicas <= 0 {
 			continue
 		}
 
-		zoneCreatedCount[zone.Zone] += replicas
+		zoneCreatedCount[zone] += replicas
 		createdTotalCount += replicas
 
 		wg.Add(1)
 		go func(order *types.ApplyOrder, zoneId string, replicas uint) {
 			defer wg.Done()
-			genIds, subErrs := g.batchLaunchCvm(kt, order, zoneId, replicas)
+			genIds, subErrs := g.batchLaunchCvm(kt, order, []string{zoneId}, replicas)
 			if len(subErrs) != 0 {
 				logs.Errorf("failed to launch cvm, subOrderID: %s, subErrs: %v, zoneId: %s, rid: %s", order.SubOrderId,
 					subErrs, zoneId, kt.Rid)
@@ -322,25 +389,44 @@ func (g *Generator) generateCVMSeparate(kt *kit.Kit, order *types.ApplyOrder, ex
 					order.SubOrderId, zoneId, genIds, kt.Rid)
 				appendGenRecord(genIds)
 			}
-		}(order, zone.Zone, replicas)
-
+		}(order, zone, replicas)
 		if order.TotalNum <= createdTotalCount {
 			break
 		}
 	}
 
 	// 全部被跳过的情况下，清空所有失败的可用区
-	if failedSkipNum == len(availZones) {
-		if err = g.updateOrderFailedZones(kt, order.SubOrderId, ""); err != nil {
+	if failedSkipNum == len(orderZones) {
+		if err := g.updateOrderFailedZones(kt, order.SubOrderId, ""); err != nil {
 			// 只记录日志，不应该影响主流程
 			logs.Warnf("failed to update order failed zoneIDs, subOrderID: %s, err: %v, rid: %s",
 				order.SubOrderId, err, kt.Rid)
 		}
 	}
-
 	wg.Wait()
+	return genRecordIds, errs
+}
 
-	return g.checkLaunchCvmResult(kt, order.ResourceType, order.SubOrderId, genRecordIds, errs)
+func checkZoneAvailability(kt *kit.Kit, subOrderID string, availZonesMap map[string]*cfgtypes.Zone,
+	failedZoneMap map[string]struct{}, zone string, failedSkipNum int) (int, bool) {
+
+	// 该可用区不在该机型的可用区列表中
+	if _, ok := availZonesMap[zone]; !ok {
+		logs.Warnf("generateCVMSeparate campus loop skip avail zone, subOrderID: %s, zone: %s, availZonesMap: %+v, "+
+			"rid: %s", subOrderID, zone, availZonesMap, kt.Rid)
+		return failedSkipNum, true
+	}
+
+	// 已经失败过的可用区，直接跳过
+	if _, ok := failedZoneMap[zone]; ok {
+		// 记录失败跳过的数量
+		failedSkipNum++
+		logs.Warnf("generateCVMSeparate campus loop skip has failed zone, subOrderID: %s, zone: %s, "+
+			"failedZoneMap: %+v, rid: %s", subOrderID, zone, failedZoneMap, kt.Rid)
+		return failedSkipNum, true
+	}
+
+	return failedSkipNum, false
 }
 
 func (g *Generator) checkLaunchCvmResult(kt *kit.Kit, resType types.ResourceType, subOrderID string,
@@ -688,11 +774,11 @@ func (g *Generator) getUnreleasedDevice(orderId string) ([]*types.DeviceInfo, er
 }
 
 // batchLaunchCvm  batch creates cvm and return created device ips
-func (g *Generator) batchLaunchCvm(kt *kit.Kit, order *types.ApplyOrder, zone string, replicas uint) ([]uint64,
+func (g *Generator) batchLaunchCvm(kt *kit.Kit, order *types.ApplyOrder, orderZones []string, replicas uint) ([]uint64,
 	[]error) {
 
-	logs.Infof("start batch launch cvm, sub order id: %s, zone: %s, replicas: %d, rid: %s", order.SubOrderId, zone,
-		replicas, kt.Rid)
+	logs.Infof("start batch launch cvm, sub order id: %s, orderZones: %v, replicas: %d, rid: %s",
+		order.SubOrderId, orderZones, replicas, kt.Rid)
 
 	var requestNum uint
 	excludeSubnetIDMap := make(map[string]struct{})
@@ -722,7 +808,8 @@ func (g *Generator) batchLaunchCvm(kt *kit.Kit, order *types.ApplyOrder, zone st
 			break
 		}
 
-		createCvmReq, err := g.buildGenRecordCvmReq(kt, generateID, order, zone, curRequiredNum, excludeSubnetIDMap)
+		createCvmReq, err := g.buildGenRecordCvmReq(
+			kt, generateID, order, orderZones, curRequiredNum, excludeSubnetIDMap)
 		if err != nil {
 			logs.Errorf("failed to launch cvm when build cvm request, err: %v, generateID: %d, sub order id: %s, "+
 				"rid: %s", err, generateID, order.SubOrderId, kt.Rid)
@@ -751,10 +838,10 @@ func (g *Generator) batchLaunchCvm(kt *kit.Kit, order *types.ApplyOrder, zone st
 	return generateIDs, errs
 }
 
-func (g *Generator) buildGenRecordCvmReq(kt *kit.Kit, generateID uint64, order *types.ApplyOrder, zone string,
+func (g *Generator) buildGenRecordCvmReq(kt *kit.Kit, generateID uint64, order *types.ApplyOrder, orderZones []string,
 	replicas uint, excludeSubnetIDMap map[string]struct{}) (*types.CVM, error) {
 
-	createCvmReq, err := g.buildCvmReq(kt, order, zone, replicas, excludeSubnetIDMap)
+	createCvmReq, err := g.buildCvmReq(kt, order, orderZones, replicas, excludeSubnetIDMap)
 	if err != nil {
 		logs.Errorf("failed to launch cvm when build cvm request, err: %v, order id: %s, rid: %s", err,
 			order.SubOrderId, kt.Rid)
