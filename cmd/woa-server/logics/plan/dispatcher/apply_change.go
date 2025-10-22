@@ -586,6 +586,7 @@ func convOrderChangeInfoFromCrpRespItem(kt *kit.Kit, orderID string, item *cvmap
 		PlanProductName: item.ProductName,
 		OpProductName:   item.ProductName,
 		ExpectTime:      item.UseTime,
+		ReturnPlanTime:  item.ReturnPlanTime,
 		ObsProject:      item.ProjectName,
 		DemandResType:   resType,
 		ResMode:         resModeCode,
@@ -773,6 +774,15 @@ func convCreateResPlanDemandReqs(kt *kit.Kit, ticket *ptypes.TicketInfo, demand 
 		Memory:          &memoryChange,
 		DiskSize:        &diskSizeChange,
 		DiskIO:          demand.DiskIO,
+	}
+	if demand.ObsProject == enumor.ObsProjectShortLease {
+		returnPlanTimeFormat, err := time.Parse(constant.DateLayout, demand.ReturnPlanTime)
+		if err != nil {
+			logs.Errorf("failed to parse return plan time, err: %v, return_plan_time: %s, rid: %s", err, demand.ReturnPlanTime,
+				kt.Rid)
+			return rpproto.ResPlanDemandCreateReq{}, rpproto.DemandChangelogCreate{}, err
+		}
+		createReq.ReturnPlanTime = returnPlanTimeFormat.Format(constant.DateLayout)
 	}
 	if createReq.DiskType.Validate() != nil {
 		createReq.DiskType = enumor.DiskPremium

@@ -316,6 +316,8 @@ type UpdatedRPDemandItem struct {
 	ObsProject enumor.ObsProject `json:"obs_project" validate:"lte=64"`
 	// ExpectTime 期望交付时间，格式为YYYY-MM-DD，例如2024-01-01
 	ExpectTime string `json:"expect_time" validate:"lte=64"`
+	// ReturnPlanTime 期望返回计划时间，格式为YYYY-MM-DD，例如2024-01-01
+	ReturnPlanTime string `json:"return_plan_time" validate:"lte=64"`
 	// ZoneID 可用区ID
 	ZoneID string `json:"zone_id" validate:"lte=64"`
 	// ZoneName 可用区名称

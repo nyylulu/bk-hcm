@@ -157,6 +157,10 @@ func (c *CrpTicketCreator) constructAddReq(kt *kit.Kit, subTicket *ptypes.SubTic
 			DiskTypeName:    demand.Updated.Cbs.DiskType.Name(),
 			DiskAmount:      int(demand.Updated.Cbs.DiskSize),
 		}
+		if demand.Updated.ObsProject == enumor.ObsProjectShortLease {
+			planItem.IsAutoReturnPlan = true
+			planItem.ReturnPlanTime = demand.Updated.ReturnPlanTime
+		}
 
 		addReq.Params.Items = append(addReq.Params.Items, planItem)
 	}

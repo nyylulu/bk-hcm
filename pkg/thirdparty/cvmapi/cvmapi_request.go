@@ -364,20 +364,22 @@ type AddCvmCbsPlanParam struct {
 
 // AddPlanItem add cvm and cbs plan order item
 type AddPlanItem struct {
-	UseTime         string  `json:"useTime"`
-	ProjectName     string  `json:"projectName"`
-	PlanProductName string  `json:"planProductName"`
-	ProductName     string  `json:"productName"`
-	CityName        string  `json:"cityName"`
-	ZoneName        string  `json:"zoneName"`
-	CoreTypeName    string  `json:"coreTypeName"`
-	InstanceModel   string  `json:"instanceModel"`
-	CvmAmount       float64 `json:"cvmAmount"`
-	CoreAmount      int     `json:"coreAmount"`
-	Desc            string  `json:"desc"`
-	InstanceIO      int     `json:"instanceIO"`
-	DiskTypeName    string  `json:"diskTypeName"`
-	DiskAmount      int     `json:"diskAmount"`
+	UseTime          string  `json:"useTime"`
+	ProjectName      string  `json:"projectName"`
+	PlanProductName  string  `json:"planProductName"`
+	ProductName      string  `json:"productName"`
+	CityName         string  `json:"cityName"`
+	ZoneName         string  `json:"zoneName"`
+	CoreTypeName     string  `json:"coreTypeName"`
+	InstanceModel    string  `json:"instanceModel"`
+	CvmAmount        float64 `json:"cvmAmount"`
+	CoreAmount       int     `json:"coreAmount"`
+	IsAutoReturnPlan bool    `json:"isAutoReturnPlan"`
+	ReturnPlanTime   string  `json:"returnPlanTime"`
+	Desc             string  `json:"desc"`
+	InstanceIO       int     `json:"instanceIO"`
+	DiskTypeName     string  `json:"diskTypeName"`
+	DiskAmount       int     `json:"diskAmount"`
 }
 
 // QueryPlanOrderReq query cvm and cbs plan order request

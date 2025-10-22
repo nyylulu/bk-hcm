@@ -156,6 +156,7 @@ type PlanOrderChangeItem struct {
 	SourceType        string            `json:"sourceType"`
 	OrderId           string            `json:"orderId"`
 	ResourceMode      enumor.ResMode    `json:"resourceMode"`
+	ReturnPlanTime    string            `json:"returnPlanTime"`
 	Desc              string            `json:"desc"`
 }
 

@@ -272,6 +272,7 @@ func (r *CreateResPlanTicketReq) Validate() error {
 type CreateResPlanDemandReq struct {
 	ObsProject     enumor.ObsProject      `json:"obs_project" validate:"required"`
 	ExpectTime     string                 `json:"expect_time" validate:"required"`
+	ReturnPlanTime string                 `json:"return_plan_time" validate:"omitempty"`
 	RegionID       string                 `json:"region_id" validate:"required"`
 	ZoneID         string                 `json:"zone_id" validate:"omitempty"`
 	DemandSource   enumor.DemandSource    `json:"demand_source" validate:"omitempty"`
@@ -328,6 +329,10 @@ func (r *CreateResPlanDemandReq) Validate() error {
 		if err := r.cbsValidate(); err != nil {
 			return err
 		}
+	}
+
+	if r.ObsProject == enumor.ObsProjectShortLease && r.ReturnPlanTime == "" {
+		return errors.New("obs project is short lease, return plan time should not be empty")
 	}
 
 	return nil

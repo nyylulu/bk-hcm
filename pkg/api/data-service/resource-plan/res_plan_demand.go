@@ -69,6 +69,7 @@ type ResPlanDemandCreateReq struct {
 	ResMode         enumor.ResModeCode   `json:"res_mode" validate:"required"`
 	ObsProject      enumor.ObsProject    `json:"obs_project" validate:"required"`
 	ExpectTime      string               `json:"expect_time" validate:"required"`
+	ReturnPlanTime  string               `json:"return_plan_time" validate:"omitempty"`
 	PlanType        enumor.PlanTypeCode  `json:"plan_type" validate:"required"`
 	AreaID          string               `json:"area_id" validate:"required"`
 	AreaName        string               `json:"area_name" validate:"required"`
@@ -102,6 +103,12 @@ func (r *ResPlanDemandCreateReq) Validate() error {
 		return err
 	}
 
+	if r.ObsProject == enumor.ObsProjectShortLease {
+		_, err = time.Parse(constant.DateLayout, r.ReturnPlanTime)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

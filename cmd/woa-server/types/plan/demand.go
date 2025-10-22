@@ -701,6 +701,7 @@ type CrpOrderChangeInfo struct {
 	PlanProductName string               `json:"plan_product_name"`
 	OpProductName   string               `json:"op_product_name"`
 	ExpectTime      string               `json:"expect_time"`
+	ReturnPlanTime  string               `json:"return_plan_time"`
 	ObsProject      enumor.ObsProject    `json:"obs_project"`
 	DemandResType   enumor.DemandResType `json:"demand_res_type"`
 	ResMode         enumor.ResModeCode   `json:"res_mode"`
