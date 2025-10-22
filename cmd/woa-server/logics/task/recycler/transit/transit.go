@@ -317,6 +317,14 @@ func (t *Transit) DealTransitTask2Transit(order *table.RecycleOrder, hosts []*ta
 	return &event.Event{Type: event.TransitSuccess, Error: nil}
 }
 
+func createHostIDMap(result *cmdb.ListBizHostResult) map[int64]bool {
+	hostMap := make(map[int64]bool)
+	for _, h := range result.Info {
+		hostMap[h.BkHostID] = true
+	}
+	return hostMap
+}
+
 // getHostStatusInfo 批量获取主机状态信息
 func (t *Transit) getHostStatusInfo(kt *kit.Kit, hostIds []int64, targetBizID int64) (map[int64]string, error) {
 	status := make(map[int64]string)
@@ -330,14 +338,8 @@ func (t *Transit) getHostStatusInfo(kt *kit.Kit, hostIds []int64, targetBizID in
 		return nil, fmt.Errorf("failed to get reborn biz hosts, err: %v", err)
 	}
 
-	targetBizHosts := make(map[int64]bool)
-	for _, h := range targetBizResult.Info {
-		targetBizHosts[h.BkHostID] = true
-	}
-	rebornHosts := make(map[int64]bool)
-	for _, h := range rebornBizResult.Info {
-		rebornHosts[h.BkHostID] = true
-	}
+	targetBizHosts := createHostIDMap(targetBizResult)
+	rebornHosts := createHostIDMap(rebornBizResult)
 
 	// 目标模块
 	targetModuleHosts := make(map[int64]bool)
