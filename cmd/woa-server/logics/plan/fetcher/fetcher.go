@@ -92,6 +92,9 @@ type Fetcher interface {
 	// GetMetaNameMapsFromIDMap get meta name maps from id map
 	GetMetaNameMapsFromIDMap(zoneMap map[string]string, regionAreaMap map[string]dmtypes.RegionArea) (
 		map[string]string, map[string]dmtypes.RegionArea)
+
+	// GetOrderList 根据销毁单据查询预测返还信息
+	GetOrderList(kt *kit.Kit, orderID string) ([]*cvmapi.QueryOrderInfo, error)
 }
 
 // ResPlanFetcher ...

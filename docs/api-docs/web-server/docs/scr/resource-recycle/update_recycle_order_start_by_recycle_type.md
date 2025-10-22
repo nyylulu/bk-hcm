@@ -16,10 +16,12 @@ POST /api/v1/woa/task/start/recycle/order/by/recycle_type
 
 #### sub_order_id_types
 
-| 参数名称         | 参数类型   | 必选 | 描述                                 |
-|--------------|--------|----|------------------------------------|
-| suborder_id  | string | 是  | 回收子单据ID                            |
-| recycle_type | string | 是  | 回收类型(枚举值:常规项目、机房裁撤、过保裁撤、春节保障、滚服项目) |
+| 参数名称                 | 参数类型   | 必选 | 描述                                        |
+|----------------------|--------|----|-------------------------------------------|
+| suborder_id          | string | 是  | 回收子单据ID                                   |
+| recycle_type         | string | 是  | 回收类型(枚举值:常规项目、机房裁撤、过保裁撤、春节保障、滚服项目)        |
+| return_forecast      | bool   | 否  | 是否返还预测                                    |
+| return_forecast_time | string | 否  | 期望返回预测时间，不能早于当天/不能晚于当年最后一天，格式是：YYYY-MM-DD |
 
 ### 调用示例
 
@@ -30,7 +32,9 @@ POST /api/v1/woa/task/start/recycle/order/by/recycle_type
   "suborder_id_types": [
     {
       "suborder_id": "1001-1",
-      "recycle_type": "常规项目"
+      "recycle_type": "常规项目",
+      "return_forecast": true,
+      "return_forecast_time": "2025-09-17"
     }
   ]
 }

@@ -55,6 +55,10 @@ func (t *Task) initState() {
 		t.State = &ReturningState{}
 	case table.RecycleStatusReturnFailed:
 		t.State = &ReturnFailedState{}
+	case table.RecycleStatusReturningPlan:
+		t.State = &ReturningPlanState{}
+	case table.RecycleStatusReturnPlanFailed:
+		t.State = &ReturnPlanFailedState{}
 	case table.RecycleStatusDone:
 		t.State = &DoneState{}
 	case table.RecycleStatusTerminate:

@@ -515,6 +515,10 @@ type ReturnParam struct {
 	Force bool `json:"force"`
 	// 选填，是否接受成本分摊。true是，false否。默认：false
 	AcceptCostShare bool `json:"acceptCostShare"`
+	//选填，是否返还预测，默认0；0-不处理，1-返还预测，2-不返还预测
+	ReturnForecast int `json:"returnForecast"`
+	// 选填，期望返回预测时间，不能早于当天/不能晚于当年最后一天，格式是：YYYY-MM-DD .
+	ReturnForecastTime string `json:"returnForecastTime,omitempty"`
 }
 
 // UpgradeReq create cvm upgrade order request
@@ -630,4 +634,16 @@ type RevokeCvmOrderParams struct {
 type QueryTechnicalClassReq struct {
 	ReqMeta `json:",inline"`
 	Params  struct{} `json:"params"`
+}
+
+// QueryOrderListReq query order list request
+type QueryOrderListReq struct {
+	ReqMeta `json:",inline"`
+	Params  *QueryOrderListParam `json:"params"`
+}
+
+// QueryOrderListParam query order list parameters
+type QueryOrderListParam struct {
+	DestroyReturnPlanOrderId []string `json:"destroyReturnPlanOrderId"`
+	UserName                 string   `json:"userName"`
 }

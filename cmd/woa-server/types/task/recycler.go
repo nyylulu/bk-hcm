@@ -997,8 +997,9 @@ type GetDetectStepCfgRst struct {
 
 // StartRecycleOrderReq start recycle order request
 type StartRecycleOrderReq struct {
-	OrderID    []uint64 `json:"order_id"`
-	SuborderID []string `json:"suborder_id"`
+	OrderID               []uint64                            `json:"order_id"`
+	SuborderID            []string                            `json:"suborder_id"`
+	ReturnForecastConfigs []*RecycleOrderReturnForecastConfig `json:"return_forecast_configs"`
 }
 
 // Validate whether StartRecycleOrderReq is valid
@@ -1039,6 +1040,13 @@ func (param *StartRecycleOrderReq) Validate() error {
 	}
 
 	return nil
+}
+
+// RecycleOrderReturnForecastConfig update recycle order return forecast config
+type RecycleOrderReturnForecastConfig struct {
+	SuborderID         string `json:"suborder_id"`
+	ReturnForecast     bool   `json:"return_forecast"`
+	ReturnForecastTime string `json:"return_forecast_time"`
 }
 
 // TerminateRecycleOrderReq terminate recycle order request
@@ -1239,8 +1247,10 @@ func (r *StartRecycleOrderByRecycleTypeReq) Validate() error {
 
 // StartRecycleOrderByRecycleTypeItem start recycle order by recycle type item
 type StartRecycleOrderByRecycleTypeItem struct {
-	SuborderID  string            `json:"suborder_id"`
-	RecycleType table.RecycleType `json:"recycle_type"`
+	SuborderID         string            `json:"suborder_id"`
+	RecycleType        table.RecycleType `json:"recycle_type"`
+	ReturnForecast     bool              `json:"return_forecast"`
+	ReturnForecastTime string            `json:"return_forecast_time"`
 }
 
 // Validate validate

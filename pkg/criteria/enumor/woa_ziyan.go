@@ -509,3 +509,11 @@ var CvmModifyRecordStatusMap = map[CvmModifyRecordStatus]string{
 	ApprovalRejectedCvmModifyStatus: "审批拒绝",
 	ApprovalTimeoutCvmModifyStatus:  "审批超时",
 }
+
+// QueryOrderInfoStatus 根据销毁单据查询预测返还信息接口状态
+type QueryOrderInfoStatus int
+
+const (
+	// QueryOrderInfoStatusSuccess 根据销毁单据查询预测返还信息接口 - 成功状态
+	QueryOrderInfoStatusSuccess = 0
+)

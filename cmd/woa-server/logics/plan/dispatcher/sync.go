@@ -77,7 +77,23 @@ func (d *Dispatcher) SyncDemandFromCRPOrder(kt *kit.Kit, crpSN string, priorBizI
 		}
 
 		// changeDemand可能会在扣减时模糊匹配到同一个需求，因此需要在扣减操作生效前记录扣减量，最后统一执行
-		upsertReq, updatedIDs, createLogReq, updateLogReq, err := d.prepareResPlanDemandChangeReq(kt, ticket,
+		ticketCtx := &ApplyTicketCtx{
+			ID:              ticket.ID,
+			Applicant:       ticket.Applicant,
+			BkBizID:         ticket.BkBizID,
+			BkBizName:       ticket.BkBizName,
+			OpProductID:     ticket.OpProductID,
+			OpProductName:   ticket.OpProductName,
+			PlanProductID:   ticket.PlanProductID,
+			PlanProductName: ticket.PlanProductName,
+			VirtualDeptID:   ticket.VirtualDeptID,
+			VirtualDeptName: ticket.VirtualDeptName,
+			Remark:          ticket.Remark,
+			Demands:         ticket.Demands,
+			CrpSN:           ticket.CrpSN,
+			DemandClass:     ticket.DemandClass,
+		}
+		upsertReq, updatedIDs, createLogReq, updateLogReq, err := d.prepareResPlanDemandChangeReq(kt, ticketCtx,
 			changeDemandsMap)
 		if err != nil {
 			logs.Errorf("failed to prepare res plan demand change req, err: %v, rid: %s", err, kt.Rid)

@@ -809,3 +809,67 @@ type QueryTechnicalClassRst struct {
 	TechnicalUnit    string  `json:"technicalUnit"`
 	TechnicalAmount  float64 `json:"technicalAmount"`
 }
+
+// QueryOrderListResp ...
+type QueryOrderListResp struct {
+	RespMeta `json:",inline"`
+	Result   *QueryOrderListRst `json:"result"`
+}
+
+// QueryOrderListRst cvm plan order change response
+type QueryOrderListRst struct {
+	Status  int                    `json:"status"`
+	Message string                 `json:"message"`
+	Data    *QueryOrderListRstData `json:"data"`
+}
+
+// QueryOrderListRstData cvm plan order change response data
+type QueryOrderListRstData struct {
+	Total int               `json:"total"`
+	Data  []*QueryOrderInfo `json:"data"`
+}
+
+// QueryOrderInfo cvm plan order change response data
+type QueryOrderInfo struct {
+	OrderID           string                      `json:"orderId"`
+	SourceType        int                         `json:"sourceType"`
+	SourceTypeName    string                      `json:"sourceTypeName"`
+	BgName            string                      `json:"bgName"`
+	DeptID            int                         `json:"deptId"`
+	DeptName          string                      `json:"deptName"`
+	PlanProductName   string                      `json:"planProductName"`
+	ToDeptName        string                      `json:"toDeptName"`
+	ToPlanProductName string                      `json:"toPlanProductName"`
+	UseTime           string                      `json:"useTime"`
+	OrderDesc         string                      `json:"orderDesc"`
+	Operator          string                      `json:"operator"`
+	CreateTime        string                      `json:"createTime"`
+	Status            enumor.QueryOrderInfoStatus `json:"status"`
+	StatusMsg         string                      `json:"statusMsg"`
+	StatusDesc        string                      `json:"statusDesc"`
+	CurrentProcessor  string                      `json:"currentProcessor"`
+	CvmData           []CvmData                   `json:"cvmData"`
+	CbsData           []struct {
+		Name  string `json:"name"`
+		Value int    `json:"value"`
+		Unit  string `json:"unit"`
+	} `json:"cbsData"`
+	TechData []struct {
+		Name  string  `json:"name"`
+		Value float64 `json:"value"`
+		Unit  string  `json:"unit"`
+	} `json:"techData"`
+	AllDiskAmount   int    `json:"allDiskAmount"`
+	AllCoreAmount   int    `json:"allCoreAmount"`
+	DeltaCoreAmount int    `json:"deltaCoreAmount"`
+	DeltaDiskAmount int    `json:"deltaDiskAmount"`
+	OrderType       int    `json:"orderType"`
+	OrderTypeName   string `json:"orderTypeName"`
+}
+
+// CvmData cvm plan order change response data
+type CvmData struct {
+	Name  string  `json:"name"`
+	Value float64 `json:"value"`
+	Unit  string  `json:"unit"`
+}

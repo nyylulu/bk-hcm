@@ -298,8 +298,9 @@ func initMongoDB(kt *kit.Kit, dis serviced.ServiceDiscover) (stream.LoopInterfac
 }
 
 func newOtherClient(kt *kit.Kit, service *Service, itsmCli itsm.Client, sd serviced.State) (*Service, error) {
+
 	recyclerIf, err := recycler.New(kt.Ctx, service.thirdCli, service.cmdbCli, service.authorizer, service.rsLogic,
-		service.dissolveLogic, service.client, service.configLogics)
+		service.dissolveLogic, service.client, service.configLogics, service.planController)
 	if err != nil {
 		logs.Errorf("new recycler failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err

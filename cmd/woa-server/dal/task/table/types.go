@@ -115,35 +115,39 @@ type RecycleStatus string
 
 // definition of various recycle status
 const (
-	RecycleStatusDefault       RecycleStatus = "DEFAULT"
-	RecycleStatusUncommit      RecycleStatus = "UNCOMMIT"
-	RecycleStatusCommitted     RecycleStatus = "COMMITTED"
-	RecycleStatusDetecting     RecycleStatus = "DETECTING"
-	RecycleStatusDetectFailed  RecycleStatus = "DETECT_FAILED"
-	RecycleStatusAudit         RecycleStatus = "FOR_AUDIT"
-	RecycleStatusRejected      RecycleStatus = "REJECTED"
-	RecycleStatusTransiting    RecycleStatus = "TRANSITING"
-	RecycleStatusTransitFailed RecycleStatus = "TRANSIT_FAILED"
-	RecycleStatusReturning     RecycleStatus = "RETURNING"
-	RecycleStatusReturnFailed  RecycleStatus = "RETURN_FAILED"
-	RecycleStatusDone          RecycleStatus = "DONE"
-	RecycleStatusTerminate     RecycleStatus = "TERMINATE"
+	RecycleStatusDefault          RecycleStatus = "DEFAULT"
+	RecycleStatusUncommit         RecycleStatus = "UNCOMMIT"
+	RecycleStatusCommitted        RecycleStatus = "COMMITTED"
+	RecycleStatusDetecting        RecycleStatus = "DETECTING"
+	RecycleStatusDetectFailed     RecycleStatus = "DETECT_FAILED"
+	RecycleStatusAudit            RecycleStatus = "FOR_AUDIT"
+	RecycleStatusRejected         RecycleStatus = "REJECTED"
+	RecycleStatusTransiting       RecycleStatus = "TRANSITING"
+	RecycleStatusTransitFailed    RecycleStatus = "TRANSIT_FAILED"
+	RecycleStatusReturning        RecycleStatus = "RETURNING"
+	RecycleStatusReturnFailed     RecycleStatus = "RETURN_FAILED"
+	RecycleStatusReturningPlan    RecycleStatus = "RETURNING_PLAN"
+	RecycleStatusReturnPlanFailed RecycleStatus = "RETURN_PLAN_FAILED"
+	RecycleStatusDone             RecycleStatus = "DONE"
+	RecycleStatusTerminate        RecycleStatus = "TERMINATE"
 )
 
 // definition of various recycle status description
 const (
-	RecycleStatusDescUncommit      string = "未提单"
-	RecycleStatusDescCommitted     string = "已提单"
-	RecycleStatusDescDetecting     string = "预检中"
-	RecycleStatusDescDetectFailed  string = "预检失败"
-	RecycleStatusDescAudit         string = "待审核"
-	RecycleStatusDescRejected      string = "已驳回"
-	RecycleStatusDescTransiting    string = "中转中"
-	RecycleStatusDescTransitFailed string = "中转失败"
-	RecycleStatusDescReturning     string = "退回中"
-	RecycleStatusDescReturnFailed  string = "退回失败"
-	RecycleStatusDescDone          string = "已完成"
-	RecycleStatusDescTerminate     string = "终止"
+	RecycleStatusDescUncommit         string = "未提单"
+	RecycleStatusDescCommitted        string = "已提单"
+	RecycleStatusDescDetecting        string = "预检中"
+	RecycleStatusDescDetectFailed     string = "预检失败"
+	RecycleStatusDescAudit            string = "待审核"
+	RecycleStatusDescRejected         string = "已驳回"
+	RecycleStatusDescTransiting       string = "中转中"
+	RecycleStatusDescTransitFailed    string = "中转失败"
+	RecycleStatusDescReturning        string = "退回中"
+	RecycleStatusDescReturnFailed     string = "退回失败"
+	RecycleStatusDescReturningPlan    string = "返还预测中"
+	RecycleStatusDescReturnPlanFailed string = "返还预测失败"
+	RecycleStatusDescDone             string = "已完成"
+	RecycleStatusDescTerminate        string = "终止"
 )
 
 // RecycleStage recycle stage
@@ -151,13 +155,14 @@ type RecycleStage string
 
 // definition of various recycle stage
 const (
-	RecycleStageCommit    RecycleStage = "COMMIT"
-	RecycleStageDetect    RecycleStage = "DETECT"
-	RecycleStageAudit     RecycleStage = "AUDIT"
-	RecycleStageTransit   RecycleStage = "TRANSIT"
-	RecycleStageReturn    RecycleStage = "RETURN"
-	RecycleStageDone      RecycleStage = "DONE"
-	RecycleStageTerminate RecycleStage = "TERMINATE"
+	RecycleStageCommit     RecycleStage = "COMMIT"
+	RecycleStageDetect     RecycleStage = "DETECT"
+	RecycleStageAudit      RecycleStage = "AUDIT"
+	RecycleStageTransit    RecycleStage = "TRANSIT"
+	RecycleStageReturn     RecycleStage = "RETURN"
+	RecycleStageReturnPlan RecycleStage = "RETURN_PLAN" // 返还预测
+	RecycleStageDone       RecycleStage = "DONE"
+	RecycleStageTerminate  RecycleStage = "TERMINATE"
 )
 
 // definition of various recycle stage description

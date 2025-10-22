@@ -45,6 +45,7 @@ func (r *recycleRecoverer) getRecycleRunningOrders(kt *kit.Kit, expireTime time.
 				table.RecycleStatusDetecting,
 				table.RecycleStatusCommitted,
 				table.RecycleStatusTransiting,
+				table.RecycleStatusReturningPlan,
 			},
 		},
 		"create_at": mapstr.MapStr{

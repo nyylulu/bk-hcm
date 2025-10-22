@@ -66,7 +66,15 @@ func (rs *ReturningState) UpdateState(ctx EventContext, ev *event.Event) error {
 			time.Sleep(time.Minute * 2)
 			taskCtx.Dispatcher.Add(taskCtx.Order.SuborderID)
 		}()
+		return nil
 	}
+	if taskCtx.Dispatcher == nil {
+		logs.Errorf("failed to add order to dispatch, for dispatcher is nil, subOrderId: %s, state: %s",
+			taskCtx.Order.SuborderID, rs.Name())
+		return fmt.Errorf("failed to add order to dispatch, for dispatcher is nil, subOrderId: %s, state: %s",
+			taskCtx.Order.SuborderID, rs.Name())
+	}
+	taskCtx.Dispatcher.Add(taskCtx.Order.SuborderID)
 
 	// 记录日志
 	logs.Infof("recycler: finish return state, subOrderId: %s, ev: %+v", taskCtx.Order.SuborderID, cvt.PtrToVal(ev))
@@ -106,8 +114,8 @@ func (rs *ReturningState) setNextState(order *table.RecycleOrder, ev *event.Even
 
 	switch ev.Type {
 	case event.ReturnSuccess:
-		update["stage"] = table.RecycleStageDone
-		update["status"] = table.RecycleStatusDone
+		update["stage"] = table.RecycleStageReturnPlan
+		update["status"] = table.RecycleStatusReturningPlan
 		update["handler"] = "AUTO"
 	case event.ReturnFailed:
 		update["status"] = table.RecycleStatusReturnFailed

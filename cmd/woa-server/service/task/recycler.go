@@ -1061,6 +1061,14 @@ func (s *service) GetRecycleStatusCfg(_ *rest.Contexts) (any, error) {
 				"status":      table.RecycleStatusTerminate,
 				"description": table.RecycleStatusDescTerminate,
 			},
+			{
+				"status":      table.RecycleStatusReturningPlan,
+				"description": table.RecycleStatusDescReturningPlan,
+			},
+			{
+				"status":      table.RecycleStatusReturnPlanFailed,
+				"description": table.RecycleStatusDescReturnPlanFailed,
+			},
 		},
 	}
 

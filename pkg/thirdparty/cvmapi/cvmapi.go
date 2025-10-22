@@ -85,6 +85,9 @@ type CVMClientInterface interface {
 
 	QueryTechnicalClass(ctx context.Context, header http.Header, req *QueryTechnicalClassReq) (*QueryTechnicalClassResp,
 		error)
+	// QueryOrderList 根据销毁单据查询预测返还信息
+	QueryOrderList(ctx context.Context, header http.Header, req *QueryOrderListReq) (
+		*QueryOrderListResp, error)
 }
 
 // NewCVMClientInterface creates a cvm api instance
@@ -621,6 +624,24 @@ func (c *cvmApi) QueryTechnicalClass(ctx context.Context, header http.Header, re
 
 	subPath := "/yunti-demand/external"
 	resp := new(QueryTechnicalClassResp)
+	err := c.client.Post().
+		WithContext(ctx).
+		Body(req).
+		SubResourcef(subPath).
+		WithParam(CvmApiKey, CvmApiKeyVal).
+		WithHeaders(header).
+		Do().
+		Into(resp)
+
+	return resp, err
+}
+
+// QueryOrderList ...
+func (c *cvmApi) QueryOrderList(ctx context.Context, header http.Header, req *QueryOrderListReq) (
+	*QueryOrderListResp, error) {
+
+	subPath := "/yunti-demand/external"
+	resp := new(QueryOrderListResp)
 	err := c.client.Post().
 		WithContext(ctx).
 		Body(req).

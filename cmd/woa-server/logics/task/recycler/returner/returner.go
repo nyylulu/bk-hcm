@@ -22,6 +22,7 @@ import (
 
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
+	"hcm/cmd/woa-server/logics/plan"
 	"hcm/cmd/woa-server/logics/task/recycler/event"
 	daltypes "hcm/cmd/woa-server/storage/dal/types"
 	recovertask "hcm/cmd/woa-server/types/task"
@@ -46,19 +47,23 @@ import (
 
 // Returner deal with device return tasks
 type Returner struct {
-	cmdbCli cmdb.Client
-	cvm     cvmapi.CVMClientInterface
-	erp     erpapi.ErpClientInterface
-	ctx     context.Context
+	cmdbCli   cmdb.Client
+	cvm       cvmapi.CVMClientInterface
+	erp       erpapi.ErpClientInterface
+	ctx       context.Context
+	planLogic plan.Logics
 }
 
 // New creates a returner
-func New(ctx context.Context, thirdCli *thirdparty.Client, cmdbCli cmdb.Client) (*Returner, error) {
+func New(ctx context.Context, thirdCli *thirdparty.Client, cmdbCli cmdb.Client, planLogic plan.Logics) (*Returner,
+	error) {
+
 	returner := &Returner{
-		cmdbCli: cmdbCli,
-		cvm:     thirdCli.CVM,
-		erp:     thirdCli.Erp,
-		ctx:     ctx,
+		cmdbCli:   cmdbCli,
+		cvm:       thirdCli.CVM,
+		erp:       thirdCli.Erp,
+		ctx:       ctx,
+		planLogic: planLogic,
 	}
 
 	return returner, nil
@@ -103,17 +108,21 @@ func (r *Returner) initReturnTask(order *table.RecycleOrder) (*table.ReturnTask,
 	if errors.Is(err, daltypes.ErrDocumentNotFound) {
 		now := time.Now()
 		newTask := &table.ReturnTask{
-			OrderID:      order.OrderID,
-			SuborderID:   order.SuborderID,
-			ResourceType: order.ResourceType,
-			RecycleType:  order.RecycleType,
-			ReturnPlan:   order.ReturnPlan,
-			SkipConfirm:  order.SkipConfirm,
-			Status:       table.ReturnStatusInit,
-			TaskID:       "",
-			TaskLink:     "",
-			CreateAt:     now,
-			UpdateAt:     now,
+			OrderID:            order.OrderID,
+			SuborderID:         order.SuborderID,
+			ResourceType:       order.ResourceType,
+			RecycleType:        order.RecycleType,
+			ReturnPlan:         order.ReturnPlan,
+			SkipConfirm:        order.SkipConfirm,
+			Status:             table.ReturnStatusInit,
+			TaskID:             "",
+			TaskLink:           "",
+			CreateAt:           now,
+			UpdateAt:           now,
+			ReturnForecast:     order.ReturnForecast,
+			ReturnForecastTime: order.ReturnForecastTime,
+			User:               order.User,
+			BkBizID:            order.BizID,
 		}
 
 		if err = dao.Set().ReturnTask().CreateReturnTask(context.Background(), newTask); err != nil {
@@ -715,4 +724,39 @@ func (r *Returner) updateHostRecycleInfoByOrderAssetID(kt *kit.Kit, subOrderID, 
 	}
 
 	return nil
+}
+
+// HandleReturnPlan 回收主机后, 处理返还预测
+func (r *Returner) HandleReturnPlan(kt *kit.Kit, order *table.RecycleOrder) *event.Event {
+	// 回收时设置了返还预测 才需要同步
+	filter := &mapstr.MapStr{
+		"suborder_id": order.SuborderID,
+	}
+
+	task, err := dao.Set().ReturnTask().GetReturnTask(context.Background(), filter)
+	if err != nil {
+		logs.Errorf("failed to get return task, err: %v, subOrderID: %s, rid: %s", err, order.SuborderID, kt.Rid)
+		return &event.Event{
+			Type:  event.ReturnPlanFailed,
+			Error: fmt.Errorf("failed to get return task, err: %v", err),
+		}
+	}
+	if task == nil {
+		logs.Errorf("return task not found, subOrderID: %s, rid: %s", order.SuborderID, kt.Rid)
+		return &event.Event{
+			Type:  event.ReturnPlanFailed,
+			Error: fmt.Errorf("return task not found"),
+		}
+	}
+	if err := r.planLogic.ApplyDestroyOrderToResPlanDemand(kt, task.TaskID); err != nil {
+		logs.Errorf("failed to apply destroy order to res plan demand, err: %v, taskID: %s, rid: %s",
+			err, task.TaskID, kt.Rid)
+		return &event.Event{
+			Type:  event.ReturnPlanFailed,
+			Error: fmt.Errorf("failed to apply destroy order to res plan demand, err: %v", err),
+		}
+	}
+	return &event.Event{
+		Type: event.ReturnPlanSuccess,
+	}
 }
