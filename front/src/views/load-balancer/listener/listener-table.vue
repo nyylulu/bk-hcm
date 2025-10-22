@@ -37,6 +37,7 @@ import { ValidateValuesFunc } from 'bkui-vue/lib/search-select/utils';
 //* 接口请求使用lbId，避免details暂无数据，导致接口报错
 const props = defineProps<{ lbId: string; details: ILoadBalancerDetails }>();
 
+let firstIn = true;
 const route = useRoute();
 const { t } = useI18n();
 const loadBalancerListenerStore = useLoadBalancerListenerStore();
@@ -127,9 +128,7 @@ const displayConfig: Record<string, Partial<ModelPropertyColumn>> = {
   name: {
     render: ({ data, row }) => {
       const handleClick = () => {
-        detailsSidesliderState.isHidden = false;
-        detailsSidesliderState.isShow = true;
-        detailsSidesliderState.rowData = data;
+        showListenerDetail(data);
       };
       return h(Button, { theme: 'primary', text: true, onClick: handleClick }, row.name);
     },
@@ -169,6 +168,11 @@ const searchQs = useSearchQs({ key: 'filter', properties: conditionProperties })
 const condition = ref<Record<string, any>>({});
 const listenerList = ref<IListenerItem[]>([]);
 
+const showListenerDetail = (data: any) => {
+  detailsSidesliderState.isHidden = false;
+  detailsSidesliderState.isShow = true;
+  detailsSidesliderState.rowData = data;
+};
 const isCurRowSelectEnable = (row: any) => {
   if (currentGlobalBusinessId.value) return true;
   if (row.id) return row.bk_biz_id === -1;
@@ -211,7 +215,10 @@ const injectLoadBalancerFields = (list: IListenerItem[]) => {
 
 const handleSingleDelete = (row: any) => {
   Confirm('请确定删除监听器', `将删除监听器【${row.name}】`, async () => {
-    await loadBalancerListenerStore.batchDeleteListener({ ids: [row.id] }, currentGlobalBusinessId.value);
+    await loadBalancerListenerStore.batchDeleteListener(
+      { ids: [row.id], account_id: props.details.account_id },
+      currentGlobalBusinessId.value,
+    );
     Message({ theme: 'success', message: '删除成功' });
     routerAction.redirect({ query: { ...route.query, _t: Date.now() } });
   });
@@ -223,7 +230,16 @@ watch(
   () => searchRef.value?.clear(false),
 );
 const handleSearch = (val: ISearchSelectValue) => {
-  searchQs.set(getSimpleConditionBySearchSelect(val));
+  searchQs.set(
+    getSimpleConditionBySearchSelect(val, [
+      {
+        field: 'port',
+        // 使用 buildSearchSelectValueBySearchQsCondition 处理后回填的值为数组 [1, 2]，在调用formatter时这里接收的是每一个元素的值，是number类型
+        // 手动输入时这里接收的是原始值是string类型 '1 | 2'，所以这里根据不同的值类型来处理，目前整个数据流加工的数据如此这是局部的解决方式
+        formatter: (value: string | number) => (typeof value === 'string' ? value?.split(' | ') : value),
+      },
+    ]),
+  );
 };
 
 const loading = ref(false);
@@ -232,7 +248,7 @@ watch(
   async (query) => {
     // 避免多次路由导致多次请求
     if (query[ActiveQueryKey.DETAILS] && ClbDetailsTabKey.LISTENER !== query[ActiveQueryKey.DETAILS]) return;
-
+    const { detailShow } = query;
     condition.value = searchQs.get(query, {});
     pagination.current = Number(query.page) || 1;
     pagination.limit = Number(query.limit) || pagination.limit;
@@ -260,6 +276,10 @@ watch(
       if (list.length > 0) {
         asyncSetRsWeightStat(list);
         injectLoadBalancerFields(list);
+        if (firstIn && detailShow) {
+          showListenerDetail(list[0]);
+          firstIn = false;
+        }
       }
 
       if (hasBindingStatus(list)) {

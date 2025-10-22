@@ -195,7 +195,7 @@ func (l *Layer4ListenerBindRSPreviewExecutor) validateWithDB(kt *kit.Kit, cloudI
 		})
 	if concurrentErr != nil {
 		logs.Errorf("validate with db failed, err: %v, rid: %s", concurrentErr, kt.Rid)
-		return err
+		return concurrentErr
 	}
 
 	if err = l.validateDetailsTarget(kt); err != nil {
@@ -227,7 +227,7 @@ func (l *Layer4ListenerBindRSPreviewExecutor) validateDetailsTarget(kt *kit.Kit)
 		})
 	if concurrentErr != nil {
 		logs.Errorf("validate details target failed, err: %v, rid: %s", concurrentErr, kt.Rid)
-		return err
+		return concurrentErr
 	}
 	return nil
 }
@@ -236,16 +236,22 @@ func (l *Layer4ListenerBindRSPreviewExecutor) validateDetailsTarget(kt *kit.Kit)
 func (l *Layer4ListenerBindRSPreviewExecutor) validateTarget(kt *kit.Kit,
 	detail *Layer4ListenerBindRSDetail, ruleCloudIDsToTGIDMap map[string]string) error {
 
-	if detail.listenerCloudID == "" || detail.cvm == nil {
+	if detail.listenerCloudID == "" {
 		detail.Status.SetNotExecutable()
-		detail.ValidateResult = append(detail.ValidateResult, "listener not found or rs not found")
+		detail.ValidateResult = append(detail.ValidateResult, "listener not found")
 		return nil
 	}
 	tgID, ok := ruleCloudIDsToTGIDMap[detail.listenerCloudID]
 	if !ok {
-		return fmt.Errorf("target group not found for listener cloud id: %s", detail.listenerCloudID)
+		detail.ValidateResult = append(detail.ValidateResult,
+			"Listener not bound to target group, will automatically create target group and bind")
+		return nil
 	}
-	detail.targetGroupID = tgID
+	if detail.cvm == nil {
+		// rsType 为 ENI，会导致cvm为空
+		return nil
+	}
+
 	target, err := getTarget(kt, l.dataServiceCli, tgID, detail.cvm.CloudID, detail.RsPort[0])
 	if err != nil {
 		return err
@@ -270,6 +276,10 @@ func (l *Layer4ListenerBindRSPreviewExecutor) validateTarget(kt *kit.Kit,
 func (l *Layer4ListenerBindRSPreviewExecutor) validateRS(kt *kit.Kit, curDetail *Layer4ListenerBindRSDetail,
 	lb corelb.LoadBalancerRaw) error {
 
+	if curDetail.InstType == enumor.EniInstType {
+		// ENI 不做校验
+		return nil
+	}
 	isCrossRegionV1, isCrossRegionV2, targetCloudVpcID, lbTargetRegion, err := parseSnapInfoTCloudLBExtension(kt,
 		lb.Extension)
 	if err != nil {
@@ -332,16 +342,13 @@ type Layer4ListenerBindRSDetail struct {
 
 	RegionID string `json:"region_id"`
 
-	// targetGroupID 在 validateTarget 阶段填充, 后续submit阶段会重复使用到,
-	// 如果为空, 那就意味着当前detail的条件无法匹配到对应的targetGroup, 可以认为targetGroup not found
-	targetGroupID string
-
 	// listenerCloudID 在 validateListener 阶段填充, 后续submit阶段会重复使用到,
 	// 如果为空, 那就意味着当前detail的条件无法匹配到对应的listener, 可以认为listener not found
 	listenerCloudID string
 
-	// cvm 在 validateRS 阶段填充, 在validateTarget和submit阶段会使用,
-	// 如果为空, 代表了rs not found
+	// cvm字段在validateRS阶段填充，在validateTarget和submit阶段使用。
+	// 当RSType为ENI时，该值为空
+	// 当RSType为CVM时，为空表示rs not found。
 	cvm *cvmInfo
 }
 

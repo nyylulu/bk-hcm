@@ -57,6 +57,8 @@ const (
 	ExportLayer4RsLimit = 5000
 	// ExportClbOneFileRowLimit 导出文件行数限制
 	ExportClbOneFileRowLimit = 5000
+	// ExportListenerParamLimit 导出监听器参数限制
+	ExportListenerParamLimit = 5000
 )
 
 const (
@@ -92,4 +94,13 @@ const (
 
 	// CLBTopoFindInLimit 负载均衡各级拓扑in查询数量限制
 	CLBTopoFindInLimit = 10000
+)
+
+const (
+	// BatchOperateModifyTargetWeightLimit 批量修改目标权重限制
+	BatchOperateModifyTargetWeightLimit = 5000
+	// BatchOperateDeleteListenerLimit 批量删除监听器数量限制
+	BatchOperateDeleteListenerLimit = 1000
+	// BatchOperateRemoveTargetLimit 批量移除RS数量限制
+	BatchOperateRemoveTargetLimit = 5000
 )

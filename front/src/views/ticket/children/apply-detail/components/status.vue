@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { APPLICATION_STATUS_MAP } from '../../../constants';
 import { ApplicationStatus, IApplicationDetail } from '../index';
 
 import StatusUnknown from '@/assets/image/Status-unknown.png';
 import share from 'bkui-vue/lib/icon/share';
 import copyToClipboard from '@/components/copy-to-clipboard/index.vue';
+import { APPLICATION_STATUS_MAP } from '@/views/ticket/constants';
 
 const props = defineProps<{ applicationDetail: IApplicationDetail }>();
 
