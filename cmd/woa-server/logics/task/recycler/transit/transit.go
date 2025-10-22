@@ -261,85 +261,132 @@ func (t *Transit) DealTransitTask2Transit(order *table.RecycleOrder, hosts []*ta
 	kt := core.NewBackendKit()
 	kt.Ctx = t.ctx
 
-	// 先看是否在原业务
-	if t.isHostInBiz(kt, hostIds, order.BizID) {
-		// 看是否已在目标模块
-		if t.isHostInTargetModule(kt, hostIds, order.BizID) {
-			logs.Infof("hosts already in target module of biz %d, treat as completed", order.BizID)
-			return &event.Event{Type: event.TransitSuccess, Error: nil}
+	statusMap, err := t.getHostStatusInfo(kt, hostIds, order.BizID)
+	if err != nil {
+		logs.Errorf("failed to get host status info, err: %v", err)
+		return &event.Event{Type: event.TransitFailed, Error: err}
+	}
+
+	completedIDs := make([]int64, 0)
+	toRebornIDs := make([]int64, 0)
+	toOriginIDs := make([]int64, 0)
+	abnormalIDs := make([]int64, 0)
+	for _, hid := range hostIds {
+		s := statusMap[hid]
+		switch s {
+		case "completed":
+			completedIDs = append(completedIDs, hid)
+		case "transit_to_reborn":
+			toRebornIDs = append(toRebornIDs, hid)
+		case "transit_to_origin":
+			toOriginIDs = append(toOriginIDs, hid)
+		default:
+			abnormalIDs = append(abnormalIDs, hid)
 		}
-		if ev := t.transferToRebornBiz(kt, order, hosts); ev != nil {
+	}
+
+	if len(completedIDs) > 0 {
+		logs.Infof("hosts %v already in target module of biz %d, skip", completedIDs, order.BizID)
+	}
+
+	if len(toRebornIDs) > 0 {
+		firstTransitHosts := t.getHostsByIDs(hosts, toRebornIDs)
+		if ev := t.transferToRebornBiz(kt, order, firstTransitHosts); ev != nil {
 			return ev
 		}
-		return t.transferToOriginBiz(kt, order, hosts)
-	}
-	// 看是否在reborn业务
-	if t.isHostInBiz(kt, hostIds, recovertask.RebornBizId) {
-		if t.isHostInTargetModule(kt, hostIds, order.BizID) {
-			logs.Infof("hosts already in target module of biz %d, treat as completed", order.BizID)
-			return &event.Event{Type: event.TransitSuccess, Error: nil}
+		if ev := t.transferToOriginBiz(kt, order, firstTransitHosts); ev != nil {
+			return ev
 		}
-		return t.transferToOriginBiz(kt, order, hosts)
 	}
 
-	// 未知状态，失败处理
-	if errUpdate := t.UpdateHostInfo(order, table.RecycleStageTransit,
-		table.RecycleStatusTransitFailed); errUpdate != nil {
-		logs.Errorf("failed to update recycle host info, err: %v", errUpdate)
+	if len(toOriginIDs) > 0 {
+		secondTransitHosts := t.getHostsByIDs(hosts, toOriginIDs)
+		if ev := t.transferToOriginBiz(kt, order, secondTransitHosts); ev != nil {
+			return ev
+		}
 	}
-	return &event.Event{Type: event.TransitFailed, Error: fmt.Errorf("hosts transit state unknown")}
+
+	if len(abnormalIDs) > 0 {
+		if errUpdate := t.UpdateHostInfo(order, table.RecycleStageTransit, table.RecycleStatusTransitFailed); errUpdate != nil {
+			logs.Errorf("failed to update recycle host info, err: %v", errUpdate)
+		}
+		return &event.Event{Type: event.TransitFailed, Error: fmt.Errorf("hosts %v have abnormal status", abnormalIDs)}
+	}
+
+	return &event.Event{Type: event.TransitSuccess, Error: nil}
 }
 
-// isHostInBiz 检查主机是否在指定业务下
-func (t *Transit) isHostInBiz(kt *kit.Kit, hostIds []int64, bizID int64) bool {
-	listResult, err := t.getBizHost(kt, bizID, hostIds)
+// getHostStatusInfo 批量获取主机状态信息
+func (t *Transit) getHostStatusInfo(kt *kit.Kit, hostIds []int64, targetBizID int64) (map[int64]string, error) {
+	status := make(map[int64]string)
+	// 目标业务、reborn 业务
+	targetBizResult, err := t.getBizHost(kt, targetBizID, hostIds)
 	if err != nil {
-		logs.Errorf("failed to check if hosts are in biz %d, err: %v", bizID, err)
-		return false
+		return nil, fmt.Errorf("failed to get target biz hosts, err: %v", err)
 	}
-	return listResult.Count > 0
-}
-
-// isHostInTargetModule 检查主机是否在目标业务的目标模块下
-func (t *Transit) isHostInTargetModule(kt *kit.Kit, hostIds []int64, bizID int64) bool {
-	listResult, err := t.getBizHost(kt, bizID, hostIds)
+	rebornBizResult, err := t.getBizHost(kt, recovertask.RebornBizId, hostIds)
 	if err != nil {
-		logs.Errorf("failed to check if hosts are in target biz %d, err: %v", bizID, err)
-		return false
+		return nil, fmt.Errorf("failed to get reborn biz hosts, err: %v", err)
 	}
 
-	// 如果主机不在目标业务下，直接返回false
-	if listResult.Count == 0 {
-		logs.Infof("no hosts found in target biz %d", bizID)
-		return false
+	targetBizHosts := make(map[int64]bool)
+	for _, h := range targetBizResult.Info {
+		targetBizHosts[h.BkHostID] = true
+	}
+	rebornHosts := make(map[int64]bool)
+	for _, h := range rebornBizResult.Info {
+		rebornHosts[h.BkHostID] = true
 	}
 
-	// 获取目标模块ID
-	targetModuleID, err := t.cc.GetBizInternalModuleID(kt, bizID)
+	// 目标模块
+	targetModuleHosts := make(map[int64]bool)
+	targetModuleID, err := t.cc.GetBizInternalModuleID(kt, targetBizID)
 	if err != nil {
-		logs.Errorf("failed to get target module ID for biz %d, err: %v", bizID, err)
-		return false
+		return nil, fmt.Errorf("failed to get target module id, err: %v", err)
 	}
-
-	// 获取主机的拓扑关系信息，检查是否在目标模块下
-	req := &cmdb.HostModuleRelationParams{
-		HostID: hostIds,
-	}
-
-	resp, err := t.cc.FindHostBizRelations(kt, req)
+	relReq := &cmdb.HostModuleRelationParams{HostID: hostIds}
+	relResp, err := t.cc.FindHostBizRelations(kt, relReq)
 	if err != nil {
-		logs.Errorf("failed to get host topo info for biz %d, err: %v", bizID, err)
-		return false
+		return nil, fmt.Errorf("failed to get host relations, err: %v", err)
 	}
-
-	relations := cvt.SliceToPtr(cvt.PtrToVal(resp))
-	inTargetModuleCount := 0
+	relations := cvt.SliceToPtr(cvt.PtrToVal(relResp))
 	for _, rel := range relations {
-		if rel.BizID == bizID && rel.BkModuleID == targetModuleID {
-			inTargetModuleCount++
+		if rel.BizID == targetBizID && rel.BkModuleID == targetModuleID {
+			targetModuleHosts[rel.HostID] = true
 		}
 	}
-	return inTargetModuleCount == len(hostIds)
+
+	for _, hid := range hostIds {
+		if targetModuleHosts[hid] {
+			status[hid] = "completed"
+			continue
+		}
+		if targetBizHosts[hid] {
+			status[hid] = "transit_to_reborn"
+			continue
+		}
+		if rebornHosts[hid] {
+			status[hid] = "transit_to_origin"
+			continue
+		}
+		status[hid] = "abnormal"
+	}
+	return status, nil
+}
+
+// getHostsByIDs 根据主机ID列表获取主机对象
+func (t *Transit) getHostsByIDs(hosts []*table.RecycleHost, ids []int64) []*table.RecycleHost {
+	m := make(map[int64]*table.RecycleHost)
+	for _, h := range hosts {
+		m[h.HostID] = h
+	}
+	res := make([]*table.RecycleHost, 0, len(ids))
+	for _, id := range ids {
+		if h, ok := m[id]; ok {
+			res = append(res, h)
+		}
+	}
+	return res
 }
 
 // executeFirstTransit 执行第一次中转：原业务 -> reborn
