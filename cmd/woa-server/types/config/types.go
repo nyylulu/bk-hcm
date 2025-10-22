@@ -494,30 +494,25 @@ type GetCapacityParam struct {
 }
 
 // Validate whether GetCapacityParam is valid
-// errKey: invalid key
-// err: detail reason why errKey is invalid
-func (param *GetCapacityParam) Validate() (string, error) {
+// err: detail reason why parameter is invalid
+func (param *GetCapacityParam) Validate() error {
 	if err := param.RequireType.Validate(); err != nil {
-		key := "require_type"
-		return key, err
+		return fmt.Errorf("require_type validation failed: %v", err)
 	}
 
 	if len(param.DeviceType) == 0 {
-		key := "device_type"
-		return key, fmt.Errorf("invalid %s, empty or non-exist", key)
+		return fmt.Errorf("device_type cannot be empty")
 	}
 
 	if len(param.Region) == 0 {
-		key := "region"
-		return key, fmt.Errorf("invalid %s, empty or non-exist", key)
+		return fmt.Errorf("region cannot be empty")
 	}
 
 	if len(param.Zone) == 0 {
-		key := "zone"
-		return key, fmt.Errorf("invalid %s, empty or non-exist", key)
+		return fmt.Errorf("zone cannot be empty")
 	}
 
-	return "", nil
+	return nil
 }
 
 // GetCapacityRst get resource apply capacity result
@@ -540,6 +535,71 @@ type CapacityInfo struct {
 type CapacityMaxInfo struct {
 	Key   string `json:"key"`
 	Value int64  `json:"value"`
+}
+
+// BatchGetCapacityParam 批量获取资源申请容量请求参数
+type BatchGetCapacityParam struct {
+	RequireType enumor.RequireType `json:"require_type"`
+	DeviceTypes []string           `json:"device_types"`
+	Region      string             `json:"region"`
+	Zones       []string           `json:"zones"`
+	Vpc         string             `json:"vpc"`
+	Subnet      string             `json:"subnet"`
+	// 计费模式
+	ChargeType cvmapi.ChargeType `json:"charge_type"`
+	// 是否忽略预测
+	IgnorePrediction bool  `json:"ignore_prediction"`
+	BizID            int64 `json:"bk_biz_id"`
+}
+
+// Validate 验证批量容量查询参数
+func (param *BatchGetCapacityParam) Validate() error {
+	if err := param.RequireType.Validate(); err != nil {
+		return fmt.Errorf("require_type validation failed: %w", err)
+	}
+
+	if len(param.DeviceTypes) == 0 {
+		return fmt.Errorf("device_types cannot be empty")
+	}
+	if len(param.DeviceTypes) > 100 {
+		return fmt.Errorf("device_types length cannot exceed 100")
+	}
+
+	if len(param.Region) == 0 {
+		return fmt.Errorf("region cannot be empty")
+	}
+
+	if len(param.Zones) == 0 {
+		return fmt.Errorf("zones cannot be empty, must specify at least one zone to query capacity")
+	}
+	if len(param.Zones) > 100 {
+		return fmt.Errorf("zones length cannot exceed 100")
+	}
+
+	if param.ChargeType != "" {
+		if err := param.ChargeType.Validate(); err != nil {
+			return fmt.Errorf("charge_type validation failed: %v", err)
+		}
+	}
+
+	return nil
+}
+
+// BatchGetCapacityRst 批量获取资源申请容量结果
+type BatchGetCapacityRst struct {
+	Count int64                `json:"count"`
+	Info  []*BatchCapacityInfo `json:"info"`
+}
+
+// BatchCapacityInfo 批量容量信息
+type BatchCapacityInfo struct {
+	DeviceType string             `json:"device_type"`
+	Region     string             `json:"region"`
+	Zone       string             `json:"zone"`
+	Vpc        string             `json:"vpc"`
+	Subnet     string             `json:"subnet"`
+	MaxNum     int64              `json:"max_num"`
+	MaxInfo    []*CapacityMaxInfo `json:"max_info"`
 }
 
 // UpdateCapacityParam update resource capacity info param
