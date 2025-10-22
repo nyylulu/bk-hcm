@@ -66,13 +66,13 @@ func (req *WoaDeviceTypePhysicalRelUpdateReq) Validate() error {
 
 // WoaDeviceTypePhysicalRelBatchCreateReq defines the request for batch creating woa device type physical rel records.
 type WoaDeviceTypePhysicalRelBatchCreateReq struct {
-	Records []WoaDeviceTypePhysicalRelCreateReq `json:"records"`
+	Records []WoaDeviceTypePhysicalRelCreateReq `json:"records" validate:"required,min=1,max=100"`
 }
 
 // Validate validates the WoaDeviceTypePhysicalRelBatchCreateReq.
 func (req *WoaDeviceTypePhysicalRelBatchCreateReq) Validate() error {
-	if len(req.Records) == 0 {
-		return errf.New(errf.InvalidParameter, "records is required")
+	if err := validator.Validate.Struct(req); err != nil {
+		return err
 	}
 	for _, record := range req.Records {
 		if err := record.Validate(); err != nil {

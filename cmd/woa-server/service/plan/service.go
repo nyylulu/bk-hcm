@@ -147,6 +147,10 @@ func (s *service) initPlanService(h *rest.Handler) {
 	h.Add("DeleteDeviceType", http.MethodDelete, "/plans/device_types/batch", s.DeleteDeviceType)
 	h.Add("SyncDeviceType", http.MethodPost, "/plans/device_types/sync", s.SyncDeviceType)
 
+	// woa device type physical rel
+	h.Add("CreateDeviceTypePhysicalRel", http.MethodPost, "/plans/device_type_physical_rels/batch/create",
+		s.CreateDeviceTypePhysicalRel)
+
 	// resource plan transfer quota
 	h.Add("GetTransferQuotaConfigs", http.MethodGet,
 		"/plans/resources/transfer_quotas/configs", s.GetTransferQuotaConfigs)
