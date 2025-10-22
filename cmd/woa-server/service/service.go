@@ -212,7 +212,7 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		return nil, err
 	}
 
-	dissolveLogics := disLogics.New(daoSet, cmdbCli, esCli, thirdCli, cc.WoaServer())
+	dissolveLogics := disLogics.New(daoSet, cmdbCli, esCli, thirdCli, cc.WoaServer(), configLogics, apiClientSet)
 
 	kt := core.NewBackendKit()
 	// Mongo开关打开才生成Client链接

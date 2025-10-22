@@ -713,26 +713,28 @@ func checkTotalDevice(_ *scheduler, _ *kit.Kit, order *types.ApplyTicket) (strin
 
 // checkRequireType check require type
 func checkRequireType(s *scheduler, kit *kit.Kit, order *types.ApplyTicket) (string, bool, error) {
-	if order.RequireType == enumor.RequireTypeGreenChannel {
+	switch order.RequireType {
+	case enumor.RequireTypeGreenChannel:
 		greenChannelConfig, err := s.gcLogics.GetConfigs(kit)
 		if err != nil {
 			return "", false, err
 		}
-
 		totalAppliedCore := uint(0)
 		for _, suborder := range order.Suborders {
 			totalAppliedCore += suborder.AppliedCore
 		}
-
 		if int64(totalAppliedCore) > greenChannelConfig.AuditThreshold {
 			return fmt.Sprintf("order %d apply core %d exceed green channel auto approval audit threshold %d",
 				order.OrderId, totalAppliedCore, greenChannelConfig.AuditThreshold), true, nil
 		}
+		return "", false, nil
 
+	case enumor.RequireTypeDissolve:
+		return "require type dissolve require approval", true, nil
+
+	default:
 		return "", false, nil
 	}
-
-	return "", false, nil
 }
 
 // checkResourceType ...

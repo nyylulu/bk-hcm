@@ -16,6 +16,7 @@ import (
 	"net/http"
 
 	"hcm/cmd/woa-server/logics/config"
+	"hcm/cmd/woa-server/logics/dissolve"
 	gclogics "hcm/cmd/woa-server/logics/green-channel"
 	planLogics "hcm/cmd/woa-server/logics/plan"
 	taskLogics "hcm/cmd/woa-server/logics/task"
@@ -37,6 +38,7 @@ func InitService(c *capability.Capability) {
 		authorizer:   c.Authorizer,
 		itsmClient:   c.ThirdCli.ITSM,
 		gcLogics:     c.GcLogic,
+		dissolveLogics: c.DissolveLogic,
 	}
 	h := rest.NewHandler()
 	h.Path("/task")
@@ -63,6 +65,7 @@ type service struct {
 	authorizer   auth.Authorizer
 	itsmClient   itsm.Client
 	gcLogics     gclogics.Logics
+	dissolveLogics dissolve.Logics
 }
 
 func (s *service) initOperationService(h *rest.Handler) {

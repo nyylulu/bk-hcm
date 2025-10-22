@@ -157,8 +157,8 @@ func (s *service) SyncRecycledHost(cts *rest.Contexts) (interface{}, error) {
 	return nil, nil
 }
 
-// CheckHostDissolveStatus check host dissolve status
-func (s *service) CheckHostDissolveStatus(cts *rest.Contexts) (interface{}, error) {
+// CheckBizHostDissolveStatus check business host dissolve status
+func (s *service) CheckBizHostDissolveStatus(cts *rest.Contexts) (interface{}, error) {
 	return s.checkHostDissolveStatus(cts, handler.ListBizAuthRes)
 }
 

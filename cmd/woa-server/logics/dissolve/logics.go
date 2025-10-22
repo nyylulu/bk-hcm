@@ -23,11 +23,14 @@ import (
 	"context"
 	"time"
 
+	"hcm/cmd/woa-server/logics/config"
+	dissolveconfig "hcm/cmd/woa-server/logics/dissolve/config"
 	"hcm/cmd/woa-server/logics/dissolve/host"
 	"hcm/cmd/woa-server/logics/dissolve/module"
 	dissolvetable "hcm/cmd/woa-server/logics/dissolve/table"
 	"hcm/pkg/api/core"
 	"hcm/pkg/cc"
+	"hcm/pkg/client"
 	"hcm/pkg/dal/dao"
 	"hcm/pkg/thirdparty"
 	"hcm/pkg/thirdparty/api-gateway/cmdb"
@@ -40,20 +43,23 @@ type Logics interface {
 	RecycledModule() module.RecycledModule
 	RecycledHost() host.RecycledHost
 	Table() dissolvetable.Table
+	Config() dissolveconfig.Config
 }
 
 type logics struct {
 	recycledModule module.RecycledModule
 	recycledHost   host.RecycledHost
 	table          dissolvetable.Table
+	config         dissolveconfig.Config
 }
 
 // New create a logics manager
 func New(dao dao.Set, cmdbCli cmdb.Client, esCli *esCli.EsCli, thirdCli *thirdparty.Client,
-	conf cc.WoaServerSetting) Logics {
+	conf cc.WoaServerSetting, configLogics config.Logics, cliSet *client.ClientSet) Logics {
 
 	recycledModule := module.New(dao)
 	recycledHost := host.New(dao, thirdCli, conf.ResDissolve.ProjectNames, conf.ResDissolve.ProjectIDs)
+	dissolveConfig := dissolveconfig.New(cliSet)
 	originDate := conf.ResDissolve.OriginDate
 	blacklist := conf.Blacklist
 
@@ -65,10 +71,13 @@ func New(dao dao.Set, cmdbCli cmdb.Client, esCli *esCli.EsCli, thirdCli *thirdpa
 		go wait.Until(workFunc, 30*time.Minute, context.Background())
 	}
 
+	table := dissolvetable.New(recycledModule, recycledHost, dissolveConfig, configLogics, cmdbCli, esCli, originDate,
+		blacklist)
 	return &logics{
 		recycledModule: recycledModule,
 		recycledHost:   recycledHost,
-		table:          dissolvetable.New(recycledModule, recycledHost, cmdbCli, esCli, originDate, blacklist),
+		table:          table,
+		config:         dissolveConfig,
 	}
 }
 
@@ -85,4 +94,9 @@ func (l *logics) RecycledHost() host.RecycledHost {
 // Table resource dissolve table interface
 func (l *logics) Table() dissolvetable.Table {
 	return l.table
+}
+
+// Config resource dissolve config interface
+func (l *logics) Config() dissolveconfig.Config {
+	return l.config
 }

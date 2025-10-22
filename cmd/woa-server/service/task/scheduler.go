@@ -644,9 +644,8 @@ func (s *service) validateDeviceTypeForGreenAndRoll(kt *kit.Kit, input *types.Ap
 
 // createApplyOrder creates apply order
 func (s *service) createApplyOrder(kt *kit.Kit, input *types.ApplyReq) (any, error) {
-	if err := s.validateDeviceTypeForGreenAndRoll(kt, input); err != nil {
-		logs.Errorf("failed to validate device type for green channel or roll server apply, err: %v, rid: %s", err,
-			kt.Rid)
+	if err := s.verifyAccordingToRequireType(kt, input); err != nil {
+		logs.Errorf("failed to verify according to require type, err: %v, rid: %s", err, kt.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
@@ -662,6 +661,53 @@ func (s *service) createApplyOrder(kt *kit.Kit, input *types.ApplyReq) (any, err
 	}
 
 	return rst, nil
+}
+
+func (s *service) verifyAccordingToRequireType(kt *kit.Kit, input *types.ApplyReq) error {
+	switch input.RequireType {
+	case enumor.RequireTypeRollServer, enumor.RequireTypeGreenChannel:
+		return s.validateDeviceTypeForGreenAndRoll(kt, input)
+	case enumor.RequireTypeDissolve:
+		return s.verifyBizDissolveQuota(kt, input)
+	default:
+		return nil
+	}
+}
+
+func (s *service) verifyBizDissolveQuota(kt *kit.Kit, input *types.ApplyReq) error {
+	if input.RequireType != enumor.RequireTypeDissolve {
+		return nil
+	}
+
+	// 查询业务机房裁撤可申请额度
+	bizID := input.BkBizId
+	bizSummaryMap, err := s.dissolveLogics.Table().ListBizCpuCoreSummary(kt, []int64{input.BkBizId})
+	if err != nil {
+		logs.Errorf("list biz dissolve cpu core summary failed, err: %v, bizID: %d, rid: %s", err, bizID, kt.Rid)
+		return err
+	}
+	summary, ok := bizSummaryMap[bizID]
+	if !ok {
+		logs.Errorf("can not find biz dissolve cpu core summary, bizID: %d, rid: %s", bizID, kt.Rid)
+		return fmt.Errorf("can not find biz dissolve cpu core summary, bizID: %d", bizID)
+	}
+	dissolveQuota := summary.TotalCore - summary.DeliveredCore
+
+	// 计算当前单据申请的CPU核数
+	var appliedCore int64
+	for _, subOrder := range input.Suborders {
+		appliedCore += int64(subOrder.AppliedCore)
+	}
+
+	// 判断申请的额度是否大于可申请额度
+	if appliedCore > dissolveQuota {
+		logs.Errorf("applied cpu core more than biz dissolve quota, applied: %d, quota: %d, bizID: %d, rid: %s",
+			appliedCore, dissolveQuota, bizID, kt.Rid)
+		return fmt.Errorf("申请的CPU核数超过机房裁撤可申请额度, 申请CPU核数: %d, 可申请额度: %d", appliedCore,
+			dissolveQuota)
+	}
+
+	return nil
 }
 
 // verifyResPlanDemand 资源预测余量校验
