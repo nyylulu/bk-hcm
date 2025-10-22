@@ -2,8 +2,8 @@ name: bk-hcm-oa
 apiVersion: v2
 description: A full stack chart for HCM Enterprise products.
 type: application
-version: 1.1.41
-appVersion: 1.8.5.12
+version: 1.1.42-alpha.1
+appVersion: 1.8.7.0-alpha.1
 dependencies:
   - name: common
     repository: https://charts.bitnami.com/bitnami

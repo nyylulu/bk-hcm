@@ -18,7 +18,7 @@
  */
 
 /*
-    SQLVER=9999,HCMVER=v9.9.9
+    SQLVER=0052,HCMVER=v1.8.7.0
     Notes:
     1. 为自研云CVM表添加bk_asset_id字段，从extension字段中提取固资号
     2. 清理extension字段中的bk_asset_id数据
@@ -49,6 +49,6 @@ where vendor = 'tcloud-ziyan'
   and JSON_EXTRACT(extension, '$.bk_asset_id') != '';
 
 CREATE OR REPLACE VIEW `hcm_version`(`hcm_ver`, `sql_ver`) AS
-SELECT 'v9.9.9' as `hcm_ver`, '9999' as `sql_ver`;
+SELECT 'v1.8.7.0' as `hcm_ver`, '0052' as `sql_ver`;
 
 COMMIT;

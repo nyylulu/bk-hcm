@@ -18,7 +18,7 @@
  */
 
 /*
-    SQLVER=9999,HCMVER=v9.9.9
+    SQLVER=0053,HCMVER=v1.8.7.0
 
     Notes:
     1. 为自研云负载均衡URL规则表添加业务ID和账号ID字段
@@ -43,6 +43,6 @@ WHERE
     tz.bk_biz_id = 0 OR tz.account_id = '';
 
 CREATE OR REPLACE VIEW `hcm_version`(`hcm_ver`, `sql_ver`) AS
-SELECT 'v9.9.9' as `hcm_ver`, '9999' as `sql_ver`;
+SELECT 'v1.8.7.0' as `hcm_ver`, '0053' as `sql_ver`;
 
 COMMIT;
