@@ -25,6 +25,7 @@ GET /api/v1/woa/plans/demands/{id}
   "data": {
     "demand_id": "0000001z",
     "expect_time": "2024-10-21",
+    "return_plan_time": "2025-01-01",
     "bk_biz_id": 111,
     "bk_biz_name": "业务",
     "dept_id": 1041,
@@ -67,35 +68,36 @@ GET /api/v1/woa/plans/demands/{id}
 
 #### data
 
-| 参数名称              | 参数类型    | 描述                                |
-|-------------------|---------|-----------------------------------|
-| demand_id         | string	 | 预测需求ID                            |
-| expect_time       | string  | 期望到货时间，格式为YYYY-MM-DD，例如2024-01-01 |
-| bk_biz_id         | int     | 业务ID                              |
-| bk_biz_name       | string  | 业务                                |
-| dept_id           | int     | 部门ID                              |
-| dept_name         | string  | 部门                                |
-| plan_product_id   | int     | 规划产品ID                            |
-| plan_product_name | string  | 规划产品                              |
-| op_product_id     | int     | 运营产品ID                            |
-| op_product_name   | string  | 运营产品                              |
-| obs_project       | string  | 项目类型                              |
-| area_id           | string  | 区域ID                              |
-| area_name         | string  | 区域名称                              |
-| region_id         | string  | 地区/城市ID                           |
-| region_name       | string  | 地区/城市                             |
-| zone_id           | string  | 可用区ID                             |
-| zone_name         | string  | 期望可用区                             |
-| plan_type         | string  | 计划类型                              |
-| core_type         | string  | 核心类型                              |
-| device_family     | string  | 机型族                               |
-| device_class      | string  | 机型类型                              |
-| device_type       | string  | 机型规格                              |
-| os                | string  | 实例数                               |
-| memory            | int     | 总内存（G）                            |
-| cpu_core          | int     | 总CPU（核）                           |
-| disk_size         | int     | 总云盘大小（G）                          |
-| disk_io           | int     | 单实例磁盘IO(MB/s)                     |
-| disk_type         | string  | 云盘类型                              |
-| disk_type_name    | string  | 云盘类型中文名                           |
-| res_mode          | string  | 资源模式，枚举：按机型、按机型族                  |
+| 参数名称              | 参数类型    | 描述                                                        |
+|-------------------|---------|-----------------------------------------------------------|
+| demand_id         | string	 | 预测需求ID                                                    |
+| expect_time       | string  | 期望到货时间，格式为YYYY-MM-DD，例如2024-01-01                         |
+| return_plan_time  | string  | 预期退回时间，格式为YYYY-MM-DD，例如2024-01-01（仅短租项目存在该字段，其他项目类型该字段为空） |
+| bk_biz_id         | int     | 业务ID                                                      |
+| bk_biz_name       | string  | 业务                                                        |
+| dept_id           | int     | 部门ID                                                      |
+| dept_name         | string  | 部门                                                        |
+| plan_product_id   | int     | 规划产品ID                                                    |
+| plan_product_name | string  | 规划产品                                                      |
+| op_product_id     | int     | 运营产品ID                                                    |
+| op_product_name   | string  | 运营产品                                                      |
+| obs_project       | string  | 项目类型                                                      |
+| area_id           | string  | 区域ID                                                      |
+| area_name         | string  | 区域名称                                                      |
+| region_id         | string  | 地区/城市ID                                                   |
+| region_name       | string  | 地区/城市                                                     |
+| zone_id           | string  | 可用区ID                                                     |
+| zone_name         | string  | 期望可用区                                                     |
+| plan_type         | string  | 计划类型                                                      |
+| core_type         | string  | 核心类型                                                      |
+| device_family     | string  | 机型族                                                       |
+| device_class      | string  | 机型类型                                                      |
+| device_type       | string  | 机型规格                                                      |
+| os                | string  | 实例数                                                       |
+| memory            | int     | 总内存（G）                                                    |
+| cpu_core          | int     | 总CPU（核）                                                   |
+| disk_size         | int     | 总云盘大小（G）                                                  |
+| disk_io           | int     | 单实例磁盘IO(MB/s)                                             |
+| disk_type         | string  | 云盘类型                                                      |
+| disk_type_name    | string  | 云盘类型中文名                                                   |
+| res_mode          | string  | 资源模式，枚举：按机型、按机型族                                          |
