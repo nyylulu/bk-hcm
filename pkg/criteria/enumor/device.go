@@ -117,3 +117,11 @@ func (t DiskSpec) Validate() error {
 
 	return nil
 }
+
+// DeviceFamily CVM机型族
+type DeviceFamily string
+
+const (
+	// DeviceFamilyStandard 标准型
+	DeviceFamilyStandard DeviceFamily = "标准型"
+)

@@ -34,6 +34,8 @@ import (
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/math"
 	"hcm/pkg/tools/uuid"
+
+	"github.com/shopspring/decimal"
 )
 
 // AdjustAbleRemainObj adjust able resource plan remained avail cpu core.
@@ -217,10 +219,10 @@ func (c *CrpTicketCreator) constructAddTransferAdjustReqParams(kt *kit.Kit, subT
 		willConsume := adjustObj.WillConsume
 
 		deviceCore := float64(adjustAbleD.CoreAmount) / adjustAbleD.CvmAmount
-		// 和CRP确认保留2位小数可以，但是肯定会存在误差
-		willChangeCvm, err := math.RoundToDecimalPlaces(float64(willConsume)/deviceCore, 2)
+		// 和CRP确认保留4位小数可以，但是肯定会存在误差
+		willChangeCvm, err := math.RoundToDecimalPlaces(float64(willConsume)/deviceCore, 4)
 		if err != nil {
-			logs.Errorf("failed to round change cvm to 2 decimal places, err: %v, crp_demand:%s, change cvm: %f, "+
+			logs.Errorf("failed to round change cvm to 4 decimal places, err: %v, crp_demand:%s, change cvm: %f, "+
 				"rid: %s", err, adjustAbleD.DemandId, float64(willConsume)/deviceCore, kt.Rid)
 			return nil, nil, err
 		}
@@ -773,12 +775,12 @@ func (c *CrpTicketCreator) constructTransferAppendDataToBiz(kt *kit.Kit, subTick
 	[]*cvmapi.AdjustUpdatedData, error) {
 
 	allAppendData := make([]*cvmapi.AdjustUpdatedData, 0)
-	for key, tranferCore := range transferTarget {
-		// 和CRP确认保留2位小数可以，但是肯定会存在误差
-		transferCVM, err := math.RoundToDecimalPlaces(float64(tranferCore)/deviceCore, 2)
+	for key, transferCore := range transferTarget {
+		// 和CRP确认保留4位小数可以，但是肯定会存在误差
+		transferCVM, err := math.RoundToDecimalPlaces(float64(transferCore)/deviceCore, 4)
 		if err != nil {
-			logs.Errorf("failed to round change cvm to 2 decimal places, err: %v, demand: %+v, change cvm: %f, "+
-				"rid: %s", err, key, float64(tranferCore)/deviceCore, kt.Rid)
+			logs.Errorf("failed to round change cvm to 4 decimal places, err: %v, demand: %+v, change cvm: %f, "+
+				"rid: %s", err, key, float64(transferCore)/deviceCore, kt.Rid)
 			return nil, err
 		}
 
@@ -812,6 +814,20 @@ func (c *CrpTicketCreator) constructTransferAppendDataToBiz(kt *kit.Kit, subTick
 			DiskTypeName:    key.Cbs.DiskTypeName,
 			// TODO 用户的云盘需求会在这里被丢弃，避免出现一对多的情况下多次提交CBS需求
 			AllDiskAmount: 0,
+		}
+
+		// TODO 临时处理：标准型机器使用核心数作为技术大类，因此可以直接以业务提单为准
+		if key.Cvm.DeviceFamily == string(enumor.DeviceFamilyStandard) {
+			expectDeviceCore := decimal.NewFromInt(key.Cvm.CpuCore).Div(key.Cvm.Os.Decimal).InexactFloat64()
+			transferCVM, err = math.RoundToDecimalPlaces(float64(transferCore)/expectDeviceCore, 4)
+			if err != nil {
+				logs.Errorf("failed to round change cvm to 4 decimal places, err: %v, demand: %+v, change cvm: %f, "+
+					"rid: %s", err, key, float64(transferCore)/expectDeviceCore, kt.Rid)
+				return nil, err
+			}
+			demandItem.InstanceType = key.Cvm.DeviceClass
+			demandItem.InstanceModel = key.Cvm.DeviceType
+			demandItem.CvmAmount = transferCVM
 		}
 
 		allAppendData = append(allAppendData, &cvmapi.AdjustUpdatedData{
