@@ -307,7 +307,8 @@ func (t *Transit) DealTransitTask2Transit(order *table.RecycleOrder, hosts []*ta
 	}
 
 	if len(abnormalIDs) > 0 {
-		if errUpdate := t.UpdateHostInfo(order, table.RecycleStageTransit, table.RecycleStatusTransitFailed); errUpdate != nil {
+		if errUpdate := t.UpdateHostInfo(order, table.RecycleStageTransit,
+			table.RecycleStatusTransitFailed); errUpdate != nil {
 			logs.Errorf("failed to update recycle host info, err: %v", errUpdate)
 		}
 		return &event.Event{Type: event.TransitFailed, Error: fmt.Errorf("hosts %v have abnormal status", abnormalIDs)}
