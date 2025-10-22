@@ -808,6 +808,7 @@ type GetRecycleHostReq struct {
 	OrderID    []uint64              `json:"order_id"`
 	SuborderID []string              `json:"suborder_id"`
 	BizID      []int64               `json:"bk_biz_id"`
+	BkAssetID  []string              `json:"bk_asset_id"`
 	DeviceType []string              `json:"device_type"`
 	Zone       []string              `json:"bk_zone_name"`
 	SubZone    []string              `json:"sub_zone"`
@@ -835,6 +836,10 @@ func (param *GetRecycleHostReq) Validate() error {
 
 	if len(param.BizID) == 0 {
 		return errors.New("bk_biz_id is required")
+	}
+
+	if len(param.BkAssetID) > pkg.BKMaxInstanceLimit {
+		return fmt.Errorf("bk_asset_id exceed limit %d", pkg.BKMaxInstanceLimit)
 	}
 
 	if len(param.DeviceType) > arrayLimit {
@@ -916,6 +921,12 @@ func (param *GetRecycleHostReq) GetFilter() (map[string]interface{}, error) {
 	if len(param.BizID) > 0 {
 		filter["bk_biz_id"] = mapstr.MapStr{
 			pkg.BKDBIN: param.BizID,
+		}
+	}
+
+	if len(param.BkAssetID) > 0 {
+		filter["asset_id"] = mapstr.MapStr{
+			pkg.BKDBIN: param.BkAssetID,
 		}
 	}
 

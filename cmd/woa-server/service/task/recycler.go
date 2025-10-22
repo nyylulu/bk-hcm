@@ -1211,7 +1211,7 @@ func (s *service) checkHostUworkTicketStatus(cts *rest.Contexts, authHandler han
 			return nil, errf.New(errf.InvalidParameter, "host info is invalid, can not find host asset id")
 		}
 
-		assetID := cvmInfos[bkHostID].Extension.BkAssetID
+		assetID := cvmInfos[bkHostID].BkAssetID
 		openTickets, err := s.logics.Recycler().CheckUworkOpenTicket(cts.Kit, assetID)
 		if err != nil {
 			logs.Errorf("failed to check uwork open ticket, err: %v, asset_id: %s, rid: %s", err, assetID,

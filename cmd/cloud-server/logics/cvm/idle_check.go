@@ -79,7 +79,7 @@ func (c *cvm) CvmIdleCheck(kt *kit.Kit, bkBizID int64, bkHostIDs []int64, source
 	ips := make([]string, 0, len(cvmList))
 	for _, one := range cvmList {
 		// 检查BkAssetID是否为空
-		if len(one.Extension.BkAssetID) == 0 {
+		if len(one.BkAssetID) == 0 {
 			logs.Errorf("BkAssetID is empty, cvm: %v, rid: %s", one, kt.Rid)
 			return "", "", fmt.Errorf("BkAssetID is empty")
 		}
@@ -88,7 +88,7 @@ func (c *cvm) CvmIdleCheck(kt *kit.Kit, bkBizID int64, bkHostIDs []int64, source
 			logs.Errorf("PrivateIPv4Addresses is empty, cvm: %v, rid: %s", one, kt.Rid)
 			return "", "", fmt.Errorf("PrivateIPv4Addresses is empty")
 		}
-		assetIDs = append(assetIDs, one.Extension.BkAssetID)
+		assetIDs = append(assetIDs, one.BkAssetID)
 		ips = append(ips, one.BaseCvm.PrivateIPv4Addresses[0])
 	}
 

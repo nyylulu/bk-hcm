@@ -293,6 +293,7 @@ func convertToHost(ccHost *cmdb.Host, accountID string, bizID int64) cvm.Cvm[cvm
 			BkBizID:              bizID,
 			BkHostID:             ccHost.BkHostID,
 			BkCloudID:            ccHost.BkCloudID,
+			BkAssetID:            ccHost.BkAssetID,
 			AccountID:            accountID,
 			Region:               ccHost.BkCloudRegion,
 			Zone:                 ccHost.BkCloudZone,
@@ -309,7 +310,6 @@ func convertToHost(ccHost *cmdb.Host, accountID string, bizID int64) cvm.Cvm[cvm
 			HostName:        ccHost.BkHostName,
 			SvrSourceTypeID: ccHost.SvrSourceTypeID,
 			SrvStatus:       ccHost.SrvStatus,
-			BkAssetID:       ccHost.BkAssetID,
 			SvrDeviceClass:  ccHost.SvrDeviceClass,
 			BkDisk:          ccHost.BkDisk,
 			BkCpu:           ccHost.BkCpu,
@@ -441,7 +441,7 @@ func isHostExtensionChange(cloud cvm.Cvm[cvm.TCloudZiyanHostExtension], db cvm.C
 		return true
 	}
 
-	if db.Extension.BkAssetID != cloud.Extension.BkAssetID {
+	if db.BkAssetID != cloud.BkAssetID {
 		return true
 	}
 

@@ -159,9 +159,9 @@ func (act BatchTaskCvmResetAction) resetTCloudZiyanCvm(kt *kit.Kit, detail coret
 
 	// update cmdb cvm srv_status
 	for _, cvm := range cvms {
-		if err = updateCMDBCvmOSAndSvrStatus(kt, cvm.Extension.BkAssetID, constant.ResetingSrvStatus, ""); err != nil {
+		if err = updateCMDBCvmOSAndSvrStatus(kt, cvm.BkAssetID, constant.ResetingSrvStatus, ""); err != nil {
 			logs.Errorf("update cmdb cvm os failed, err: %v, bkAssetID: %s, rid: %s",
-				err, cvm.Extension.BkAssetID, kt.Rid)
+				err, cvm.BkAssetID, kt.Rid)
 			return err
 		}
 	}
@@ -199,12 +199,12 @@ func (act BatchTaskCvmResetAction) resetTCloudZiyanCvm(kt *kit.Kit, detail coret
 	}
 	for _, cvm := range cvms {
 		// update cmdb cvm os info
-		if err = updateCMDBCvmOSAndSvrStatus(kt, cvm.Extension.BkAssetID, cvm.Extension.SrvStatus,
+		if err = updateCMDBCvmOSAndSvrStatus(kt, cvm.BkAssetID, cvm.Extension.SrvStatus,
 			newImageName); err != nil {
 
 			logs.Errorf("update cmdb cvm os failed, err: %v, bkAssetID: %s, cvmCloudID: %s, taskManageID: %s, "+
 				"flowID: %s, rid: %s", err, cvm.CloudID, detail.TaskManagementID, detail.FlowID,
-				cvm.Extension.BkAssetID, kt.Rid)
+				cvm.BkAssetID, kt.Rid)
 			return err
 		}
 	}
