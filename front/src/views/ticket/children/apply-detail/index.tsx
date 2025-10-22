@@ -3,7 +3,7 @@ import './index.scss';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import { useAccountStore } from '@/store';
 import { useRoute } from 'vue-router';
-import { APPLICATION_TYPE_MAP } from '../..//constants';
+import { APPLICATION_TYPE_MAP } from '@/views/ticket/constants';
 import Clb from './clb.vue';
 import useFormModel from '@/hooks/useFormModel';
 import routerAction from '@/router/utils/action';

@@ -27,7 +27,7 @@ spec:
             - "until telnet {{ template "bk-hcm.database.host" . }} {{ template "bk-hcm.database.port" . }}; do echo waiting for db {{ template "bk-hcm.database.host" . }}; sleep 2; done;"
       containers:
         - name: migrate-db
-          image: {{ .Values.global.imageRegistry }}/{{ .Values.dataservice.image.repository }}:v{{ default .Values.global.imageTag .Values.dataservice.image.tag }}
+          image: {{ default .Values.global.imageRegistry .Values.image.registry}}/{{ .Values.dataservice.image.repository }}:v{{ default .Values.image.tag .Values.dataservice.image.tag }}
           imagePullPolicy: {{ .Values.global.imagePullPolicy | quote }}
           command:
             - /data/hcm/sql-migrate

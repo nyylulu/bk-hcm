@@ -1,6 +1,7 @@
 import { ComputedRef, inject } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAccountStore, useBusinessStore } from '@/store';
+import { QueryRuleOPEnum } from '@/typings';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import { useTable } from '@/hooks/useTable/useTable';
@@ -45,6 +46,10 @@ export default () => {
         { name: t('已开启'), id: 1 },
         { name: t('未开启'), id: 0 },
       ],
+    },
+    {
+      id: 'id',
+      name: t('目标组ID'),
     },
   ];
   const tableColumns = [
@@ -91,7 +96,7 @@ export default () => {
     if (!item) return '请选择条件';
     if ('port' === item.id) {
       const port = parseInt(values[0].id, 10);
-      return 1 >= port && port <= 65535 ? true : '端口范围1-65535';
+      return port >= 1 && port <= 65535 ? true : '端口范围1-65535';
     }
     return true;
   };
@@ -102,6 +107,16 @@ export default () => {
       extra: {
         valueBehavior: 'all',
         validateValues,
+      },
+      conditionFormatterMapper: {
+        port: (value: string) => ({
+          field: 'port',
+          op: QueryRuleOPEnum.IN,
+          value: value
+            .split('|')
+            .map((port: string) => Number(port))
+            .filter((val: number) => !isNaN(val)),
+        }),
       },
     },
     tableOptions: {

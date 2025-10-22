@@ -88,4 +88,6 @@ const (
 	DeviceTypeAbsentInCRP int32 = 2000023
 	// SyncRepeatLockError CLB、安全组重复同步
 	SyncRepeatLockError int32 = 2000024
+	// ResourceUnassigned 资源未分配
+	ResourceUnassigned int32 = 2000025
 )
