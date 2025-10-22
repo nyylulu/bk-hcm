@@ -621,6 +621,12 @@ func (svc *lbSvc) BizUrlRuleBindTargetGroup(cts *rest.Contexts) (any, error) {
 			return nil, err
 		}
 		return taskManagementID, nil
+	case enumor.TCloudZiyan:
+		taskManagementID, err := svc.tcloudZiyanUrlBindTargetGroup(cts, bizID, req)
+		if err != nil {
+			return nil, err
+		}
+		return taskManagementID, nil
 	default:
 		return nil, fmt.Errorf("unsupport vendor for bind target group: %s", vendor)
 	}
@@ -782,6 +788,12 @@ func (svc *lbSvc) batchCreateUrlRuleWithoutTG(kt *kit.Kit, vendor enumor.Vendor,
 	switch vendor {
 	case enumor.TCloud:
 		createResp, err = svc.client.HCService().TCloud.Clb.BatchCreateUrlRule(kt, lblID, hcReq)
+		if err != nil {
+			logs.Errorf("fail to create tcloud url rule, err: %v, rid: %s", err, kt.Rid)
+			return nil, err
+		}
+	case enumor.TCloudZiyan:
+		createResp, err = svc.client.HCService().TCloudZiyan.Clb.BatchCreateUrlRule(kt, lblID, hcReq)
 		if err != nil {
 			logs.Errorf("fail to create tcloud url rule, err: %v, rid: %s", err, kt.Rid)
 			return nil, err

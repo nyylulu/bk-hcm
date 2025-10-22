@@ -83,6 +83,12 @@ func (act ListenerRuleUpdateHealthCheckAction) Run(kt run.ExecuteKit, params any
 				err, opt, kt.Kit().Rid)
 			return nil, err
 		}
+	case enumor.TCloudZiyan:
+		if err := act.updateTCloudZiyanUrlRule(kt.Kit(), opt); err != nil {
+			logs.Errorf("ListenerRuleUpdateHealthCheckAction update tcloud url rule failed, err: %v, params: %+v, rid: %s",
+				err, opt, kt.Kit().Rid)
+			return nil, err
+		}
 	}
 
 	return nil, nil
@@ -137,5 +143,49 @@ func (act ListenerRuleUpdateHealthCheckAction) updateTCloudUrlRule(kt *kit.Kit,
 func (act ListenerRuleUpdateHealthCheckAction) Rollback(kt run.ExecuteKit, params any) error {
 	logs.Infof(" ----------- ListenerRuleUpdateHealthCheckAction Rollback -----------, params: %+v, rid: %s",
 		params, kt.Kit().Rid)
+	return nil
+}
+
+// updateTCloudZiyanUrlRule 更新自研云CLB规则的健康检查配置
+func (act ListenerRuleUpdateHealthCheckAction) updateTCloudZiyanUrlRule(kt *kit.Kit,
+	opt *ListenerRuleUpdateHealthCheckOption) error {
+
+	listReq := &core.ListReq{
+		Filter: tools.ExpressionAnd(tools.RuleEqual("cloud_id", opt.CloudRuleID)),
+		Page:   core.NewDefaultBasePage(),
+	}
+	resp, err := actcli.GetDataService().TCloudZiyan.LoadBalancer.ListUrlRule(kt, listReq)
+	if err != nil {
+		return err
+	}
+	if len(resp.Details) == 0 {
+		logs.Errorf("ListenerRuleUpdateHealthCheckAction update url rule failed, "+
+			"rule not found, params: %+v, rid: %s", opt, kt.Rid)
+		return errf.New(errf.RecordNotFound, "url rule not found")
+	}
+
+	rule := resp.Details[0]
+	switch rule.RuleType {
+	case enumor.Layer7RuleType:
+		req := &hclb.TCloudRuleUpdateReq{
+			HealthCheck: opt.HealthCheck,
+		}
+		err = actcli.GetHCService().TCloudZiyan.Clb.UpdateUrlRule(kt, rule.LblID, rule.ID, req)
+		if err != nil {
+			logs.Errorf("ListenerRuleUpdateHealthCheckAction update url rule failed, err: %v, params: %+v, rid: %s",
+				err, opt, kt.Rid)
+			return err
+		}
+	case enumor.Layer4RuleType:
+		req := &hclb.HealthCheckUpdateReq{
+			HealthCheck: opt.HealthCheck,
+		}
+		err = actcli.GetHCService().TCloudZiyan.Clb.UpdateListenerHealthCheck(kt, rule.LblID, req)
+		if err != nil {
+			logs.Errorf("ListenerRuleUpdateHealthCheckAction update url rule failed, err: %v, params: %+v, rid: %s",
+				err, opt, kt.Rid)
+			return err
+		}
+	}
 	return nil
 }
