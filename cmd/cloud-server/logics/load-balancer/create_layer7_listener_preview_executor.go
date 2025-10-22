@@ -210,6 +210,13 @@ func (c *CreateLayer7ListenerPreviewExecutor) validateWithDB(kt *kit.Kit, cloudI
 
 func (c *CreateLayer7ListenerPreviewExecutor) validateListener(kt *kit.Kit, detail *CreateLayer7ListenerDetail) error {
 
+	//校验https协议是否有证书
+	if detail.Protocol == enumor.HttpsProtocol {
+		if err := c.validateCert(kt, detail); err != nil {
+			return err
+		}
+	}
+
 	switch c.vendor {
 	case enumor.TCloud:
 		listeners, err := c.getTCloudListenersByPort(kt, detail.CloudClbID, detail.ListenerPorts[0])
