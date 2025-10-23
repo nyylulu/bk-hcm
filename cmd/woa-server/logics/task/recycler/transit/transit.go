@@ -404,7 +404,7 @@ func (t *Transit) getHostsByIDs(hosts []*table.RecycleHost, ids []int64) []*tabl
 	return res
 }
 
-// executeFirstTransit 执行第一次中转：原业务 -> reborn
+// transferToRebornBiz 执行第一次中转：原业务 -> reborn
 func (t *Transit) transferToRebornBiz(kt *kit.Kit, order *table.RecycleOrder, hosts []*table.RecycleHost) *event.Event {
 	hostIds := make([]int64, 0)
 	ips := make([]string, 0)
@@ -415,7 +415,7 @@ func (t *Transit) transferToRebornBiz(kt *kit.Kit, order *table.RecycleOrder, ho
 
 	// transfer hosts to reborn-_CR中转
 	if err := t.transferHost2CrTransit(kt, hostIds, order.BizID); err != nil {
-		logs.Errorf("recycler:logics:cvm:executeFirstTransit:failed to transfer host to CR transit module, err: %v", err)
+		logs.Errorf("recycler:logics:cvm:transferToRebornBiz:failed to transfer host to CR transit module, err: %v", err)
 		if errUpdate := t.UpdateHostInfo(order, table.RecycleStageTransit,
 			table.RecycleStatusTransitFailed); errUpdate != nil {
 			logs.Errorf("failed to update recycle host info, err: %v", errUpdate)
@@ -434,7 +434,7 @@ func (t *Transit) transferToRebornBiz(kt *kit.Kit, order *table.RecycleOrder, ho
 	// shield TMP alarms
 	if err := t.shieldTMPAlarm(ips); err != nil {
 		// add shield config may fail, ignore it
-		logs.Warnf("recycler:logics:cvm:executeFirstTransit:failed to add shield TMP alarm config, "+
+		logs.Warnf("recycler:logics:cvm:transferToRebornBiz:failed to add shield TMP alarm config, "+
 			"err: %v, ips: %v", err, ips)
 	}
 
@@ -446,7 +446,7 @@ func (t *Transit) transferToRebornBiz(kt *kit.Kit, order *table.RecycleOrder, ho
 	return &event.Event{Type: event.TransitSuccess, Error: nil}
 }
 
-// executeSecondTransit 执行第二次中转：reborn -> 原业务
+// transferToOriginBiz 执行第二次中转：reborn -> 原业务
 func (t *Transit) transferToOriginBiz(kt *kit.Kit, order *table.RecycleOrder, hosts []*table.RecycleHost) *event.Event {
 	// transfer hosts from reborn-_CR中转 to destBiz-CR_IEG_资源服务系统专用退回中转勿改勿删
 	// reborn biz id is 213, the id of its module "_CR中转" is 5069670
@@ -454,7 +454,7 @@ func (t *Transit) transferToOriginBiz(kt *kit.Kit, order *table.RecycleOrder, ho
 	srcModuleId := recovertask.CrRelayModuleId
 
 	if err := t.TransferHost2BizTransit(kt, hosts, srcBizId, srcModuleId, order.BizID); err != nil {
-		logs.Errorf("recycler:logics:cvm:executeSecondTransit:failed,failed to transfer host to biz's "+
+		logs.Errorf("recycler:logics:cvm:transferToOriginBiz:failed,failed to transfer host to biz's "+
 			"CR transit module in CMDB, err: %v, srcBizId: %d, bizID: %d", err, srcBizId, order.BizID)
 		if errUpdate := t.UpdateHostInfo(order, table.RecycleStageTransit,
 			table.RecycleStatusTransitFailed); errUpdate != nil {
