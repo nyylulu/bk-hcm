@@ -35,7 +35,7 @@ export default defineComponent({
       requireType: '',
       suborderId: '',
       dateRange: applicationTime(),
-      assetId: '',
+      assetId: [],
     });
 
     const { selections, handleSelectionChange } = useSelection();
@@ -83,7 +83,7 @@ export default defineComponent({
               ['ip', 'in', formModel.ip],
               ['update_at', 'd>=', formModel.dateRange[0]],
               ['update_at', 'd<=', formModel.dateRange[1]],
-              ['asset_id', '=', formModel.assetId],
+              ['asset_id', 'in', formModel.assetId],
             ]),
             page: { start: 0, limit: 10 },
           },
@@ -167,7 +167,16 @@ export default defineComponent({
             },
             {
               title: t('固资号'),
-              content: <Input v-model={formModel.assetId} clearable placeholder={t('请输入固资号')} />,
+              content: (
+                <TagInput
+                  v-model={formModel.assetId}
+                  allow-create
+                  collapse-tags
+                  allow-auto-match
+                  pasteFn={(v) => v.split(/\r\n|\n|\r/).map((tag) => ({ id: tag, name: tag }))}
+                  placeholder='请输入固资号'
+                />
+              ),
             },
           ]}
         />
