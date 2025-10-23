@@ -597,7 +597,7 @@ func (r *Returner) transferHost2BizRecycle(kt *kit.Kit, hostIDs []int64, bizID i
 
 // getBizRecycleModuleID get business recycle module ID
 func (r *Returner) getBizRecycleModuleID(kt *kit.Kit, bizID int64) (int64, error) {
-	moduleID, err := r.cmdbCli.GetBizInternalModuleID(kt, bizID)
+	moduleID, err := r.cmdbCli.GetBizRecycleModuleID(kt, bizID)
 	if err != nil {
 		logs.Errorf("failed to get biz internal module, err: %v", err)
 		return 0, fmt.Errorf("failed to get biz internal module, err: %v", err)

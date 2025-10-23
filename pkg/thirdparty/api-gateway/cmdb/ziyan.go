@@ -42,8 +42,8 @@ type ZiyanCmdbClient interface {
 	GetHostBizIds(kt *kit.Kit, hostIds []int64) (map[int64]int64, error)
 	// GetBizInternalModule get business's internal module
 	GetBizInternalModule(kt *kit.Kit, req *GetBizInternalModuleReq) (*BizInternalModuleRespRst, error)
-	// GetBizInternalModuleID get business's internal module id
-	GetBizInternalModuleID(kt *kit.Kit, bizID int64) (int64, error)
+	// GetBizRecycleModuleID get business's recycle module id (renamed from GetBizInternalModuleID)
+	GetBizRecycleModuleID(kt *kit.Kit, bizID int64) (int64, error)
 
 	// ListHost same as ListHostWithoutBiz
 	ListHost(kt *kit.Kit, req *ListHostReq) (*ListHostResult, error)
@@ -295,8 +295,8 @@ func (c *cmdbApiGateWay) GetBizInternalModule(kt *kit.Kit, req *GetBizInternalMo
 		rest.GET, kt, req, "/topo/internal/tencent/%d", req.BkBizID)
 }
 
-// GetBizInternalModuleID get business's internal module ID
-func (c *cmdbApiGateWay) GetBizInternalModuleID(kt *kit.Kit, bizID int64) (int64, error) {
+// GetBizRecycleModuleID get business's recycle module ID (renamed from GetBizInternalModuleID)
+func (c *cmdbApiGateWay) GetBizRecycleModuleID(kt *kit.Kit, bizID int64) (int64, error) {
 	req := &GetBizInternalModuleReq{
 		BkBizID: bizID,
 	}

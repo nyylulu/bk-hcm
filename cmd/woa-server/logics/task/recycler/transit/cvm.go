@@ -90,7 +90,7 @@ func (t *Transit) dealTransitTask2TransitCvm(kt *kit.Kit, order *table.RecycleOr
 	}
 
 	// get biz's module "待回收"
-	moduleID, err := t.cc.GetBizInternalModuleID(kt, order.BizID)
+	moduleID, err := t.cc.GetBizRecycleModuleID(kt, order.BizID)
 	if err != nil {
 		logs.Errorf("recycler:logics:cvm:dealTransitTask2TransitCvm:failed, failed to get biz %d recycle module id, "+
 			"err: %v, subOrderId: %s", order.BizID, err, order.SuborderID)

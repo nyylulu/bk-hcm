@@ -43,6 +43,20 @@ import (
 	"hcm/pkg/tools/slice"
 )
 
+// HostTransitStatus 主机转移状态
+type HostTransitStatus string
+
+const (
+	// HostTransitStatusCompleted 转移完成
+	HostTransitStatusCompleted HostTransitStatus = "completed"
+	// HostTransitStatusTransitToOrigin 需要转移到原始业务
+	HostTransitStatusTransitToOrigin HostTransitStatus = "transit_to_origin"
+	// HostTransitStatusTransitToReborn 需要转移到reborn业务
+	HostTransitStatusTransitToReborn HostTransitStatus = "transit_to_reborn"
+	// HostTransitStatusAbnormal 异常情况
+	HostTransitStatusAbnormal HostTransitStatus = "abnormal"
+)
+
 // Host2CrTransitDefaultBatchSize once 100 hosts at most, if not specified, use 10
 const Host2CrTransitDefaultBatchSize = 10
 
@@ -268,19 +282,19 @@ func (t *Transit) DealTransitTask2Transit(order *table.RecycleOrder, hosts []*ta
 	}
 
 	completedIDs := make([]int64, 0)
-	toRebornIDs := make([]int64, 0)
-	toOriginIDs := make([]int64, 0)
+	needSecondTransferIDs := make([]int64, 0)
+	needFirstTransferIDs := make([]int64, 0)
 	abnormalIDs := make([]int64, 0)
 	for _, hid := range hostIds {
 		s := statusMap[hid]
 		switch s {
-		case "completed":
+		case HostTransitStatusCompleted:
 			completedIDs = append(completedIDs, hid)
-		case "transit_to_reborn":
-			toRebornIDs = append(toRebornIDs, hid)
-		case "transit_to_origin":
-			toOriginIDs = append(toOriginIDs, hid)
-		default:
+		case HostTransitStatusTransitToOrigin:
+			needSecondTransferIDs = append(needSecondTransferIDs, hid)
+		case HostTransitStatusTransitToReborn:
+			needFirstTransferIDs = append(needFirstTransferIDs, hid)
+		case HostTransitStatusAbnormal:
 			abnormalIDs = append(abnormalIDs, hid)
 		}
 	}
@@ -289,19 +303,19 @@ func (t *Transit) DealTransitTask2Transit(order *table.RecycleOrder, hosts []*ta
 		logs.Infof("hosts %v already in target module of biz %d, skip", completedIDs, order.BizID)
 	}
 
-	if len(toRebornIDs) > 0 {
-		firstTransitHosts := t.getHostsByIDs(hosts, toRebornIDs)
-		if ev := t.transferToRebornBiz(kt, order, firstTransitHosts); ev != nil {
-			return ev
-		}
-		if ev := t.transferToOriginBiz(kt, order, firstTransitHosts); ev != nil {
+	if len(needSecondTransferIDs) > 0 {
+		secondTransitHosts := t.getHostsByIDs(hosts, needSecondTransferIDs)
+		if ev := t.transferToOriginBiz(kt, order, secondTransitHosts); ev != nil {
 			return ev
 		}
 	}
 
-	if len(toOriginIDs) > 0 {
-		secondTransitHosts := t.getHostsByIDs(hosts, toOriginIDs)
-		if ev := t.transferToOriginBiz(kt, order, secondTransitHosts); ev != nil {
+	if len(needFirstTransferIDs) > 0 {
+		firstTransitHosts := t.getHostsByIDs(hosts, needFirstTransferIDs)
+		if ev := t.transferToRebornBiz(kt, order, firstTransitHosts); ev != nil {
+			return ev
+		}
+		if ev := t.transferToOriginBiz(kt, order, firstTransitHosts); ev != nil {
 			return ev
 		}
 	}
@@ -317,62 +331,60 @@ func (t *Transit) DealTransitTask2Transit(order *table.RecycleOrder, hosts []*ta
 	return &event.Event{Type: event.TransitSuccess, Error: nil}
 }
 
-func createHostIDMap(result *cmdb.ListBizHostResult) map[int64]bool {
-	hostMap := make(map[int64]bool)
-	for _, h := range result.Info {
-		hostMap[h.BkHostID] = true
-	}
-	return hostMap
-}
-
 // getHostStatusInfo 批量获取主机状态信息
-func (t *Transit) getHostStatusInfo(kt *kit.Kit, hostIds []int64, targetBizID int64) (map[int64]string, error) {
-	status := make(map[int64]string)
-	// 目标业务、reborn 业务
-	targetBizResult, err := t.getBizHost(kt, targetBizID, hostIds)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get target biz hosts, err: %v", err)
-	}
-	rebornBizResult, err := t.getBizHost(kt, recovertask.RebornBizId, hostIds)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get reborn biz hosts, err: %v", err)
-	}
-
-	targetBizHosts := createHostIDMap(targetBizResult)
-	rebornHosts := createHostIDMap(rebornBizResult)
-
-	// 目标模块
-	targetModuleHosts := make(map[int64]bool)
-	targetModuleID, err := t.cc.GetBizInternalModuleID(kt, targetBizID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get target module id, err: %v", err)
-	}
+func (t *Transit) getHostStatusInfo(kt *kit.Kit, hostIds []int64, targetBizID int64) (map[int64]HostTransitStatus, error) {
+	status := make(map[int64]HostTransitStatus)
 	relReq := &cmdb.HostModuleRelationParams{HostID: hostIds}
+	// 获取主机与业务模块的关系
 	relResp, err := t.cc.FindHostBizRelations(kt, relReq)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get host relations, err: %v", err)
 	}
 	relations := cvt.SliceToPtr(cvt.PtrToVal(relResp))
+
+	targetRecycleModuleID, err := t.cc.GetBizRecycleModuleID(kt, targetBizID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get target recycle module id, err: %v", err)
+	}
+
+	rebornRecycleModuleID, err := t.cc.GetBizRecycleModuleID(kt, recovertask.RebornBizId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get reborn recycle module id, err: %v", err)
+	}
+
+	hostBizModuleMap := make(map[int64]map[int64]int64)
 	for _, rel := range relations {
-		if rel.BizID == targetBizID && rel.BkModuleID == targetModuleID {
-			targetModuleHosts[rel.HostID] = true
+		if hostBizModuleMap[rel.HostID] == nil {
+			hostBizModuleMap[rel.HostID] = make(map[int64]int64)
 		}
+		hostBizModuleMap[rel.HostID][rel.BizID] = rel.BkModuleID
 	}
 
 	for _, hid := range hostIds {
-		if targetModuleHosts[hid] {
-			status[hid] = "completed"
+		hostBizModules := hostBizModuleMap[hid]
+
+		// 在reborn业务的目标模块
+		if rebornModuleID, exists := hostBizModules[recovertask.RebornBizId]; exists {
+			if rebornModuleID != rebornRecycleModuleID {
+				status[hid] = HostTransitStatusTransitToOrigin
+				continue
+			}
+		}
+
+		// 在原始业务的待回收模块
+		if originModuleID, exists := hostBizModules[targetBizID]; exists {
+			if originModuleID == targetRecycleModuleID {
+				status[hid] = HostTransitStatusTransitToReborn
+				continue
+			}
+		}
+
+		if len(hostBizModules) == 0 {
+			status[hid] = HostTransitStatusCompleted
 			continue
 		}
-		if targetBizHosts[hid] {
-			status[hid] = "transit_to_reborn"
-			continue
-		}
-		if rebornHosts[hid] {
-			status[hid] = "transit_to_origin"
-			continue
-		}
-		status[hid] = "abnormal"
+
+		status[hid] = HostTransitStatusAbnormal
 	}
 	return status, nil
 }
