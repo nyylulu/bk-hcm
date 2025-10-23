@@ -379,6 +379,7 @@ func (c *Controller) approveResPlanTicketAdmin(kt *kit.Kit, subTicket *rpst.ResP
 	adminAuditStatus := enumor.RPAdminAuditStatusRejected
 	if cvt.PtrToVal(req.Approval) {
 		// 审批通过
+		ticketStatus = enumor.RPSubTicketStatusAuditing
 		adminAuditStatus = enumor.RPAdminAuditStatusDone
 		if !cvt.PtrToVal(req.UseTransferPool) {
 			// 不使用中转池，根据单据需求情况修改子单类型
