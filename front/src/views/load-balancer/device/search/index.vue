@@ -103,7 +103,7 @@ watch(
   },
 );
 
-const conditionField: ModelPropertySearch[] = [
+const conditionField = computed<ModelPropertySearch[]>(() => [
   {
     id: 'account_id',
     type: 'account',
@@ -239,7 +239,7 @@ const conditionField: ModelPropertySearch[] = [
       pasteFn: handlePaste,
     },
   },
-];
+]);
 </script>
 
 <template>
