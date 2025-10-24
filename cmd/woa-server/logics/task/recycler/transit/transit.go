@@ -285,17 +285,17 @@ func (t *Transit) DealTransitTask2Transit(order *table.RecycleOrder, hosts []*ta
 	needSecondTransferIDs := make([]int64, 0)
 	needFirstTransferIDs := make([]int64, 0)
 	abnormalIDs := make([]int64, 0)
-	for _, hid := range hostIds {
-		s := statusMap[hid]
+	for _, hostId := range hostIds {
+		s := statusMap[hostId]
 		switch s {
 		case HostTransitStatusCompleted:
-			completedIDs = append(completedIDs, hid)
+			completedIDs = append(completedIDs, hostId)
 		case HostTransitStatusTransitToOrigin:
-			needSecondTransferIDs = append(needSecondTransferIDs, hid)
+			needSecondTransferIDs = append(needSecondTransferIDs, hostId)
 		case HostTransitStatusTransitToReborn:
-			needFirstTransferIDs = append(needFirstTransferIDs, hid)
+			needFirstTransferIDs = append(needFirstTransferIDs, hostId)
 		case HostTransitStatusAbnormal:
-			abnormalIDs = append(abnormalIDs, hid)
+			abnormalIDs = append(abnormalIDs, hostId)
 		}
 	}
 
@@ -347,44 +347,37 @@ func (t *Transit) getHostStatusInfo(kt *kit.Kit, hostIds []int64, targetBizID in
 		return nil, fmt.Errorf("failed to get target recycle module id, err: %v", err)
 	}
 
-	rebornRecycleModuleID, err := t.cc.GetBizRecycleModuleID(kt, recovertask.RebornBizId)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get reborn recycle module id, err: %v", err)
-	}
-
-	hostBizModuleMap := make(map[int64]map[int64]int64)
+	hostBizModuleMap := make(map[int64]*cmdb.HostTopoRelation)
 	for _, rel := range relations {
-		if hostBizModuleMap[rel.HostID] == nil {
-			hostBizModuleMap[rel.HostID] = make(map[int64]int64)
-		}
-		hostBizModuleMap[rel.HostID][rel.BizID] = rel.BkModuleID
+		hostBizModuleMap[rel.HostID] = rel
 	}
 
-	for _, hid := range hostIds {
-		hostBizModules := hostBizModuleMap[hid]
+	for _, hostId := range hostIds {
+		hostBizRel := hostBizModuleMap[hostId]
 
-		// 在reborn业务的目标模块
-		if rebornModuleID, exists := hostBizModules[recovertask.RebornBizId]; exists {
-			if rebornModuleID != rebornRecycleModuleID {
-				status[hid] = HostTransitStatusTransitToOrigin
+		// 主机在reborn业务
+		if hostBizRel != nil && hostBizRel.BizID == recovertask.RebornBizId {
+			if hostBizRel.BkModuleID == recovertask.CrRelayModuleId {
+				status[hostId] = HostTransitStatusTransitToOrigin
 				continue
 			}
-		}
-
-		// 在原始业务的待回收模块
-		if originModuleID, exists := hostBizModules[targetBizID]; exists {
-			if originModuleID == targetRecycleModuleID {
-				status[hid] = HostTransitStatusTransitToReborn
-				continue
-			}
-		}
-
-		if len(hostBizModules) == 0 {
-			status[hid] = HostTransitStatusCompleted
+			status[hostId] = HostTransitStatusAbnormal
 			continue
 		}
 
-		status[hid] = HostTransitStatusAbnormal
+		if hostBizRel != nil && hostBizRel.BizID == targetBizID {
+			if hostBizRel.BkModuleID == targetRecycleModuleID {
+				status[hostId] = HostTransitStatusTransitToReborn
+				continue
+			}
+		}
+
+		if hostBizRel == nil {
+			status[hostId] = HostTransitStatusCompleted
+			continue
+		}
+
+		status[hostId] = HostTransitStatusAbnormal
 	}
 	return status, nil
 }
