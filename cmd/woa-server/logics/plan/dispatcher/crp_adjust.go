@@ -23,9 +23,12 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"hcm/cmd/woa-server/logics/plan/fetcher"
 	ptypes "hcm/cmd/woa-server/types/plan"
+	"hcm/pkg/cc"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	rpt "hcm/pkg/dal/table/resource-plan/res-plan-ticket"
 	"hcm/pkg/kit"
@@ -134,6 +137,10 @@ func (c *CrpTicketCreator) CreateCRPTicket(kt *kit.Kit, subTicket *ptypes.SubTic
 		logs.Errorf("failed to adjust cvm & cbs plan order, subTicketID: %s, code: %d, msg: %s, req: %v, "+
 			"crp_trace: %s, rid: %s", subTicket.ID, resp.Error.Code, resp.Error.Message, cvt.PtrToVal(adjustReq),
 			resp.TraceId, kt.Rid)
+		if strings.Contains(resp.Error.Message, constant.CRPResPlanDemandIsOverLimit) {
+			return "", fmt.Errorf(constant.CRPResPlanDemandIsOverLimitMessage,
+				strings.Join(cc.WoaServer().ResPlan.CRPOverLimitContact, ","))
+		}
 		return "", fmt.Errorf("failed to create crp ticket, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
 	}
 

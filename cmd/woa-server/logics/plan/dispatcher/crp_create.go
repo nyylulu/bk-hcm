@@ -26,6 +26,7 @@ import (
 
 	ptypes "hcm/cmd/woa-server/types/plan"
 	rpproto "hcm/pkg/api/data-service/resource-plan"
+	"hcm/pkg/cc"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
@@ -93,6 +94,10 @@ func (c *CrpTicketCreator) createAddCrpTicket(kt *kit.Kit, subTicket *ptypes.Sub
 	if resp.Error.Code != 0 {
 		logs.Errorf("failed to add cvm & cbs plan order, code: %d, msg: %s, crp_trace: %s, "+
 			"sub_ticket_id: %s, rid: %s", resp.Error.Code, resp.Error.Message, resp.TraceId, subTicket.ID, kt.Rid)
+		if strings.Contains(resp.Error.Message, constant.CRPResPlanDemandIsOverLimit) {
+			return "", fmt.Errorf(constant.CRPResPlanDemandIsOverLimitMessage,
+				strings.Join(cc.WoaServer().ResPlan.CRPOverLimitContact, ","))
+		}
 		return "", fmt.Errorf("failed to create crp ticket, code: %d, msg: %s", resp.Error.Code,
 			resp.Error.Message)
 	}

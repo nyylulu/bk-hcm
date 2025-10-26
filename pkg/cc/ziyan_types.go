@@ -793,6 +793,7 @@ type ResPlan struct {
 	ExpireNotification   ResPlanExpireNotice  `yaml:"expireNotification"`
 	RefreshTransferQuota ResPlanTransferQuota `yaml:"refreshTransferQuota"`
 	AdminAuditor         []string             `yaml:"adminAuditor"`
+	CRPOverLimitContact  []string             `yaml:"crpOverLimitContact"`
 }
 
 // ResPlanExpireNotice 资源预测过期通知配置
