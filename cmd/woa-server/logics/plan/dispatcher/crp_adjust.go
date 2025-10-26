@@ -22,6 +22,7 @@ package dispatcher
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 
 	"hcm/cmd/woa-server/logics/plan/fetcher"
@@ -236,6 +237,11 @@ func (c *CrpTicketCreator) constructAddTransferAdjustReqParams(kt *kit.Kit, subT
 			AdjustType:          string(enumor.CrpAdjustTypeUpdate),
 			CvmCbsPlanQueryItem: adjustAbleD.Clone(),
 		}
+		// 短租项目预测需要提供isAutoReturnPlan参数
+		if adjustAbleD.ProjectName == enumor.ObsProjectShortLease {
+			srcItem.IsAutoReturnPlan = true
+			updatedItem.IsAutoReturnPlan = true
+		}
 		// transferItem为转移到本业务的预测
 		transferItems, err := c.constructTransferAppendDataToBiz(kt, subTicket, deviceCore, adjustAbleD,
 			adjustObj.TransferTarget)
@@ -302,6 +308,11 @@ func (c *CrpTicketCreator) constructDelTransferAdjustReqParams(kt *kit.Kit, subT
 			AdjustType:          string(enumor.CrpAdjustTypeUpdate),
 			CvmCbsPlanQueryItem: adjustAbleD.Clone(),
 		}
+		// 短租项目预测需要提供isAutoReturnPlan参数
+		if adjustAbleD.ProjectName == enumor.ObsProjectShortLease {
+			srcItem.IsAutoReturnPlan = true
+			updatedItem.IsAutoReturnPlan = true
+		}
 		// transferItem为转移到中转池的预测
 		transferItems := c.constructTransferAppendDataToPool(adjustAbleD, willChangeCvm, willConsume)
 
@@ -366,6 +377,12 @@ func (c *CrpTicketCreator) constructNormalCrpAdjustReqParams(kt *kit.Kit, subTic
 			CvmCbsPlanQueryItem: adjustAbleD.Clone(),
 		}
 
+		// 短租项目预测需要提供isAutoReturnPlan参数
+		if adjustAbleD.ProjectName == enumor.ObsProjectShortLease {
+			srcItem.IsAutoReturnPlan = true
+			updatedItem.IsAutoReturnPlan = true
+		}
+
 		// if adjust type is update, updated item are normal.
 		// if adjust type is delay, updated will fill parameter TimeAdjustCvmAmount with OriginOs.
 		// if adjust type is cancel, error.
@@ -375,6 +392,7 @@ func (c *CrpTicketCreator) constructNormalCrpAdjustReqParams(kt *kit.Kit, subTic
 			updatedItem.CvmAmount = max(updatedItem.CvmAmount-willChangeCvm, 0)
 			updatedItem.CoreAmount -= willConsume
 		case enumor.CrpAdjustTypeDelay:
+			updatedItem.ReturnPlanTime = ""
 			updatedItem.UseTime = adjustObj.ExpectTime
 			updatedItem.TimeAdjustCvmAmount = willChangeCvm
 		default:
@@ -424,6 +442,19 @@ func (c *CrpTicketCreator) getAllCRPAdjustAbleDemands(kt *kit.Kit, ticketType en
 				kt.Rid)
 			return err
 		}
+
+		// 对AbleDemandsRst进行排序，returnPlanTime和本地相同的预测优先
+		slices.SortFunc(AbleDemandsRst, func(a, b *cvmapi.CvmCbsPlanQueryItem) int {
+			if a.ReturnPlanTime == demand.Original.ReturnPlanTime &&
+				b.ReturnPlanTime != demand.Original.ReturnPlanTime {
+				return -1
+			}
+			if a.ReturnPlanTime != demand.Original.ReturnPlanTime &&
+				b.ReturnPlanTime == demand.Original.ReturnPlanTime {
+				return 1
+			}
+			return 0
+		})
 
 		adjustAbleDemands := make([]*cvmapi.CvmCbsPlanQueryItem, 0)
 		// 仅延期和转移单，可使用“已评审”的CRP预测进行修改
@@ -645,6 +676,12 @@ func (c *CrpTicketCreator) prePrepareAdjustAbleData(kt *kit.Kit, isTransfer, isA
 		logs.Infof("pre prepare adjust able data, adjust_able_demand: %+v, rid: %s", adjustAbleD, kt.Rid)
 		logs.Infof("pre prepare adjust able data, demand: %+v, needCpuCores: %d, canConsume: %d, rid: %s",
 			demand.Original, needCpuCores, canConsume, kt.Rid)
+		// 短租预测场景，如果即将修改的crp预测的预期退回时间与本地不一致，给出警告
+		if demandDetail.ObsProject == enumor.ObsProjectShortLease &&
+			adjustAbleD.ReturnPlanTime != cvt.PtrToVal(demandDetail.ReturnPlanTime) {
+			logs.Warnf("pre prepare adjust able data, return plan time is not equal, local return time: %s, "+
+				"crp return time: %s, rid: %s", demandDetail.ReturnPlanTime, adjustAbleD.ReturnPlanTime, kt.Rid)
+		}
 
 		needCpuCores -= canConsume
 	}
@@ -758,6 +795,14 @@ func (c *CrpTicketCreator) constructAdjustAppendData(kt *kit.Kit, subTicket *pty
 		DiskTypeName:    diskTypeName,
 		AllDiskAmount:   demand.Updated.Cbs.DiskSize,
 	}
+	// 修改场景追加调整后的预测时，需要提供预期退回时间参数
+	if demand.Updated.ObsProject == enumor.ObsProjectShortLease {
+		demandItem.IsAutoReturnPlan = true
+		demandItem.ReturnPlanTime = demand.Updated.ReturnPlanTime
+		if demand.Updated.ReturnPlanTime == "" {
+			return nil, errors.New("short-term lease project must provide return plan time")
+		}
+	}
 
 	updatedData := &cvmapi.AdjustUpdatedData{
 		AdjustType:          string(enumor.CrpAdjustTypeUpdate),
@@ -806,12 +851,18 @@ func (c *CrpTicketCreator) constructTransferAppendDataToBiz(kt *kit.Kit, subTick
 			ZoneName:        key.ZoneName,
 			InstanceModel:   source.InstanceModel,
 			UseTime:         key.ExpectTime,
+			ReturnPlanTime:  key.ReturnPlanTime,
 			CvmAmount:       transferCVM,
 			InstanceIO:      int(key.Cbs.DiskIo),
 			DiskType:        diskType,
 			DiskTypeName:    key.Cbs.DiskTypeName,
 			// TODO 用户的云盘需求会在这里被丢弃，避免出现一对多的情况下多次提交CBS需求
 			AllDiskAmount: 0,
+		}
+
+		// 短租项目预测需要提供isAutoReturnPlan和returnPlanTime参数
+		if key.ObsProject == enumor.ObsProjectShortLease {
+			demandItem.IsAutoReturnPlan = true
 		}
 
 		allAppendData = append(allAppendData, &cvmapi.AdjustUpdatedData{
@@ -842,12 +893,18 @@ func (c *CrpTicketCreator) constructTransferAppendDataToPool(source *cvmapi.CvmC
 		ZoneName:        source.ZoneName,
 		InstanceModel:   source.InstanceModel,
 		UseTime:         source.UseTime,
+		ReturnPlanTime:  source.ReturnPlanTime,
 		CvmAmount:       targetOS,
 		CoreAmount:      targetCPU,
 		InstanceIO:      source.InstanceIO,
 		DiskType:        source.DiskType,
 		DiskTypeName:    source.DiskTypeName,
 		AllDiskAmount:   0,
+	}
+
+	// 短租项目预测需要提供isAutoReturnPlan和returnPlanTime参数
+	if source.ProjectName == enumor.ObsProjectShortLease {
+		demandItem.IsAutoReturnPlan = true
 	}
 
 	updatedData := &cvmapi.AdjustUpdatedData{

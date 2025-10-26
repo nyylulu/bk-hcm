@@ -109,7 +109,7 @@ type ResPlanDemandTable struct {
 	ResMode enumor.ResModeCode `db:"res_mode" json:"res_mode" validate:"lte=16"`
 	// ObsProject 项目类型
 	ObsProject enumor.ObsProject `db:"obs_project" json:"obs_project" validate:"lte=64"`
-	// ExpectTime 期望交付时间
+	// ExpectTime 期望交付时间，YYYYMMDD
 	ExpectTime int `db:"expect_time" json:"expect_time"`
 	// ReturnPlanTime 期望退回时间，YYYYMMDD
 	ReturnPlanTime int `db:"return_plan_time" json:"return_plan_time"`

@@ -280,14 +280,25 @@ func (c *Controller) convResPlanDemandRespAndFilter(kt *kit.Kit, req *ptypes.Lis
 				demand.ExpectTime, kt.Rid)
 			return nil, nil, err
 		}
-
+		// 短租项目需要提供预期退回时间字段
+		returnTimePtr := new(string)
+		if demand.ObsProject == enumor.ObsProjectShortLease {
+			returnTime, err := times.TransTimeStrWithLayout(strconv.Itoa(demand.ReturnPlanTime),
+				constant.DateLayoutCompact, constant.DateLayout)
+			if err != nil {
+				logs.Warnf("failed to parse demand return plan time, err: %v, return_plan_time: %d, rid: %s", err,
+					demand.ReturnPlanTime, kt.Rid)
+			} else {
+				returnTimePtr = &returnTime
+			}
+		}
+		demandItem := convListResPlanDemandItemByTable(demand, expectDateStr, returnTimePtr)
 		demandKey, err := c.getDemandExpendKeyFromTable(kt, demand, expectDateStr, deviceTypes)
 		if err != nil {
 			logs.Errorf("failed to get demand expend key, err: %v, demand id: %s, rid: %s", err, demand.ID,
 				kt.Rid)
 			return nil, nil, err
 		}
-		demandItem := convListResPlanDemandItemByTable(demand, expectDateStr)
 
 		// 对一个预测，如果未通过固定的planType消耗完，尝试匹配不带planType的申领记录（目前主要是升降配类型）
 		matchPlanType := []enumor.PlanTypeCode{demandKey.PlanType, enumor.PlanTypeCodeIgnore}
@@ -307,7 +318,6 @@ func (c *Controller) convResPlanDemandRespAndFilter(kt *kit.Kit, req *ptypes.Lis
 			demandItem.RemainedOS = demandItem.TotalOS.Sub(demandItem.AppliedOS)
 			demandItem.RemainedCpuCore = demandItem.TotalCpuCore - demandItem.AppliedCpuCore
 			demandItem.RemainedMemory = demandItem.TotalMemory - demandItem.AppliedMemory
-
 			if demandItem.RemainedCpuCore <= 0 {
 				break
 			}
@@ -333,7 +343,6 @@ func (c *Controller) convResPlanDemandRespAndFilter(kt *kit.Kit, req *ptypes.Lis
 		calcDemandListOverview(overview, demandItem, demand.PlanType)
 		demandDetails = append(demandDetails, demandItem)
 	}
-
 	return overview, demandDetails, nil
 }
 
@@ -413,7 +422,9 @@ func (c *Controller) getDemandExpendKeyFromTable(kt *kit.Kit, demand rpd.ResPlan
 	return resPlanDemandExpendKey, nil
 }
 
-func convListResPlanDemandItemByTable(table rpd.ResPlanDemandTable, expectTime string) *ptypes.ListResPlanDemandItem {
+func convListResPlanDemandItemByTable(table rpd.ResPlanDemandTable, expectTime string,
+	returnPlanTime *string) *ptypes.ListResPlanDemandItem {
+
 	return &ptypes.ListResPlanDemandItem{
 		DemandID:         table.ID,
 		BkBizID:          table.BkBizID,
@@ -425,6 +436,7 @@ func convListResPlanDemandItemByTable(table rpd.ResPlanDemandTable, expectTime s
 		DemandClass:      table.DemandClass,
 		DemandResType:    table.DemandResType,
 		ExpectTime:       expectTime,
+		ReturnPlanTime:   returnPlanTime,
 		DeviceClass:      table.DeviceClass,
 		DeviceType:       table.DeviceType,
 		TotalOS:          table.OS.Decimal,

@@ -318,6 +318,9 @@ type CvmCbsPlanQueryItem struct {
 	ReviewStatus          enumor.ResPlanReviewStatus `json:"reviewStatus"`
 	ForecastType          string                     `json:"forecastType"` // 需求类型（常规需求、年度预算）
 	GenerationType        string                     `json:"generation_type"`
+	// 短租退回时间相关参数
+	IsAutoReturnPlan bool   `json:"isAutoReturnPlan"`
+	ReturnPlanTime   string `json:"returnPlanTime"`
 }
 
 // Clone return a clone CvmCbsPlanQueryItem.
@@ -334,6 +337,7 @@ func (i *CvmCbsPlanQueryItem) Clone() *CvmCbsPlanQueryItem {
 		ExpectStartDate:       i.ExpectStartDate,
 		ExpectEndDate:         i.ExpectEndDate,
 		UseTime:               i.UseTime,
+		ReturnPlanTime:        i.ReturnPlanTime,
 		BgId:                  i.BgId,
 		BgName:                i.BgName,
 		DeptId:                i.DeptId,

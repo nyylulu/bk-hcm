@@ -224,6 +224,8 @@ type OriginalRPDemandItem struct {
 	ObsProject enumor.ObsProject `json:"obs_project" validate:"lte=64"`
 	// ExpectTime 期望交付时间，格式为YYYY-MM-DD，例如2024-01-01
 	ExpectTime string `json:"expect_time" validate:"lte=64"`
+	// ReturnPlanTime 期望退回时间，格式为YYYY-MM-DD，例如2024-01-01
+	ReturnPlanTime string `json:"return_plan_time" validate:"lte=64"`
 	// ZoneID 可用区ID
 	ZoneID string `json:"zone_id" validate:"lte=64"`
 	// ZoneName 可用区名称
@@ -294,19 +296,20 @@ func (i *OriginalRPDemandItem) Validate() error {
 // Clone return a clone OriginalRPDemandItem.
 func (i *OriginalRPDemandItem) Clone() *OriginalRPDemandItem {
 	return &OriginalRPDemandItem{
-		DemandID:    i.DemandID,
-		CrpDemandID: i.CrpDemandID,
-		ObsProject:  i.ObsProject,
-		ExpectTime:  i.ExpectTime,
-		ZoneID:      i.ZoneID,
-		ZoneName:    i.ZoneName,
-		RegionID:    i.RegionID,
-		RegionName:  i.RegionName,
-		AreaID:      i.AreaID,
-		AreaName:    i.AreaName,
-		Remark:      i.Remark,
-		Cvm:         i.Cvm,
-		Cbs:         i.Cbs,
+		DemandID:       i.DemandID,
+		CrpDemandID:    i.CrpDemandID,
+		ObsProject:     i.ObsProject,
+		ExpectTime:     i.ExpectTime,
+		ReturnPlanTime: i.ReturnPlanTime,
+		ZoneID:         i.ZoneID,
+		ZoneName:       i.ZoneName,
+		RegionID:       i.RegionID,
+		RegionName:     i.RegionName,
+		AreaID:         i.AreaID,
+		AreaName:       i.AreaName,
+		Remark:         i.Remark,
+		Cvm:            i.Cvm,
+		Cbs:            i.Cbs,
 	}
 }
 
@@ -316,7 +319,7 @@ type UpdatedRPDemandItem struct {
 	ObsProject enumor.ObsProject `json:"obs_project" validate:"lte=64"`
 	// ExpectTime 期望交付时间，格式为YYYY-MM-DD，例如2024-01-01
 	ExpectTime string `json:"expect_time" validate:"lte=64"`
-	// ReturnPlanTime 期望返回计划时间，格式为YYYY-MM-DD，例如2024-01-01
+	// ReturnPlanTime 期望退回时间，格式为YYYY-MM-DD，例如2024-01-01
 	ReturnPlanTime string `json:"return_plan_time" validate:"lte=64"`
 	// ZoneID 可用区ID
 	ZoneID string `json:"zone_id" validate:"lte=64"`
@@ -386,18 +389,19 @@ func (i *UpdatedRPDemandItem) Validate() error {
 // Clone return a clone UpdatedRPDemandItem.
 func (i *UpdatedRPDemandItem) Clone() *UpdatedRPDemandItem {
 	return &UpdatedRPDemandItem{
-		ObsProject:   i.ObsProject,
-		ExpectTime:   i.ExpectTime,
-		ZoneID:       i.ZoneID,
-		ZoneName:     i.ZoneName,
-		RegionID:     i.RegionID,
-		RegionName:   i.RegionName,
-		AreaID:       i.AreaID,
-		AreaName:     i.AreaName,
-		DemandSource: i.DemandSource,
-		Remark:       i.Remark,
-		Cvm:          i.Cvm,
-		Cbs:          i.Cbs,
+		ObsProject:     i.ObsProject,
+		ExpectTime:     i.ExpectTime,
+		ReturnPlanTime: i.ReturnPlanTime,
+		ZoneID:         i.ZoneID,
+		ZoneName:       i.ZoneName,
+		RegionID:       i.RegionID,
+		RegionName:     i.RegionName,
+		AreaID:         i.AreaID,
+		AreaName:       i.AreaName,
+		DemandSource:   i.DemandSource,
+		Remark:         i.Remark,
+		Cvm:            i.Cvm,
+		Cbs:            i.Cbs,
 	}
 }
 
