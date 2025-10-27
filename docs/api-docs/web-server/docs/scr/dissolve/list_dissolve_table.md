@@ -51,7 +51,8 @@ POST /api/v1/woa/dissolve/table/list
           "current": {
             "host_count": 0,
             "cpu_count": 0
-          }
+          },
+          "delivered_core":100
         },
         "progress": "100.00%"
       },
@@ -68,7 +69,8 @@ POST /api/v1/woa/dissolve/table/list
           "current": {
             "host_count": 0,
             "cpu_count": 0
-          }
+          },
+          "delivered_core":100
         },
         "progress": ""
       },
@@ -117,10 +119,11 @@ POST /api/v1/woa/dissolve/table/list
 
 #### data.items[n].total
 
-| 参数名称  | 参数类型   | 描述   |
-|---------|--------|-------|
-| current | object | 当前   |
-| origin  | object    | 原始   |
+| 参数名称               | 参数类型   | 描述            |
+|--------------------|--------|---------------|
+| current            | object | 当前            |
+| origin             | object | 原始            |
+| delivered_core | int    | 裁撤cpu已交付的总核心数 |
 
 #### data.items[n].total.current
 

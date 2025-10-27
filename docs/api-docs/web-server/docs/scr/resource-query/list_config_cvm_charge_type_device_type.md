@@ -48,11 +48,13 @@ POST /api/v1/woa/config/findmany/config/cvm/charge_type/device_type
         "device_types": [
           {
             "device_type": "SK1.LARGE16",
-            "available": false
+            "available": false,
+            "remain_core":10
           },
           {
             "device_type": "I2.2XLARGE8",
-            "available": false
+            "available": false,
+            "remain_core":10
           }
         ]
       },
@@ -62,11 +64,13 @@ POST /api/v1/woa/config/findmany/config/cvm/charge_type/device_type
         "device_types": [
           {
             "device_type": "SK1.LARGE16",
-            "available": true
+            "available": true,
+            "remain_core":10
           },
           {
             "device_type": "I2.2XLARGE8",
-            "available": false
+            "available": false,
+            "remain_core":10
           }
         ]
       }
@@ -101,7 +105,8 @@ POST /api/v1/woa/config/findmany/config/cvm/charge_type/device_type
 
 #### data.info[i].device_types[i]
 
-| 参数名称         | 参数类型   | 描述   |
-|--------------|--------|------|
-| device_type	 | string | 机型   |
-| available    | bool   | 是否可用 |
+| 参数名称      | 参数类型 | 描述      |
+|--------------|--------|-----------|
+| device_type  | string | 机型       |
+| available    | bool   | 是否可用    |
+| remain_core  | int    | 剩余核心数  |

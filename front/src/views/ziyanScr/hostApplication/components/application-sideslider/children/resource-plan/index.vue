@@ -28,11 +28,10 @@ const emit = defineEmits<{
 dayjs.extend(isoWeek);
 
 interface Props {
-  requireType: number;
+  requireType: RequirementType;
   bizId?: number;
   initialCondition?: ICondition;
 }
-
 const { pagination, pageParams, handlePageChange, handlePageSizeChange, handleSort } = usePage(false);
 
 const resourcePlanStore = useResourcePlanStore();

@@ -44,6 +44,12 @@ export const cvm: ISearchItem[] = [
     name: '实例名称',
     id: 'name',
   },
+  {
+    name: '固资号',
+    id: 'bk_asset_id',
+    multiple: true,
+    children: [],
+  },
   ...base,
   {
     name: '管控区域',

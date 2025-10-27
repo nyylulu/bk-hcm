@@ -38,10 +38,14 @@ func InitService(c *capability.Capability) {
 	}
 
 	h := rest.NewHandler()
-
 	s.initDissolveService(h)
-
 	h.Load(c.WebService)
+
+	// 业务下的接口
+	bizH := rest.NewHandler()
+	bizH.Path("/bizs/{bk_biz_id}")
+	bizService(bizH, s)
+	bizH.Load(c.WebService)
 }
 
 type service struct {
@@ -69,6 +73,17 @@ func (s *service) initDissolveService(h *rest.Handler) {
 	h.Add("ListCurrentHost", http.MethodPost, "/dissolve/host/current/list", s.ListCurHost)
 	h.Add("ListResDissolveTable", http.MethodPost, "/dissolve/table/list", s.ListResDissolveTable)
 
-	h.Add("CheckHostDissolveStatus", http.MethodPost, "/bizs/{bk_biz_id}/dissolve/hosts/status/check",
-		s.CheckHostDissolveStatus)
+	// summary
+	h.Add("ListDissolveCpuCoreSummary", http.MethodPost, "/dissolve/cpu_core/summary", s.ListDissolveCpuCoreSummary)
+
+	// config
+	h.Add("GetDissolveConfig", http.MethodGet, "/dissolve/config", s.GetDissolveConfig)
+	h.Add("UpsertDissolveConfig", http.MethodPut, "/dissolve/config/upsert", s.UpsertDissolveConfig)
+}
+
+// bizService 业务下的接口
+func bizService(h *rest.Handler, s *service) {
+	h.Add("CheckBizHostDissolveStatus", http.MethodPost, "/dissolve/hosts/status/check", s.CheckBizHostDissolveStatus)
+	h.Add("ListBizDissolveCpuCoreSummary", http.MethodPost, "/dissolve/cpu_core/summary",
+		s.ListBizDissolveCpuCoreSummary)
 }

@@ -2,7 +2,7 @@
 import { computed, reactive } from 'vue';
 import { RouteLocationRaw } from 'vue-router';
 import { ModelProperty } from '@/model/typings';
-import { APPLICATION_TYPE_MAP } from '../..//constants';
+import { APPLICATION_TYPE_MAP } from '@/views/ticket/constants';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
 import { GLOBAL_BIZS_KEY, LB_ISP, NET_CHARGE_MAP, VendorMap } from '@/common/constant';
 import { LB_NETWORK_TYPE_MAP } from '@/constants';

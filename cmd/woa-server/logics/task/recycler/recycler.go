@@ -400,10 +400,18 @@ func (r *recycler) fillCheckInfo(host *types.RecycleCheckInfo, user string, hasP
 	} else if strings.Contains(host.Operator, user) == false && strings.Contains(host.BakOperator, user) == false {
 		host.Recyclable = false
 		host.Message = "必须为主机负责人或备份负责人"
+	} else if !r.hasInnnerIP(host.IP) {
+		host.Recyclable = false
+		host.Message = "主机没有内网IP，不可回收"
 	} else {
 		host.Recyclable = true
 		host.Message = "可回收"
 	}
+}
+
+// hasInnnerIP 检查主机是否有内网IP
+func (r *recycler) hasInnnerIP(ip string) bool {
+	return strings.TrimSpace(ip) != ""
 }
 
 // getHostBaseInfo get host detail info for recycle

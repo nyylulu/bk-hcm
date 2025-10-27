@@ -85,9 +85,6 @@ type CVMClientInterface interface {
 
 	// QueryReturnPlan query return plan
 	QueryReturnPlan(ctx context.Context, header http.Header, req *QueryReturnPlanReq) (*QueryReturnPlanResp, error)
-
-	QueryTechnicalClass(ctx context.Context, header http.Header, req *QueryTechnicalClassReq) (*QueryTechnicalClassResp,
-		error)
 	// QueryOrderList 根据销毁单据查询预测返还信息
 	QueryOrderList(ctx context.Context, header http.Header, req *QueryOrderListReq) (
 		*QueryOrderListResp, error)
@@ -627,24 +624,6 @@ func (c *cvmApi) RevokeCvmOrder(ctx context.Context, header http.Header, req *Re
 
 	subPath := "/apply/api/"
 	resp := new(RevokeCvmOrderResp)
-	err := c.client.Post().
-		WithContext(ctx).
-		Body(req).
-		SubResourcef(subPath).
-		WithParam(CvmApiKey, CvmApiKeyVal).
-		WithHeaders(header).
-		Do().
-		Into(resp)
-
-	return resp, err
-}
-
-// QueryTechnicalClass query technical class from crp
-func (c *cvmApi) QueryTechnicalClass(ctx context.Context, header http.Header, req *QueryTechnicalClassReq) (
-	*QueryTechnicalClassResp, error) {
-
-	subPath := "/yunti-demand/external"
-	resp := new(QueryTechnicalClassResp)
 	err := c.client.Post().
 		WithContext(ctx).
 		Body(req).

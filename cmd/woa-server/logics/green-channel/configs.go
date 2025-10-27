@@ -21,6 +21,8 @@
 package greenchannel
 
 import (
+	"encoding/json"
+
 	gctypes "hcm/cmd/woa-server/types/green-channel"
 	"hcm/pkg/api/core"
 	cgconf "hcm/pkg/api/core/global-config"
@@ -57,7 +59,7 @@ func (l *logics) GetConfigs(kt *kit.Kit) (gctypes.Config, error) {
 	if v, ok := configMap[constant.ConfigKeyGCBizQuota]; ok {
 		config.BizQuota, err = util.GetInt64ByInterface(v)
 		if err != nil {
-			logs.Warnf("failed to convert biz quota, err: %v, rid: %s, value: %v", err, kt.Rid, v)
+			logs.Errorf("failed to convert biz quota, err: %v, value: %v, rid: %s", err, v, kt.Rid)
 			return gctypes.Config{}, err
 		}
 	}
@@ -65,7 +67,7 @@ func (l *logics) GetConfigs(kt *kit.Kit) (gctypes.Config, error) {
 	if v, ok := configMap[constant.ConfigTypeGCIEGQuota]; ok {
 		config.IEGQuota, err = util.GetInt64ByInterface(v)
 		if err != nil {
-			logs.Warnf("failed to convert ieg quota, err: %v, rid: %s, value: %v", err, kt.Rid, v)
+			logs.Errorf("failed to convert ieg quota, err: %v, value: %v, rid: %s", err, v, kt.Rid)
 			return gctypes.Config{}, err
 		}
 	}
@@ -73,9 +75,19 @@ func (l *logics) GetConfigs(kt *kit.Kit) (gctypes.Config, error) {
 	if v, ok := configMap[constant.ConfigTypeGCAuditThreshold]; ok {
 		config.AuditThreshold, err = util.GetInt64ByInterface(v)
 		if err != nil {
-			logs.Warnf("failed to convert audit threshold, err: %v, rid: %s, value: %v", err, kt.Rid, v)
+			logs.Errorf("failed to convert audit threshold, err: %v, value: %v, rid: %s", err, v, kt.Rid)
 			return gctypes.Config{}, err
 		}
+	}
+
+	if v, ok := configMap[constant.ConfigKeyCvmApply]; ok {
+		cvmApplyConfigStr := util.GetStrByInterface(v)
+		cvmApplyConfig := gctypes.CvmApplyConfig{}
+		if err = json.Unmarshal([]byte(cvmApplyConfigStr), &cvmApplyConfig); err != nil {
+			logs.Errorf("failed to convert cvm apply config, err: %v, value: %v, rid: %s", err, v, kt.Rid)
+			return gctypes.Config{}, err
+		}
+		config.CvmApplyConfig = cvmApplyConfig
 	}
 
 	return config, nil

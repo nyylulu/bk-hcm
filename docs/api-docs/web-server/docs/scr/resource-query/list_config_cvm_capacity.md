@@ -10,15 +10,15 @@ POST /api/v1/woa/config/find/cvm/capacity
 
 ### 输入参数
 
-| 参数名称       | 参数类型 | 必选 | 描述          |
-|--------------|---------|------|--------------|
-| require_type | int	 | 是	| 需求类型。1: 常规项目; 2: 春节保障; 3: 机房裁撤
-| region	   | string	 | 是	| 地域   |
-| zone	       | string	 | 是	| 可用区 |
-| device_type  | string	 | 是	| 机型   |
-| vpc	       | string	 | 否	| vpc。若vpc为空，则返回IEG默认vpc的最大可申领量 |
-| subnet	   | string	 | 否	| 子网。若vpc不为空且subnet为空，则返回vpc下所有子网的最大可申领量 |
-| charge_type  | string  | 否    | 计费模式 (PREPAID:包年包月，POSTPAID_BY_HOUR:按量计费)，默认:包年包月 |
+| 参数名称         | 参数类型         | 必选 | 描述                                                                 |
+|--------------|--------------|----|--------------------------------------------------------------------|
+| require_type | int	         | 是	 | 需求类型。1: 常规项目; 2: 春节保障; 3: 机房裁撤                                     |
+| region	      | string	      | 是	 | 地域                                                                 |
+| zone	        | string	      | 是	 | 可用区。指定要查询的单个可用区               |
+| device_type  | string	      | 是	 | 机型                                                                 |
+| vpc	         | string	      | 否	 | vpc。若vpc为空，则返回IEG默认vpc的最大可申领量                                      |
+| subnet	      | string	      | 否	 | 子网。若vpc不为空且subnet为空，则返回vpc下所有子网的最大可申领量                             |
+| charge_type  | string       | 否  | 计费模式 (PREPAID:包年包月，POSTPAID_BY_HOUR:按量计费)，默认:包年包月                  |
 
 ### 调用示例
 

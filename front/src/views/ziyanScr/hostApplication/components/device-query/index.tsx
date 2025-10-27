@@ -3,7 +3,7 @@ import './index.scss';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { useTable } from '@/hooks/useTable/useTable';
 import { transferSimpleConditions } from '@/utils/scr/simple-query-builder';
-import { Button, Form, Input } from 'bkui-vue';
+import { Button, Form, TagInput } from 'bkui-vue';
 import useFormModel from '@/hooks/useFormModel';
 import { useBusinessGlobalStore } from '@/store/business-global';
 import { timeFormatter, applicationTime, isEmpty } from '@/common/util';
@@ -34,6 +34,7 @@ export default defineComponent({
       requireType: '',
       suborderId: '',
       dateRange: applicationTime(),
+      assetId: [],
     });
 
     const { CommonTable, getListData, isLoading, dataList, pagination } = useTable({
@@ -73,29 +74,15 @@ export default defineComponent({
               ['order_id', '=', formModel.orderId],
               ['suborder_id', '=', formModel.suborderId],
               ['bk_username', 'in', formModel.bkUsername],
-              ['ip', 'in', ipArray.value],
+              ['ip', 'in', formModel.ip],
               ['update_at', 'd>=', timeFormatter(formModel.dateRange[0], 'YYYY-MM-DD')],
               ['update_at', 'd<=', timeFormatter(formModel.dateRange[1], 'YYYY-MM-DD')],
+              ['asset_id', 'in', formModel.assetId],
             ]),
             page: { start: 0, limit: 10 },
           },
         };
       },
-    });
-
-    const ipArray = computed(() => {
-      const ipv4 = /^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$/;
-      const ips = [];
-      formModel.ip
-        .split(/\r?\n/)
-        .map((ip) => ip.trim())
-        .filter((ip) => ip.length > 0)
-        .forEach((item) => {
-          if (ipv4.test(item)) {
-            ips.push(item);
-          }
-        });
-      return ips;
     });
 
     const filterOrders = () => {
@@ -131,7 +118,7 @@ export default defineComponent({
               <bk-date-picker type='daterange' v-model={formModel.dateRange} clearable={false} />
             </FormItem>
             <FormItem label='内网 IP'>
-              <Input
+              {/* <Input
                 class={'filte-item'}
                 type='textarea'
                 clearable
@@ -139,6 +126,27 @@ export default defineComponent({
                 v-model={formModel.ip}
                 autosize
                 resize={false}
+              /> */}
+              <TagInput
+                v-model={formModel.ip}
+                allow-create
+                collapse-tags
+                allow-auto-match
+                pasteFn={(v) => v.split(/\r\n|\n|\r/).map((tag) => ({ id: tag, name: tag }))}
+                createTagValidator={(ip) =>
+                  /^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$/.test(ip)
+                }
+                placeholder='输入合法的 IP 地址'
+              />
+            </FormItem>
+            <FormItem label='固资号'>
+              <TagInput
+                v-model={formModel.assetId}
+                allow-create
+                collapse-tags
+                allow-auto-match
+                pasteFn={(v) => v.split(/\r\n|\n|\r/).map((tag) => ({ id: tag, name: tag }))}
+                placeholder='请输入固资号'
               />
             </FormItem>
           </Form>

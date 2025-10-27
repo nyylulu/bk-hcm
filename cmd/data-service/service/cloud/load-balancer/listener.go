@@ -291,6 +291,8 @@ func convTCloudLBRule(kt *kit.Kit, item dataproto.ListenerWithRuleCreateReq, lbl
 		SessionType:        item.SessionType,
 		SessionExpire:      item.SessionExpire,
 		Certificate:        types.JsonField(certJSON),
+		AccountID:          item.AccountID,
+		BkBizID:            item.BkBizID,
 		Creator:            kt.User,
 		Reviser:            kt.User,
 	}
@@ -315,6 +317,8 @@ func convZiyanLBRule(kt *kit.Kit, item dataproto.ListenerWithRuleCreateReq, lblI
 		SessionType:        item.SessionType,
 		SessionExpire:      item.SessionExpire,
 		Certificate:        types.JsonField(certJSON),
+		AccountID:          item.AccountID,
+		BkBizID:            item.BkBizID,
 		Creator:            kt.User,
 		Reviser:            kt.User,
 	}

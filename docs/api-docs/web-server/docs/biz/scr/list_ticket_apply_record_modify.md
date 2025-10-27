@@ -63,7 +63,12 @@ POST /api/v1/woa/bizs/{bk_biz_id}/task/find/apply/record/modify
               "disk_type": "CLOUD_PREMIUM",
               "disk_size": 100,
               "disk_num": 1,
-            }]
+            }],
+            "zones": [
+              "ap-nanjing-1",
+              "ap-nanjing-2"
+            ],
+            "res_assign": 1
           },
           "cur_data":{
             "total_num":4,
@@ -86,7 +91,12 @@ POST /api/v1/woa/bizs/{bk_biz_id}/task/find/apply/record/modify
               "disk_type": "CLOUD_PREMIUM",
               "disk_size": 100,
               "disk_num": 1,
-            }]
+            }],
+            "zones": [
+              "ap-nanjing-1",
+              "ap-nanjing-2"
+            ],
+            "res_assign": 1
           }
         },
         "create_at":"2022-10-15 18:07:37",
@@ -145,6 +155,8 @@ POST /api/v1/woa/bizs/{bk_biz_id}/task/find/apply/record/modify
 | subnet          | string            | 私有子网，默认为空       |
 | system_disk     | DiskObject        | 系统盘，磁盘大小：50G-1000G且为50的倍数（IT类型默认本地盘、50G；其他类型默认高性能云盘、100G） |
 | data_disk       | array DiskObject  | 数据盘，支持多块硬盘，磁盘大小：20G-32000G且为10的倍数，数据盘数量总和不能超过20块 |
+| zones           | string array      | 多可用区(选“全部”时该字段是空数组)                      |
+| res_assign      | int               | 资源分配方式(1表示“有资源区域优先”、2表示“分Campus生产”)  |
 
 #### spec for DiskObject
 | 参数名称   | 参数类型  | 必选 | 描述                                                      |

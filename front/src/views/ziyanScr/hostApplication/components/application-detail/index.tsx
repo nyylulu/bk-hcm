@@ -20,12 +20,15 @@ import DetailHeader from '@/views/resource/resource-manage/common/header/detail-
 import DetailInfo from '@/views/resource/resource-manage/common/info/detail-info';
 import Panel from '@/components/panel';
 import WName from '@/components/w-name';
+import { useDissolveQuotaStore, type ICpuCoreSummary } from '@/store/dissolve/quota';
+
 import ModifyRecord from './modify-record';
 import ItsmTicketAudit, { type IItsmTicketAudit } from './itsm-ticket-audit.vue';
 import type { IQueryResData } from '@/typings';
 import ApprovalStatus from './approval-status.vue';
 import { ScrResourceType } from '@/constants';
 import UpgradeCvmTable from './upgrade-cvm-table.vue';
+import { RequirementType } from '@/store/config/requirement';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 
@@ -38,7 +41,9 @@ export default defineComponent({
     const route = useRoute();
     const router = useRouter();
     const userStore = useUserStore();
-    const { whereAmI, getBusinessApiPath, getBizsId } = useWhereAmI();
+    const dissolveQuotaStore = useDissolveQuotaStore();
+
+    const { whereAmI, getBusinessApiPath, getBizsId, isBusinessPage } = useWhereAmI();
 
     const backRoute = computed(() => {
       if (whereAmI.value === Senarios.business) {
@@ -51,6 +56,8 @@ export default defineComponent({
     });
 
     const isUpgradeCvm = computed(() => route.query.resource_type === ScrResourceType.UPGRADECVM);
+
+    const isDissolve = computed(() => detail.value.require_type === RequirementType.Dissolve);
 
     const ips = ref<{ [key: string]: any }>({});
     const detail: Ref<{
@@ -190,6 +197,8 @@ export default defineComponent({
 
     const suborders = ref([]);
     const subordersOriginal = ref([]);
+
+    const dissolveSummary = ref<ICpuCoreSummary>({ total_core: 0, delivered_core: 0 });
 
     const cloudMachineList = computed(() => {
       return suborders.value
@@ -343,6 +352,13 @@ export default defineComponent({
         getDemandDetail();
         getItsmTicketAudit();
       }
+
+      if (isDissolve.value) {
+        const orderBizId = Number(route.query.bkBizId);
+        dissolveSummary.value = await dissolveQuotaStore.getCpuCoreSummary(orderBizId, {
+          bk_biz_id: isBusinessPage ? undefined : orderBizId,
+        });
+      }
     });
 
     onUnmounted(() => {
@@ -422,13 +438,33 @@ export default defineComponent({
               <UpgradeCvmTable suborders={suborders.value} />
             ) : (
               <>
-                <Button
-                  class={'mr8'}
-                  v-clipboard:copy={clipHostIp.value.join('\n')}
-                  v-clipboard:success={batchMessage}
-                  disabled={selections.value.length === 0}>
-                  批量复制IP
-                </Button>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <Button
+                    class={'mr8'}
+                    v-clipboard:copy={clipHostIp.value.join('\n')}
+                    v-clipboard:success={batchMessage}
+                    disabled={selections.value.length === 0}>
+                    批量复制IP
+                  </Button>
+                  {isDissolve.value && !dissolveQuotaStore.cpuCoreSummaryLoading && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginLeft: '24px' }}>
+                      <div>
+                        申请CPU核数：
+                        <span>{subordersOriginal.value.reduce((acc, cur) => acc + cur.applied_core, 0)}</span>
+                      </div>
+                      <div>
+                        裁撤总核数：
+                        <span>{dissolveSummary.value.total_core}</span>
+                      </div>
+                      <div>
+                        裁撤可申领核数：
+                        <span>
+                          {Math.max(dissolveSummary.value.total_core - dissolveSummary.value.delivered_core, 0)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
                 {cloudMachineList.value.length > 0 && (
                   <>
                     <p class={'mt16 mb8'}>云主机</p>

@@ -103,6 +103,7 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/cvms/list
 | vendor              | string | 供应商（枚举值：tcloud、aws、azure、gcp、huawei） |
 | bk_biz_id           | int64  | 业务ID                                 |
 | bk_cloud_id         | int64  | 云区域ID                                |
+| bk_asset_id         | string | 固资号                                 |
 | account_id          | string | 账号ID                                 |
 | region              | string | 地域                                   |
 | zone                | string | 可用区                                  |
@@ -187,6 +188,7 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/cvms/list
         "vendor": "tcloud",
         "bk_biz_id": -1,
         "bk_cloud_id": 100,
+        "bk_asset_id": "asset-123",
         "account_id": "0000001",
         "region": "ap-hk",
         "zone": "ap-hk-1",
@@ -260,6 +262,7 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/cvms/list
 | vendor                 | string       | 供应商（枚举值：tcloud、aws、azure、gcp、huawei） |
 | bk_biz_id              | int64        | 业务ID                                 |
 | bk_cloud_id            | int64        | 云区域ID                                |
+| bk_asset_id            | string       | 固资号                                 |
 | account_id             | string       | 账号ID                                 |
 | region                 | string       | 地域                                   |
 | zone                   | string       | 可用区                                  |

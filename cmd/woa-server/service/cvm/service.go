@@ -24,6 +24,7 @@ import (
 
 	"hcm/cmd/woa-server/logics/config"
 	"hcm/cmd/woa-server/logics/cvm"
+	gclogics "hcm/cmd/woa-server/logics/green-channel"
 	"hcm/cmd/woa-server/service/capability"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/rest"
@@ -35,6 +36,7 @@ func InitService(c *capability.Capability) {
 		authorizer:   c.Authorizer,
 		logics:       c.CvmLogic,
 		configLogics: c.ConfigLogics,
+		gcLogics:     c.GcLogic,
 	}
 	h := rest.NewHandler()
 
@@ -47,6 +49,7 @@ type service struct {
 	logics       cvm.Logics
 	configLogics config.Logics
 	authorizer   auth.Authorizer
+	gcLogics     gclogics.Logics
 }
 
 func (s *service) initCvmService(h *rest.Handler) {

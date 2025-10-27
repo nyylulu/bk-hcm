@@ -275,6 +275,7 @@ func (cli *client) createVpc(kt *kit.Kit, accountID string, addVpc []types.HuaWe
 		if one.Extension.Cidr != nil {
 			tmpCidrs := make([]cloud.HuaWeiCidr, 0, len(one.Extension.Cidr))
 			for _, cidrItem := range one.Extension.Cidr {
+
 				tmpCidrs = append(tmpCidrs, cloud.HuaWeiCidr{
 					Type: cidrItem.Type,
 					Cidr: cidrItem.Cidr,
@@ -338,11 +339,6 @@ func (cli *client) listVpcFromDB(kt *kit.Kit, params *SyncBaseParams) (
 			Op: filter.And,
 			Rules: []filter.RuleFactory{
 				&filter.AtomRule{
-					Field: "account_id",
-					Op:    filter.Equal.Factory(),
-					Value: params.AccountID,
-				},
-				&filter.AtomRule{
 					Field: "cloud_id",
 					Op:    filter.In.Factory(),
 					Value: params.CloudIDs,
@@ -355,6 +351,10 @@ func (cli *client) listVpcFromDB(kt *kit.Kit, params *SyncBaseParams) (
 			},
 		},
 		Page: core.NewDefaultBasePage(),
+	}
+
+	if len(params.AccountID) > 0 {
+		req.Filter.Rules = append(req.Filter.Rules, tools.RuleEqual("account_id", params.AccountID))
 	}
 	result, err := cli.dbCli.HuaWei.Vpc.ListVpcExt(kt.Ctx, kt.Header(), req)
 	if err != nil {

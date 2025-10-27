@@ -26,7 +26,20 @@ export enum ListenerActionType {
   BATCH_EXPORT = 'batch_export',
 }
 
-export type ResourceActionType = LoadBalancerActionType | ListenerActionType;
+export enum ListenerDeviceType {
+  REMOVE = 'remove',
+  BATCH_EXPORT = 'batch_export',
+  COPY = 'copy',
+}
+
+export enum RsDeviceType {
+  UNBIND = 'unbind',
+  BATCH_EXPORT = 'batch_export',
+  ADJUST = 'adjust',
+  INFO = 'info',
+}
+
+export type ResourceActionType = LoadBalancerActionType | ListenerActionType | ListenerDeviceType | RsDeviceType;
 
 export enum LoadBalancerType {
   OPEN = 'OPEN',
@@ -145,3 +158,5 @@ export enum RsInstType {
   CVM = 'CVM',
   ENI = 'ENI',
 }
+
+export const DOMAIN_REGEX = /^([a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$/;

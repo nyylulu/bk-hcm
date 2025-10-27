@@ -10,19 +10,20 @@ POST /api/v1/woa/bizs/{bk_biz_id}/task/findmany/recycle/host
 
 ### 输入参数
 
-| 参数名称      | 参数类型           | 必选 | 描述        |
-|--------------|------------------|------|------------|
-| order_id	   | int array	      | 否   | 资源回收单号列表，数量最大20 |
-| suborder_id  | string	array     | 否   | 资源回收子单号列表，数量最大20      |
-| device_type  | string	array     | 否   | 机型列表，数量最大20      |
-| bk_zone_name | string array     | 否   | 地域列表，数量最大20      |
-| sub_zone     | string array     | 否   | 园区列表，数量最大20      |
-| status       | string	array     | 否   | 回收状态列表，数量最大20      |
-| bk_username  | string	array     | 否   | 提单人列表，数量最大20      |
-| ip           | string array     | 否   | 设备内网IP列表，数量最大500      |
+| 参数名称         | 参数类型           | 必选 | 描述                             |
+|--------------|------------------|------|--------------------------------|
+| order_id	    | int array	      | 否   | 资源回收单号列表，数量最大20                |
+| suborder_id  | string	array     | 否   | 资源回收子单号列表，数量最大20               |
+| device_type  | string	array     | 否   | 机型列表，数量最大20                    |
+| bk_zone_name | string array     | 否   | 地域列表，数量最大20                    |
+| sub_zone     | string array     | 否   | 园区列表，数量最大20                    |
+| status       | string	array     | 否   | 回收状态列表，数量最大20                  |
+| bk_username  | string	array     | 否   | 提单人列表，数量最大20                   |
+| ip           | string array     | 否   | 设备内网IP列表，数量最大500               |
+| bk_asset_id  | string array |否 | 固资号列表，数量最大500                |
 | start        | string	          | 否   | 单据创建时间过滤条件起点日期，格式如"2022-05-01" |
 | end          | string	          | 否   | 单据创建时间过滤条件终点日期，格式如"2022-05-01" |
-| page         | object	          | 是   | 分页信息     |
+| page         | object	          | 是   | 分页信息                           |
 
 #### page
 
@@ -71,7 +72,7 @@ POST /api/v1/woa/bizs/{bk_biz_id}/task/findmany/recycle/host
         "bk_biz_id":2,
         "bk_biz_name":"xx",
         "bk_username":"xxx",
-        "asset_id":"TYSV1802949K",
+        "bk_asset_id":"TYSV1802949K",
         "ip":"10.0.0.1",
         "instance_id":"ins-kulm3t6z",
         "device_type":"S5.4XLARGE64",

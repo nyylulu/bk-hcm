@@ -48,9 +48,12 @@ import { CvmDeviceType } from '@/views/ziyanScr/components/devicetype-selector/t
 // 小额绿通
 import GreenChannelTipsAlert from './green-channel/tips-alert.vue';
 import GreenChannelCpuCoreLimits from './green-channel/cpu-core-limits.vue';
+// 机房裁撤
+import DissolveCpuCoreLimits from './dissolve/cpu-core-limits.vue';
 // 预测
 import usePlanDeviceType from '@/views/ziyanScr/hostApplication/plan/usePlanDeviceType';
 import PlanLinkAlert from '../../plan/plan-link-alert.vue';
+import { RequirementType } from '@/store/config/requirement';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 const { DropdownMenu, DropdownItem } = Dropdown;
@@ -82,7 +85,7 @@ export default defineComponent({
     const isLoading = ref(false);
     const title = ref('增加资源需求');
     const CVMapplication = ref(false);
-    const { getBizsId, whereAmI } = useWhereAmI();
+    const { getBizsId, whereAmI, isBusinessPage } = useWhereAmI();
     const planStore = usePlanStore();
     const isNeedVerfiy = ref(false);
     const isVerifyFailed = ref(false);
@@ -170,6 +173,7 @@ export default defineComponent({
     const isRollingServer = computed(() => order.value.model.requireType === 6);
     const isGreenChannel = computed(() => order.value.model.requireType === 7);
     const isSpringPool = computed(() => order.value.model.requireType === 8);
+    const isDissolve = computed(() => order.value.model.requireType === RequirementType.Dissolve);
     const isRollingServerLike = computed(() => isRollingServer.value || isSpringPool.value);
     const isSpecialRequirement = computed(() => isRollingServer.value || isGreenChannel.value);
 
@@ -1005,6 +1009,7 @@ export default defineComponent({
       let val = 0;
       if (isRollingServerLike.value) val = rollingServerCpuCoreLimitsRef.value?.availableCpuCoreQuota ?? val;
       if (isGreenChannel.value) val = greenChannelCpuCoreLimitsRef.value?.availableCpuCoreQuota ?? val;
+      if (isDissolve.value) val = dissolveCpuCoreLimitsRef.value?.availableCpuCoreQuota ?? val;
       return val;
     });
     const isCpuCoreExceeded = computed(() => replicasCpuCores.value > availableCpuCoreQuota.value);
@@ -1013,6 +1018,56 @@ export default defineComponent({
     const greenChannelCpuCoreLimitsRef = useTemplateRef<typeof GreenChannelCpuCoreLimits>(
       'green-channel-cpu-core-limits',
     );
+    // 机房裁撤
+    const dissolveCpuCoreLimitsRef = useTemplateRef<typeof DissolveCpuCoreLimits>('dissolve-cpu-core-limits');
+
+    const addButtonDisabledState = computed(() => {
+      let disabled = false;
+      let content = '';
+      if (
+        (isRollingServer.value || isGreenChannel.value || isSpringPool.value || isDissolve.value) &&
+        availableCpuCoreQuota.value <= 0
+      ) {
+        content = `已超过${
+          // eslint-disable-next-line no-nested-ternary
+          isRollingServerLike.value
+            ? isRollingServer.value
+              ? '滚服项目'
+              : '春保资源池'
+            : isGreenChannel.value
+            ? '小额绿通'
+            : '机房裁撤'
+        }的CPU可用额度，不允许添加`;
+        disabled = true;
+      }
+      return { content, disabled };
+    });
+
+    const applyButtonDisabledState = computed(() => {
+      if (isRollingServer.value) {
+        return { disabled: true, content: '滚服项目暂不支持一键申请' };
+      }
+      if ((isGreenChannel.value || isSpringPool.value || isDissolve.value) && availableCpuCoreQuota.value <= 0) {
+        return { disabled: true, content: '已超过CPU可用额度，不允许添加' };
+      }
+      return { disabled: false, content: '' };
+    });
+
+    const submitButtonDisabledState = computed(() => {
+      if (!physicalTableData.value.length && !cloudTableData.value.length) {
+        return { disabled: true, content: '资源需求不能为空' };
+      }
+      if ((isRollingServer.value || isGreenChannel.value || isDissolve.value) && isCpuCoreExceeded.value) {
+        let name = '滚服项目';
+        if (isGreenChannel.value) {
+          name = '小额绿通';
+        } else if (isDissolve.value) {
+          name = '机房裁撤';
+        }
+        return { disabled: true, content: `当前所需的CPU总核数超过${name}CPU限额，请调整后再重试。` };
+      }
+      return { disabled: false, content: '' };
+    });
 
     watch(
       () => cloudTableData.value,
@@ -1149,13 +1204,14 @@ export default defineComponent({
                     title.value = '增加资源需求';
                     IDCPMlist();
                   }}
-                  disabled={(isSpecialRequirement.value || isSpringPool.value) && availableCpuCoreQuota.value <= 0}
+                  loading={dissolveCpuCoreLimitsRef.value?.cpuCoreSummaryLoading}
+                  disabled={
+                    !dissolveCpuCoreLimitsRef.value?.cpuCoreSummaryLoading && addButtonDisabledState.value.disabled
+                  }
                   v-bk-tooltips={{
-                    content: `已超过${
-                      // eslint-disable-next-line no-nested-ternary
-                      isRollingServerLike.value ? (isRollingServer.value ? '滚服项目' : '春保资源池') : '小额绿通'
-                    }的CPU可用额度，不允许添加`,
-                    disabled: !((isSpecialRequirement.value || isSpringPool.value) && availableCpuCoreQuota.value <= 0),
+                    content: addButtonDisabledState.value.content,
+                    disabled:
+                      dissolveCpuCoreLimitsRef.value?.cpuCoreSummaryLoading || !addButtonDisabledState.value.disabled,
                   }}>
                   <Plus class={'prefix-icon'} />
                   添加
@@ -1163,12 +1219,14 @@ export default defineComponent({
                 <Button
                   class='button'
                   onClick={handleApplication}
-                  disabled={isRollingServer.value || (isGreenChannel.value && availableCpuCoreQuota.value <= 0)}
+                  loading={dissolveCpuCoreLimitsRef.value?.cpuCoreSummaryLoading}
+                  disabled={
+                    !dissolveCpuCoreLimitsRef.value?.cpuCoreSummaryLoading && applyButtonDisabledState.value.disabled
+                  }
                   v-bk-tooltips={{
-                    content: isRollingServer.value
-                      ? '滚服项目暂不支持一键申请'
-                      : '已超过小额绿通的CPU可用额度，不允许添加',
-                    disabled: !(isRollingServer.value || (isGreenChannel.value && availableCpuCoreQuota.value <= 0)),
+                    content: applyButtonDisabledState.value.content,
+                    disabled:
+                      dissolveCpuCoreLimitsRef.value?.cpuCoreSummaryLoading || !applyButtonDisabledState.value.disabled,
                   }}>
                   一键申请
                 </Button>
@@ -1186,6 +1244,15 @@ export default defineComponent({
                     ref='green-channel-cpu-core-limits'
                     replicasCpuCores={replicasCpuCores.value}
                     bizId={computedBiz.value}
+                  />
+                )}
+                {/* 机房裁撤-cpu需求限额 */}
+                {isDissolve.value && (
+                  <DissolveCpuCoreLimits
+                    ref='dissolve-cpu-core-limits'
+                    replicasCpuCores={replicasCpuCores.value}
+                    bizId={computedBiz.value}
+                    isBusinessPage={isBusinessPage}
                   />
                 )}
               </div>
@@ -1262,10 +1329,10 @@ export default defineComponent({
                         class='mr16'
                         theme='primary'
                         loading={isLoading.value}
-                        disabled={!physicalTableData.value.length && !cloudTableData.value.length}
+                        disabled={submitButtonDisabledState.value.disabled}
                         v-bk-tooltips={{
-                          content: '资源需求不能为空',
-                          disabled: physicalTableData.value.length || cloudTableData.value.length,
+                          content: submitButtonDisabledState.value.content,
+                          disabled: !submitButtonDisabledState.value.disabled,
                         }}
                         onClick={() => handleSaveOrSubmit('submit')}>
                         提交
@@ -1291,25 +1358,11 @@ export default defineComponent({
                     class='mr16'
                     theme='primary'
                     loading={isLoading.value}
-                    disabled={
-                      (!physicalTableData.value.length && !cloudTableData.value.length) ||
-                      // todo：如果是滚服项目、小额绿通，且需求核数超过限额，暂不允许提交，后续与资源预测交互同步。
-                      isCpuCoreExceeded.value
-                    }
-                    v-bk-tooltips={(function () {
-                      let disabled = true;
-                      let content = '';
-                      if (!physicalTableData.value.length && !cloudTableData.value.length) {
-                        content = '资源需求不能为空';
-                        disabled = Boolean(physicalTableData.value.length || cloudTableData.value.length);
-                      }
-                      if (isCpuCoreExceeded.value) {
-                        const name = isRollingServer.value ? '滚服项目' : '小额绿通';
-                        content = `当前所需的CPU总核数超过${name}CPU限额，请调整后再重试。`;
-                        disabled = !isCpuCoreExceeded.value;
-                      }
-                      return { content, disabled };
-                    })()}
+                    disabled={submitButtonDisabledState.value.disabled}
+                    v-bk-tooltips={{
+                      content: submitButtonDisabledState.value.content,
+                      disabled: !submitButtonDisabledState.value.disabled,
+                    }}
                     onClick={() => handleSaveOrSubmit('submit')}>
                     提交
                   </Button>

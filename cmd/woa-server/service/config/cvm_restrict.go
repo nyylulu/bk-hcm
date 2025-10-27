@@ -48,7 +48,7 @@ func (s *service) GetCapacity(cts *rest.Contexts) (interface{}, error) {
 		return nil, err
 	}
 
-	if _, err := input.Validate(); err != nil {
+	if err := input.Validate(); err != nil {
 		logs.Errorf("failed to get resource apply capacity, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
@@ -82,4 +82,26 @@ func (s *service) UpdateCapacity(cts *rest.Contexts) (interface{}, error) {
 	}
 
 	return nil, nil
+}
+
+// BatchGetCapacity 批量获取CVM容量信息
+func (s *service) BatchGetCapacity(cts *rest.Contexts) (interface{}, error) {
+	input := new(types.BatchGetCapacityParam)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to decode batch get capacity request, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	if err := input.Validate(); err != nil {
+		logs.Errorf("failed to validate batch get capacity request, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	rst, err := s.logics.Capacity().BatchGetCapacity(cts.Kit, input)
+	if err != nil {
+		logs.Errorf("failed to batch get resource apply capacity, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return rst, nil
 }

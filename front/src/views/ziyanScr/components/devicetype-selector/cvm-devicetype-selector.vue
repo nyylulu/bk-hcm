@@ -28,7 +28,16 @@
     :info="selectedCvmDeviceType"
     :is-default-four-years="isDefaultFourYears"
     :is-gpu-device-type="isGpuDeviceType"
-  />
+  >
+    <template #default>
+      <p v-if="isGreenChannel">
+        注意：
+        <span style="color: red">
+          交付机型可能和所选不同，公司交付策略为同机型有资源优先交付，模糊机型范围为S4m、S5、S5t、S6、S6t、SA2、SA3、SA5t、SA5、SA6、SA9、S9
+        </span>
+      </p>
+    </template>
+  </cvm-devicetype-tip>
 </template>
 
 <script setup lang="ts">
@@ -39,6 +48,7 @@ import type { RollingServerHost } from '../../rolling-server/inherit-package-for
 
 import DevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/index.vue';
 import CvmDevicetypeTip from '@/views/ziyanScr/components/devicetype-selector/cvm-tip.vue';
+import { RequirementType } from '@/store/config/requirement';
 
 interface IProps {
   region: string;
@@ -79,8 +89,11 @@ const params = computed(() => {
     require_type: requireType,
   };
 });
-const isRollingServer = computed(() => props.requireType === 6);
-const isSpecialRequirement = computed(() => [6, 7].includes(props.requireType));
+const isRollingServer = computed(() => props.requireType === RequirementType.RollServer);
+const isGreenChannel = computed(() => props.requireType === RequirementType.GreenChannel);
+const isSpecialRequirement = computed(() =>
+  [RequirementType.GreenChannel, RequirementType.RollServer].includes(props.requireType),
+);
 
 // 机型排序
 const deviceTypeCompareFn = (a: DeviceType, b: DeviceType) => {
@@ -90,10 +103,27 @@ const deviceTypeCompareFn = (a: DeviceType, b: DeviceType) => {
     return Number(set.has(b.device_type)) - Number(set.has(a.device_type));
   }
   // 滚服、小额绿通
-  const aDeviceTypeClass = (a as CvmDeviceType).device_type_class;
-  const bDeviceTypeClass = (b as CvmDeviceType).device_type_class;
+  const {
+    device_type_class: aDeviceTypeClass,
+    device_group: aDeviceGroup,
+    cpu_amount: aCpuAmount,
+  } = a as CvmDeviceType;
+
+  const {
+    device_type_class: bDeviceTypeClass,
+    device_group: bDeviceGroup,
+    cpu_amount: bCpuAmount,
+  } = b as CvmDeviceType;
+
   if (aDeviceTypeClass === 'CommonType' && bDeviceTypeClass === 'SpecialType') return -1;
   if (aDeviceTypeClass === 'SpecialType' && bDeviceTypeClass === 'CommonType') return 1;
+
+  // 对小额绿通有特殊限制
+  if (isGreenChannel.value) {
+    const aDeviceValid = aDeviceGroup === '标准型' && aCpuAmount <= 16;
+    const bDeviceValid = bDeviceGroup === '标准型' && bCpuAmount <= 16;
+    return Number(bDeviceValid) - Number(aDeviceValid);
+  }
   return 0;
 };
 
@@ -104,10 +134,12 @@ const deviceTypeOptionDisabledCallback = (option: DeviceType) => {
     return !props.computedAvailableDeviceTypeSet.has(option.device_type);
   }
   // 滚服、小额绿通
-  const { device_type_class, device_group } = option as CvmDeviceType;
+  const { device_type_class, device_group, cpu_amount } = option as CvmDeviceType;
+
   return (
-    'SpecialType' === device_type_class ||
-    (isRollingServer.value && device_group !== props.rollingServerHost?.device_group)
+    device_type_class === 'SpecialType' ||
+    (isRollingServer.value && device_group !== props.rollingServerHost?.device_group) ||
+    (isGreenChannel.value && !(device_group === '标准型' && cpu_amount <= 16))
   );
 };
 
@@ -116,9 +148,11 @@ const deviceTypeOptionDisabledTipsCallback = (option: DeviceType) => {
   // 非滚服、非小额绿通
   if (!isSpecialRequirement.value) return '当前机型不在有效预测范围内';
   // 滚服、小额绿通
-  const { device_type_class, device_group } = option as CvmDeviceType;
+  const { device_type_class, device_group, cpu_amount } = option as CvmDeviceType;
+
   if (device_type_class === 'SpecialType') return '专用机型不允许选择';
   if (isRollingServer.value && device_group !== props.rollingServerHost?.device_group) return '机型族不匹配';
+  if (isGreenChannel.value && !(device_group === '标准型' && cpu_amount <= 16)) return '非S类小核心不允许选择';
 };
 
 const selectedCvmDeviceType = ref<CvmDeviceType>(null);

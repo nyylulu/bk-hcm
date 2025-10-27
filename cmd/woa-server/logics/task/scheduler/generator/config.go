@@ -29,7 +29,7 @@ import (
 
 // getAvailableZoneInfo get available cvm zone info
 func (g *Generator) getAvailableZoneInfo(kt *kit.Kit, requireType enumor.RequireType, deviceType, region string) (
-	[]*cfgtype.Zone, error) {
+	map[string]*cfgtype.Zone, error) {
 
 	allZones, err := g.getZoneList(kt, region)
 	if err != nil {
@@ -41,17 +41,17 @@ func (g *Generator) getAvailableZoneInfo(kt *kit.Kit, requireType enumor.Require
 		return nil, err
 	}
 
-	availZones := make([]*cfgtype.Zone, 0)
+	availZonesMap := make(map[string]*cfgtype.Zone, 0)
 	for _, zone := range allZones {
 		for _, zoneId := range availZoneIds {
 			if zone.Zone == zoneId {
-				availZones = append(availZones, zone)
+				availZonesMap[zone.Zone] = zone
 				break
 			}
 		}
 	}
 
-	return availZones, nil
+	return availZonesMap, nil
 }
 
 // getAvailableZoneIds get available cvm zone id

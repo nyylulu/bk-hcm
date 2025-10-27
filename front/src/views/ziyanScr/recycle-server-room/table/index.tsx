@@ -2,6 +2,10 @@ import { defineComponent, type PropType, ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import http from '@/http';
 import { useZiyanScrStore } from '@/store/ziyanScr';
+import useSearchQs from '@/hooks/use-search-qs';
+import routerAction from '@/router/utils/action';
+import { MENU_BUSINESS_TICKET_MANAGEMENT } from '@/constants/menu-symbol';
+import { GLOBAL_BIZS_KEY } from '@/common/constant';
 import { useBusinessGlobalStore } from '@/store/business-global';
 import { getDisplayText } from '@/utils';
 import ExportToExcelButton from '@/components/export-to-excel-button';
@@ -15,6 +19,7 @@ import cssModule from './index.module.scss';
 
 import type { IDissolve } from '@/typings/ziyanScr';
 import type { IQueryResData } from '@/typings';
+import { RequirementType } from '@/store/config/requirement';
 
 export default defineComponent({
   components: {
@@ -199,6 +204,18 @@ export default defineComponent({
       }
     };
 
+    const handleGotoTicket = (data: IDissolve) => {
+      const searchQs = useSearchQs();
+      routerAction.open({
+        name: MENU_BUSINESS_TICKET_MANAGEMENT,
+        query: {
+          [GLOBAL_BIZS_KEY]: data.bk_biz_id,
+          type: 'host_apply',
+          filter: searchQs.build({ require_type: [RequirementType.Dissolve], bk_username: [] }),
+        },
+      });
+    };
+
     return () => (
       <Panel>
         <section class={cssModule.search}>
@@ -277,6 +294,19 @@ export default defineComponent({
             <bk-table-column label={t('原始CPU')} field='total.origin.cpu_count' min-width='150px' sort>
               {{
                 default: ({ row }: { row: IDissolve }) => <>{getDisplayText(row?.total?.origin?.cpu_count)}</>,
+              }}
+            </bk-table-column>
+            <bk-table-column label={t('已申领CPU总核数')} field='total.delivered_core' min-width='150px' sort>
+              {{
+                default: ({ row }: { row: IDissolve }) => {
+                  return row.bk_biz_name !== '总数' ? (
+                    <bk-button text theme='primary' onClick={() => handleGotoTicket(row)}>
+                      {getDisplayText(row?.total?.delivered_core)}
+                    </bk-button>
+                  ) : (
+                    getDisplayText(row?.total?.delivered_core)
+                  );
+                },
               }}
             </bk-table-column>
             <bk-table-column label={t('当前数量')} field='total.current.host_count' min-width='150px' sort>

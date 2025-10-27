@@ -355,6 +355,18 @@ func (s *scheduler) GetApplyTicket(kit *kit.Kit, param *types.GetApplyTicketReq)
 		return nil, err
 	}
 
+	// 转换旧版可用区到新版可用区，方便前端统一展示
+	for _, ticket := range inst.Suborders {
+		if ticket.Spec != nil && len(ticket.Spec.Zone) > 0 && len(ticket.Spec.Zones) == 0 {
+			ticket.Spec.Zones = []string{ticket.Spec.Zone}
+			// 分Campus
+			if ticket.Spec.Zone == cvmapi.CvmSeparateCampus {
+				ticket.Spec.Zones = []string{cvmapi.CvmZoneAll}
+				ticket.Spec.ResAssign = enumor.CampusResAssign
+			}
+		}
+	}
+
 	rst := &types.GetApplyTicketRst{
 		ApplyTicket: inst,
 	}
@@ -716,26 +728,28 @@ func checkTotalDevice(_ *scheduler, _ *kit.Kit, order *types.ApplyTicket) (strin
 
 // checkRequireType check require type
 func checkRequireType(s *scheduler, kit *kit.Kit, order *types.ApplyTicket) (string, bool, error) {
-	if order.RequireType == enumor.RequireTypeGreenChannel {
+	switch order.RequireType {
+	case enumor.RequireTypeGreenChannel:
 		greenChannelConfig, err := s.gcLogics.GetConfigs(kit)
 		if err != nil {
 			return "", false, err
 		}
-
 		totalAppliedCore := uint(0)
 		for _, suborder := range order.Suborders {
 			totalAppliedCore += suborder.AppliedCore
 		}
-
 		if int64(totalAppliedCore) > greenChannelConfig.AuditThreshold {
 			return fmt.Sprintf("order %d apply core %d exceed green channel auto approval audit threshold %d",
 				order.OrderId, totalAppliedCore, greenChannelConfig.AuditThreshold), true, nil
 		}
+		return "", false, nil
 
+	case enumor.RequireTypeDissolve:
+		return "require type dissolve require approval", true, nil
+
+	default:
 		return "", false, nil
 	}
-
-	return "", false, nil
 }
 
 // checkResourceType ...
@@ -1357,6 +1371,16 @@ func (s *scheduler) orderToUnifyOrder(kt *kit.Kit, orders []*types.ApplyOrder, g
 					order.SubOrderId, err, kt.Rid)
 			}
 			productNum = uint(len(deviceInfos))
+		}
+
+		// 转换旧版可用区到新版可用区，方便前端统一展示
+		if order.Spec != nil && len(order.Spec.Zone) > 0 && len(order.Spec.Zones) == 0 {
+			order.Spec.Zones = []string{order.Spec.Zone}
+			// 分Campus
+			if order.Spec.Zone == cvmapi.CvmSeparateCampus {
+				order.Spec.Zones = []string{cvmapi.CvmZoneAll}
+				order.Spec.ResAssign = enumor.CampusResAssign
+			}
 		}
 
 		unifyOrder := &types.UnifyOrder{
@@ -2560,6 +2584,8 @@ func (s *scheduler) modifyOrder(kt *kit.Kit, order *types.ApplyOrder, param *typ
 		"spec.vpc":             param.Spec.Vpc,
 		"spec.subnet":          param.Spec.Subnet,
 		"spec.failed_zone_ids": []string{}, // 修改需求重试时需要清空已失败的可用区，也就是全可用区重试
+		"spec.zones":           param.Spec.Zones,
+		"spec.res_assign":      param.Spec.ResAssign,
 		"stage":                types.TicketStageRunning,
 		"status":               types.ApplyStatusWaitForMatch,
 		"total_num":            param.TotalNum,
@@ -2639,6 +2665,8 @@ func (s *scheduler) createModifyRecord(kt *kit.Kit, order *types.ApplyOrder, par
 				Subnet:      order.Spec.Subnet,
 				SystemDisk:  order.Spec.SystemDisk,
 				DataDisk:    order.Spec.DataDisk,
+				Zones:       order.Spec.Zones,
+				ResAssign:   order.Spec.ResAssign,
 			},
 			CurData: &table.ModifyData{
 				TotalNum:    param.TotalNum,
@@ -2654,6 +2682,8 @@ func (s *scheduler) createModifyRecord(kt *kit.Kit, order *types.ApplyOrder, par
 				Subnet:      param.Spec.Subnet,
 				SystemDisk:  param.Spec.SystemDisk,
 				DataDisk:    param.Spec.DataDisk,
+				Zones:       param.Spec.Zones,
+				ResAssign:   param.Spec.ResAssign,
 			},
 		},
 		CreateAt: time.Now(),
@@ -3415,6 +3445,8 @@ func (s *scheduler) auditApplyModifyCallback(kt *kit.Kit, param *types.ConfirmAp
 			NetworkType: modifyRecord.Details.CurData.NetworkType,
 			Vpc:         modifyRecord.Details.CurData.Vpc,
 			Subnet:      modifyRecord.Details.CurData.Subnet,
+			Zones:       modifyRecord.Details.CurData.Zones,
+			ResAssign:   modifyRecord.Details.CurData.ResAssign,
 		},
 	}
 	if err = s.modifyOrder(kt, order, maReq); err != nil {

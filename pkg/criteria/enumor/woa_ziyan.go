@@ -510,6 +510,28 @@ var CvmModifyRecordStatusMap = map[CvmModifyRecordStatus]string{
 	ApprovalTimeoutCvmModifyStatus:  "审批超时",
 }
 
+// ResAssign 资源分配方式（1表示“有资源区域优先”、2表示“分Campus生产”）
+type ResAssign uint
+
+const (
+	// ResPriorityResAssign 有资源区域优先
+	ResPriorityResAssign ResAssign = 1
+	// CampusResAssign 分Campus生产
+	CampusResAssign ResAssign = 2
+)
+
+// Validate ResAssign.
+func (r ResAssign) Validate() error {
+	switch r {
+	case ResPriorityResAssign:
+	case CampusResAssign:
+	default:
+		return fmt.Errorf("unsupported verify res assign result: %d", r)
+	}
+
+	return nil
+}
+
 // QueryOrderInfoStatus 根据销毁单据查询预测返还信息接口状态
 type QueryOrderInfoStatus int
 

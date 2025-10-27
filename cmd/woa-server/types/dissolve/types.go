@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"time"
 
 	"hcm/pkg"
 	"hcm/pkg/api/core"
@@ -404,8 +405,9 @@ type BizDetail struct {
 
 // Total statistical data of hosts under business
 type Total struct {
-	Origin  TotalData `json:"origin"`
-	Current TotalData `json:"current"`
+	Origin        TotalData `json:"origin"`
+	Current       TotalData `json:"current"`
+	DeliveredCore int64     `json:"delivered_core"`
 }
 
 // TotalData statistical data of host under business
@@ -467,4 +469,35 @@ type HostDissolveStatusCheckResp struct {
 type HostDissolveStatusCheckInfo struct {
 	HostID int64 `json:"bk_host_id"`
 	Status bool  `json:"status"`
+}
+
+// ListDissolveCpuCoreSummaryReq list dissolve cpu core summary request
+type ListDissolveCpuCoreSummaryReq struct {
+	BizID int64 `json:"bk_biz_id" validate:"required"`
+}
+
+// Validate ...
+func (l *ListDissolveCpuCoreSummaryReq) Validate() error {
+	return validator.Validate.Struct(l)
+}
+
+// CpuCoreSummary dissolve cpu core summary
+type CpuCoreSummary struct {
+	TotalCore     int64 `json:"total_core"`
+	DeliveredCore int64 `json:"delivered_core"`
+}
+
+// Config dissolve config
+type Config struct {
+	HostApplyTime time.Time `json:"host_apply_time"`
+}
+
+// UpsertConfigReq upsert config request
+type UpsertConfigReq struct {
+	HostApplyTime *time.Time `json:"host_apply_time" validate:"required"`
+}
+
+// Validate ...
+func (u *UpsertConfigReq) Validate() error {
+	return validator.Validate.Struct(u)
 }

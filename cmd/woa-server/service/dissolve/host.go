@@ -157,8 +157,8 @@ func (s *service) SyncRecycledHost(cts *rest.Contexts) (interface{}, error) {
 	return nil, nil
 }
 
-// CheckHostDissolveStatus check host dissolve status
-func (s *service) CheckHostDissolveStatus(cts *rest.Contexts) (interface{}, error) {
+// CheckBizHostDissolveStatus check business host dissolve status
+func (s *service) CheckBizHostDissolveStatus(cts *rest.Contexts) (interface{}, error) {
 	return s.checkHostDissolveStatus(cts, handler.ListBizAuthRes)
 }
 
@@ -215,7 +215,7 @@ func (s *service) checkHostDissolveStatus(cts *rest.Contexts, authHandler handle
 			logs.Errorf("host extension is nil, host: %v, rid: %s", host, cts.Kit.Rid)
 			return nil, errf.New(errf.InvalidParameter, "host info is invalid, can not find host asset id")
 		}
-		hostIDAssetIDMap[host.BkHostID] = host.Extension.BkAssetID
+		hostIDAssetIDMap[host.BkHostID] = host.BkAssetID
 	}
 
 	assetIDStatusMap, err := s.logics.RecycledHost().IsDissolveHost(cts.Kit, maps.Values(hostIDAssetIDMap))

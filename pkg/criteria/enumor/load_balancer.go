@@ -21,6 +21,7 @@ package enumor
 
 import (
 	"errors"
+	"fmt"
 )
 
 // RuleType 负载均衡类型
@@ -66,10 +67,27 @@ const (
 	FailedBindingStatus BindingStatus = "failed"
 	// PartialFailedBindingStatus 部分失败
 	PartialFailedBindingStatus BindingStatus = "partial_failed"
+	// UnBindingStatus 未绑定
+	UnBindingStatus BindingStatus = "unbinding"
 )
 
 // ProtocolType 协议类型
 type ProtocolType string
+
+// Validate ProtocolType.
+func (p ProtocolType) Validate() error {
+	switch p {
+	case HttpProtocol:
+	case HttpsProtocol:
+	case TcpProtocol:
+	case UdpProtocol:
+	case TcpSslProtocol:
+	case QuicProtocol:
+	default:
+		return fmt.Errorf("unsupported protocol type: %s", p)
+	}
+	return nil
+}
 
 // 目标组类型
 const (

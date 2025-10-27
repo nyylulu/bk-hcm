@@ -317,7 +317,7 @@ func initLogics(sd serviced.State, apiClientSet *client.ClientSet, clients *clie
 
 	// new dissolve logic
 	logics.dissolveLogics = disLogics.New(clients.daoSet, clients.cmdbCli, clients.esCli, clients.thirdCli,
-		cc.WoaServer())
+		cc.WoaServer(), logics.configLogics, apiClientSet)
 
 	return logics, nil
 }

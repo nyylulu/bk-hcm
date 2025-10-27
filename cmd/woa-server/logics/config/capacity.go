@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sync"
 
 	"hcm/cmd/woa-server/model/config"
 	types "hcm/cmd/woa-server/types/config"
@@ -38,6 +39,8 @@ type CapacityIf interface {
 	GetCapacity(kt *kit.Kit, input *types.GetCapacityParam) (*types.GetCapacityRst, error)
 	// UpdateCapacity updates resource apply capacity info
 	UpdateCapacity(kt *kit.Kit, input *types.UpdateCapacityParam) error
+	// BatchGetCapacity 批量获取资源申请容量信息
+	BatchGetCapacity(kt *kit.Kit, input *types.BatchGetCapacityParam) (*types.BatchGetCapacityRst, error)
 }
 
 // NewCapacityOp creates a capacity interface
@@ -55,7 +58,6 @@ type capacity struct {
 	cmdbCli cmdb.Client
 }
 
-// GetCapacity gets resource apply capacity info
 func (c *capacity) GetCapacity(kt *kit.Kit, input *types.GetCapacityParam) (*types.GetCapacityRst, error) {
 	// 1. query subnet from db
 	filter := map[string]interface{}{
@@ -140,6 +142,316 @@ func (c *capacity) GetCapacity(kt *kit.Kit, input *types.GetCapacityParam) (*typ
 		cvt.PtrToVal(input), string(jsonRst), kt.Rid)
 
 	return rst, nil
+}
+
+// BatchGetCapacity 批量获取资源申请容量信息
+func (c *capacity) BatchGetCapacity(kt *kit.Kit, input *types.BatchGetCapacityParam) (*types.BatchGetCapacityRst, error) {
+	// 1. query subnet from db
+	filter := map[string]interface{}{
+		"region": input.Region,
+	}
+
+	if len(input.Zones) > 0 {
+		filter["zone"] = mapstr.MapStr{pkg.BKDBIN: input.Zones}
+	}
+
+	vpcID := input.Vpc
+	if vpcID == "" {
+		dftVpc, err := c.vpc.GetRegionDftVpc(kt, input.Region)
+		if err != nil {
+			logs.Errorf("failed to get default vpc for err: %v, region: %s, rid: %s", err, input.Region, kt.Rid)
+			return nil, err
+		}
+		vpcID = dftVpc
+	}
+	filter["vpc_id"] = vpcID
+
+	if input.Subnet != "" {
+		filter["subnet_id"] = input.Subnet
+	} else {
+		isDftRegionVpc, err := c.vpc.IsRegionDftVpc(kt, vpcID)
+		if err != nil {
+			logs.Errorf("failed to determine whether it is the default vpc, err: %v, region: %s, vpc id: %s, rid: %s",
+				err, input.Region, vpcID, kt.Rid)
+			return nil, err
+		}
+		if isDftRegionVpc {
+			// filter subnet with name prefix cvm_use_
+			filter["subnet_name"] = mapstr.MapStr{
+				pkg.BKDBLIKE: "^cvm_use_",
+			}
+		}
+	}
+
+	// get subnet with enable flag only
+	filter["enable"] = true
+
+	page := metadata.BasePage{
+		Start: 0,
+		Limit: pkg.BKNoLimit,
+	}
+
+	subnetList, err := config.Operation().Subnet().FindManySubnet(kt.Ctx, page, filter)
+	if err != nil {
+		logs.Errorf("failed to find subnet with filter: %+v, err: %v, rid: %s", filter, err, kt.Rid)
+		return nil, err
+	}
+
+	zoneToVpc := make(map[string][]string)
+	vpcToSubnet := make(map[string][]string)
+
+	for _, subnetItem := range subnetList {
+		zoneToVpc[subnetItem.Zone] = append(zoneToVpc[subnetItem.Zone], subnetItem.VpcId)
+		vpcToSubnet[subnetItem.VpcId] = append(vpcToSubnet[subnetItem.VpcId], subnetItem.SubnetId)
+	}
+
+	// 2.query apply capacity concurrently
+	deviceZoneToCapacity := c.queryBatchCapacityConcurrent(kt, input, zoneToVpc, vpcToSubnet)
+
+	rst := &types.BatchGetCapacityRst{}
+	for _, capacityInfo := range deviceZoneToCapacity {
+		rst.Info = append(rst.Info, capacityInfo)
+	}
+	rst.Count = int64(len(rst.Info))
+	// 为方便排查问题，增加日志记录
+	jsonRst, err := json.Marshal(rst)
+	if err != nil {
+		logs.Errorf("batch get capacity failed to marshal capacityRst, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+	logs.Infof("batch get capacity, input: %+v, result: %s, rid: %s",
+		cvt.PtrToVal(input), string(jsonRst), kt.Rid)
+
+	return rst, nil
+}
+
+// queryBatchCapacityConcurrent 并发查询多机型、多可用区的容量信息
+func (c *capacity) queryBatchCapacityConcurrent(kt *kit.Kit, input *types.BatchGetCapacityParam,
+	zoneToVpc map[string][]string, vpcToSubnet map[string][]string) []*types.BatchCapacityInfo {
+
+	deviceZoneToCapacity := make([]*types.BatchCapacityInfo, 0)
+	if len(zoneToVpc) == 0 {
+		return deviceZoneToCapacity
+	}
+
+	// 生成所有设备类型×可用区的组合任务
+	tasks := make([]struct {
+		deviceType string
+		zone       string
+		vpcList    []string
+	}, 0, len(input.DeviceTypes)*len(zoneToVpc))
+
+	for _, deviceType := range input.DeviceTypes {
+		for zoneID, vpcList := range zoneToVpc {
+			tasks = append(tasks, struct {
+				deviceType string
+				zone       string
+				vpcList    []string
+			}{deviceType: deviceType, zone: zoneID, vpcList: vpcList})
+		}
+	}
+
+	resultChan := make(chan *types.BatchCapacityInfo, len(tasks))
+	var wg sync.WaitGroup
+	semaphore := make(chan struct{}, 5)
+
+	for _, task := range tasks {
+		wg.Add(1)
+		go func(deviceType, zone string, vpcs []string) {
+			defer wg.Done()
+
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+
+			vpcUniq := arrayutil.StrArrayUnique(vpcs)
+			capacityInfo := c.getZoneCapacityForBatch(kt, input, deviceType, zone, vpcUniq, vpcToSubnet, input.IgnorePrediction)
+
+			if capacityInfo != nil {
+				resultChan <- capacityInfo
+			}
+		}(task.deviceType, task.zone, task.vpcList)
+	}
+
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	// 收集结果
+	for result := range resultChan {
+		deviceZoneToCapacity = append(deviceZoneToCapacity, result)
+	}
+
+	return deviceZoneToCapacity
+}
+
+// getZoneCapacityForBatch 获取单个设备类型+可用区的容量信息
+func (c *capacity) getZoneCapacityForBatch(kt *kit.Kit, input *types.BatchGetCapacityParam, deviceType, zone string, vpcList []string,
+	vpcToSubnet map[string][]string, ignorePrediction bool) *types.BatchCapacityInfo {
+
+	capacityInfo := c.createEmptyCapacityInfo(deviceType, input.Region, zone)
+	if len(vpcList) == 0 {
+		return capacityInfo
+	}
+
+	// 1. 查询CVM容量
+	capacityItem, req, resp := c.queryCvmCapacityForBatch(kt, input, deviceType, zone, vpcList, vpcToSubnet)
+	if capacityItem == nil {
+		return capacityInfo
+	}
+
+	// 2. 查询子网信息并更新容量
+	c.updateCapacityWithSubnetInfo(kt, input, zone, vpcList, vpcToSubnet, capacityItem, ignorePrediction)
+
+	// 3. 记录日志
+	c.logCapacityInfo(kt, input, deviceType, zone, req, resp, capacityItem)
+
+	return capacityItem
+}
+
+// createEmptyCapacityInfo 创建空的容量信息
+func (c *capacity) createEmptyCapacityInfo(deviceType, region, zone string) *types.BatchCapacityInfo {
+	return &types.BatchCapacityInfo{
+		DeviceType: deviceType,
+		Region:     region,
+		Zone:       zone,
+		Vpc:        "",
+		Subnet:     "",
+		MaxNum:     0,
+		MaxInfo:    make([]*types.CapacityMaxInfo, 0),
+	}
+}
+
+// queryCvmCapacityForBatch 查询CVM容量信息
+func (c *capacity) queryCvmCapacityForBatch(kt *kit.Kit, input *types.BatchGetCapacityParam, deviceType, zone string,
+	vpcList []string, vpcToSubnet map[string][]string) (*types.BatchCapacityInfo, interface{}, interface{}) {
+
+	req, err := c.createCapacityReqForBatch(kt, input, deviceType, zone, vpcList, vpcToSubnet)
+	if err != nil {
+		logs.Errorf("failed to create cvm capacity req, err: %v, input: %+v, rid: %s", err, cvt.PtrToVal(input), kt.Rid)
+		return nil, nil, nil
+	}
+
+	resp, err := c.cvm.QueryCvmCapacity(nil, nil, req)
+	if err != nil {
+		logs.ErrorJson("failed to get cvm apply capacity, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
+		return nil, nil, nil
+	}
+
+	if resp.Error.Code != 0 {
+		logs.Errorf("failed to get cvm apply capacity, code: %d, msg: %s, crpTraceID: %s, rid: %s",
+			resp.Error.Code, resp.Error.Message, resp.TraceId, kt.Rid)
+		return nil, nil, nil
+	}
+
+	if resp.Result == nil {
+		logs.Errorf("failed to get cvm apply capacity, for result is nil, crpTraceID: %s, rid: %s",
+			resp.TraceId, kt.Rid)
+		return nil, nil, nil
+	}
+
+	capacityItem := &types.BatchCapacityInfo{
+		DeviceType: deviceType,
+		Region:     input.Region,
+		Zone:       zone,
+		Vpc:        "",
+		Subnet:     "",
+		MaxNum:     int64(resp.Result.MaxNum),
+		MaxInfo:    make([]*types.CapacityMaxInfo, 0),
+	}
+
+	for _, info := range resp.Result.MaxInfo {
+		capacityItem.MaxInfo = append(capacityItem.MaxInfo, &types.CapacityMaxInfo{
+			Key:   c.translateCapacityKey(info.Key),
+			Value: int64(info.Value),
+		})
+	}
+
+	return capacityItem, req, resp
+}
+
+// updateCapacityWithSubnetInfo 更新容量信息中的子网信息
+func (c *capacity) updateCapacityWithSubnetInfo(kt *kit.Kit, input *types.BatchGetCapacityParam, zone string,
+	vpcList []string, vpcToSubnet map[string][]string, capacityItem *types.BatchCapacityInfo, ignorePrediction bool) {
+
+	subnetToLeftIp := make(map[string]*cvmapi.SubnetInfo)
+	for _, vpcItem := range vpcList {
+		subnetList, err := c.querySubnet(kt, input.Region, zone, vpcItem)
+		if err != nil {
+			logs.Errorf("failed to get cvm subnet info, err: %v, rid: %s", err, kt.Rid)
+			return
+		}
+		for _, subnetItem := range subnetList {
+			subnetToLeftIp[subnetItem.Id] = subnetItem
+		}
+	}
+
+	totalLeftIp := c.sumLeftIp(subnetToLeftIp, vpcList, vpcToSubnet)
+	c.updateCapacityMaxInfoForBatch(capacityItem, totalLeftIp, ignorePrediction)
+}
+
+// logCapacityInfo 记录容量信息日志
+func (c *capacity) logCapacityInfo(kt *kit.Kit, input *types.BatchGetCapacityParam, deviceType, zone string,
+	req, resp interface{}, capacityItem *types.BatchCapacityInfo) {
+
+	jsonReq, err := json.Marshal(req)
+	if err != nil {
+		logs.Errorf("get zone capacity failed to marshal capacityReq, err: %v, rid: %s", err, kt.Rid)
+		return
+	}
+
+	jsonResp, err := json.Marshal(resp)
+	if err != nil {
+		logs.Errorf("get zone capacity failed to marshal capacityResp, err: %v, rid: %s", err, kt.Rid)
+		return
+	}
+
+	jsonCapacityItem, err := json.Marshal(capacityItem)
+	if err != nil {
+		logs.Errorf("get zone capacity failed to marshal capacityItem, err: %v, rid: %s", err, kt.Rid)
+		return
+	}
+
+	logs.Infof("get zone capacity info, input: %+v, zone: %s, deviceType: %s, capacityReq: %s, capacityResp: %s, "+
+		"capacityItem: %s, rid: %s", cvt.PtrToVal(input), zone, deviceType, string(jsonReq), string(jsonResp),
+		string(jsonCapacityItem), kt.Rid)
+}
+
+// createCapacityReqForBatch 创建容量查询请求
+func (c *capacity) createCapacityReqForBatch(kt *kit.Kit, input *types.BatchGetCapacityParam, deviceType, zone string, vpcList []string,
+	vpcToSubnet map[string][]string) (*cvmapi.CapacityReq, error) {
+
+	tempParam := &types.GetCapacityParam{
+		RequireType:      input.RequireType,
+		DeviceType:       deviceType,
+		Region:           input.Region,
+		Zone:             zone,
+		Vpc:              input.Vpc,
+		Subnet:           input.Subnet,
+		ChargeType:       input.ChargeType,
+		IgnorePrediction: input.IgnorePrediction,
+		BizID:            input.BizID,
+	}
+
+	return c.createCapacityReq(kt, tempParam, zone, vpcList, vpcToSubnet)
+}
+
+// updateCapacityMaxInfoForBatch 更新容量最大信息
+func (c *capacity) updateCapacityMaxInfoForBatch(capacity *types.BatchCapacityInfo, leftIp int64, ignorePrediction bool) {
+	maxNum := leftIp
+	for _, maxInfo := range capacity.MaxInfo {
+		key := maxInfo.Key
+		if key == hcmKeyIPCap {
+			maxInfo.Value = leftIp
+		}
+
+		// 所有key的最小值，为可申请的最大值；当忽略预测时，只需要关心所选VPC子网可用IP数和云梯系统单次最大申请量。
+		if maxInfo.Value < maxNum && (!ignorePrediction || key == hcmKeyIPCap || key == hcmKeyApplyLimit) {
+			maxNum = maxInfo.Value
+		}
+	}
+
+	capacity.MaxNum = maxNum
 }
 
 // UpdateCapacity updates resource apply capacity info
