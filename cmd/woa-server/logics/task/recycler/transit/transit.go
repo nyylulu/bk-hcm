@@ -360,26 +360,22 @@ func (t *Transit) getHostStatusInfo(kt *kit.Kit, hostIds []int64, targetBizID in
 	for _, hostId := range hostIds {
 		hostBizRel := hostBizModuleMap[hostId]
 
-		// 主机在reborn业务
-		if hostBizRel != nil && hostBizRel.BizID == recovertask.RebornBizId {
-			if hostBizRel.BkModuleID == recovertask.CrRelayModuleId ||
-				hostBizRel.BkModuleID == rebornRecycleModuleID {
-				status[hostId] = HostTransitStatusTransitToOrigin
-				continue
-			}
-			status[hostId] = HostTransitStatusAbnormal
+		if hostBizRel == nil {
+			status[hostId] = HostTransitStatusCompleted
 			continue
 		}
 
-		if hostBizRel != nil && hostBizRel.BizID == targetBizID {
-			if hostBizRel.BkModuleID == targetRecycleModuleID {
-				status[hostId] = HostTransitStatusTransitToReborn
-				continue
-			}
+		if hostBizRel.BizID == recovertask.RebornBizId && hostBizRel.BkModuleID == recovertask.CrRelayModuleId {
+			status[hostId] = HostTransitStatusTransitToOrigin
+			continue
 		}
 
-		if hostBizRel == nil {
-			status[hostId] = HostTransitStatusCompleted
+		if hostBizRel.BizID == targetBizID && hostBizRel.BkModuleID == targetRecycleModuleID {
+			status[hostId] = HostTransitStatusTransitToReborn
+			continue
+		}
+		if hostBizRel.BizID == recovertask.RebornBizId && hostBizRel.BkModuleID == rebornRecycleModuleID {
+			status[hostId] = HostTransitStatusTransitToReborn
 			continue
 		}
 
