@@ -357,7 +357,8 @@ func (t *Transit) getHostStatusInfo(kt *kit.Kit, hostIds []int64, targetBizID in
 
 		// 主机在reborn业务
 		if hostBizRel != nil && hostBizRel.BizID == recovertask.RebornBizId {
-			if hostBizRel.BkModuleID == recovertask.CrRelayModuleId {
+			if hostBizRel.BkModuleID == recovertask.CrRelayModuleId ||
+				hostBizRel.BkModuleID == recovertask.DataToCleanedModule {
 				status[hostId] = HostTransitStatusTransitToOrigin
 				continue
 			}
