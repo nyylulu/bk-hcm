@@ -83,6 +83,9 @@ type CVMClientInterface interface {
 	ReportPenaltyRatio(ctx context.Context, header http.Header, req *CvmCbsPlanPenaltyRatioReportReq) (
 		*CvmCbsPlanPenaltyRatioReportResp, error)
 
+	// QueryReturnPlan query return plan
+	QueryReturnPlan(ctx context.Context, header http.Header, req *QueryReturnPlanReq) (*QueryReturnPlanResp, error)
+
 	QueryTechnicalClass(ctx context.Context, header http.Header, req *QueryTechnicalClassReq) (*QueryTechnicalClassResp,
 		error)
 	// QueryOrderList 根据销毁单据查询预测返还信息
@@ -404,6 +407,24 @@ func (c *cvmApi) ReportPenaltyRatio(ctx context.Context, header http.Header, req
 
 	subPath := "/tocservice/obs/"
 	resp := new(CvmCbsPlanPenaltyRatioReportResp)
+	err := c.client.Post().
+		WithContext(ctx).
+		Body(req).
+		SubResourcef(subPath).
+		WithParam(CvmApiKey, CvmApiKeyVal).
+		WithHeaders(header).
+		Do().
+		Into(resp)
+
+	return resp, err
+}
+
+// QueryReturnPlan query cvm return plan
+func (c *cvmApi) QueryReturnPlan(ctx context.Context, header http.Header, req *QueryReturnPlanReq) (
+	*QueryReturnPlanResp, error) {
+
+	subPath := "/yunti-return/webapi/cvm"
+	resp := new(QueryReturnPlanResp)
 	err := c.client.Post().
 		WithContext(ctx).
 		Body(req).

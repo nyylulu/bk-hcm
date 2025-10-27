@@ -74,6 +74,7 @@ import (
 	"hcm/cmd/data-service/service/cloud/zone"
 	"hcm/cmd/data-service/service/cos"
 	globalconfig "hcm/cmd/data-service/service/global-config"
+	"hcm/cmd/data-service/service/meta"
 	orgtopo "hcm/cmd/data-service/service/org-topo"
 	recyclerecord "hcm/cmd/data-service/service/recycle-record"
 	resourceplan "hcm/cmd/data-service/service/resource-plan"
@@ -295,6 +296,7 @@ func (s *Service) apiSet() *restful.Container {
 
 	resourceplan.InitService(capability)
 	rollingserver.InitService(capability)
+	meta.InitService(capability)
 
 	rollingapplied.InitService(capability)
 	rollingreturned.InitService(capability)

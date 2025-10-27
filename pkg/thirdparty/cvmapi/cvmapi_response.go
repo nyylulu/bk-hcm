@@ -475,6 +475,48 @@ type PlanOrderBaseInfo struct {
 	CurrentProcessor string          `json:"currentProcessor"`
 }
 
+// QueryReturnPlanResp query cvm return plan response
+type QueryReturnPlanResp struct {
+	RespMeta `json:",inline"`
+	Result   *QueryReturnPlanRst `json:"result"`
+}
+
+// QueryReturnPlanRst query cvm return plan result
+type QueryReturnPlanRst struct {
+	Total                  int               `json:"total"`
+	Data                   []*ReturnPlanItem `json:"data"`
+	TotalCoreAmount        float64           `json:"totalCoreAmount"`
+	TotalAppliedCoreAmount float64           `json:"totalAppliedCoreAmount"`
+	TotalLeftCoreAmount    float64           `json:"totalLeftCoreAmount"`
+	TotalExpiredCoreAmount float64           `json:"totalExpiredCoreAmount"`
+}
+
+// ReturnPlanItem cvm return plan item
+type ReturnPlanItem struct {
+	ID                 int64             `json:"id"`
+	BGID               int64             `json:"bgId"`
+	BGName             string            `json:"bgName"`
+	DeptID             int64             `json:"deptID"`
+	DeptName           string            `json:"deptName"`
+	PlanProductID      int64             `json:"planProductID"`
+	PlanProductName    string            `json:"planProductName"`
+	ProductID          int64             `json:"productID"`
+	ProductName        string            `json:"productName"`
+	ProjectName        enumor.ObsProject `json:"projectName"`
+	PlanTime           string            `json:"planTime"` // YYYY-MM-DD
+	GenerationType     int64             `json:"generationType"`
+	GenerationTypeName string            `json:"generationTypeName"` // 采购代次
+	CoreType           int64             `json:"coreType"`
+	CoreTypeName       string            `json:"coreTypeName"`
+	DeviceFamilyName   string            `json:"deviceFamilyName"` // 物理机机型族：云上计算标准
+	InstanceModel      string            `json:"instanceModel"`    // CVM机型
+	InstanceType       string            `json:"instanceType"`
+	CityName           string            `json:"cityName"`
+	ZoneName           string            `json:"zoneName"`
+	CvmAmount          float64           `json:"cvmAmount"`
+	CoreAmount         decimal.Decimal   `json:"coreAmount"` // 退回计划可能有小数核心
+}
+
 // CapacityResp cvm apply capacity query response
 type CapacityResp struct {
 	RespMeta `json:",inline"`

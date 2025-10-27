@@ -393,6 +393,27 @@ type QueryPlanOrderParam struct {
 	OrderIds []string `json:"orderIds,omitempty"`
 }
 
+// QueryReturnPlanReq query cvm return plan request
+type QueryReturnPlanReq struct {
+	ReqMeta `json:",inline"`
+	Params  *QueryReturnPlanParam `json:"params"`
+}
+
+// QueryReturnPlanParam query cvm return plan parameters
+// docs: iwiki/p/4015475872#退回计划查询API
+type QueryReturnPlanParam struct {
+	UserName         string              `json:"userName"`
+	StartDate        string              `json:"startDate"` // 查询的预计退回日期起始，格式YYYY-MM-DD
+	EndDate          string              `json:"endDate"`   // 查询的预计退回日期结束，格式YYYY-MM-DD
+	DeptName         []string            `json:"deptName"`
+	PlanProductName  []string            `json:"planProductName"`
+	ProductName      []string            `json:"productName"`
+	ProjectName      []enumor.ObsProject `json:"projectName"`
+	CityName         []string            `json:"cityName"`
+	DeviceFamilyName []string            `json:"deviceFamilyName"`
+	Page             *Page               `json:"page,omitempty"`
+}
+
 /* CapacityReq request example
 {
     "method":"queryApplyCapacity",

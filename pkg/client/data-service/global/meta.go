@@ -17,21 +17,31 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package shortrental
+package global
 
 import (
-	"hcm/pkg/dal/dao/types"
-	srt "hcm/pkg/dal/table/short-rental"
+	metaproto "hcm/pkg/api/data-service/meta"
+	"hcm/pkg/client/common"
+	"hcm/pkg/kit"
+	"hcm/pkg/rest"
 )
 
-// ShortRentalReturnedRecordListResult list short rental returned record result.
-type ShortRentalReturnedRecordListResult = types.ListResult[srt.ShortRentalReturnedRecordTable]
+// MetaClient is data service meta api client.
+type MetaClient struct {
+	client rest.ClientInterface
+}
 
-// SumShortRentalReturnedRecord sum short rental returned record result.
-type SumShortRentalReturnedRecord struct {
-	SumReturnedCore      int64  `db:"sum_returned_core" json:"sum_returned_core"`
-	PhysicalDeviceFamily string `db:"physical_device_family" json:"physical_device_family"`
-	RegionName           string `db:"region_name" json:"region_name"`
-	OpProductName        string `db:"op_product_name" json:"op_product_name"`
-	PlanProductName      string `db:"plan_product_name" json:"plan_product_name"`
+// NewMetaClient create a new meta api client.
+func NewMetaClient(client rest.ClientInterface) *MetaClient {
+	return &MetaClient{
+		client: client,
+	}
+}
+
+// --- woa zone ---
+
+// GetRegionAreaMap get region area map.
+func (b *MetaClient) GetRegionAreaMap(kt *kit.Kit) (*metaproto.RegionAreaMap, error) {
+	return common.Request[common.Empty, metaproto.RegionAreaMap](
+		b.client, rest.GET, kt, nil, "/res_plans/woa_zones/region_area_map")
 }

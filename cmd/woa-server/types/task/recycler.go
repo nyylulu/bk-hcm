@@ -110,12 +110,13 @@ func (param *ReturnPlan) Validate() (errKey string, err error) {
 
 // PreviewRecycleReq preview recycle order request
 type PreviewRecycleReq struct {
-	IPs         []string    `json:"ips"`
-	AssetIDs    []string    `json:"asset_ids"`
-	HostIDs     []int64     `json:"bk_host_ids"`
-	ReturnPlan  *ReturnPlan `json:"return_plan"`
-	SkipConfirm bool        `json:"skip_confirm"`
-	Remark      string      `json:"remark" bson:"remark"`
+	IPs                 []string            `json:"ips"`
+	AssetIDs            []string            `json:"asset_ids"`
+	HostIDs             []int64             `json:"bk_host_ids"`
+	ReturnPlan          *ReturnPlan         `json:"return_plan"`
+	SkipConfirm         bool                `json:"skip_confirm"`
+	RecycleTypeSequence []table.RecycleType `json:"recycle_type_sequence"`
+	Remark              string              `json:"remark" bson:"remark"`
 }
 
 // Validate whether PreviewRecycleReq is valid
@@ -141,6 +142,16 @@ func (req *PreviewRecycleReq) Validate() error {
 	remarkLimit := 256
 	if len(req.Remark) > remarkLimit {
 		return fmt.Errorf("remark exceed size limit %d", remarkLimit)
+	}
+
+	// 校验回收顺序参数提供的回收类型是否正确
+	for _, recycleT := range req.RecycleTypeSequence {
+		if err := recycleT.Validate(); err != nil {
+			return err
+		}
+		if recycleT.IsFixedType() {
+			return fmt.Errorf("fixed recycle type: %s is not allowed", recycleT)
+		}
 	}
 
 	if req.ReturnPlan == nil {

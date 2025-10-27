@@ -70,6 +70,7 @@ type Client struct {
 
 	GlobalConfig *GlobalConfigsClient
 	OrgTopo      *OrgTopoClient
+	Meta         *MetaClient
 
 	ResUsageBizRel *ResUsageBizRelClient
 }
@@ -123,6 +124,7 @@ func NewClient(client rest.ClientInterface) *Client {
 		GlobalConfig:   NewGlobalConfigClient(client),
 		ResUsageBizRel: NewResUsageBizRelRelClient(client),
 		ResourcePlan:   NewResourcePlanClient(client),
-		OrgTopo:      NewOrgTopoClient(client),
+		OrgTopo:        NewOrgTopoClient(client),
+		Meta:           NewMetaClient(client),
 	}
 }

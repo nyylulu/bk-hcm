@@ -21,7 +21,7 @@ package enumor
 
 import "fmt"
 
-// ShortRentalStatus ...
+// ShortRentalStatus is the returned status of short rental
 type ShortRentalStatus string
 
 const (
@@ -33,7 +33,7 @@ const (
 	ShortRentalStatusTerminate ShortRentalStatus = "TERMINATE"
 )
 
-// Validate ...
+// Validate validate ShortRentalStatus
 func (s ShortRentalStatus) Validate() error {
 	switch s {
 	case ShortRentalStatusReturning, ShortRentalStatusDone, ShortRentalStatusTerminate:

@@ -23,6 +23,7 @@ package shortrentalreturnedrecord
 import (
 	"hcm/pkg/api/core"
 	rpproto "hcm/pkg/api/data-service/resource-plan"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
@@ -74,6 +75,9 @@ func (svc *service) SumShortRentalReturnedCore(cts *rest.Contexts) (interface{},
 	}
 	rules = append(rules, tools.RuleEqual("year", req.Year))
 	rules = append(rules, tools.RuleEqual("month", req.Month))
+	// 统计已回收核心数时，排除掉回收终止的条目
+	rules = append(rules, tools.RuleNotEqual("status", enumor.ShortRentalStatusTerminate))
+
 	expr := &filter.Expression{
 		Op:    filter.And,
 		Rules: rules,

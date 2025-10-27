@@ -17,21 +17,14 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
+// Package shortrental ...
 package shortrental
 
-import (
-	"hcm/pkg/dal/dao/types"
-	srt "hcm/pkg/dal/table/short-rental"
-)
-
-// ShortRentalReturnedRecordListResult list short rental returned record result.
-type ShortRentalReturnedRecordListResult = types.ListResult[srt.ShortRentalReturnedRecordTable]
-
-// SumShortRentalReturnedRecord sum short rental returned record result.
-type SumShortRentalReturnedRecord struct {
-	SumReturnedCore      int64  `db:"sum_returned_core" json:"sum_returned_core"`
-	PhysicalDeviceFamily string `db:"physical_device_family" json:"physical_device_family"`
-	RegionName           string `db:"region_name" json:"region_name"`
-	OpProductName        string `db:"op_product_name" json:"op_product_name"`
-	PlanProductName      string `db:"plan_product_name" json:"plan_product_name"`
+// RecycleGroupKey 回收时按该key分组匹配退回计划
+type RecycleGroupKey struct {
+	PlanProductName string
+	OpProductName   string
+	RegionID        string // 仅在创建短租退回计划记录时使用，CRP中没有该字段，无法用于匹配
+	RegionName      string
+	PhysFamily      string
 }

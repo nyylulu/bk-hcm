@@ -15,6 +15,7 @@ package dispatcher
 
 import (
 	"hcm/cmd/woa-server/dal/task/table"
+	srlogics "hcm/cmd/woa-server/logics/short-rental"
 	"hcm/cmd/woa-server/logics/task/recycler/event"
 )
 
@@ -22,12 +23,14 @@ import (
 type Task struct {
 	State       ActionState
 	orderStatus table.RecycleStatus
+	srLogic     srlogics.Logics
 }
 
 // NewTask creates a task instance
-func NewTask(status table.RecycleStatus) *Task {
+func NewTask(status table.RecycleStatus, shortRentalLogic srlogics.Logics) *Task {
 	task := &Task{
 		orderStatus: status,
+		srLogic:     shortRentalLogic,
 	}
 	task.initState()
 	return task
@@ -38,21 +41,29 @@ func (t *Task) initState() {
 	case table.RecycleStatusUncommit:
 		t.State = &UncommitState{}
 	case table.RecycleStatusCommitted:
-		t.State = &CommittedState{}
+		t.State = &CommittedState{
+			ShortRentalLogic: t.srLogic,
+		}
 	case table.RecycleStatusDetecting:
 		t.State = &DetectingState{}
 	case table.RecycleStatusDetectFailed:
 		t.State = &DetectFailedState{}
 	case table.RecycleStatusAudit:
-		t.State = &AuditingState{}
+		t.State = &AuditingState{
+			ShortRentalLogic: t.srLogic,
+		}
 	case table.RecycleStatusRejected:
 		t.State = &AuditRejectedState{}
 	case table.RecycleStatusTransiting:
-		t.State = &TransitingState{}
+		t.State = &TransitingState{
+			ShortRentalLogic: t.srLogic,
+		}
 	case table.RecycleStatusTransitFailed:
 		t.State = &TransitFailedState{}
 	case table.RecycleStatusReturning:
-		t.State = &ReturningState{}
+		t.State = &ReturningState{
+			ShortRentalLogic: t.srLogic,
+		}
 	case table.RecycleStatusReturnFailed:
 		t.State = &ReturnFailedState{}
 	case table.RecycleStatusReturningPlan:

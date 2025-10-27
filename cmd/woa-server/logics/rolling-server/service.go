@@ -80,11 +80,11 @@ type Logics interface {
 	ReduceRollingCvmProdAppliedRecord(kt *kit.Kit, devices []*types.MatchDeviceBrief) error
 	GetCpuCoreSum(kt *kit.Kit, deviceTypeCountMap map[string]int) (int64, error)
 	// CalSplitRecycleHosts 计算并匹配指定时间范围指定业务的主机Host
-	CalSplitRecycleHosts(kt *kit.Kit, bkBizID int64, hosts []*table.RecycleHost, allBizReturnedCpuCore,
-		globalQuota int64) (map[string]*rolling_server.RecycleHostMatchInfo, []*table.RecycleHost, int64, error)
+	CalSplitRecycleHosts(kt *kit.Kit, bkBizID int64, hosts []*table.RecycleHost, recycleTypeSeq []table.RecycleType,
+		allBizReturnedCpuCore, globalQuota int64) ([]*table.RecycleHost, int64, error)
 	// InsertReturnedHostMatched 插入需要退还的主机匹配记录
 	InsertReturnedHostMatched(kt *kit.Kit, bkBizID int64, orderID uint64, subOrderID string, hosts []*table.RecycleHost,
-		hostMatchMap map[string]*rolling_server.RecycleHostMatchInfo, status enumor.ReturnedStatus) error
+		status enumor.ReturnedStatus) error
 	// UpdateReturnedStatusBySubOrderID 根据回收子订单ID更新滚服回收的状态
 	UpdateReturnedStatusBySubOrderID(kt *kit.Kit, bkBizID int64, subOrderID string,
 		updateLocked enumor.ReturnedStatus) error

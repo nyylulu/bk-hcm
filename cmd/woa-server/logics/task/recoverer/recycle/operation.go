@@ -83,7 +83,7 @@ func (r *recycleRecoverer) getDetectTasksCount(kt *kit.Kit, subOrderId string, s
 
 // newTask create a recycle task to flow state
 func (r *recycleRecoverer) newTask(order *table.RecycleOrder) (*dispatcher.Task, *dispatcher.CommonContext) {
-	task := dispatcher.NewTask(order.Status)
+	task := dispatcher.NewTask(order.Status, r.recyclerIf.GetShortRentalLogic())
 	taskCtx := &dispatcher.CommonContext{
 		Order:      order,
 		Dispatcher: r.recyclerIf.GetDispatcher(),

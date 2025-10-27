@@ -17,21 +17,16 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package shortrental
+// Package meta ...
+package meta
 
-import (
-	"hcm/pkg/dal/dao/types"
-	srt "hcm/pkg/dal/table/short-rental"
-)
+// RegionAreaMap is region and area map.
+type RegionAreaMap map[string]RegionArea
 
-// ShortRentalReturnedRecordListResult list short rental returned record result.
-type ShortRentalReturnedRecordListResult = types.ListResult[srt.ShortRentalReturnedRecordTable]
-
-// SumShortRentalReturnedRecord sum short rental returned record result.
-type SumShortRentalReturnedRecord struct {
-	SumReturnedCore      int64  `db:"sum_returned_core" json:"sum_returned_core"`
-	PhysicalDeviceFamily string `db:"physical_device_family" json:"physical_device_family"`
-	RegionName           string `db:"region_name" json:"region_name"`
-	OpProductName        string `db:"op_product_name" json:"op_product_name"`
-	PlanProductName      string `db:"plan_product_name" json:"plan_product_name"`
+// RegionArea is region and area struct.
+type RegionArea struct {
+	RegionID   string `db:"region_id" json:"region_id"`
+	RegionName string `db:"region_name" json:"region_name"`
+	AreaID     string `db:"area_id" json:"area_id"`
+	AreaName   string `db:"area_name" json:"area_name"`
 }

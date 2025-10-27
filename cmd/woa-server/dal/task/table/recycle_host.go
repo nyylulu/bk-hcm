@@ -35,6 +35,7 @@ type RecycleHost struct {
 	DeviceType      string               `json:"device_type" bson:"device_type"`
 	Zone            string               `json:"bk_zone_name" bson:"bk_zone_name"`
 	SubZone         string               `json:"sub_zone" bson:"sub_zone"`
+	CloudRegionID   string               `json:"cloud_region_id" bson:"cloud_region_id"`
 	ModuleName      string               `json:"module_name" bson:"module_name"`
 	Operator        string               `json:"operator" bson:"operator"`
 	BakOperator     string               `json:"bak_operator" bson:"bak_operator"`
@@ -61,4 +62,8 @@ type RecycleHost struct {
 	SvrSourceTypeID cmdb.SvrSourceTypeID `json:"bk_svr_source_type_id"`
 	Recyclable      bool                 `json:"-"`
 	RecycleMessage  string               `json:"-"`
+	// RollServerMatchedCore 记录该回收主机匹配到的滚服申领单及匹配的核数
+	RollServerMatchedCore map[string]int64 `json:"-"`
+	IsMatchRollServer     bool             `json:"-"`
+	IsMatchShortRental    bool             `json:"-"`
 }

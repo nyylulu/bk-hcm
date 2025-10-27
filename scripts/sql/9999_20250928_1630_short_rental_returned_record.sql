@@ -52,9 +52,9 @@ CREATE TABLE IF NOT EXISTS `short_rental_returned_record` (
     `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
 
     PRIMARY KEY (`id`),
-    UNIQUE KEY `idx_biz_suborder_device_family_region` (`bk_biz_id`, `suborder_id`, `physical_device_family`, `region_id`),
-    KEY `idx_op_product_year_month_device_family_region` (`op_product_id`, `year`, `month`, `physical_device_family`,
-                                                        `region_id`)
+    UNIQUE KEY `idx_biz_suborder_device_family_region` (`suborder_id`, `bk_biz_id`, `physical_device_family`, `region_id`),
+    KEY `idx_op_product_year_month_device_family_region` (`year`, `month`, `physical_device_family`,
+                                                        `region_id`, `op_product_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='短租退回记录表';
 
 insert into id_generator(`resource`, `max_id`)

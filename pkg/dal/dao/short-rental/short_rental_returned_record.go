@@ -132,7 +132,9 @@ func (d ShortRentalReturnedRecordDao) UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, fil
 }
 
 // List get short rental returned record list.
-func (d ShortRentalReturnedRecordDao) List(kt *kit.Kit, opt *types.ListOption) (*stypes.ShortRentalReturnedRecordListResult, error) {
+func (d ShortRentalReturnedRecordDao) List(kt *kit.Kit, opt *types.ListOption) (
+	*stypes.ShortRentalReturnedRecordListResult, error) {
+
 	if opt == nil {
 		return nil, errf.New(errf.InvalidParameter, "list short rental returned record options is nil")
 	}
@@ -155,7 +157,8 @@ func (d ShortRentalReturnedRecordDao) List(kt *kit.Kit, opt *types.ListOption) (
 
 		count, err := d.Orm.Do().Count(kt.Ctx, sql, whereValue)
 		if err != nil {
-			logs.Errorf("count short rental returned record failed, err: %v, filter: %v, rid: %s", err, opt.Filter, kt.Rid)
+			logs.Errorf("count short rental returned record failed, err: %v, filter: %v, rid: %s", err, opt.Filter,
+				kt.Rid)
 			return nil, err
 		}
 		return &stypes.ShortRentalReturnedRecordListResult{Count: count}, nil
@@ -200,7 +203,8 @@ func (d ShortRentalReturnedRecordDao) DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, exp
 
 // SumReturnedCore sum returned core of short rental returned records,
 // group by physicalDeviceFamily and region_name and op_product_id.
-func (d ShortRentalReturnedRecordDao) SumReturnedCore(kt *kit.Kit, expression *filter.Expression) ([]*stypes.SumShortRentalReturnedRecord, error) {
+func (d ShortRentalReturnedRecordDao) SumReturnedCore(kt *kit.Kit, expression *filter.Expression) (
+	[]*stypes.SumShortRentalReturnedRecord, error) {
 
 	if expression == nil {
 		return nil, errf.New(errf.InvalidParameter, "filter expr is required")
@@ -212,8 +216,8 @@ func (d ShortRentalReturnedRecordDao) SumReturnedCore(kt *kit.Kit, expression *f
 	}
 
 	sql := fmt.Sprintf(`SELECT IFNULL(SUM(returned_core), 0) AS sum_returned_core, physical_device_family,
-       region_name, op_product_id FROM %s %s GROUP BY physical_device_family, region_name, op_product_id`,
-		table.ShortRentalReturnedRecordTable, whereExpr)
+       region_name, op_product_name, plan_product_name FROM %s %s GROUP BY physical_device_family, region_name, 
+       op_product_name, plan_product_name`, table.ShortRentalReturnedRecordTable, whereExpr)
 
 	details := make([]*stypes.SumShortRentalReturnedRecord, 0)
 	if err := d.Orm.Do().Select(kt.Ctx, &details, sql, whereValue); err != nil {

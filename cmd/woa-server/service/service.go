@@ -37,6 +37,7 @@ import (
 	planctrl "hcm/cmd/woa-server/logics/plan"
 	ressynclogics "hcm/cmd/woa-server/logics/res-sync"
 	rslogics "hcm/cmd/woa-server/logics/rolling-server"
+	srlogics "hcm/cmd/woa-server/logics/short-rental"
 	taskLogics "hcm/cmd/woa-server/logics/task"
 	"hcm/cmd/woa-server/logics/task/informer"
 	"hcm/cmd/woa-server/logics/task/operation"
@@ -102,6 +103,7 @@ type Service struct {
 	operationIf   operation.Interface
 	esCli         *es.EsCli
 	rsLogic       rslogics.Logics
+	srLogic       srlogics.Logics
 	gcLogic       gclogics.Logics
 	bizLogic      biz.Logics
 	dissolveLogic disLogics.Logics
@@ -113,151 +115,273 @@ type Service struct {
 
 // NewService create a service instance.
 func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, error) {
-	tls := cc.WoaServer().Network.TLS
-
-	var tlsConfig *ssl.TLSConfig
-	if tls.Enable() {
-		tlsConfig = &ssl.TLSConfig{
-			InsecureSkipVerify: tls.InsecureSkipVerify,
-			CertFile:           tls.CertFile,
-			KeyFile:            tls.KeyFile,
-			CAFile:             tls.CAFile,
-			Password:           tls.Password,
-		}
+	tlsConfig, err := initTLSConfig()
+	if err != nil {
+		return nil, err
 	}
 
-	// initiate system api client set.
+	apiClientSet, err := initAPIClient(tlsConfig, dis)
+	if err != nil {
+		return nil, err
+	}
+
+	clients, err := initClients(apiClientSet, dis)
+	if err != nil {
+		return nil, err
+	}
+
+	logics, err := initLogics(sd, apiClientSet, clients)
+	if err != nil {
+		return nil, err
+	}
+
+	mongoComponents, err := initMongoComponents(dis, clients, logics)
+	if err != nil {
+		return nil, err
+	}
+
+	service := assembleService(apiClientSet, clients, logics, mongoComponents)
+	return newOtherClient(core.NewBackendKit(), service, clients.itsmCli, sd)
+}
+
+// initTLSConfig 初始化TLS配置
+func initTLSConfig() (*ssl.TLSConfig, error) {
+	tls := cc.WoaServer().Network.TLS
+	if !tls.Enable() {
+		return nil, nil
+	}
+
+	return &ssl.TLSConfig{
+		InsecureSkipVerify: tls.InsecureSkipVerify,
+		CertFile:           tls.CertFile,
+		KeyFile:            tls.KeyFile,
+		CAFile:             tls.CAFile,
+		Password:           tls.Password,
+	}, nil
+}
+
+// initAPIClient 初始化API客户端
+func initAPIClient(tlsConfig *ssl.TLSConfig, dis serviced.ServiceDiscover) (*client.ClientSet, error) {
 	restCli, err := restcli.NewClient(tlsConfig)
 	if err != nil {
 		return nil, err
 	}
-	apiClientSet := client.NewClientSet(restCli, dis)
+	return client.NewClientSet(restCli, dis), nil
+}
+
+// clientSet 封装所有客户端
+type clientSet struct {
+	daoSet     dao.Set
+	esCli      *es.EsCli
+	cmdbCli    cmdb.Client
+	itsmCli    itsm.Client
+	cmsiCli    cmsi.Client
+	authorizer auth.Authorizer
+	thirdCli   *thirdparty.Client
+}
+
+// initClients 初始化所有客户端
+func initClients(apiClientSet *client.ClientSet, dis serviced.ServiceDiscover) (*clientSet, error) {
+	clients := &clientSet{}
 
 	// init db client
 	daoSet, err := dao.NewDaoSet(cc.WoaServer().Database)
 	if err != nil {
 		return nil, err
 	}
+	clients.daoSet = daoSet
 
-	// 创建ESB Client
+	// init CMDB client
 	cmdbConfig := cc.WoaServer().Cmdb
-
 	if err = cmdb.InitCmdbClient(&cmdbConfig, metrics.Register()); err != nil {
 		return nil, err
 	}
-	cmdbCli := cmdb.CmdbClient()
+	clients.cmdbCli = cmdb.CmdbClient()
 
+	// init ITSM client
 	itsmCfg := cc.WoaServer().ITSM
 	itsmCli, err := itsm.NewClient(&itsmCfg, metrics.Register())
 	if err != nil {
 		return nil, err
 	}
+	clients.itsmCli = itsmCli
 
 	// 创建调用第三方平台Client
 	thirdCli, err := thirdparty.NewClient(cc.WoaServer().ClientConfig, metrics.Register())
 	if err != nil {
 		return nil, err
 	}
+	clients.thirdCli = thirdCli
 
-	// create authorizer
-	authorizer, err := auth.NewAuthorizer(dis, tls)
-	if err != nil {
-		return nil, err
-	}
-
-	// init redis client
-	rConf := cc.WoaServer().Redis
-	redisConf, err := redis.NewConf(&rConf)
-	if err != nil {
-		return nil, err
-	}
-	if err = redisCli.InitClient("redis", redisConf); err != nil {
-		return nil, err
-	}
-
-	configLogics := conflogics.New(apiClientSet, thirdCli, cmdbCli)
-	gcLogics, err := gclogics.New(apiClientSet, configLogics)
-	if err != nil {
-		logs.Errorf("new green channel logics failed, err: %v", err)
-		return nil, err
-	}
-
-	bizLogic, err := biz.New(cmdbCli, authorizer)
-	if err != nil {
-		logs.Errorf("new biz logic failed, err: %v", err)
-		return nil, err
-	}
-
+	// init CMSI client
 	cmsiCfg := cc.WoaServer().Cmsi
 	cmsiCli, err := cmsi.NewClient(&cmsiCfg, metrics.Register())
 	if err != nil {
 		logs.Errorf("failed to create cmsi client, err: %v", err)
 		return nil, err
 	}
+	clients.cmsiCli = cmsiCli
 
-	rsLogics, err := rslogics.New(sd, apiClientSet, cmdbCli, thirdCli, bizLogic, cmsiCli, configLogics)
-	if err != nil {
-		logs.Errorf("new rolling server logics failed, err: %v", err)
-		return nil, err
-	}
-
-	planCtrl, err := planctrl.New(sd, apiClientSet, daoSet, cmsiCli, itsmCli, thirdCli.CVM, bizLogic)
-	if err != nil {
-		logs.Errorf("new plan controller failed, err: %v", err)
-		return nil, err
-	}
-
+	// init elasticsearch client
 	esCli, err := es.NewEsClient(cc.WoaServer().Es, cc.WoaServer().Blacklist)
 	if err != nil {
 		return nil, err
 	}
+	clients.esCli = esCli
 
-	dissolveLogics := disLogics.New(daoSet, cmdbCli, esCli, thirdCli, cc.WoaServer())
+	// create authorizer
+	authorizer, err := auth.NewAuthorizer(dis, cc.WoaServer().Network.TLS)
+	if err != nil {
+		return nil, err
+	}
+	clients.authorizer = authorizer
+
+	// init redis client
+	if err := initRedisClient(); err != nil {
+		return nil, err
+	}
+
+	return clients, nil
+}
+
+// initRedisClient 初始化Redis客户端
+func initRedisClient() error {
+	rConf := cc.WoaServer().Redis
+	redisConf, err := redis.NewConf(&rConf)
+	if err != nil {
+		return err
+	}
+	return redisCli.InitClient("redis", redisConf)
+}
+
+// logicSet 封装所有逻辑组件
+type logicSet struct {
+	configLogics   configlogic.Logics
+	gcLogics       gclogics.Logics
+	bizLogic       biz.Logics
+	rsLogics       rslogics.Logics
+	srLogics       srlogics.Logics
+	planCtrl       planctrl.Logics
+	esCli          *es.EsCli
+	dissolveLogics disLogics.Logics
+}
+
+// initLogics 初始化所有逻辑组件
+func initLogics(sd serviced.State, apiClientSet *client.ClientSet, clients *clientSet) (*logicSet, error) {
+	logics := &logicSet{}
+
+	// new config logic
+	logics.configLogics = conflogics.New(apiClientSet, clients.thirdCli, clients.cmdbCli)
+
+	// new green channel logic
+	gcLogics, err := gclogics.New(apiClientSet, logics.configLogics)
+	if err != nil {
+		logs.Errorf("new green channel logics failed, err: %v", err)
+		return nil, err
+	}
+	logics.gcLogics = gcLogics
+
+	// new business logic
+	bizLogic, err := biz.New(clients.cmdbCli, clients.authorizer)
+	if err != nil {
+		logs.Errorf("new biz logic failed, err: %v", err)
+		return nil, err
+	}
+	logics.bizLogic = bizLogic
+
+	// new rolling server logic
+	rsLogics, err := rslogics.New(sd, apiClientSet, clients.cmdbCli, clients.thirdCli, bizLogic, clients.cmsiCli,
+		logics.configLogics)
+	if err != nil {
+		logs.Errorf("new rolling server logics failed, err: %v", err)
+		return nil, err
+	}
+	logics.rsLogics = rsLogics
+
+	// new short rental logic
+	srLogics, err := srlogics.New(sd, apiClientSet, clients.thirdCli, bizLogic, clients.cmsiCli, logics.configLogics)
+	if err != nil {
+		logs.Errorf("new short rental logics failed, err: %v", err)
+		return nil, err
+	}
+	logics.srLogics = srLogics
+
+	// new resource plan controller
+	planCtrl, err := planctrl.New(sd, apiClientSet, clients.daoSet, clients.cmsiCli, clients.itsmCli,
+		clients.thirdCli.CVM, bizLogic)
+	if err != nil {
+		logs.Errorf("new plan controller failed, err: %v", err)
+		return nil, err
+	}
+	logics.planCtrl = planCtrl
+
+	// new dissolve logic
+	logics.dissolveLogics = disLogics.New(clients.daoSet, clients.cmdbCli, clients.esCli, clients.thirdCli,
+		cc.WoaServer())
+
+	return logics, nil
+}
+
+// mongoComponentSet 封装MongoDB相关组件
+type mongoComponentSet struct {
+	informerIf  informer.Interface
+	schedulerIf scheduler.Interface
+}
+
+// initMongoComponents 初始化涉及MongoDB的逻辑
+func initMongoComponents(dis serviced.ServiceDiscover, clients *clientSet, logics *logicSet) (*mongoComponentSet,
+	error) {
+	if !cc.WoaServer().UseMongo {
+		return &mongoComponentSet{}, nil
+	}
 
 	kt := core.NewBackendKit()
-	// Mongo开关打开才生成Client链接
-	var informerIf informer.Interface
-	var schedulerIf scheduler.Interface
-
-	// Mongo开关打开才进行Init检测
-	if cc.WoaServer().UseMongo {
-		loopW, watchDB, err := initMongoDB(kt, dis)
-		if err != nil {
-			return nil, err
-		}
-
-		informerIf, err = informer.New(loopW, watchDB)
-		if err != nil {
-			logs.Errorf("new informer failed, err: %v, rid: %s", err, kt.Rid)
-			return nil, err
-		}
-
-		schedulerIf, err = scheduler.New(kt.Ctx, rsLogics, gcLogics, thirdCli, cmdbCli, informerIf,
-			cc.WoaServer().ClientConfig, planCtrl, bizLogic, configLogics)
-		if err != nil {
-			logs.Errorf("new scheduler failed, err: %v, rid: %s", err, kt.Rid)
-			return nil, err
-		}
+	loopW, watchDB, err := initMongoDB(kt, dis)
+	if err != nil {
+		return nil, err
 	}
 
-	service := &Service{
+	informerIf, err := informer.New(loopW, watchDB)
+	if err != nil {
+		logs.Errorf("new informer failed, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	schedulerIf, err := scheduler.New(kt.Ctx, logics.rsLogics, logics.srLogics, logics.gcLogics,
+		clients.thirdCli, clients.cmdbCli, informerIf, cc.WoaServer().ClientConfig,
+		logics.planCtrl, logics.bizLogic, logics.configLogics)
+	if err != nil {
+		logs.Errorf("new scheduler failed, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	return &mongoComponentSet{
+		informerIf:  informerIf,
+		schedulerIf: schedulerIf,
+	}, nil
+}
+
+// assembleService 组装Service结构体
+func assembleService(apiClientSet *client.ClientSet, clients *clientSet, logics *logicSet,
+	mongoComponents *mongoComponentSet) *Service {
+	return &Service{
 		client:         apiClientSet,
-		dao:            daoSet,
-		cmdbCli:        cmdbCli,
-		authorizer:     authorizer,
-		thirdCli:       thirdCli,
+		dao:            clients.daoSet,
+		cmdbCli:        clients.cmdbCli,
+		authorizer:     clients.authorizer,
+		thirdCli:       clients.thirdCli,
 		clientConf:     cc.WoaServer(),
-		informerIf:     informerIf,
-		schedulerIf:    schedulerIf,
-		esCli:          esCli,
-		rsLogic:        rsLogics,
-		gcLogic:        gcLogics,
-		planController: planCtrl,
-		bizLogic:       bizLogic,
-		dissolveLogic:  dissolveLogics,
-		configLogics:   configLogics,
+		informerIf:     mongoComponents.informerIf,
+		schedulerIf:    mongoComponents.schedulerIf,
+		esCli:          logics.esCli,
+		rsLogic:        logics.rsLogics,
+		srLogic:        logics.srLogics,
+		gcLogic:        logics.gcLogics,
+		planController: logics.planCtrl,
+		bizLogic:       logics.bizLogic,
+		dissolveLogic:  logics.dissolveLogics,
+		configLogics:   logics.configLogics,
 	}
-	return newOtherClient(kt, service, itsmCli, sd)
 }
 
 // initMongoDB init mongodb client and watch client
@@ -299,8 +423,9 @@ func initMongoDB(kt *kit.Kit, dis serviced.ServiceDiscover) (stream.LoopInterfac
 
 func newOtherClient(kt *kit.Kit, service *Service, itsmCli itsm.Client, sd serviced.State) (*Service, error) {
 
-	recyclerIf, err := recycler.New(kt.Ctx, service.thirdCli, service.cmdbCli, service.authorizer, service.rsLogic,
-		service.dissolveLogic, service.client, service.configLogics, service.planController)
+	recyclerIf, err := recycler.New(kt.Ctx, service.thirdCli, service.bizLogic, service.cmdbCli, service.authorizer,
+		service.rsLogic, service.srLogic, service.dissolveLogic, service.client, service.configLogics,
+		service.planController)
 	if err != nil {
 		logs.Errorf("new recycler failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
