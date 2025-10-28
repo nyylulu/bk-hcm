@@ -17,8 +17,8 @@ import FormCvmImageSelector from '@/views/ziyanScr/components/ostype-selector/fo
 import ChargeMonthsSelector from '@/views/ziyanScr/cvm-produce/component/create-order/children/charge-months-selector.vue';
 import applicationSideslider from '../application-sideslider/index.vue';
 import WName from '@/components/w-name';
-import HostApplyTipsAlert from './host-apply-tips-alert/index.vue';
-import HostApplySpringPoolTips from './spring-pool/tips.vue';
+import HostApplyTips from './host-apply-tips/common-tips.vue';
+import HostApplySpringPoolTips from './host-apply-tips/spring-pool-tips.vue';
 import CvmMaxCapacity from '@/views/ziyanScr/components/cvm-max-capacity/index.vue';
 import ReqTypeValue from '@/components/display-value/req-type-value.vue';
 import { MENU_SERVICE_HOST_APPLICATION, MENU_BUSINESS_TICKET_MANAGEMENT } from '@/constants/menu-symbol';
@@ -39,20 +39,21 @@ import http from '@/http';
 import { useItDeviceType } from '@/views/ziyanScr/cvm-produce/component/create-order/use-it-device-type';
 import { ICvmSystemDisk } from '@/views/ziyanScr/components/cvm-system-disk/typings';
 // 滚服项目
-import RollingServerTipsAlert from '@/views/ziyanScr/rolling-server/tips-alert/index.vue';
+import RollingServerTips from './host-apply-tips/rolling-server-tips.vue';
 import InheritPackageFormItem, {
   type RollingServerHost,
 } from '@/views/ziyanScr/rolling-server/inherit-package-form-item/index.vue';
 import RollingServerCpuCoreLimits from '@/views/ziyanScr/rolling-server/cpu-core-limits/index.vue';
 import { CvmDeviceType } from '@/views/ziyanScr/components/devicetype-selector/types';
 // 小额绿通
-import GreenChannelTipsAlert from './green-channel/tips-alert.vue';
+import GreenChannelTips from './host-apply-tips/green-channel-tips.vue';
 import GreenChannelCpuCoreLimits from './green-channel/cpu-core-limits.vue';
 // 机房裁撤
 import DissolveCpuCoreLimits from './dissolve/cpu-core-limits.vue';
 // 预测
 import usePlanDeviceType from '@/views/ziyanScr/hostApplication/plan/usePlanDeviceType';
 import PlanLinkAlert from '../../plan/plan-link-alert.vue';
+import ShortRentalTips from './host-apply-tips/short-rental-tips.vue';
 import { RequirementType } from '@/store/config/requirement';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
@@ -170,9 +171,10 @@ export default defineComponent({
     const cloudTableColumns = ref([]);
 
     // 特殊需求类型（滚服项目、小额绿通）-状态
-    const isRollingServer = computed(() => order.value.model.requireType === 6);
-    const isGreenChannel = computed(() => order.value.model.requireType === 7);
-    const isSpringPool = computed(() => order.value.model.requireType === 8);
+    const isRollingServer = computed(() => order.value.model.requireType === RequirementType.RollServer);
+    const isGreenChannel = computed(() => order.value.model.requireType === RequirementType.GreenChannel);
+    const isSpringPool = computed(() => order.value.model.requireType === RequirementType.SpringResPool);
+    const isShortRental = computed(() => order.value.model.requireType === RequirementType.ShortRental);
     const isDissolve = computed(() => order.value.model.requireType === RequirementType.Dissolve);
     const isRollingServerLike = computed(() => isRollingServer.value || isSpringPool.value);
     const isSpecialRequirement = computed(() => isRollingServer.value || isGreenChannel.value);
@@ -1144,10 +1146,11 @@ export default defineComponent({
                 </bk-form-item>
                 <div class='alert-content'>
                   {(function () {
-                    if (isRollingServer.value) return <RollingServerTipsAlert />;
-                    if (isGreenChannel.value) return <GreenChannelTipsAlert />;
+                    if (isRollingServer.value) return <RollingServerTips />;
+                    if (isGreenChannel.value) return <GreenChannelTips />;
                     if (isSpringPool.value) return <HostApplySpringPoolTips />;
-                    return <HostApplyTipsAlert requireType={order.value.model.requireType} />;
+                    if (isShortRental.value) return <ShortRentalTips />;
+                    return <HostApplyTips requireType={order.value.model.requireType} />;
                   })()}
                 </div>
               </div>
@@ -1555,6 +1558,27 @@ export default defineComponent({
                                 ),
                               }}
                             </bk-alert>
+                            {/* 包年包月时提示短租信息 */}
+                            {resourceForm.value.charge_type === cvmChargeTypes.PREPAID && isShortRental.value && (
+                              <bk-alert theme='warning' class='form-item-tips'>
+                                {{
+                                  title: () => (
+                                    <>
+                                      <span style={{ color: 'red' }}>
+                                        注意：短租项目，需要按退回计划如期退回，如超时不退，会有罚金产生，请关注CRP机器退回通知，
+                                      </span>
+                                      如有疑问请咨询
+                                      <bk-link
+                                        href='https://crp.woa.com/crp-outside/yunti/news/20'
+                                        theme='primary'
+                                        target='_blank'>
+                                        云梯助手
+                                      </bk-link>
+                                    </>
+                                  ),
+                                }}
+                              </bk-alert>
+                            )}
                           </bk-form-item>
                           {resourceForm.value.charge_type === cvmChargeTypes.PREPAID && (
                             <bk-form-item label='购买时长' required property='charge_months'>

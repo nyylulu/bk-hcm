@@ -21,7 +21,9 @@ const emit = defineEmits<{
 }>();
 
 const isUseResourcePlan = computed(() =>
-  [RequirementType.Regular, RequirementType.Spring, RequirementType.Dissolve].includes(props.requireType),
+  [RequirementType.Regular, RequirementType.Spring, RequirementType.Dissolve, RequirementType.ShortRental].includes(
+    props.requireType,
+  ),
 );
 
 const view = computed(() => (isUseResourcePlan.value ? ResourcePlan : Inventory));

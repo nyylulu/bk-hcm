@@ -30,11 +30,13 @@
       height: 100%;
     }
   }
+
   .in-thirteen-weeks {
     text-align: center;
     cursor: pointer;
     padding: 10px 0;
   }
+
   :global(.is-thirteen) {
     color: #5594fa;
   }
@@ -43,9 +45,22 @@
 .plan-mod-timepicker-tip {
   line-height: 20px;
   font-size: 12px;
+
   .time-txt {
-    color: #EA3636;
+    color: #ea3636;
     font-size: 11px;
     margin: 2px;
+  }
+}
+
+.date-range-btns {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  color: #5594fa;
+
+  & > div {
+    cursor: pointer;
+    padding: 10px 0;
   }
 }

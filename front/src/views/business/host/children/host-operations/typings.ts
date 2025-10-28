@@ -47,4 +47,6 @@ export interface IPreviewRecycleOrderItem {
   create_at: string;
   update_at: string;
   sum_cpu_core: number;
+  return_forecast: boolean;
+  return_forecast_time: string;
 }

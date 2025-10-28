@@ -187,6 +187,7 @@ export default defineComponent({
         const info = planStore.convertToAdjust(originDetail, updatedDetail);
         adjusts.push(info);
       }
+
       const { data } = await planStore.adjust_biz_resource_plan_demand({ adjusts });
       if (!data.id) return;
       Message({

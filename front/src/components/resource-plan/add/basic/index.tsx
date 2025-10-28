@@ -67,6 +67,22 @@ export default defineComponent({
     const DISABLE_TIME_KEYS = ['obs_project', 'region_id', 'zone_id'];
     const DISABLE_CONFIG_KEY = 'expect_time';
 
+    // 表单校验规则
+    const formRules = ref({
+      return_plan_time: [
+        {
+          validator: (value: string) => {
+            const returnDate = dayjs(value);
+            const expectDate = dayjs(props.planTicketDemand.expect_time);
+
+            return !returnDate.isBefore(expectDate, 'day');
+          },
+          trigger: 'change',
+          message: t('短租退回日期不能早于期望到货日期'),
+        },
+      ],
+    });
+
     const handleUpdatePlanTicketDemand = (key: string, value: unknown) => {
       const newDemand = { ...props.planTicketDemand, [key]: value };
 
@@ -170,6 +186,17 @@ export default defineComponent({
       return dayjs(currentDate).isBefore(dayjs());
     };
 
+    const getReturnDisabledDate = (date: Date) => {
+      // 退回时间不应该能够早于到货时间
+      const currentDate = dayjs(date);
+      const today = dayjs();
+      const expectTime = dayjs(props.planTicketDemand.expect_time);
+      const compareDate = today.isAfter(expectTime) ? today : expectTime;
+
+      // 如果当前日期早于期望到货时间，则禁用该日期
+      return currentDate.isBefore(compareDate, 'day');
+    };
+
     const validate = () => {
       return formRef.value.validate();
     };
@@ -183,6 +210,14 @@ export default defineComponent({
         return;
       }
       handleUpdatePlanTicketDemand('expect_time', dayjs().add(13, 'week').format('YYYY-MM-DD'));
+    };
+
+    const handleReturnTimeWithMonth = (month: number) => {
+      const days = month * 30;
+      handleUpdatePlanTicketDemand(
+        'return_plan_time',
+        dayjs(props.planTicketDemand.expect_time).add(days, 'day').format('YYYY-MM-DD'), // 退回时间的1个月、2个月、3个月是相对于期望到货日期而言的
+      );
     };
 
     watch(
@@ -237,6 +272,14 @@ export default defineComponent({
       },
     );
 
+    const isShowShortRentalTime = computed(() => {
+      return (
+        props.planTicketDemand.obs_project === '短租项目' &&
+        props.resourceType === 'cvm' &&
+        props.type === AdjustType.none
+      );
+    });
+
     onBeforeMount(() => {
       getZones();
       getRegions();
@@ -250,7 +293,12 @@ export default defineComponent({
 
     return () => (
       <Panel title={t('基础信息')} noShadow>
-        <bk-form form-type='vertical' ref={formRef} model={props.planTicketDemand} class={cssModule.home}>
+        <bk-form
+          form-type='vertical'
+          ref={formRef}
+          model={props.planTicketDemand}
+          rules={formRules.value}
+          class={cssModule.home}>
           <bk-form-item label={t('资源类型')}>
             <bk-radio-group
               modelValue={props.resourceType}
@@ -264,9 +312,10 @@ export default defineComponent({
             <ObsProjectSelector
               modelValue={props.planTicketDemand.obs_project}
               disabled={props.type === AdjustType.time}
-              showRollingServerProject={props.is931Business}
               popoverOptions={{ boundary: 'parent' }}
               showTips
+              showRollingServerProject={props.is931Business}
+              showShortRentalProject={props.resourceType !== 'cbs'}
               onChange={(val: string | string[]) => handleUpdatePlanTicketDemand('obs_project', val as string)}
             />
           </bk-form-item>
@@ -329,6 +378,30 @@ export default defineComponent({
               {t('将无法申领')}
             </p>
           </bk-form-item>
+          {isShowShortRentalTime.value && (
+            <bk-form-item label={t('短租退回日期')} property='return_plan_time' required>
+              <bk-date-picker
+                disabled={!props.planTicketDemand.expect_time}
+                clearable
+                modelValue={props.planTicketDemand.return_plan_time}
+                disabledDate={getReturnDisabledDate}
+                onChange={(val: string) => handleUpdatePlanTicketDemand('return_plan_time', val)}>
+                {{
+                  footer: () => (
+                    <div class={cssModule['date-range-btns']}>
+                      <div onClick={() => handleReturnTimeWithMonth(1)}>1个月</div>
+                      <div onClick={() => handleReturnTimeWithMonth(2)}>2个月</div>
+                      <div onClick={() => handleReturnTimeWithMonth(3)}>3个月</div>
+                    </div>
+                  ),
+                }}
+              </bk-date-picker>
+              <p v-show={!props.planTicketDemand.expect_time} class={cssModule['plan-mod-timepicker-tip']}>
+                <span class={cssModule['time-txt']}>请先选择期望到货日期</span>
+              </p>
+            </bk-form-item>
+          )}
+
           {/* 变更原因、需求备注仅和单据绑定，编辑时无需更改 */}
           {props.type === AdjustType.none && (
             <>

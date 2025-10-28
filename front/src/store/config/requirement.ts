@@ -21,6 +21,7 @@ export enum RequirementType {
   RollServer = 6,
   GreenChannel = 7,
   SpringResPool = 8,
+  ShortRental = 9,
 }
 
 type RequirementResponse = IQueryResData<{ count: number; info: IRequirementItem[] }>;
