@@ -347,11 +347,6 @@ func (t *Transit) getHostStatusInfo(kt *kit.Kit, hostIds []int64, targetBizID in
 		return nil, fmt.Errorf("failed to get target recycle module id, err: %v", err)
 	}
 
-	rebornRecycleModuleID, err := t.cc.GetBizRecycleModuleID(kt, recovertask.RebornBizId)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get reborn recycle module id, err: %v", err)
-	}
-
 	hostBizModuleMap := make(map[int64]*cmdb.HostTopoRelation)
 	for _, rel := range relations {
 		hostBizModuleMap[rel.HostID] = rel
@@ -371,10 +366,6 @@ func (t *Transit) getHostStatusInfo(kt *kit.Kit, hostIds []int64, targetBizID in
 		}
 
 		if hostBizRel.BizID == targetBizID && hostBizRel.BkModuleID == targetRecycleModuleID {
-			status[hostId] = HostTransitStatusTransitToReborn
-			continue
-		}
-		if hostBizRel.BizID == recovertask.RebornBizId && hostBizRel.BkModuleID == rebornRecycleModuleID {
 			status[hostId] = HostTransitStatusTransitToReborn
 			continue
 		}
