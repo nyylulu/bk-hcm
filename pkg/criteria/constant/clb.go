@@ -93,7 +93,7 @@ const (
 	CLBExcelHeaderTCloudZiyan = "tencent_cloud_private(腾讯云-自研云)"
 
 	// CLBTopoFindInLimit 负载均衡各级拓扑in查询数量限制
-	CLBTopoFindInLimit = 10000
+	CLBTopoFindInLimit = 100000
 )
 
 const (
