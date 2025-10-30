@@ -527,3 +527,19 @@ func (r ResAssign) Validate() error {
 
 	return nil
 }
+
+// HostTransitStatus 主机转移状态
+type HostTransitStatus string
+
+const (
+	// HostTransitStatusCompleted 转移完成
+	HostTransitStatusCompleted HostTransitStatus = "completed"
+	// HostTransitStatusNotFound 无业务关系
+	HostTransitStatusNotFound HostTransitStatus = "not_found"
+	// HostTransitStatusTransitToOrigin 需要转移到原始业务
+	HostTransitStatusTransitToOrigin HostTransitStatus = "transit_to_origin"
+	// HostTransitStatusTransitToReborn 需要转移到reborn业务
+	HostTransitStatusTransitToReborn HostTransitStatus = "transit_to_reborn"
+	// HostTransitStatusAbnormal 异常情况
+	HostTransitStatusAbnormal HostTransitStatus = "abnormal"
+)

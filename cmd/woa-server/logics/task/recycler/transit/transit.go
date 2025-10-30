@@ -30,6 +30,7 @@ import (
 	"hcm/pkg/cc"
 	"hcm/pkg/client"
 	"hcm/pkg/criteria/constant"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/kit"
@@ -41,20 +42,6 @@ import (
 	"hcm/pkg/tools/metadata"
 	"hcm/pkg/tools/querybuilder"
 	"hcm/pkg/tools/slice"
-)
-
-// HostTransitStatus 主机转移状态
-type HostTransitStatus string
-
-const (
-	// HostTransitStatusCompleted 转移完成
-	HostTransitStatusCompleted HostTransitStatus = "completed"
-	// HostTransitStatusTransitToOrigin 需要转移到原始业务
-	HostTransitStatusTransitToOrigin HostTransitStatus = "transit_to_origin"
-	// HostTransitStatusTransitToReborn 需要转移到reborn业务
-	HostTransitStatusTransitToReborn HostTransitStatus = "transit_to_reborn"
-	// HostTransitStatusAbnormal 异常情况
-	HostTransitStatusAbnormal HostTransitStatus = "abnormal"
 )
 
 // Host2CrTransitDefaultBatchSize once 100 hosts at most, if not specified, use 10
@@ -277,73 +264,84 @@ func (t *Transit) DealTransitTask2Transit(order *table.RecycleOrder, hosts []*ta
 
 	statusMap, err := t.getHostStatusInfo(kt, hostIds, order.BizID)
 	if err != nil {
-		logs.Errorf("failed to get host status info, err: %v", err)
+		logs.Errorf("failed to get host status info, suborder_id: %s, err: %v", order.SuborderID, err)
 		return &event.Event{Type: event.TransitFailed, Error: err}
 	}
+	completedIDs, needSecondIDs, needFirstIDs, abnormalIDs := classifyStatus(statusMap, order.SuborderID, kt.Rid)
 
-	completedIDs := make([]int64, 0)
-	needSecondTransferIDs := make([]int64, 0)
-	needFirstTransferIDs := make([]int64, 0)
-	abnormalIDs := make([]int64, 0)
-	for _, hostId := range hostIds {
-		s := statusMap[hostId]
-		switch s {
-		case HostTransitStatusCompleted:
-			completedIDs = append(completedIDs, hostId)
-		case HostTransitStatusTransitToOrigin:
-			needSecondTransferIDs = append(needSecondTransferIDs, hostId)
-		case HostTransitStatusTransitToReborn:
-			needFirstTransferIDs = append(needFirstTransferIDs, hostId)
-		case HostTransitStatusAbnormal:
-			abnormalIDs = append(abnormalIDs, hostId)
+	if len(abnormalIDs) > 0 {
+		if errUpdate := t.UpdateHostInfo(order, table.RecycleStageTransit, table.RecycleStatusTransitFailed); errUpdate != nil {
+			logs.Errorf("failed to update recycle host info, err: %v", errUpdate)
 		}
+		return &event.Event{Type: event.TransitFailed, Error: fmt.Errorf("hosts %v have abnormal status", abnormalIDs)}
 	}
 
 	if len(completedIDs) > 0 {
 		logs.Infof("hosts %v already in target module of biz %d, skip", completedIDs, order.BizID)
 	}
 
-	if len(needSecondTransferIDs) > 0 {
-		secondTransitHosts := t.getHostsByIDs(hosts, needSecondTransferIDs)
-		if ev := t.transferToOriginBiz(kt, order, secondTransitHosts); ev != nil {
+	if len(needSecondIDs) > 0 {
+		second := t.getHostsByIDs(hosts, needSecondIDs)
+		logs.Infof("wait 10s before second transit for already-in-reborn hosts, suborder_id: %s, biz_id: %d, hosts: %v",
+			order.SuborderID, order.BizID, needSecondIDs)
+		time.Sleep(10 * time.Second)
+		if ev := t.transferToOriginBiz(kt, order, second); ev != nil && ev.Type == event.TransitFailed {
 			return ev
 		}
 	}
 
-	if len(needFirstTransferIDs) > 0 {
-		firstTransitHosts := t.getHostsByIDs(hosts, needFirstTransferIDs)
-		if ev := t.transferToRebornBiz(kt, order, firstTransitHosts); ev != nil {
+	if len(needFirstIDs) > 0 {
+		first := t.getHostsByIDs(hosts, needFirstIDs)
+		if ev := t.transferToRebornBiz(kt, order, first); ev != nil && ev.Type == event.TransitFailed {
 			return ev
 		}
-		if ev := t.transferToOriginBiz(kt, order, firstTransitHosts); ev != nil {
+		logs.Infof("wait 10s between first and second transit, suborder_id: %s, biz_id: %d, hosts: %v",
+			order.SuborderID, order.BizID, needFirstIDs)
+		time.Sleep(10 * time.Second)
+		if ev := t.transferToOriginBiz(kt, order, first); ev != nil && ev.Type == event.TransitFailed {
 			return ev
 		}
 	}
-
-	if len(abnormalIDs) > 0 {
-		if errUpdate := t.UpdateHostInfo(order, table.RecycleStageTransit,
-			table.RecycleStatusTransitFailed); errUpdate != nil {
-			logs.Errorf("failed to update recycle host info, err: %v", errUpdate)
-		}
-		return &event.Event{Type: event.TransitFailed, Error: fmt.Errorf("hosts %v have abnormal status", abnormalIDs)}
-	}
-
 	return &event.Event{Type: event.TransitSuccess, Error: nil}
 }
 
+// classifyStatus 将状态分类并记录未知状态
+func classifyStatus(m map[int64]enumor.HostTransitStatus, suborderID string, rid string) (completed, needSecond, needFirst, abnormal []int64) {
+	for id, s := range m {
+		switch s {
+		case enumor.HostTransitStatusCompleted:
+			completed = append(completed, id)
+		case enumor.HostTransitStatusTransitToOrigin:
+			needSecond = append(needSecond, id)
+		case enumor.HostTransitStatusTransitToReborn:
+			needFirst = append(needFirst, id)
+		case enumor.HostTransitStatusNotFound, enumor.HostTransitStatusAbnormal:
+			abnormal = append(abnormal, id)
+		default:
+			logs.Warnf("unknown host transit status, suborder_id: %s, host_id: %d, status: %s, rid: %s", suborderID, id, s, rid)
+			abnormal = append(abnormal, id)
+		}
+	}
+	return
+}
+
 // getHostStatusInfo 批量获取主机状态信息
-func (t *Transit) getHostStatusInfo(kt *kit.Kit, hostIds []int64, targetBizID int64) (map[int64]HostTransitStatus, error) {
-	status := make(map[int64]HostTransitStatus)
+func (t *Transit) getHostStatusInfo(kt *kit.Kit, hostIds []int64, targetBizID int64) (map[int64]enumor.HostTransitStatus, error) {
+	status := make(map[int64]enumor.HostTransitStatus)
 	relReq := &cmdb.HostModuleRelationParams{HostID: hostIds}
 	// 获取主机与业务模块的关系
 	relResp, err := t.cc.FindHostBizRelations(kt, relReq)
 	if err != nil {
+		logs.Errorf("failed to get host relations, host_ids: %v, target_biz_id: %d, err: %v, rid: %s", hostIds,
+			targetBizID, err, kt.Rid)
 		return nil, fmt.Errorf("failed to get host relations, err: %v", err)
 	}
 	relations := cvt.SliceToPtr(cvt.PtrToVal(relResp))
 
 	targetRecycleModuleID, err := t.cc.GetBizRecycleModuleID(kt, targetBizID)
 	if err != nil {
+		logs.Errorf("failed to get target recycle module id, target_biz_id: %d, err: %v, rid: %s", targetBizID, err,
+			kt.Rid)
 		return nil, fmt.Errorf("failed to get target recycle module id, err: %v", err)
 	}
 
@@ -356,21 +354,23 @@ func (t *Transit) getHostStatusInfo(kt *kit.Kit, hostIds []int64, targetBizID in
 		hostBizRel := hostBizModuleMap[hostId]
 
 		if hostBizRel == nil {
-			status[hostId] = HostTransitStatusCompleted
+			logs.Warnf("host has no biz relation, mark as not_found, host_id: %d, target_biz_id: %d, rid: %s",
+				hostId, targetBizID, kt.Rid)
+			status[hostId] = enumor.HostTransitStatusNotFound
 			continue
 		}
 
 		if hostBizRel.BizID == recovertask.RebornBizId && hostBizRel.BkModuleID == recovertask.CrRelayModuleId {
-			status[hostId] = HostTransitStatusTransitToOrigin
+			status[hostId] = enumor.HostTransitStatusTransitToOrigin
 			continue
 		}
 
 		if hostBizRel.BizID == targetBizID && hostBizRel.BkModuleID == targetRecycleModuleID {
-			status[hostId] = HostTransitStatusTransitToReborn
+			status[hostId] = enumor.HostTransitStatusTransitToReborn
 			continue
 		}
 
-		status[hostId] = HostTransitStatusAbnormal
+		status[hostId] = enumor.HostTransitStatusAbnormal
 	}
 	return status, nil
 }
@@ -427,8 +427,6 @@ func (t *Transit) transferToRebornBiz(kt *kit.Kit, order *table.RecycleOrder, ho
 	// close network or shutdown
 	// TODO
 
-	// wait 10 seconds to avoid cmdb data mess
-	time.Sleep(time.Second * 10)
 	return &event.Event{Type: event.TransitSuccess, Error: nil}
 }
 
