@@ -491,7 +491,7 @@ const (
               line-height: 20px;
               text-decoration: none;
             "
-            href="%s/#/business/rolling-server?bizs=%d&filter=roll_date=%s,%s%%26suborder_id%%5B%%5D%%26bk_biz_id"
+            href="%s/#/business/rolling-server?bizs=%d&filter=roll_date=%s,%s"
             target="_blank"
           >
             链接查看详情
@@ -524,6 +524,6 @@ const (
 业务：%s
 日期：%s
 CPU核数(未退还)：%d核
-点击链接查看详情：%s/#/business/rolling-server?bizs=%d&filter=roll_date=%s,%s%%26suborder_id%%5B%%5D%%26bk_biz_id
+点击链接查看详情：%s/#/business/rolling-server?bizs=%d&filter=roll_date=%s,%s
 `
 )
