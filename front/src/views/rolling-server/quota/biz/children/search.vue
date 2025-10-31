@@ -57,7 +57,7 @@ watch(
 
 <template>
   <div class="quota-biz-search">
-    <grid-container layout="vertical" :column="4" :content-min-width="300" :gap="[16, 60]">
+    <grid-container layout="vertical" :column="4" :content-min-width="'1fr'" :gap="[16, 60]">
       <grid-item-form-element v-for="field in fields" :key="field.id" :label="field.name">
         <component :is="`hcm-search-${field.type}`" v-bind="getSearchCompProps(field)" v-model="formValues[field.id]" />
       </grid-item-form-element>
@@ -77,9 +77,11 @@ watch(
 
   .row-action {
     padding: 4px 0;
+
     :deep(.item-content) {
       gap: 10px;
     }
+
     .bk-button {
       min-width: 86px;
     }

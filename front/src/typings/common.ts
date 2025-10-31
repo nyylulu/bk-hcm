@@ -33,6 +33,7 @@ export enum QueryRuleOPEnumLegacy {
   GTE = 'gte',
   LT = 'lt',
   LTE = 'lte',
+  LESS_OR_EQUAL = 'less_or_equal',
   IN = 'in',
   NIN = 'nin',
   CS = 'cs',

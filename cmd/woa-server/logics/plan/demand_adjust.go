@@ -38,7 +38,6 @@ import (
 	"hcm/pkg/dal/table/types"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
-	"hcm/pkg/thirdparty/cvmapi"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/maps"
 	"hcm/pkg/tools/slice"
@@ -46,49 +45,6 @@ import (
 
 	"github.com/shopspring/decimal"
 )
-
-func convAdjustAbleQueryParam(req *ptypes.AdjustAbleDemandsReq) *cvmapi.CvmCbsAdjustAblePlanQueryParam {
-	reqParams := new(cvmapi.CvmCbsAdjustAblePlanQueryParam)
-
-	if len(req.RegionName) > 0 {
-		reqParams.CityName = req.RegionName
-	}
-
-	if len(req.DeviceFamily) > 0 {
-		reqParams.InstanceFamily = req.DeviceFamily
-	}
-
-	if len(req.DeviceType) > 0 {
-		reqParams.InstanceModel = req.DeviceType
-	}
-
-	if len(req.ExpectTime) > 0 {
-		reqParams.UseTime = req.ExpectTime
-	}
-
-	if len(req.PlanProductName) > 0 {
-		reqParams.PlanProductName = req.PlanProductName
-	}
-
-	if len(req.OpProductName) > 0 {
-		reqParams.ProductName = req.OpProductName
-	}
-
-	if len(req.ObsProject) > 0 {
-		reqParams.ProjectName = string(req.ObsProject)
-	}
-
-	if len(req.DiskType) > 0 {
-		// TODO 因CRP会在拆单时改变云盘的类型，且云盘不会参与模糊匹配，因此查询时暂时不考虑diskType参数.
-		// reqParams.DiskTypeName = req.DiskType.Name()
-	}
-
-	if len(req.ResMode) > 0 {
-		reqParams.ResourceMode = string(req.ResMode)
-	}
-
-	return reqParams
-}
 
 // AdjustBizResPlanDemand adjust biz res plan demand.
 func (c *Controller) AdjustBizResPlanDemand(kt *kit.Kit, req *ptypes.AdjustRPDemandReq, bkBizID int64,
@@ -414,7 +370,7 @@ func (c *Controller) constructUpdateDemands(kt *kit.Kit, updates []ptypes.Adjust
 	}
 
 	// get create resource plan ticket needed zoneMap, regionAreaMap and deviceTypeMap.
-	zoneMap, regionAreaMap, deviceTypeMap, err := c.getMetaMaps(kt)
+	zoneMap, regionAreaMap, deviceTypeMap, err := c.resFetcher.GetMetaMaps(kt)
 	if err != nil {
 		logs.Errorf("failed to get meta maps, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -433,6 +389,12 @@ func (c *Controller) constructUpdateDemands(kt *kit.Kit, updates []ptypes.Adjust
 
 	result := make([]rpt.ResPlanDemand, len(updates))
 	for idx, update := range updates {
+		// TODO 目前CRP接口不支持修改CBS类型的预测，且CBS类型的预测不会产生罚金，因此暂时不允许单独修改CBS类型的预测
+		if len(update.UpdatedInfo.DemandResTypes) == 1 &&
+			slices.Contains(update.UpdatedInfo.DemandResTypes, enumor.DemandResTypeCBS) {
+			return nil, errors.New("cannot adjust cbs plan demand")
+		}
+
 		result[idx] = rpt.ResPlanDemand{
 			DemandClass: demandClass,
 			Original:    demandOriginMap[update.DemandID],
@@ -446,29 +408,27 @@ func (c *Controller) constructUpdateDemands(kt *kit.Kit, updates []ptypes.Adjust
 				AreaID:       regionAreaMap[update.UpdatedInfo.RegionID].AreaID,
 				AreaName:     regionAreaMap[update.UpdatedInfo.RegionID].AreaName,
 				DemandSource: update.DemandSource,
+				Cvm: rpt.Cvm{
+					ResMode:        update.UpdatedInfo.Cvm.ResMode,
+					DeviceType:     update.UpdatedInfo.Cvm.DeviceType,
+					DeviceClass:    deviceTypeMap[update.UpdatedInfo.Cvm.DeviceType].DeviceClass,
+					DeviceFamily:   deviceTypeMap[update.UpdatedInfo.Cvm.DeviceType].DeviceFamily,
+					TechnicalClass: deviceTypeMap[update.UpdatedInfo.Cvm.DeviceType].TechnicalClass,
+					CoreType:       deviceTypeMap[update.UpdatedInfo.Cvm.DeviceType].CoreType,
+					Os:             types.Decimal{Decimal: cvt.PtrToVal(update.UpdatedInfo.Cvm.Os)},
+					CpuCore:        cvt.PtrToVal(update.UpdatedInfo.Cvm.CpuCore),
+					Memory:         cvt.PtrToVal(update.UpdatedInfo.Cvm.Memory),
+				},
 			},
 		}
 
-		// TODO 目前CRP接口不支持修改CBS类型的预测，且CBS类型的预测不会产生罚金，因此暂时不允许单独修改CBS类型的预测
-		if len(update.UpdatedInfo.DemandResTypes) == 1 &&
-			slices.Contains(update.UpdatedInfo.DemandResTypes, enumor.DemandResTypeCBS) {
-			return nil, errors.New("cannot adjust cbs plan demand")
-		}
-
-		result[idx].Updated.Cvm.ResMode = update.UpdatedInfo.Cvm.ResMode
-		result[idx].Updated.Cvm.DeviceType = update.UpdatedInfo.Cvm.DeviceType
-		result[idx].Updated.Cvm.DeviceClass = deviceTypeMap[update.UpdatedInfo.Cvm.DeviceType].DeviceClass
-		result[idx].Updated.Cvm.DeviceFamily = deviceTypeMap[update.UpdatedInfo.Cvm.DeviceType].DeviceFamily
-		result[idx].Updated.Cvm.CoreType = deviceTypeMap[update.UpdatedInfo.Cvm.DeviceType].CoreType
-		result[idx].Updated.Cvm.Os = types.Decimal{Decimal: cvt.PtrToVal(update.UpdatedInfo.Cvm.Os)}
-		result[idx].Updated.Cvm.CpuCore = cvt.PtrToVal(update.UpdatedInfo.Cvm.CpuCore)
-		result[idx].Updated.Cvm.Memory = cvt.PtrToVal(update.UpdatedInfo.Cvm.Memory)
-
 		if slices.Contains(update.UpdatedInfo.DemandResTypes, enumor.DemandResTypeCBS) {
-			result[idx].Updated.Cbs.DiskType = update.UpdatedInfo.Cbs.DiskType
-			result[idx].Updated.Cbs.DiskTypeName = update.UpdatedInfo.Cbs.DiskType.Name()
-			result[idx].Updated.Cbs.DiskIo = cvt.PtrToVal(update.UpdatedInfo.Cbs.DiskIo)
-			result[idx].Updated.Cbs.DiskSize = cvt.PtrToVal(update.UpdatedInfo.Cbs.DiskSize)
+			result[idx].Updated.Cbs = rpt.Cbs{
+				DiskType:     update.UpdatedInfo.Cbs.DiskType,
+				DiskTypeName: update.UpdatedInfo.Cbs.DiskType.Name(),
+				DiskIo:       cvt.PtrToVal(update.UpdatedInfo.Cbs.DiskIo),
+				DiskSize:     cvt.PtrToVal(update.UpdatedInfo.Cbs.DiskSize),
+			}
 		}
 	}
 
@@ -565,14 +525,15 @@ func (c *Controller) constructOriginalDemandWithCPUCore(kt *kit.Kit, demand rpdt
 		AreaID:     demand.AreaID,
 		AreaName:   demand.AreaName,
 		Cvm: rpt.Cvm{
-			ResMode:      demand.ResMode.Name(),
-			DeviceType:   demand.DeviceType,
-			DeviceClass:  demand.DeviceClass,
-			DeviceFamily: demand.DeviceFamily,
-			CoreType:     string(demand.CoreType),
-			Os:           types.Decimal{Decimal: originOS},
-			CpuCore:      originCPUCore,
-			Memory:       originMem,
+			ResMode:        demand.ResMode.Name(),
+			DeviceType:     demand.DeviceType,
+			DeviceClass:    demand.DeviceClass,
+			DeviceFamily:   demand.DeviceFamily,
+			TechnicalClass: demand.TechnicalClass,
+			CoreType:       string(demand.CoreType),
+			Os:             types.Decimal{Decimal: originOS},
+			CpuCore:        originCPUCore,
+			Memory:         originMem,
 		},
 		Cbs: rpt.Cbs{
 			DiskType:     demand.DiskType,
@@ -640,14 +601,15 @@ func (c *Controller) constructDelayDemands(kt *kit.Kit, delays []ptypes.AdjustRP
 			AreaID:     result[idx].Original.AreaID,
 			AreaName:   result[idx].Original.AreaName,
 			Cvm: rpt.Cvm{
-				ResMode:      result[idx].Original.Cvm.ResMode,
-				DeviceType:   result[idx].Original.Cvm.DeviceType,
-				DeviceClass:  result[idx].Original.Cvm.DeviceClass,
-				DeviceFamily: result[idx].Original.Cvm.DeviceFamily,
-				CoreType:     result[idx].Original.Cvm.CoreType,
-				Os:           result[idx].Original.Cvm.Os,
-				CpuCore:      result[idx].Original.Cvm.CpuCore,
-				Memory:       result[idx].Original.Cvm.Memory,
+				ResMode:        result[idx].Original.Cvm.ResMode,
+				DeviceType:     result[idx].Original.Cvm.DeviceType,
+				DeviceClass:    result[idx].Original.Cvm.DeviceClass,
+				DeviceFamily:   result[idx].Original.Cvm.DeviceFamily,
+				TechnicalClass: result[idx].Original.Cvm.TechnicalClass,
+				CoreType:       result[idx].Original.Cvm.CoreType,
+				Os:             result[idx].Original.Cvm.Os,
+				CpuCore:        result[idx].Original.Cvm.CpuCore,
+				Memory:         result[idx].Original.Cvm.Memory,
 			},
 			Cbs: rpt.Cbs{
 				DiskType:     result[idx].Original.Cbs.DiskType,

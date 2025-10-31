@@ -21,6 +21,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	cfgtypes "hcm/cmd/woa-server/types/config"
@@ -33,6 +34,8 @@ import (
 	"hcm/pkg/thirdparty/cvmapi"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/utils"
+
+	"golang.org/x/sync/errgroup"
 )
 
 var (
@@ -159,6 +162,7 @@ func (g *Generator) getCreateCvmReq(cvm *types.CVM) *cvmapi.OrderCreateReq {
 			BakOperator:       cvm.Operator,
 			ChargeType:        cvmapi.ChargeTypePrePaid,
 			InheritInstanceId: cvm.InheritInstanceId,
+			FuzzyZone:         cvm.FuzzyZone,
 		},
 	}
 	// 计费模式
@@ -393,20 +397,26 @@ func (g *Generator) listCVM(orderId string) ([]*cvmapi.InstanceItem, error) {
 }
 
 // buildCvmReq construct a cvm creating task request
-func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone string, replicas uint,
+func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, orderZones []string, replicas uint,
 	excludeSubnetIDMap map[string]struct{}) (*types.CVM, error) {
+
+	if len(orderZones) == 0 {
+		logs.Errorf("build cvm req, orderZones is empty, subOrderID: %s, rid: %s", order.SubOrderId, kt.Rid)
+		return nil, fmt.Errorf("orderZones cannot be empty for subOrderID: %s", order.SubOrderId)
+	}
 
 	// TODO: get parameters from config
 	// construct cvm launch req
 	req := &types.CVM{
-		AppId:             "931",
-		ApplyType:         int64(order.RequireType),
-		AppModuleId:       51524,
-		Operator:          "dommyzhang",
-		ApplyNumber:       replicas,
-		NoteInfo:          order.Remark,
-		Area:              order.Spec.Region,
-		Zone:              zone,
+		AppId:       "931",
+		ApplyType:   int64(order.RequireType),
+		AppModuleId: 51524,
+		Operator:    "dommyzhang",
+		NoteInfo:    order.Remark,
+		Area:        order.Spec.Region,
+		// 多可用区已经不使用zone参数了，但是crp接口里面zone是必传项，所以就给一个默认值，crp最终还是以fuzzyZone为准的。
+		// CRP接口文档：https://tapd.woa.com/yunti/markdown_wikis/show/#1220416802000190933
+		Zone:              orderZones[0],
 		InstanceType:      order.Spec.DeviceType,
 		DiskType:          order.Spec.DiskType,
 		DiskSize:          order.Spec.DiskSize,
@@ -420,87 +430,10 @@ func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone strin
 	if len(req.DiskType) == 0 {
 		req.DiskType = cvmapi.CvmLaunchSystemDiskTypePremium
 	}
-	// vpc and subnet
-	if order.Spec.Vpc != "" {
-		req.VPCId = order.Spec.Vpc
-	} else {
-		vpc, err := g.configLogics.Vpc().GetRegionDftVpc(kt, order.Spec.Region)
-		if err != nil {
-			logs.Errorf("failed to get region default vpc, err: %v, subOrderID: %s, region: %s, rid: %s", err,
-				order.SubOrderId, order.Spec.Region, kt.Rid)
-			return nil, err
-		}
-		req.VPCId = vpc
-	}
-	if order.Spec.Subnet != "" {
-		req.SubnetId = order.Spec.Subnet
-	} else {
-		subnetList, err := g.getCvmSubnet(kt, zone, req.VPCId, order)
-		if err != nil {
-			logs.Errorf("failed to get available subnet, subOrderID: %s, err: %v, region: %s, zone: %s, vpcID: %s, "+
-				"rid: %s", order.SubOrderId, err, order.Spec.Region, zone, req.VPCId, kt.Rid)
-			return nil, err
-		}
-		sort.Sort(sort.Reverse(subnetList))
-		subnetID := ""
-		applyNum := uint(0)
-		for _, subnet := range subnetList {
-			if _, ok := excludeSubnetIDMap[subnet.Id]; ok {
-				logs.Warnf("exclude subnet id: %s, subOrderID: %s, rid: %s", subnet.Id, order.SubOrderId, kt.Rid)
-				continue
-			}
 
-			capacity, err := g.getCapacity(kt, order, zone, req.VPCId, subnet.Id)
-			if err != nil {
-				logs.Errorf("failed to get capacity with subnet %s, subOrderID: %s, subnetNum: %d, zone: %s, "+
-					"reqVpcID: %s, err: %v, rid: %s", subnet.Id, order.SubOrderId, len(subnetList), zone,
-					req.VPCId, err, kt.Rid)
-				continue
-			}
-			maxNum, ok := capacity[zone]
-			if !ok {
-				logs.Warnf("get no capacity with zone %s and subnet %s, subOrderID: %s, rid: %s",
-					zone, subnet.Id, order.SubOrderId, kt.Rid)
-				continue
-			}
-			if maxNum > 0 {
-				subnetID = subnet.Id
-				applyNum = uint(maxNum)
-				break
-			}
-			// 记录日志，方便排查线上资源申请问题
-			logs.Errorf("buildCvmReq:get no available capacity info, subOrderID: %s, subnetNum: %d, zone: %s, "+
-				"reqVpcID: %s, subnet: %+v, orderInfo: %+v, capacity: %+v, rid: %s", order.SubOrderId, len(subnetList),
-				zone, req.VPCId, cvt.PtrToVal(subnet), cvt.PtrToVal(order), capacity, kt.Rid)
-		}
-
-		if subnetID == "" || applyNum <= 0 {
-			// get capacity detail as component of error message
-			capInfo, _ := g.getCapacityDetail(kt, order, zone, req.VPCId, "")
-			capInfoStr, err := json.Marshal(capInfo)
-			if err != nil {
-				logs.Warnf("buildCvmReq:get empty subnet info json marshal failed, err: %+v, rid: %s", err, kt.Rid)
-			}
-			// 记录日志，方便排查线上资源申请问题
-			logs.Errorf("buildCvmReq:get empty subnet info failed, subOrderID: %s, subnetNum: %d, applyNum: %d, "+
-				"zone: %s, reqVpcID: %s, subnetID: %s, orderInfo: %+v, capInfoStr: %s, rid: %s", order.SubOrderId,
-				len(subnetList), applyNum, zone, req.VPCId, subnetID, cvt.PtrToVal(order), capInfoStr, kt.Rid)
-			return nil, fmt.Errorf("no capacity: %s", capInfoStr)
-		}
-		req.SubnetId = subnetID
-		if applyNum < replicas {
-			// set apply number to min(replicas, leftIp)
-			req.ApplyNumber = applyNum
-		}
-		// 记录日志，方便排查线上资源申请问题
-		subnetListRemain, err := json.Marshal(subnetList)
-		if err != nil {
-			logs.Warnf("buildCvmReq:get subnet info json marshal failed, err: %+v, rid: %s", err, kt.Rid)
-		}
-		logs.Infof("buildCvmReq:get subnet info success, subOrderID: %s, subnetNum: %d, applyNum: %d, replicas: %d, "+
-			"zone: %s, reqVpcID: %s, subnetID: %s, orderInfo: %+v, subnetList: %s, req: %+v, rid: %s",
-			order.SubOrderId, len(subnetList), applyNum, replicas, zone, req.VPCId, subnetID, cvt.PtrToVal(order),
-			subnetListRemain, cvt.PtrToVal(req), kt.Rid)
+	err := g.buildApplyOrderVpcZones(kt, req, order, orderZones, replicas, excludeSubnetIDMap)
+	if err != nil {
+		return nil, err
 	}
 
 	// image
@@ -529,6 +462,123 @@ func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone strin
 	req.VirtualDeptName = productInfo.VirtualDeptName
 
 	return req, nil
+}
+
+// buildApplyOrderVpcZones 构建申请单的VPC、可用区参数
+func (g *Generator) buildApplyOrderVpcZones(kt *kit.Kit, req *types.CVM, order *types.ApplyOrder, orderZones []string,
+	replicas uint, excludeSubnetIDMap map[string]struct{}) error {
+
+	if order.Spec.Vpc != "" {
+		req.VPCId = order.Spec.Vpc
+	} else {
+		vpc, err := g.configLogics.Vpc().GetRegionDftVpc(kt, order.Spec.Region)
+		if err != nil {
+			logs.Errorf("failed to get region default vpc, err: %v, subOrderID: %s, region: %s, rid: %s", err,
+				order.SubOrderId, order.Spec.Region, kt.Rid)
+			return err
+		}
+		req.VPCId = vpc
+	}
+	if order.Spec.Subnet != "" {
+		req.SubnetId = order.Spec.Subnet
+		req.ApplyNumber = replicas
+	} else {
+		fuzzyZones, err := g.buildSubnetFuzzyZone(kt, req, order, orderZones, replicas, excludeSubnetIDMap)
+		if err != nil {
+			return err
+		}
+		// 所有可用区都没有可用的子网、剩余IP数量
+		if len(fuzzyZones) == 0 {
+			// get capacity detail as component of error message
+			capInfo, _ := g.getCapacityDetail(kt, order, cvmapi.CvmSeparateCampus, req.VPCId, "")
+			capInfoStr, capErr := json.Marshal(capInfo)
+			// 记录日志，方便排查线上资源申请问题
+			logs.Errorf("buildCvmReq:get empty subnet info failed, subOrderID: %s, zones: %v, reqVpcID: %s, "+
+				"orderInfo: %+v, capInfoStr: %s, capErr: %v, rid: %s", order.SubOrderId, orderZones,
+				req.VPCId, cvt.PtrToVal(order), capInfoStr, capErr, kt.Rid)
+			return fmt.Errorf("no capacity: %s", capInfoStr)
+		}
+		req.FuzzyZone = fuzzyZones
+	}
+	return nil
+}
+
+func (g *Generator) buildSubnetFuzzyZone(kt *kit.Kit, req *types.CVM, order *types.ApplyOrder,
+	orderZones []string, replicas uint, excludeSubnetIDMap map[string]struct{}) ([]cvmapi.FuzzyZoneItem, error) {
+
+	// 根据多可用区，批量获取子网列表
+	zoneSubnetMap, err := g.batchGetSubnetListByZones(kt, orderZones, req.VPCId, order)
+	if err != nil {
+		logs.Errorf("failed to get available subnet, subOrderID: %s, err: %v, region: %s, zones: %v, vpcID: %s, "+
+			"rid: %s", order.SubOrderId, err, order.Spec.Region, orderZones, req.VPCId, kt.Rid)
+		return nil, err
+	}
+
+	fuzzyZones := make([]cvmapi.FuzzyZoneItem, 0)
+	excludeZoneMap := make(map[string]struct{})
+	for _, zone := range orderZones {
+		subnetList, ok := zoneSubnetMap[zone]
+		if !ok {
+			logs.Warnf("get no subnet list with zone: %s, subOrderID: %s, orderZones: %v, zoneSubnetMap: %+v, "+
+				"rid: %s", zone, order.SubOrderId, orderZones, zoneSubnetMap, kt.Rid)
+			continue
+		}
+		// 按照子网的剩余IP数量从多到少排序，剩余IP数量相同的情况下按ID从大到小排序，这样可以优先选择剩余IP数量最多的子网
+		sort.Sort(sort.Reverse(subnetList))
+		for _, subnet := range subnetList {
+			if _, ok = excludeSubnetIDMap[subnet.Id]; ok {
+				logs.Warnf("exclude subnet id: %s, subOrderID: %s, rid: %s", subnet.Id, order.SubOrderId, kt.Rid)
+				continue
+			}
+			// 可用区已放入fuzzyZones并且申请数量已满足，直接跳出
+			if _, ok = excludeZoneMap[zone]; ok && req.ApplyNumber >= replicas {
+				logs.Warnf("get repeat zone: %s, subOrderID: %s, orderZones: %v, excludeZoneMap: %+v, "+
+					"rid: %s", zone, order.SubOrderId, orderZones, excludeZoneMap, kt.Rid)
+				break
+			}
+			capacity, err := g.getCapacity(kt, order, zone, req.VPCId, subnet.Id)
+			if err != nil {
+				logs.Errorf("failed to get capacity with subnet %s, subOrderID: %s, subnetNum: %d, zone: %s, "+
+					"reqVpcID: %s, err: %v, rid: %s", subnet.Id, order.SubOrderId, len(subnetList), zone,
+					req.VPCId, err, kt.Rid)
+				continue
+			}
+			maxNum, ok := capacity[zone]
+			if !ok {
+				logs.Warnf("get no capacity with zone %s and subnet %s, subOrderID: %s, rid: %s",
+					zone, subnet.Id, order.SubOrderId, kt.Rid)
+				continue
+			}
+			if maxNum > 0 {
+				req.ApplyNumber += min(uint(maxNum), replicas-req.ApplyNumber)
+
+				// 记录第一个可用区、子网给默认的可用区、子网字段
+				if len(req.Zone) == 0 {
+					req.Zone = zone
+				}
+				if len(req.SubnetId) == 0 {
+					req.SubnetId = subnet.Id
+				}
+				// 记录该可用区对应的VPC、子网
+				fuzzyZones = append(fuzzyZones, cvmapi.FuzzyZoneItem{
+					Zone: zone, SubnetID: subnet.Id, VpcID: req.VPCId})
+				// 记录当前的可用区
+				excludeZoneMap[zone] = struct{}{}
+			}
+
+			// 记录日志，方便排查线上资源申请问题
+			subnetListRemain, err := json.Marshal(subnetList)
+			if err != nil {
+				logs.Warnf("buildCvmReq:get subnet info json marshal failed, err: %+v, rid: %s", err, kt.Rid)
+			}
+			// 记录日志，方便排查线上资源申请问题
+			logs.Infof("buildCvmReq:get loop subnet capacity info success, subOrderID: %s, zone: %s, "+
+				"subnetNum: %d, reqVpcID: %s, maxNum: %d, replicas: %d, subnet: %+v, subnetList: %s, "+
+				"capacity: %+v, rid: %s", order.SubOrderId, zone, len(subnetList), req.VPCId, maxNum, replicas,
+				cvt.PtrToVal(subnet), subnetListRemain, capacity, kt.Rid)
+		}
+	}
+	return fuzzyZones, nil
 }
 
 func (g *Generator) getProductInfo(kt *kit.Kit, order *types.ApplyOrder) (cmdb.CompanyCmdbInfo, error) {
@@ -649,4 +699,44 @@ func (g *Generator) checkRecordCrpOrderTimeout(kt *kit.Kit, crpOrderID string, c
 		logs.Warnf("%s: query crp cvm apply order timeout, subOrderID: %s, crpOrderID: %s, crpTraceID: %s, rid: %s",
 			constant.CvmApplyOrderCrpProductTimeout, subOrderID, crpOrderID, crpTraceID, kt.Rid)
 	}
+}
+
+// batchGetSubnetListByZones 根据多可用区，批量获取子网列表
+func (g *Generator) batchGetSubnetListByZones(kt *kit.Kit, zones []string, vpcID string, order *types.ApplyOrder) (
+	map[string]AvailSubnetList, error) {
+
+	var lock sync.Mutex
+	pipeline := make(chan struct{}, 20)
+	zoneSubnetMap := make(map[string]AvailSubnetList)
+	querySubnetFunc := func(zone, vpcID string, order *types.ApplyOrder) error {
+		defer func() {
+			<-pipeline
+		}()
+
+		subnetList, err := g.getCvmSubnet(kt, zone, vpcID, order)
+		if err != nil {
+			logs.Errorf("failed to get cvm available subnet, subOrderID: %s, err: %v, region: %s, zone: %s, "+
+				"vpcID: %s, rid: %s", order.SubOrderId, err, order.Spec.Region, zone, vpcID, kt.Rid)
+			return err
+		}
+
+		lock.Lock()
+		defer lock.Unlock()
+		zoneSubnetMap[zone] = subnetList
+		return nil
+	}
+
+	var eg, _ = errgroup.WithContext(kt.Ctx)
+	for _, zoneItem := range zones {
+		pipeline <- struct{}{}
+		zone := zoneItem
+		eg.Go(func() error { return querySubnetFunc(zone, vpcID, order) })
+	}
+	if err := eg.Wait(); err != nil {
+		logs.Errorf("failed to wait cvm available subnet, subOrderID: %s, err: %v, region: %s, zones: %v, "+
+			"vpcID: %s, rid: %s", order.SubOrderId, err, order.Spec.Region, zones, vpcID, kt.Rid)
+		return nil, err
+	}
+
+	return zoneSubnetMap, nil
 }

@@ -9,6 +9,8 @@
  * either express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+// Package selector ...
 package selector
 
 import (
@@ -19,6 +21,7 @@ import (
 	"hcm/pkg/tools/util"
 )
 
+// LabelAddOption ...
 type LabelAddOption struct {
 	InstanceIDs []int64 `json:"instance_ids"`
 	Labels      Labels  `json:"labels"`
@@ -36,32 +39,43 @@ type LabelUpdateRequest struct {
 	TableName string             `json:"table_name"`
 }
 
+// LabelAddRequest ...
 type LabelAddRequest struct {
 	Option    LabelAddOption `json:"option"`
 	TableName string         `json:"table_name"`
 }
 
+// LabelRemoveOption ...
 type LabelRemoveOption struct {
 	InstanceIDs []int64  `json:"instance_ids"`
 	Keys        []string `json:"keys"`
 }
 
+// LabelRemoveRequest ...
 type LabelRemoveRequest struct {
 	Option    LabelRemoveOption `json:"option"`
 	TableName string            `json:"table_name"`
 }
 
+// Operator ...
 type Operator string
 
 const (
+	// DoesNotExist ...
 	DoesNotExist Operator = "!"
-	Equals       Operator = "="
-	In           Operator = "in"
-	NotEquals    Operator = "!="
-	NotIn        Operator = "notin"
-	Exists       Operator = "exists"
+	// Equals ...
+	Equals Operator = "="
+	// In ...
+	In Operator = "in"
+	// NotEquals ...
+	NotEquals Operator = "!="
+	// NotIn ...
+	NotIn Operator = "notin"
+	// Exists ...
+	Exists Operator = "exists"
 )
 
+// AvailableOperators ...
 var AvailableOperators = []Operator{
 	DoesNotExist,
 	Equals,
@@ -71,12 +85,14 @@ var AvailableOperators = []Operator{
 	Exists,
 }
 
+// Selector ...
 type Selector struct {
 	Key      string   `json:"key" field:"key" bson:"key"`
 	Operator Operator `json:"operator" field:"operator" bson:"operator"`
 	Values   []string `json:"values" field:"values" bson:"values"`
 }
 
+// Validate ...
 func (s *Selector) Validate() (string, error) {
 	if util.InArray(s.Operator, AvailableOperators) == false {
 		return "operator", fmt.Errorf("operator %s not available, available operators: %+v", s.Operator,
@@ -101,6 +117,7 @@ func (s *Selector) Validate() (string, error) {
 	return "", nil
 }
 
+// ToMgoFilter ...
 func (s *Selector) ToMgoFilter() (map[string]interface{}, error) {
 	filter := make(map[string]interface{})
 	field := "labels." + s.Key
@@ -145,8 +162,10 @@ func (s *Selector) ToMgoFilter() (map[string]interface{}, error) {
 	return filter, nil
 }
 
+// Selectors ...
 type Selectors []Selector
 
+// Validate ...
 func (ss Selectors) Validate() (string, error) {
 	for _, selector := range ss {
 		if key, err := selector.Validate(); err != nil {
@@ -156,6 +175,7 @@ func (ss Selectors) Validate() (string, error) {
 	return "", nil
 }
 
+// ToMgoFilter ...
 func (ss Selectors) ToMgoFilter() (map[string]interface{}, error) {
 	filters := make([]map[string]interface{}, 0)
 	for _, selector := range ss {

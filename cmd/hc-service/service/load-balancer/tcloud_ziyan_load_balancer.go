@@ -386,6 +386,7 @@ func (svc *clbSvc) createListenerWithRuleInZiyan(kt *kit.Kit, req *protolb.Liste
 		SniSwitch:         req.SniSwitch,
 		SessionType:       cvt.ValToPtr(req.SessionType),
 		Certificate:       req.Certificate,
+		EndPort:           req.EndPort,
 	}
 	if req.Protocol.IsLayer4Protocol() {
 		lblOpt.HealthCheck = &corelb.TCloudHealthCheckInfo{}
@@ -499,6 +500,7 @@ func (svc *clbSvc) insertListenerWithRuleInZiyan(kt *kit.Kit, req *protolb.Liste
 				Url:                url,
 				SniSwitch:          req.SniSwitch,
 				Certificate:        req.Certificate,
+				EndPort:            cvt.ValToPtr(int64(req.EndPort)),
 			},
 		},
 	}

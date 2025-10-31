@@ -263,6 +263,7 @@ func (r *PullAIBillsReq) Validate() error {
 	return validator.Validate.Struct(r)
 }
 
+// AIBillItem ...
 type AIBillItem struct {
 	ID                 string              `json:"id"`
 	Year               int                 `json:"year"`

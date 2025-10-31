@@ -15,6 +15,7 @@ package config
 
 import (
 	types "hcm/cmd/woa-server/types/config"
+	tasktypes "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
@@ -107,29 +108,13 @@ func (s *service) getAllAffinity() []*types.AffinityInfo {
 
 // GetApplyStage gets apply stage config list
 func (s *service) GetApplyStage(_ *rest.Contexts) (interface{}, error) {
-	// TODO: store in db
-	rst := mapstr.MapStr{
-		"info": []mapstr.MapStr{{
-			"stage":       "UNCOMMIT",
-			"description": "未提交",
-		}, {
-			"stage":       "AUDIT",
-			"description": "待审核",
-		}, {
-			"stage":       "TERMINATE",
-			"description": "终止",
-		}, {
-			"stage":       "RUNNING",
-			"description": "备货中",
-		}, {
-			"stage":       "SUSPEND",
-			"description": "备货异常",
-		}, {
-			"stage":       "DONE",
-			"description": "完成",
-		},
-		},
+	info := make([]mapstr.MapStr, 0)
+	for _, stageKey := range tasktypes.TicketStageOrder {
+		info = append(info, mapstr.MapStr{
+			"stage":       stageKey,
+			"description": tasktypes.TicketStageEnums[stageKey],
+		})
 	}
 
-	return rst, nil
+	return mapstr.MapStr{"info": info}, nil
 }

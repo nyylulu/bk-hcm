@@ -18,12 +18,16 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"slices"
 	"strconv"
+	"time"
 
 	"hcm/cmd/woa-server/model/task"
 	"hcm/cmd/woa-server/types/config"
+	gctypes "hcm/cmd/woa-server/types/green-channel"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/criteria/mapstr"
@@ -31,6 +35,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
+	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/cvmapi"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/metadata"
@@ -349,7 +354,7 @@ func (s *service) GetApplyAuditCrp(cts *rest.Contexts) (interface{}, error) {
 }
 
 // getApplyAuditItsm get apply ticket audit info
-func (s *service) getApplyAuditItsm(kt *kit.Kit, req *types.GetApplyAuditItsmReq) (any, error) {
+func (s *service) getApplyAuditItsm(kt *kit.Kit, req *types.GetApplyAuditItsmReq) (*types.GetApplyAuditItsmRst, error) {
 	rst, err := s.logics.Scheduler().GetApplyAuditItsm(kt, req)
 	if err != nil {
 		logs.Errorf("failed to get apply ticket itsm audit info, err: %v, rid: %s", err, kt.Rid)
@@ -600,9 +605,33 @@ func (s *service) validateDeviceTypeForGreenAndRoll(kt *kit.Kit, input *types.Ap
 		logs.Errorf("failed to get device type info, err: %v, deviceTypes: %v, rid: %s", err, deviceTypes, kt.Rid)
 		return err
 	}
+
+	// 获取小额绿通的配置
+	cvmApplyConfigs := gctypes.CvmApplyConfig{}
+	if input.RequireType == enumor.RequireTypeGreenChannel {
+		gcConfigs, err := s.gcLogics.GetConfigs(kt)
+		if err != nil {
+			logs.Errorf("get green channel configs failed, err: %v, rid: %s", err, kt.Rid)
+			return err
+		}
+		cvmApplyConfigs = gcConfigs.CvmApplyConfig
+	}
+
 	var unsupportedTypes []string
 	for _, item := range resp.Info {
 		if item.DeviceTypeClass == cvmapi.SpecialType {
+			unsupportedTypes = append(unsupportedTypes, item.DeviceType)
+		}
+		// 小额绿通只能申请[标准型]、[16核以下]的机型
+		if !(input.RequireType == enumor.RequireTypeGreenChannel && cvmApplyConfigs.Enabled) {
+			continue
+		}
+		deviceGroupIf, ok := item.Label["device_group"]
+		if !ok {
+			continue
+		}
+		deviceGroup := util.GetStrByInterface(deviceGroupIf)
+		if !(slices.Contains(cvmApplyConfigs.DeviceGroups, deviceGroup) && item.Cpu <= cvmApplyConfigs.CpuMaxLimit) {
 			unsupportedTypes = append(unsupportedTypes, item.DeviceType)
 		}
 	}
@@ -615,8 +644,8 @@ func (s *service) validateDeviceTypeForGreenAndRoll(kt *kit.Kit, input *types.Ap
 
 // createApplyOrder creates apply order
 func (s *service) createApplyOrder(kt *kit.Kit, input *types.ApplyReq) (any, error) {
-	if err := s.validateDeviceTypeForGreenAndRoll(kt, input); err != nil {
-		logs.Errorf("failed to validate device type for green channel or roll server apply, err: %v, rid: %s", err, kt.Rid)
+	if err := s.verifyAccordingToRequireType(kt, input); err != nil {
+		logs.Errorf("failed to verify according to require type, err: %v, rid: %s", err, kt.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
@@ -632,6 +661,53 @@ func (s *service) createApplyOrder(kt *kit.Kit, input *types.ApplyReq) (any, err
 	}
 
 	return rst, nil
+}
+
+func (s *service) verifyAccordingToRequireType(kt *kit.Kit, input *types.ApplyReq) error {
+	switch input.RequireType {
+	case enumor.RequireTypeRollServer, enumor.RequireTypeGreenChannel:
+		return s.validateDeviceTypeForGreenAndRoll(kt, input)
+	case enumor.RequireTypeDissolve:
+		return s.verifyBizDissolveQuota(kt, input)
+	default:
+		return nil
+	}
+}
+
+func (s *service) verifyBizDissolveQuota(kt *kit.Kit, input *types.ApplyReq) error {
+	if input.RequireType != enumor.RequireTypeDissolve {
+		return nil
+	}
+
+	// 查询业务机房裁撤可申请额度
+	bizID := input.BkBizId
+	bizSummaryMap, err := s.dissolveLogics.Table().ListBizCpuCoreSummary(kt, []int64{input.BkBizId})
+	if err != nil {
+		logs.Errorf("list biz dissolve cpu core summary failed, err: %v, bizID: %d, rid: %s", err, bizID, kt.Rid)
+		return err
+	}
+	summary, ok := bizSummaryMap[bizID]
+	if !ok {
+		logs.Errorf("can not find biz dissolve cpu core summary, bizID: %d, rid: %s", bizID, kt.Rid)
+		return fmt.Errorf("can not find biz dissolve cpu core summary, bizID: %d", bizID)
+	}
+	dissolveQuota := summary.TotalCore - summary.DeliveredCore
+
+	// 计算当前单据申请的CPU核数
+	var appliedCore int64
+	for _, subOrder := range input.Suborders {
+		appliedCore += int64(subOrder.AppliedCore)
+	}
+
+	// 判断申请的额度是否大于可申请额度
+	if appliedCore > dissolveQuota {
+		logs.Errorf("applied cpu core more than biz dissolve quota, applied: %d, quota: %d, bizID: %d, rid: %s",
+			appliedCore, dissolveQuota, bizID, kt.Rid)
+		return fmt.Errorf("申请的CPU核数超过机房裁撤可申请额度, 申请CPU核数: %d, 可申请额度: %d", appliedCore,
+			dissolveQuota)
+	}
+
+	return nil
 }
 
 // verifyResPlanDemand 资源预测余量校验
@@ -1385,12 +1461,12 @@ func (s *service) StartBizApplyOrder(cts *rest.Contexts) (any, error) {
 	return s.startApplyOrder(cts, bkBizIDMap, meta.Biz, meta.Create)
 }
 
-// StartApplyOrder start apply order
+// StartApplyOrder 主机申请重试
 func (s *service) StartApplyOrder(cts *rest.Contexts) (any, error) {
 	return s.startApplyOrder(cts, make(map[int64]struct{}), meta.ZiYanResource, meta.Create)
 }
 
-// startApplyOrder start apply order
+// startApplyOrder 主机申请重试
 func (s *service) startApplyOrder(cts *rest.Contexts, bkBizIDMap map[int64]struct{}, resType meta.ResourceType,
 	action meta.Action) (any, error) {
 
@@ -1536,7 +1612,7 @@ func (s *service) ModifyBizApplyOrder(cts *rest.Contexts) (any, error) {
 	return s.modifyApplyOrder(cts, bkBizIDMap, meta.Biz, meta.Create)
 }
 
-// ModifyApplyOrder modify apply order
+// ModifyApplyOrder 修改需求重试
 func (s *service) ModifyApplyOrder(cts *rest.Contexts) (any, error) {
 	return s.modifyApplyOrder(cts, make(map[int64]struct{}), meta.ZiYanResource, meta.Create)
 }
@@ -1551,9 +1627,8 @@ func (s *service) modifyApplyOrder(cts *rest.Contexts, bkBizIDMap map[int64]stru
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
-	if err != nil {
-		logs.Errorf("failed to modify apply order, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+	if err := input.Validate(); err != nil {
+		logs.Errorf("failed to modify apply order, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(pkg.CCErrCommParamsIsInvalid, err)
 	}
 
@@ -1688,11 +1763,35 @@ func (s *service) GetApplyModify(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
+	// 转换旧版可用区到新版可用区，方便前端统一展示
+	for _, modifyItem := range rst.Info {
+		if modifyItem.Details == nil {
+			continue
+		}
+
+		if modifyItem.Details.PreData != nil {
+			modifyItem.Details.PreData.Zones = []string{modifyItem.Details.PreData.Zone}
+			// 分Campus
+			if modifyItem.Details.PreData.Zone == cvmapi.CvmSeparateCampus {
+				modifyItem.Details.PreData.Zones = []string{cvmapi.CvmZoneAll}
+				modifyItem.Details.PreData.ResAssign = enumor.CampusResAssign
+			}
+		}
+
+		if modifyItem.Details.CurData != nil {
+			modifyItem.Details.CurData.Zones = []string{modifyItem.Details.CurData.Zone}
+			// 分Campus
+			if modifyItem.Details.CurData.Zone == cvmapi.CvmSeparateCampus {
+				modifyItem.Details.CurData.Zones = []string{cvmapi.CvmZoneAll}
+				modifyItem.Details.CurData.ResAssign = enumor.CampusResAssign
+			}
+		}
+	}
+
 	return rst, nil
 }
 
 // getApplyOrderBizIds get apply order biz ids
-// Deprecated: use listApplyOrders instead
 func (s *service) getApplyOrderBizIds(kit *kit.Kit, suborderIds []string) ([]int64, error) {
 	filter := map[string]interface{}{}
 
@@ -1949,4 +2048,128 @@ func (s *service) CancelBizApplyTicketCrp(cts *rest.Contexts) (interface{}, erro
 	}
 
 	return nil, nil
+}
+
+// ListApplyAuditInfo list apply audit info
+func (s *service) ListApplyAuditInfo(cts *rest.Contexts) (interface{}, error) {
+	req := new(types.ListApplyAuditInfoReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	details := make([]types.ListApplyAuditInfo, len(req.TicketIDs))
+	for i, ticketID := range req.TicketIDs {
+		auditInfo, err := s.getApplyAuditItsm(cts.Kit, &types.GetApplyAuditItsmReq{OrderId: ticketID})
+		if err != nil {
+			logs.Errorf("failed to get apply audit itsm, err: %v, rid: %s", err, cts.Kit.Rid)
+			return nil, err
+		}
+		status := itsm.Status(auditInfo.Status)
+		if err = status.Validate(); err != nil {
+			logs.Errorf("status is invalid, err: %v, ticket id: %d, rid: %s", err, ticketID, cts.Kit.Rid)
+			return nil, fmt.Errorf("status is invalid, err: %v, ticket id: %d", err, ticketID)
+		}
+		rst, err := s.logics.Scheduler().GetApplyTicket(cts.Kit, &types.GetApplyTicketReq{OrderId: ticketID})
+		if err != nil {
+			logs.Errorf("failed to get apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+			return nil, err
+		}
+		if rst == nil || rst.ApplyTicket == nil {
+			logs.Errorf("can not find apply ticket, ticket id: %d, rid: %s", ticketID, cts.Kit.Rid)
+			return nil, fmt.Errorf("can not find apply ticket, ticket id: %d", ticketID)
+		}
+		details[i] = types.ListApplyAuditInfo{
+			TicketID:     ticketID,
+			Status:       status,
+			TicketInfo:   rst,
+			CurrentSteps: auditInfo.CurrentSteps,
+		}
+		if !status.IsFinalState() {
+			continue
+		}
+		if len(auditInfo.Logs) == 0 {
+			logs.Errorf("audit logs is empty, ticket id: %d, rid: %s", ticketID, cts.Kit.Rid)
+			return nil, fmt.Errorf("audit logs is empty, ticket id: %d", ticketID)
+		}
+		endAt, err := time.Parse(constant.DateTimeLayout, auditInfo.Logs[len(auditInfo.Logs)-1].OperateAt)
+		if err != nil {
+			logs.Errorf("failed to parse end at, err: %v, ticket id: %d, rid: %s", err, ticketID, cts.Kit.Rid)
+			return nil, fmt.Errorf("failed to parse end at, err: %v, ticket id: %d", err, ticketID)
+		}
+		details[i].EndAt = cvt.ValToPtr(endAt)
+	}
+
+	return types.ListApplyAuditInfoResp{Details: details}, nil
+}
+
+// ApproveApplyTicketNode approve or reject apply ticket node
+func (s *service) ApproveApplyTicketNode(cts *rest.Contexts) (any, error) {
+	req := new(types.ApproveApplyTicketNodeReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	auditInfo, err := s.getApplyAuditItsm(cts.Kit, &types.GetApplyAuditItsmReq{OrderId: req.TicketID})
+	if err != nil {
+		logs.Errorf("failed to get apply audit itsm, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+	status := itsm.Status(auditInfo.Status)
+	if err = status.Validate(); err != nil {
+		logs.Errorf("status is invalid, err: %v, ticket id: %d, rid: %s", err, req.TicketID, cts.Kit.Rid)
+		return nil, fmt.Errorf("status is invalid, err: %v, ticket id: %d", err, req.TicketID)
+	}
+	if status.IsFinalState() {
+		return nil, nil
+	}
+
+	param := itsm.ApproveNodeOpt{
+		SN:       auditInfo.ItsmTicketId,
+		StateId:  req.StateID,
+		Operator: req.Operator,
+		Approval: cvt.PtrToVal(req.Approval),
+		Remark:   req.Remark,
+	}
+	if err = s.itsmClient.ApproveNode(cts.Kit, &param); err != nil {
+		logs.Errorf("failed to approve itsm node, err: %v, param: %+v, rid: %s", err, req, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// FindApproveNodeResult find approve node result
+func (s *service) FindApproveNodeResult(cts *rest.Contexts) (any, error) {
+	req := new(types.FindApproveNodeResultReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	rst, err := s.logics.Scheduler().GetApplyTicket(cts.Kit, &types.GetApplyTicketReq{OrderId: req.TicketID})
+	if err != nil {
+		logs.Errorf("failed to get apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+	if rst == nil || rst.ApplyTicket == nil {
+		logs.Errorf("can not find apply ticket, ticket id: %d, rid: %s", req.TicketID, cts.Kit.Rid)
+		return nil, fmt.Errorf("can not find apply ticket, ticket id: %d", req.TicketID)
+	}
+
+	result, err := s.itsmClient.GetApproveNodeResult(cts.Kit, rst.ItsmTicketId, req.StateID)
+	if err != nil {
+		logs.Errorf("failed to find approve node result, err: %v, ticket id: %s, state id: %d, rid: %s",
+			err, rst.ItsmTicketId, req.StateID, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return result, nil
 }

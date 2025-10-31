@@ -25,6 +25,7 @@ import (
 
 	"hcm/pkg/api/core"
 	rpproto "hcm/pkg/api/data-service/resource-plan"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/orm"
@@ -109,6 +110,10 @@ func (svc *service) batchUpdateResPlanDemandWithTx(kt *kit.Kit, txn *sqlx.Tx,
 		if updateReq.Reviser != "" {
 			record.Reviser = updateReq.Reviser
 		}
+		// 技术分类
+		if updateReq.TechnicalClass != "" {
+			record.TechnicalClass = updateReq.TechnicalClass
+		}
 
 		if err := svc.dao.ResPlanDemand().UpdateWithTx(kt, txn,
 			tools.EqualExpression("id", updateReq.ID), record); err != nil {
@@ -179,19 +184,23 @@ func (svc *service) BatchUpsertResPlanDemand(cts *rest.Contexts) (interface{}, e
 		createIDs := make([]string, 0)
 
 		if len(req.CreateDemands) > 0 {
-			var err error
-			createIDs, err = svc.batchCreateResPlanDemandWithTx(cts.Kit, txn, req.CreateDemands)
-			if err != nil {
-				logs.Errorf("batch create res plan demand failed, err: %v, rid: %v", err, cts.Kit.Rid)
-				return nil, err
+			for _, batch := range slice.Split(req.CreateDemands, constant.BatchOperationMaxLimit) {
+				newIDs, err := svc.batchCreateResPlanDemandWithTx(cts.Kit, txn, batch)
+				if err != nil {
+					logs.Errorf("batch create res plan demand failed, err: %v, rid: %v", err, cts.Kit.Rid)
+					return nil, err
+				}
+				createIDs = append(createIDs, newIDs...)
 			}
 		}
 
 		if len(req.UpdateDemands) > 0 {
-			_, err := svc.batchUpdateResPlanDemandWithTx(cts.Kit, txn, req.UpdateDemands)
-			if err != nil {
-				logs.Errorf("batch update res plan demand failed, err: %v, rid: %v", err, cts.Kit.Rid)
-				return nil, err
+			for _, batch := range slice.Split(req.UpdateDemands, constant.BatchOperationMaxLimit) {
+				_, err := svc.batchUpdateResPlanDemandWithTx(cts.Kit, txn, batch)
+				if err != nil {
+					logs.Errorf("batch update res plan demand failed, err: %v, rid: %v", err, cts.Kit.Rid)
+					return nil, err
+				}
 			}
 		}
 

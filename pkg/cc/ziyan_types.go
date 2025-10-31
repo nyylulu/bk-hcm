@@ -117,24 +117,25 @@ func (r Redis) validate() error {
 
 // ClientConfig third-party api client config set
 type ClientConfig struct {
-	CvmOpt    CVMCliConf `yaml:"cvm"`
-	TjjOpt    TjjCli     `yaml:"tjj"`
-	XshipOpt  XshipCli   `yaml:"xship"`
-	TCloudOpt TCloudCli  `yaml:"tencentcloud"`
-	DvmOpt    DVMCli     `yaml:"dvm"`
-	ErpOpt    ErpCli     `yaml:"erp"`
-	TmpOpt    TmpCli     `yaml:"tmp"`
-	Xray      XrayCli    `yaml:"xray"`
-	Tcaplus   TcaplusCli `yaml:"tcaplus"`
-	TGW       TGWCli     `yaml:"tgw"`
-	L5        L5Cli      `yaml:"l5"`
-	Safety    SafetyCli  `yaml:"safety"`
-	BkChat    BkChatCli  `yaml:"bkchat"`
-	Sops      SopsCli    `yaml:"sops"`
-	ITSM      ApiGateway `yaml:"itsm"`
-	Ngate     NgateCli   `yaml:"ngate"`
-	CaiChe    CaiCheCli  `yaml:"caiche"`
-	BkDbm     ApiGateway `yaml:"bkdbm"`
+	CvmOpt        CVMCliConf `yaml:"cvm"`
+	TjjOpt        TjjCli     `yaml:"tjj"`
+	XshipOpt      XshipCli   `yaml:"xship"`
+	TCloudOpt     TCloudCli  `yaml:"tencentcloud"`
+	DvmOpt        DVMCli     `yaml:"dvm"`
+	ErpOpt        ErpCli     `yaml:"erp"`
+	TmpOpt        TmpCli     `yaml:"tmp"`
+	Xray          XrayCli    `yaml:"xray"`
+	Tcaplus       TcaplusCli `yaml:"tcaplus"`
+	TGW           TGWCli     `yaml:"tgw"`
+	L5            L5Cli      `yaml:"l5"`
+	Safety        SafetyCli  `yaml:"safety"`
+	BkChat        BkChatCli  `yaml:"bkchat"`
+	Sops          SopsCli    `yaml:"sops"`
+	ITSM          ApiGateway `yaml:"itsm"`
+	Ngate         NgateCli   `yaml:"ngate"`
+	CaiChe        CaiCheCli  `yaml:"caiche"`
+	BkDbm         ApiGateway `yaml:"bkdbm"`
+	BkBotApproval ApiGateway `yaml:"bkbotapproval"`
 }
 
 func (c ClientConfig) validate() error {
@@ -199,6 +200,10 @@ func (c ClientConfig) validate() error {
 	}
 
 	if err := c.BkDbm.validate(); err != nil {
+		return err
+	}
+
+	if err := c.BkBotApproval.validate(); err != nil {
 		return err
 	}
 
@@ -550,6 +555,7 @@ func (i ItsmFlow) validate() error {
 type ResourceDissolve struct {
 	OriginDate               string   `yaml:"originDate"`
 	ProjectNames             []string `yaml:"projectNames"`
+	ProjectIDs               []int    `yaml:"projectIDs"`
 	ListExcludedProjectNames []string `yaml:"listExcludedProjectNames"`
 	SyncDissolveHost         bool     `yaml:"syncDissolveHost"`
 }
@@ -561,6 +567,10 @@ func (r ResourceDissolve) validate() error {
 
 	if len(r.ProjectNames) == 0 {
 		return errors.New("resourceDissolve.projectNames is not set")
+	}
+
+	if len(r.ProjectIDs) == 0 {
+		return errors.New("resourceDissolve.projectIDs is not set")
 	}
 
 	return nil
@@ -779,8 +789,11 @@ type RollingServerReturnNotice struct {
 
 // ResPlan 资源预测相关配置
 type ResPlan struct {
-	ReportPenaltyRatio bool                `yaml:"reportPenaltyRatio"`
-	ExpireNotification ResPlanExpireNotice `yaml:"expireNotification"`
+	ReportPenaltyRatio   bool                 `yaml:"reportPenaltyRatio"`
+	ExpireNotification   ResPlanExpireNotice  `yaml:"expireNotification"`
+	RefreshTransferQuota ResPlanTransferQuota `yaml:"refreshTransferQuota"`
+	AdminAuditor         []string             `yaml:"adminAuditor"`
+	CRPOverLimitContact  []string             `yaml:"crpOverLimitContact"`
 }
 
 // ResPlanExpireNotice 资源预测过期通知配置
@@ -788,6 +801,13 @@ type ResPlanExpireNotice struct {
 	Enable           bool     `yaml:"enable"`
 	SendToBusiness   bool     `yaml:"sendToBusiness"`
 	DefaultReceivers []string `yaml:"defaultReceivers"`
+}
+
+// ResPlanTransferQuota 资源预测转移额度配置
+type ResPlanTransferQuota struct {
+	Enable     bool  `yaml:"enable"`
+	Quota      int64 `yaml:"quota"`
+	AuditQuota int64 `yaml:"audit_quota"`
 }
 
 // MOA 太湖/MOA api配置

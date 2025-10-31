@@ -47,6 +47,7 @@ var defaultFlowNameMap = map[FlowName]struct{}{
 	FlowDeleteCvm:              {},
 	FlowCreateCvm:              {},
 	FlowResetCvm:               {},
+	FlowIdleCheckCvm:           {},
 	FlowDeleteFirewallRule:     {},
 	FlowDeleteSubnet:           {},
 	FlowNormalTest:             {},
@@ -102,12 +103,13 @@ func (v FlowName) ValidateLoadBalancer() error {
 
 // 主机相关Flow
 const (
-	FlowStartCvm  FlowName = "start_cvm"
-	FlowStopCvm   FlowName = "stop_cvm"
-	FlowRebootCvm FlowName = "reboot_cvm"
-	FlowDeleteCvm FlowName = "delete_cvm"
-	FlowCreateCvm FlowName = "create_cvm"
-	FlowResetCvm  FlowName = "reset_cvm"
+	FlowStartCvm     FlowName = "start_cvm"
+	FlowStopCvm      FlowName = "stop_cvm"
+	FlowRebootCvm    FlowName = "reboot_cvm"
+	FlowDeleteCvm    FlowName = "delete_cvm"
+	FlowCreateCvm    FlowName = "create_cvm"
+	FlowResetCvm     FlowName = "reset_cvm"
+	FlowIdleCheckCvm FlowName = "idle_check_cvm"
 )
 
 // 防火墙相关Flow

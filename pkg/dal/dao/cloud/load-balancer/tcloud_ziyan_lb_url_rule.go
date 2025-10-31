@@ -24,6 +24,7 @@ import (
 	"fmt"
 
 	"hcm/pkg/api/core"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/audit"
@@ -42,7 +43,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-// LbTCloudUrlRuleInterface only used for lb tcloud url rule.
+// LbTCloudZiyanUrlRuleInterface only used for lb tcloud url rule.
 type LbTCloudZiyanUrlRuleInterface interface {
 	BatchCreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []*tablelb.TCloudZiyanLbUrlRuleTable) ([]string, error)
 	Update(kt *kit.Kit, expr *filter.Expression, model *tablelb.TCloudZiyanLbUrlRuleTable) error
@@ -61,8 +62,8 @@ type LbTCloudZiyanUrlRuleDao struct {
 }
 
 // BatchCreateWithTx lb url rule.
-func (dao LbTCloudZiyanUrlRuleDao) BatchCreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []*tablelb.TCloudZiyanLbUrlRuleTable) (
-	[]string, error) {
+func (dao LbTCloudZiyanUrlRuleDao) BatchCreateWithTx(kt *kit.Kit, tx *sqlx.Tx,
+	models []*tablelb.TCloudZiyanLbUrlRuleTable) ([]string, error) {
 
 	tableName := table.TCloudZiyanLbUrlRuleTable
 	ids, err := dao.IDGen.Batch(kt, tableName, len(models))
@@ -126,7 +127,9 @@ func (dao LbTCloudZiyanUrlRuleDao) BatchCreateWithTx(kt *kit.Kit, tx *sqlx.Tx, m
 }
 
 // Update lb url rule.
-func (dao LbTCloudZiyanUrlRuleDao) Update(kt *kit.Kit, expr *filter.Expression, model *tablelb.TCloudZiyanLbUrlRuleTable) error {
+func (dao LbTCloudZiyanUrlRuleDao) Update(kt *kit.Kit, expr *filter.Expression,
+	model *tablelb.TCloudZiyanLbUrlRuleTable) error {
+
 	if expr == nil {
 		return errf.New(errf.InvalidParameter, "filter expr is nil")
 	}
@@ -151,12 +154,14 @@ func (dao LbTCloudZiyanUrlRuleDao) Update(kt *kit.Kit, expr *filter.Expression, 
 	_, err = dao.Orm.AutoTxn(kt, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
 		effect, err := dao.Orm.Txn(txn).Update(kt.Ctx, sql, tools.MapMerge(toUpdate, whereValue))
 		if err != nil {
-			logs.Errorf("[tcloud-ziyan] update load balancer url rule failed, err: %v, filter: %s, rid: %v", err, expr, kt.Rid)
+			logs.Errorf("[tcloud-ziyan] update load balancer url rule failed, err: %v, filter: %s, rid: %v",
+				err, expr, kt.Rid)
 			return nil, err
 		}
 
 		if effect == 0 {
-			logs.Infof("[tcloud-ziyan] update load balancer url rule, but record not found, sql: %s, rid: %v", sql, kt.Rid)
+			logs.Infof("[tcloud-ziyan] update load balancer url rule, but record not found, sql: %s, rid: %v",
+				sql, kt.Rid)
 		}
 
 		return nil, nil
@@ -199,13 +204,18 @@ func (dao LbTCloudZiyanUrlRuleDao) UpdateByIDWithTx(kt *kit.Kit, tx *sqlx.Tx, id
 }
 
 // List lb url rule.
-func (dao LbTCloudZiyanUrlRuleDao) List(kt *kit.Kit, opt *types.ListOption) (*types.ListResult[*tablelb.TCloudZiyanLbUrlRuleTable], error) {
+func (dao LbTCloudZiyanUrlRuleDao) List(kt *kit.Kit, opt *types.ListOption) (
+	*types.ListResult[*tablelb.TCloudZiyanLbUrlRuleTable], error) {
+
 	if opt == nil {
 		return nil, errf.New(errf.InvalidParameter, "list options is nil")
 	}
 
-	if err := opt.Validate(filter.NewExprOption(filter.RuleFields(tablelb.TCloudZiyanLbUrlRuleColumns.ColumnTypes())),
-		core.NewDefaultPageOption()); err != nil {
+	expr := filter.NewExprOption(
+		filter.RuleFields(tablelb.TCloudZiyanLbUrlRuleColumns.ColumnTypes()),
+		filter.MaxInLimit(constant.CLBTopoFindInLimit),
+	)
+	if err := opt.Validate(expr, core.NewDefaultPageOption()); err != nil {
 		return nil, err
 	}
 
@@ -220,7 +230,8 @@ func (dao LbTCloudZiyanUrlRuleDao) List(kt *kit.Kit, opt *types.ListOption) (*ty
 
 		count, err := dao.Orm.Do().Count(kt.Ctx, sql, whereValue)
 		if err != nil {
-			logs.Errorf("[tcloud-ziyan] count load balancer url rule failed, err: %v, filter: %s, rid: %s", err, opt.Filter, kt.Rid)
+			logs.Errorf("[tcloud-ziyan] count load balancer url rule failed, err: %v, filter: %s, rid: %s",
+				err, opt.Filter, kt.Rid)
 			return nil, err
 		}
 

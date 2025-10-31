@@ -103,6 +103,8 @@ log:
   # log level.
   verbosity: 0
 
+# HCM 网关地址
+bkApigwHCMUrl: "http://127.0.0.1"
 useMongo: true
 
 mongodb:
@@ -317,6 +319,9 @@ resourceDissolve:
   # 裁撤列表展示需要排除对应项目名称的主机
   listExcludedProjectNames:
     - "2025机房裁撤（海外）"
+  # 新版裁撤/云徙列表查询对应的项目id
+  projectIDs:
+    - 26
   syncDissolveHost: true
 
 elasticsearch:
@@ -372,6 +377,12 @@ resPlan:
     enable: false
     sendToBusiness: false
     defaultReceiver: ""
+  refreshTransferQuota:
+    enable: false
+    quota: 5000
+    audit_quota: 1000
+  adminAuditor: []
+  crpOverLimitContact: ["demo"]
 
 # 开启自研云资源同步服务,单位:分钟
 resourceSync:
@@ -444,3 +455,32 @@ cmdb:
     caFile:
     # the password to decrypt the certificate.
     password:
+
+# defines bkbotapproval related settings.
+bkbotapproval:
+  # endpoints is a seed list of host:port addresses of api gateway nodes.
+  endpoints:
+    - http://127.0.0.1
+  # appCode is the BlueKing app code of hcm to request api gateway.
+  appCode: test
+  # appSecret is the BlueKing app secret of hcm to request api gateway.
+  appSecret: test
+  # user is the BlueKing user of hcm to request api gateway.
+  user: admin
+  # bkTicket is the BlueKing access ticket of hcm to request api gateway.
+  bkTicket:
+  # bkToken is the BlueKing access token of hcm to request api gateway.
+  bkToken:
+  # defines tls related options.
+  tls:
+    # server should be accessed without verifying the TLS certificate.
+    insecureSkipVerify:
+    # server requires TLS client certificate authentication.
+    certFile:
+    # server requires TLS client certificate authentication.
+    keyFile:
+    # trusted root certificates for server.
+    caFile:
+    # the password to decrypt the certificate.
+    password:
+

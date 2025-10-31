@@ -89,6 +89,8 @@ const (
 	GcpCreditReturnCostReverse = "CreditReverse"
 	// GcpAIDeductProductCode aws ai deduct product code
 	GcpAIDeductProductCode = "AIDeduct"
+	// GcpAIDeductProductCodeReverse 当赠金中包含ai的赠金时，需要创建该类型的条目，抵扣ai消耗的金额，减少ai消耗的绝对值
+	GcpAIDeductProductCodeReverse = "AIDeductReverse"
 
 	// HuaweiTaxDeductProductCode ..
 	HuaweiTaxDeductProductCode = "TaxDeduct"

@@ -16,12 +16,15 @@ import (
 	"net/http"
 
 	"hcm/cmd/woa-server/logics/config"
+	"hcm/cmd/woa-server/logics/dissolve"
+	gclogics "hcm/cmd/woa-server/logics/green-channel"
 	planLogics "hcm/cmd/woa-server/logics/plan"
 	taskLogics "hcm/cmd/woa-server/logics/task"
 	"hcm/cmd/woa-server/service/capability"
 	"hcm/pkg/client"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/rest"
+	"hcm/pkg/thirdparty/api-gateway/itsm"
 )
 
 // InitService initial the service
@@ -33,6 +36,9 @@ func InitService(c *capability.Capability) {
 		configLogics: c.ConfigLogics,
 		planLogics:   c.PlanController,
 		authorizer:   c.Authorizer,
+		itsmClient:   c.ThirdCli.ITSM,
+		gcLogics:     c.GcLogic,
+		dissolveLogics: c.DissolveLogic,
 	}
 	h := rest.NewHandler()
 	h.Path("/task")
@@ -57,6 +63,9 @@ type service struct {
 	configLogics config.Logics
 	planLogics   planLogics.Logics
 	authorizer   auth.Authorizer
+	itsmClient   itsm.Client
+	gcLogics     gclogics.Logics
+	dissolveLogics dissolve.Logics
 }
 
 func (s *service) initOperationService(h *rest.Handler) {
@@ -72,6 +81,7 @@ func (s *service) initRecyclerService(h *rest.Handler) {
 	h.Add("GetBizRecycleOrder", http.MethodPost, "/findmany/biz/recycle/order", s.GetBizRecycleOrder)
 	h.Add("GetRecycleDetect", http.MethodPost, "/findmany/recycle/detect", s.GetRecycleDetect)
 	h.Add("ListDetectHost", http.MethodPost, "/list/recycle/detect/host", s.ListDetectHost)
+	h.Add("ListDetectTask", http.MethodPost, "/list/detect/task", s.ListDetectTask)
 	h.Add("GetRecycleDetectStep", http.MethodPost, "/findmany/recycle/detect/step", s.GetRecycleDetectStep)
 	h.Add("StartRecycleOrder", http.MethodPost, "/start/recycle/order", s.StartRecycleOrder)
 	h.Add("StartRecycleOrderByRecycleType", http.MethodPost,
@@ -86,6 +96,7 @@ func (s *service) initRecyclerService(h *rest.Handler) {
 	h.Add("GetRecycleRecordRegion", http.MethodGet, "/find/recycle/record/region", s.GetRecycleRecordRegion)
 	h.Add("GetRecycleRecordZone", http.MethodGet, "/find/recycle/record/zone", s.GetRecycleRecordZone)
 	h.Add("GetBizHostToRecycle", http.MethodPost, "/find/recycle/biz/host", s.GetBizHostToRecycle)
+	h.Add("StartIdleCheck", http.MethodPost, "/start/cvms/idle_check", s.StartIdleCheck)
 
 	// configs related api
 	h.Add("GetRecycleStageCfg", http.MethodGet, "/find/config/recycle/stage", s.GetRecycleStageCfg)
@@ -128,6 +139,10 @@ func (s *service) initSchedulerService(h *rest.Handler) {
 
 	h.Add("CheckRollingServerHost", http.MethodPost, "/check/rolling_server/host", s.CheckRollingServerHost)
 	h.Add("GetApplyAuditCrp", http.MethodPost, "/apply/crp_ticket/audit/get", s.GetApplyAuditCrp)
+
+	h.Add("ListApplyAuditInfo", http.MethodPost, "/apply/ticket/audit/info/list", s.ListApplyAuditInfo)
+	h.Add("ApproveApplyTicketNode", http.MethodPost, "/approve/apply/ticket/node", s.ApproveApplyTicketNode)
+	h.Add("FindApproveNodeResult", http.MethodPost, "/find/approve_node/result", s.FindApproveNodeResult)
 }
 
 // bizService 业务下的接口
@@ -150,6 +165,7 @@ func bizService(h *rest.Handler, s *service) {
 	h.Add("MatchBizDevice", http.MethodPost, "/commit/apply/match", s.MatchBizDevice)
 	h.Add("MatchBizPoolDevice", http.MethodPost, "/commit/apply/pool/match", s.MatchBizPoolDevice)
 	h.Add("GetBizApplyModify", http.MethodPost, "/find/apply/record/modify", s.GetBizApplyModify)
+	h.Add("ConfirmBizApplyModify", http.MethodPost, "/confirm/apply/record/modify", s.ConfirmBizApplyModify)
 	h.Add("CreateBizRecycleOrder", http.MethodPost, "/create/recycle/order", s.CreateBizRecycleOrder)
 	h.Add("PreviewBizRecycleOrder", http.MethodPost, "/preview/recycle/order", s.PreviewBizRecycleOrder)
 	h.Add("TerminateBizRecycleOrder", http.MethodPost, "/terminate/recycle/order", s.TerminateBizRecycleOrder)

@@ -35,6 +35,7 @@ type BatchTaskCvmResetOption struct {
 	// ManagementDetailIDs 对应的详情行id列表，需要和批量绑定的Targets参数长度对应
 	ManagementDetailIDs []string                           `json:"management_detail_ids" validate:"required,min=1"`
 	CvmResetList        []*protocvm.TCloudBatchResetCvmReq `json:"cvm_reset_list" validate:"required,min=1,dive"`
+	SkipOperatorVerify  bool                               `json:"skip_operator_verify" validate:"omitempty"`
 }
 
 // Validate validate option.
@@ -82,4 +83,18 @@ func (opt CvmOperationOption) Validate() error {
 	}
 
 	return validator.Validate.Struct(opt)
+}
+
+// MonitorIdleCheckCvmOption 分别是空闲检查子单ID、主机ID到任务详情ID的映射
+type MonitorIdleCheckCvmOption struct {
+	SuborderID           string           `json:"suborder_id" validate:"required"`
+	HostIDToTaskDetailID map[int64]string `json:"host_id_to_task_detail_id" validate:"required,min=1,max=500"`
+}
+
+// Validate validate option.
+func (opt MonitorIdleCheckCvmOption) Validate() error {
+	if err := validator.Validate.Struct(opt); err != nil {
+		return err
+	}
+	return nil
 }

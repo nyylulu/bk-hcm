@@ -57,3 +57,8 @@ func (d *Decimal) Scan(raw interface{}) error {
 func (d Decimal) Value() (driver.Value, error) {
 	return d.Decimal.String(), nil
 }
+
+// Copy the decimal
+func (d Decimal) Copy() Decimal {
+	return Decimal{d.Decimal.Copy()}
+}

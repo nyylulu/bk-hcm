@@ -20,6 +20,7 @@
 package loadbalancer
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -589,9 +590,12 @@ func (svc *lbSvc) listListenerWithTarget(kt *kit.Kit, lblReq protocloud.ListList
 	// 如果传入了RSPORT，则进行校验
 	var targetIPPortMap = make(map[string]struct{}, len(targetList))
 	if len(lblReq.ListenerQueryItem.RsPorts) > 0 {
+		// 校验传入的RSPORT和RPIP是否一一对应
+		if len(lblReq.ListenerQueryItem.RsPorts) != len(lblReq.ListenerQueryItem.RsIPs) {
+			return nil, nil, errors.New("rs_port and rs_ip num must be equal")
+		}
 		for idx, ip := range lblReq.ListenerQueryItem.RsIPs {
-			targetIPPortMap[fmt.Sprintf("%s_%s_%d", lblReq.ListenerQueryItem.InstType, ip,
-				lblReq.ListenerQueryItem.RsPorts[idx])] = struct{}{}
+			targetIPPortMap[fmt.Sprintf("%s_%d", ip, lblReq.ListenerQueryItem.RsPorts[idx])] = struct{}{}
 		}
 	}
 
@@ -600,7 +604,7 @@ func (svc *lbSvc) listListenerWithTarget(kt *kit.Kit, lblReq protocloud.ListList
 	targetGroupIDs := make([]string, 0)
 	for _, item := range targetList {
 		// 不符合的数据需要过滤掉
-		if _, ok := targetIPPortMap[fmt.Sprintf("%s_%s_%d", item.InstType, item.IP, item.Port)]; !ok &&
+		if _, ok := targetIPPortMap[fmt.Sprintf("%s_%d", item.IP, item.Port)]; !ok &&
 			len(lblReq.ListenerQueryItem.RsIPs) > 0 && len(lblReq.ListenerQueryItem.RsPorts) > 0 {
 			logs.Warnf("list load balancer target rsip[%s] port[%d] is not found, rid: %s", item.IP, item.Port, kt.Rid)
 			continue
@@ -622,35 +626,37 @@ func (svc *lbSvc) listListenerWithTarget(kt *kit.Kit, lblReq protocloud.ListList
 func (svc *lbSvc) listBizListenerByLbIDs(kt *kit.Kit, lblReq protocloud.ListListenerQueryReq, cloudClbIDs []string) (
 	map[string]tablelb.LoadBalancerListenerTable, []string, []tablelb.LoadBalancerListenerTable, error) {
 
-	lblFilter := make([]*filter.AtomRule, 0)
-	lblFilter = append(lblFilter, tools.RuleEqual("vendor", lblReq.Vendor))
-	lblFilter = append(lblFilter, tools.RuleEqual("bk_biz_id", lblReq.BkBizID))
-	lblFilter = append(lblFilter, tools.RuleEqual("account_id", lblReq.AccountID))
-	lblFilter = append(lblFilter, tools.RuleIn("cloud_lb_id", cloudClbIDs))
-	lblFilter = append(lblFilter, tools.RuleEqual("protocol", lblReq.ListenerQueryItem.Protocol))
-	if len(lblReq.ListenerQueryItem.Ports) > 0 {
-		lblFilter = append(lblFilter, tools.RuleIn("port", lblReq.ListenerQueryItem.Ports))
-	}
-
 	lblList := make([]tablelb.LoadBalancerListenerTable, 0)
-	opt := &types.ListOption{
-		Filter: tools.ExpressionAnd(lblFilter...),
-		Page:   core.NewDefaultBasePage(),
-	}
-	for {
-		loopLblList, err := svc.dao.LoadBalancerListener().List(kt, opt)
-		if err != nil {
-			logs.Errorf("list biz listener by clbIDs failed, err: %v, req: %+v, rid: %s",
-				err, lblReq, kt.Rid)
-			return nil, nil, nil, fmt.Errorf("list biz listener by clbIDs failed, err: %v", err)
+	elems := slice.Split(cloudClbIDs, int(core.DefaultMaxPageLimit))
+	for _, cloudClbIDParts := range elems {
+		lblFilter := make([]*filter.AtomRule, 0)
+		lblFilter = append(lblFilter, tools.RuleEqual("vendor", lblReq.Vendor))
+		lblFilter = append(lblFilter, tools.RuleEqual("bk_biz_id", lblReq.BkBizID))
+		lblFilter = append(lblFilter, tools.RuleEqual("account_id", lblReq.AccountID))
+		lblFilter = append(lblFilter, tools.RuleIn("cloud_lb_id", cloudClbIDParts))
+		lblFilter = append(lblFilter, tools.RuleEqual("protocol", lblReq.ListenerQueryItem.Protocol))
+		if len(lblReq.ListenerQueryItem.Ports) > 0 {
+			lblFilter = append(lblFilter, tools.RuleIn("port", lblReq.ListenerQueryItem.Ports))
 		}
 
-		lblList = append(lblList, loopLblList.Details...)
-		if uint(len(loopLblList.Details)) < core.DefaultMaxPageLimit {
-			break
+		opt := &types.ListOption{
+			Filter: tools.ExpressionAnd(lblFilter...),
+			Page:   core.NewDefaultBasePage(),
 		}
+		for {
+			loopLblList, err := svc.dao.LoadBalancerListener().List(kt, opt)
+			if err != nil {
+				logs.Errorf("list biz listener by clbIDs failed, err: %v, req: %+v, rid: %s", err, lblReq, kt.Rid)
+				return nil, nil, nil, fmt.Errorf("list biz listener by clbIDs failed, err: %v", err)
+			}
 
-		opt.Page.Start += uint32(core.DefaultMaxPageLimit)
+			lblList = append(lblList, loopLblList.Details...)
+			if uint(len(loopLblList.Details)) < core.DefaultMaxPageLimit {
+				break
+			}
+
+			opt.Page.Start += uint32(core.DefaultMaxPageLimit)
+		}
 	}
 
 	lblProtocolPortMap := make(map[string]tablelb.LoadBalancerListenerTable, len(lblList))
@@ -704,6 +710,7 @@ func (svc *lbSvc) ListListenerByCond(cts *rest.Contexts) (any, error) {
 				Region:        item.Region,
 				CloudLbIDs:    item.CloudLbIDs,
 				ClbVipDomains: item.ClbVipDomains,
+				Ports:         item.Ports,
 				RuleType:      ruleType,
 				RsIPs:         item.RsIPs,
 				RsPorts:       item.RsPorts,
@@ -713,6 +720,11 @@ func (svc *lbSvc) ListListenerByCond(cts *rest.Contexts) (any, error) {
 		var lblCondList []*protocloud.ListBatchListenerResult
 		// 如果传入了RSIP、RSPort，需要查询监听器对应的目标组、目标组里的RS是否匹配
 		if len(item.RsIPs) > 0 || len(item.RsPorts) > 0 {
+			// 校验监听器查询参数
+			if err = queryReq.ListenerQueryItem.Validate(); err != nil {
+				return nil, err
+			}
+
 			lblCondList, err = svc.queryListenerWithTargets(cts.Kit, queryReq)
 		} else {
 			lblCondList, err = svc.queryListenerWithoutTargets(cts.Kit, queryReq)

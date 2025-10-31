@@ -55,6 +55,9 @@ var TCloudZiyanLbUrlRuleColumnsDescriptor = utils.ColumnDescriptors{
 	{Column: "certificate", NamedC: "certificate", Type: enumor.Json},
 	{Column: "memo", NamedC: "memo", Type: enumor.String},
 
+	{Column: "account_id", NamedC: "account_id", Type: enumor.String},
+	{Column: "bk_biz_id", NamedC: "bk_biz_id", Type: enumor.Numeric},
+
 	{Column: "creator", NamedC: "creator", Type: enumor.String},
 	{Column: "reviser", NamedC: "reviser", Type: enumor.String},
 	{Column: "created_at", NamedC: "created_at", Type: enumor.Time},
@@ -84,6 +87,9 @@ type TCloudZiyanLbUrlRuleTable struct {
 	Certificate        types.JsonField `db:"certificate" json:"certificate"`
 	Memo               *string         `db:"memo" json:"memo"`
 
+	AccountID string `db:"account_id" validate:"lte=64" json:"account_id"`
+	BkBizID   int64  `db:"bk_biz_id" validate:"omitempty" json:"bk_biz_id"`
+
 	Creator   string     `db:"creator" validate:"lte=64" json:"creator"`
 	Reviser   string     `db:"reviser" validate:"lte=64" json:"reviser"`
 	CreatedAt types.Time `db:"created_at" validate:"excluded_unless" json:"created_at"`
@@ -110,6 +116,10 @@ func (tlbur TCloudZiyanLbUrlRuleTable) InsertValidate() error {
 	}
 	if len(tlbur.Region) == 0 {
 		return errors.New("region is required")
+	}
+
+	if len(tlbur.AccountID) == 0 {
+		return errors.New("account_id is required")
 	}
 
 	if len(tlbur.Creator) == 0 {

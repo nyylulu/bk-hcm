@@ -166,6 +166,9 @@ type SearchBizResult struct {
 type Biz struct {
 	BizID   int64  `json:"bk_biz_id"`
 	BizName string `json:"bk_biz_name"`
+	// 运营产品信息
+	BkProductID   int64  `json:"bk_product_id"`
+	BkProductName string `json:"bk_product_name"`
 	// 二级业务id
 	BsName2ID int64 `json:"bs2_name_id"`
 	// 运维负责人

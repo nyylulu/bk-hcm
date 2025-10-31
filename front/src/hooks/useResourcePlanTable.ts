@@ -14,7 +14,7 @@ export const useTable = <
 ) => {
   // 查询列表相关状态
   const isLoading = ref(false);
-  const tableData = ref<T[K1]>();
+  const tableData = ref<T[K1]>([] as T[K1]);
   const overview = ref<T[K2]>();
   const pagination = ref({
     current: 1,

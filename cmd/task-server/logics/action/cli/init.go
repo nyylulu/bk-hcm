@@ -23,6 +23,7 @@ import (
 	"hcm/pkg/client"
 	dataservice "hcm/pkg/client/data-service"
 	hcservice "hcm/pkg/client/hc-service"
+	woaserver "hcm/pkg/client/woa-server"
 	"hcm/pkg/dal/dao"
 	"hcm/pkg/thirdparty/alarmapi"
 	"hcm/pkg/thirdparty/api-gateway/cmdb"
@@ -56,6 +57,11 @@ func GetHCService(labels ...string) *hcservice.Client {
 // GetDataService get data service.
 func GetDataService() *dataservice.Client {
 	return cliSet.DataService()
+}
+
+// GetWoaServer get woa server.
+func GetWoaServer() *woaserver.Client {
+	return cliSet.WoaServer()
 }
 
 // SetDaoSet set dao set.

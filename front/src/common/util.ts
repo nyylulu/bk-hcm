@@ -290,6 +290,7 @@ export const isEmpty = (value: unknown) => {
 
 // 获取深层数据
 export const getValueByKey = (data: object, keyPath: string): string => {
+  if (data === undefined || data === null) return undefined;
   const keys = keyPath.split('.');
   let result: unknown = JSON.parse(JSON.stringify(data));
 

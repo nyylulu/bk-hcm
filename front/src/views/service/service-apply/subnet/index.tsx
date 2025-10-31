@@ -11,6 +11,7 @@ import { useAccountStore, useBusinessStore, useResourceStore } from '@/store';
 import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
 import { RouteLocationRaw, useRoute, useRouter } from 'vue-router';
 import CommonCard from '@/components/CommonCard';
+import { MENU_BUSINESS_TICKET_DETAILS } from '@/constants/menu-symbol';
 
 const { FormItem } = Form;
 const { Option } = Select;
@@ -109,7 +110,7 @@ export default defineComponent({
         });
         if (whereAmI.value === Senarios.business) {
           router.push({
-            path: '/business/applications/detail',
+            name: MENU_BUSINESS_TICKET_DETAILS,
             query: { id: data.id },
           });
         } else {

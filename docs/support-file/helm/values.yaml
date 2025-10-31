@@ -14,7 +14,7 @@ image:
   pullPolicy: IfNotPresent
   pullSecrets: []
   # tag版本，不需要带v前缀
-  tag: 1.8.5.0-alpha.2
+  tag: 1.8.7.0
 
 apigwReleaseVersion: 1.0.0
 
@@ -550,10 +550,24 @@ taskserver:
       canceledFlowFetcherConcurrency: 1
     # executor 公共组件，负责执行异步任务
     executor:
-      # workerNumber 负责处理异步任务的协程数量
+      # workerNumber 负责处理异步任务的协程数量，非零正整数值
       workerNumber: 5
-      # taskExecTimeoutSec 异步任务执行超时时间，是整个异步任务执行流程的总时间，包括运行、回滚、重试。
+      # taskExecTimeoutSec 异步任务执行超时时间，是整个异步任务执行流程的总时间，包括运行、回滚、重试。非零正整数值
       taskExecTimeoutSec: 120
+      # initQueueCapacity 初始化队列容量，非零正整数值
+      initQueueCapacity: 25
+      # fastTaskWorkerRatio 快任务专用协程占workerNumber的比例，0~1的浮点数
+      fastTaskWorkerRatio: 0.2
+      # fastTaskThresholdSec 快任务阈值，执行时间小于该值的任务属于快任务，会被放入到快任务队列，单位秒
+      fastTaskThresholdSec: 10
+      # timeWindowCapacity 时间窗口容量，非零正整数值
+      timeWindowCapacity: 5
+      # timeWindowDurationMin 时间窗口持续时间，单位分钟，正整数
+      timeWindowDurationMin: 30
+      # fastTaskQueueCapacity 快任务队列容量，非零正整数值
+      fastTaskQueueCapacity: 10
+      # slowTaskQueueCapacity 慢任务队列容量，非零正整数值
+      slowTaskQueueCapacity: 10
     # dispatcher 主节点组件，负责派发任务
     dispatcher:
       # watchIntervalSec 查看是否有Pending状态任务的周期
@@ -813,6 +827,8 @@ bkLoginCookieName: ""
 bkItsmUrl: http://itsm.bk.com
 # HCM 地址
 bkHCMUrl: http://hcm.bk.com
+# HCM 网关地址
+bkApigwHCMUrl: http://hcm.bk.com
 # 中英文持久化设置cookie使用，一般设置为 .域名
 bkDomain: .bk.com
 # 蓝鲸配置平台创建业务页面跳转链接
@@ -1086,6 +1102,8 @@ resourceDissolve:
   originDate: "20240105"
   projectNames:
     - "2025机房裁撤"
+  projectIDs:
+    - 26
   syncDissolveHost: true
 
 elasticsearch:
@@ -1190,6 +1208,14 @@ rollingServer:
     defaultReceivers:
 resPlan:
   reportPenaltyRatio: false
+  refreshTransferQuota:
+    enable: false
+    # 预测转移额度
+    quota: 0
+    # 预测转移审批额度
+    audit_quota: 0
+  adminAuditor: []
+  crpOverLimitContact: []
 
 # Alarm告警平台的配置
 alarm:
@@ -1433,3 +1459,31 @@ compatibility:
 
 # ccHostPoolBiz cmdb host pool biz id
 ccHostPoolBiz: 1
+
+# defines bkbotapproval related settings.
+bkbotapproval:
+  # endpoints is a seed list of host:port addresses of api gateway nodes.
+  endpoints:
+    - demo.com
+  # appCode is the BlueKing app code of hcm to request api gateway.
+  appCode: bk-hcm
+  # appSecret is the BlueKing app secret of hcm to request api gateway.
+  appSecret: xxxxxxxxx
+  # user is the BlueKing user of hcm to request api gateway.
+  user: bk-hcm
+  # bkTicket is the BlueKing access ticket of hcm to request api gateway.
+  bkTicket:
+  # bkToken is the BlueKing access token of hcm to request api gateway.
+  bkToken:
+  # defines tls related options.
+  tls:
+    # server should be accessed without verifying the TLS certificate.
+    insecureSkipVerify:
+    # server requires TLS client certificate authentication.
+    certFile:
+    # server requires TLS client certificate authentication.
+    keyFile:
+    # trusted root certificates for server.
+    caFile:
+    # the password to decrypt the certificate.
+    password:

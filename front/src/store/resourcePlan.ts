@@ -6,9 +6,7 @@ import {
   IOpResourcesTicketsResult,
   IBizResourcesTicketsResult,
   ResourcePlanTicketByIdResult,
-  IResPlanTicketStatusListResult,
   IPlanTicket,
-  ITicketTypesResult,
   IOpProductsResult,
   IPlanProductsResult,
   IBizsByOpProductResult,
@@ -22,8 +20,7 @@ import {
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 
-export const useResourcePlanStore = defineStore({
-  id: 'resourcePlanStore',
+export const useResourcePlanStore = defineStore('resourcePlanStore', {
   state: () => ({}),
   actions: {
     getDiskTypes() {
@@ -86,10 +83,6 @@ export const useResourcePlanStore = defineStore({
     getDeviceTypes(device_classes?: string[], device_types?: string[]) {
       return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/meta/device_type/list`, { device_classes, device_types });
     },
-    // 查询单据类型列表。
-    getTicketTypesList(): Promise<ITicketTypesResult> {
-      return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/metas/ticket_types/list`);
-    },
     // 查询运营产品列表。
     getOpProductsList(): Promise<IOpProductsResult> {
       return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/metas/op_products/list`);
@@ -105,10 +98,6 @@ export const useResourcePlanStore = defineStore({
     // 获取计划类型列表
     getPlanTypes() {
       return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/metas/plan_types/list`);
-    },
-    // 查询资源预测单据状态列表。
-    getStatusList(): Promise<IResPlanTicketStatusListResult> {
-      return http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/plan/res_plan_ticket_status/list`);
     },
     // 查询业务下资源预测需求列表
     getResourcesDemandsList(bk_biz_id: number, data: IListResourcesDemandsParam): Promise<IListResourcesDemandsResult> {

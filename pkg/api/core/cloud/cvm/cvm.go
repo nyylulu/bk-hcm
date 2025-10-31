@@ -57,6 +57,7 @@ type BaseCvm struct {
 	BkBizID   int64         `json:"bk_biz_id"`
 	BkHostID  int64         `json:"bk_host_id"`
 	BkCloudID int64         `json:"bk_cloud_id"`
+	BkAssetID string        `json:"bk_asset_id"`
 	AccountID string        `json:"account_id"`
 	Region    string        `json:"region"`
 	Zone      string        `json:"zone"`

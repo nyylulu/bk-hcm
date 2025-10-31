@@ -59,4 +59,8 @@ const TCloudClientErrRetryTimes = 5
 const (
 	// CRPResPlanDemandIsInProcessing CRP的预测资源已被其他单据修改，正在审批中
 	CRPResPlanDemandIsInProcessing = "AdjustDemandIsInProcessingException"
+	// CRPResPlanDemandIsOverLimit CRP的预测资源超上限问题
+	CRPResPlanDemandIsOverLimit = "已超上限，请联系规划经理沟通"
+	// CRPResPlanDemandIsOverLimitMessage CRP的预测资源超上限问题, 提示信息
+	CRPResPlanDemandIsOverLimitMessage = "部门资源预测数据超过规划上限，请企微联系%s，并提供相关信息：1.运营产品  2.地域 3.机型4.CPU总核数 5.业务需求原因 "
 )

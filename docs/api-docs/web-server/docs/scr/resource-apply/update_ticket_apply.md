@@ -19,17 +19,19 @@ POST /api/v1/woa/task/modify/apply
 | spec	        | object       | 是   | 资源需求声明       |
 
 #### spec
-| 参数名称       | 参数类型 | 必选 | 描述          |
-|---------------|--------|------|--------------|
-| region        | string	| 是   | 地域        |
-| zone          | string	| 是   | 可用区      |
-| device_type   | string	| 是   | 机型        |
-| image_id      | string    | 是   | 镜像ID      |
-| disk_size     | int       | 是   | 数据盘磁盘大小，单位G |
-| disk_type	    | string	| 是   | 数据盘磁盘类型。"CLOUD_SSD": SSD云硬盘, "CLOUD_PREMIUM": 高性能云盘 |
-| network_type  | string	| 是   | 网络类型。"ONETHOUSAND": 千兆, "TENTHOUSAND": 万兆 |
-| vpc	        | string    | 否   | 私有网络，默认为空 |
-| subnet        | string    | 否   | 私有子网，默认为空 |
+| 参数名称       | 参数类型        | 必选 | 描述          |
+|---------------|---------------|------|--------------|
+| region        | string	    | 是   | 地域        |
+| zone          | string	    | 否   | 可用区（跟zones参数，需要传其中一个，该参数即将废弃）|
+| device_type   | string	    | 是   | 机型        |
+| image_id      | string        | 是   | 镜像ID      |
+| disk_size     | int           | 是   | 数据盘磁盘大小，单位G |
+| disk_type	    | string	    | 是   | 数据盘磁盘类型。"CLOUD_SSD": SSD云硬盘, "CLOUD_PREMIUM": 高性能云盘 |
+| network_type  | string	    | 是   | 网络类型。"ONETHOUSAND": 千兆, "TENTHOUSAND": 万兆 |
+| vpc	        | string        | 否   | 私有网络，默认为空 |
+| subnet        | string        | 否   | 私有子网，默认为空 |
+| zones         | string array  | 否   | 多可用区(选“全部”时传all)                             |
+| res_assign    | int           | 否   | 资源分配方式(1表示“有资源区域优先”、2表示“分Campus生产”)  |
 
 ### 调用示例
 
@@ -43,14 +45,18 @@ POST /api/v1/woa/task/modify/apply
   "replicas":10,
   "spec":{
     "region":"ap-shanghai",
-    "zone":"ap-shanghai-2",
     "device_type":"S3.LARGE8",
     "image_id":"img-r5igp4bv",
     "disk_size":200,
     "disk_type":"CLOUD_PREMIUM",
     "network_type":"TENTHOUSAND",
     "vpc":"",
-    "subnet":""
+    "subnet":"",
+    "zones": [
+      "ap-nanjing-1",
+      "ap-nanjing-2"
+    ],
+    "res_assign": 1
   }
 }
 ```

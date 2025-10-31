@@ -7,7 +7,7 @@ import './index.scss';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import usePagination from '@/hooks/usePagination';
 import useTimeoutPoll from '@/hooks/use-timeout-poll';
-import CrpTicketAudit from '@/views/business/applications/apply/applications/suborder-detail/crp-ticket-audit.vue';
+import CrpTicketAudit from '@/views/ticket/children/host-apply/applications/suborder-detail/crp-ticket-audit.vue';
 import CopyToClipboard from '@/components/copy-to-clipboard/index.vue';
 
 export default defineComponent({

@@ -68,6 +68,9 @@ const (
 
 	// HostRecycleSubSys defines all the recycle related sub system.
 	HostRecycleSubSys = "host_recycle"
+
+	// AsyncSubSys defines all the async flow or task related sub system.
+	AsyncSubSys = "async"
 )
 
 // labels

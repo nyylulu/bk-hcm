@@ -61,7 +61,7 @@ func (r *recycleRecoverer) recoverDetectedOrder(kt *kit.Kit, order *table.Recycl
 
 	task, taskCtx := r.newTask(order)
 	if ev.Type == event.DetectSuccess {
-		if err := r.recyclerIf.CheckDetectStatus(order.SuborderID); err != nil {
+		if err := r.recyclerIf.CheckDetectStatus(kt, order.SuborderID); err != nil {
 			logs.Errorf("failed to check detect task status, subOrderId: %s, err: %v, rid: %s", order.SuborderID, err,
 				kt.Rid)
 			ev = &event.Event{Type: event.DetectFailed, Error: err}

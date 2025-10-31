@@ -37,7 +37,7 @@ POST /api/v1/woa/task/create/apply
 | 参数名称              | 参数类型          | 必选 | 描述                                                      |
 |---------------------|------------------|-----|-----------------------------------------------------------|
 | region              | string	         | 是  | 地域                                                       |
-| zone                | string	         | 是  | 可用区                                                     |
+| zone                | string	         | 是  | 可用区（跟zones参数，需要传其中一个，该参数即将废弃）             |
 | resource_mode	      | int              | 是  | 1: 按机型族申领, 0: 按机型申领                                |
 | device_group        | string           | 否  | 机型族。当resource_mode为1时必填                             |
 | model_type          | string           | 否  | 配置类型。当resource_mode为1时必填                            |
@@ -53,6 +53,8 @@ POST /api/v1/woa/task/create/apply
 | inherit_instance_id | string           | 否  | 被继承云主机实例ID（同一批次只支持一台），如果是滚服项目，该字段必传       |
 | system_disk         | DiskObject       | 是  | 系统盘，磁盘大小：50G-1000G且为50的倍数（IT类型默认本地盘、50G；其他类型默认高性能云盘、100G） |
 | data_disk           | DiskObject array | 否  | 数据盘，支持多块硬盘，磁盘大小：20G-32000G且为10的倍数，数据盘数量总和不能超过20块 |
+| zones               | string array     | 否  | 多可用区(选“全部”时传all)                                      |
+| res_assign          | int              | 否  | 资源分配方式(1表示“有资源区域优先”、2表示“分Campus生产”)           |
 
 #### spec for IDCPM
 
@@ -123,7 +125,6 @@ POST /api/v1/woa/task/create/apply
       "remark": "",
       "spec": {
         "region": "ap-shanghai",
-        "zone": "ap-shanghai-2",
         "device_type": "S3.LARGE8",
         "image_id": "img-r5igp4bv",
         "disk_size": 200,
@@ -143,7 +144,12 @@ POST /api/v1/woa/task/create/apply
         "disk_type": "CLOUD_PREMIUM",
         "disk_size": 100,
         "disk_num": 1,
-        }]
+        }],
+        "zones": [
+          "ap-nanjing-1",
+          "ap-nanjing-2"
+        ],
+        "res_assign": 1
       }
     }
   ]

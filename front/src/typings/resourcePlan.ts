@@ -88,6 +88,7 @@ export interface TicketByIdResult {
   demands: {
     original_info: TicketDemands;
     updated_info: TicketDemands;
+    demand_class: string;
   }[];
 }
 

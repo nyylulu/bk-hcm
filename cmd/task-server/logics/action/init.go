@@ -74,6 +74,7 @@ func register() {
 	action.RegisterAction(actioncvm.StopActionV2{})
 	action.RegisterAction(actioncvm.RebootActionV2{})
 	action.RegisterAction(actioncvm.BatchTaskCvmResetAction{})
+	action.RegisterAction(actioncvm.MonitorIdleCheckAction{})
 
 	action.RegisterAction(actionfirewall.DeleteAction{})
 
@@ -90,6 +91,7 @@ func register() {
 	action.RegisterAction(actionlb.ModifyTargetWeightAction{})
 
 	action.RegisterAction(actionlb.ListenerRuleAddTargetAction{})
+	action.RegisterAction(actionlb.ListenerRuleUpdateHealthCheckAction{})
 	action.RegisterAction(actionlb.DeleteLoadBalancerAction{})
 
 	action.RegisterAction(actionbilldailypull.PullDailyBillAction{})

@@ -42,7 +42,9 @@ var _ action.Action = new(BatchTaskCvmResetAction)
 var _ action.ParameterAction = new(BatchTaskCvmResetAction)
 
 // BatchTaskCvmResetAction 批量操作-调整RS权重
-type BatchTaskCvmResetAction struct{}
+type BatchTaskCvmResetAction struct {
+	skipOperatorVerify bool
+}
 
 // ParameterNew return request params.
 func (act BatchTaskCvmResetAction) ParameterNew() (params any) {
@@ -62,6 +64,7 @@ func (act BatchTaskCvmResetAction) Run(kt run.ExecuteKit, params any) (result an
 			fmt.Sprintf("params type mismatch, BatchTaskCvmResetOption:%+v", params))
 	}
 
+	act.skipOperatorVerify = opt.SkipOperatorVerify
 	asyncKit := kt.AsyncKit()
 	results := make([]*hclb.BatchCreateResult, 0, len(opt.CvmResetList))
 	for i := range opt.CvmResetList {

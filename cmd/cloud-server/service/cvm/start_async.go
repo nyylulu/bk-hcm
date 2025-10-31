@@ -65,7 +65,7 @@ func (svc *cvmSvc) batchAsyncStartCvmSvc(cts *rest.Contexts, bkBizID int64, vali
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	if err := svc.validateAuthorize(cts, req.IDs, validHandler); err != nil {
+	if err := svc.validateAuthorize(cts, req.IDs, meta.Start, validHandler); err != nil {
 		logs.Errorf("validate authorize and create audit failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
@@ -134,7 +134,7 @@ func (svc *cvmSvc) listCvmByIDs(kt *kit.Kit, ids []string) ([]corecvm.BaseCvm, e
 	return result, nil
 }
 
-func (svc *cvmSvc) validateAuthorize(cts *rest.Contexts, ids []string,
+func (svc *cvmSvc) validateAuthorize(cts *rest.Contexts, ids []string, action meta.Action,
 	validHandler handler.ValidWithAuthHandler) error {
 
 	basicInfoReq := dataproto.ListResourceBasicInfoReq{
@@ -150,7 +150,7 @@ func (svc *cvmSvc) validateAuthorize(cts *rest.Contexts, ids []string,
 
 	// validate biz and authorize
 	err = validHandler(cts, &handler.ValidWithAuthOption{Authorizer: svc.authorizer, ResType: meta.Cvm,
-		Action: meta.Start, BasicInfos: basicInfoMap})
+		Action: action, BasicInfos: basicInfoMap})
 	if err != nil {
 		logs.Errorf("validate authorize failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return err

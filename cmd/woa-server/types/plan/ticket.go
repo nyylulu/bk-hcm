@@ -23,6 +23,7 @@ import (
 	"hcm/pkg/criteria/validator"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
+	rpdaotypes "hcm/pkg/dal/dao/types/resource-plan"
 	rpt "hcm/pkg/dal/table/resource-plan/res-plan-ticket"
 	"hcm/pkg/runtime/filter"
 	cvt "hcm/pkg/tools/converter"
@@ -30,6 +31,36 @@ import (
 
 	"github.com/shopspring/decimal"
 )
+
+// TicketInfo resource plan ticket info.
+type TicketInfo struct {
+	ID               string                `json:"id"`
+	Type             enumor.RPTicketType   `json:"type"`
+	Applicant        string                `json:"applicant"`
+	BkBizID          int64                 `json:"bk_biz_id"`
+	BkBizName        string                `json:"bk_biz_name"`
+	OpProductID      int64                 `json:"op_product_id"`
+	OpProductName    string                `json:"op_product_name"`
+	PlanProductID    int64                 `json:"plan_product_id"`
+	PlanProductName  string                `json:"plan_product_name"`
+	VirtualDeptID    int64                 `json:"virtual_dept_id"`
+	VirtualDeptName  string                `json:"virtual_dept_name"`
+	DemandClass      enumor.DemandClass    `json:"demand_class"`
+	OriginalCpuCore  int64                 `json:"original_cpu_core"`
+	OriginalMemory   int64                 `json:"original_memory"`
+	OriginalDiskSize int64                 `json:"original_disk_size"`
+	UpdatedCpuCore   int64                 `json:"updated_cpu_core"`
+	UpdatedMemory    int64                 `json:"updated_memory"`
+	UpdatedDiskSize  int64                 `json:"updated_disk_size"`
+	Remark           string                `json:"remark"`
+	Demands          rpt.ResPlanDemands    `json:"demands"`
+	SubmittedAt      string                `json:"submitted_at"`
+	Status           enumor.RPTicketStatus `json:"status"`
+	ItsmSN           string                `json:"itsm_sn"`
+	ItsmURL          string                `json:"itsm_url"`
+	CrpSN            string                `json:"crp_sn"`
+	CrpURL           string                `json:"crp_url"`
+}
 
 // ListResPlanTicketReq is list resource plan ticket request.
 type ListResPlanTicketReq struct {
@@ -95,7 +126,7 @@ func (r *ListResPlanTicketReq) Validate() error {
 }
 
 // GenListOption generate list option by list resource plan ticket request.
-func (r *ListResPlanTicketReq) GenListOption() (*types.ListOption, error) {
+func (r *ListResPlanTicketReq) GenListOption() (*core.ListReq, error) {
 	rules := make([]filter.RuleFactory, 0)
 
 	if len(r.BkBizIDs) > 0 {
@@ -153,7 +184,7 @@ func (r *ListResPlanTicketReq) GenListOption() (*types.ListOption, error) {
 		}
 	}
 
-	opt := &types.ListOption{
+	opt := &core.ListReq{
 		Filter: &filter.Expression{
 			Op:    filter.And,
 			Rules: rules,
@@ -373,6 +404,82 @@ func (r *CreateResPlanDemandReq) GetResource() CreateResPlanDemandResource {
 	}
 }
 
+// RPTicketWithStatusAndResListRst list resource plan ticket with status and resource result.
+type RPTicketWithStatusAndResListRst core.ListResultT[RPTicketWithStatusAndRes]
+
+// RPTicketWithStatusAndRes resource plan ticket with status and resource.
+type RPTicketWithStatusAndRes struct {
+	rpdaotypes.RPTicketWithStatus
+	TicketTypeName      string               `json:"ticket_type_name"`
+	OriginalInfo        RPTicketResourceInfo `json:"original_info"`
+	UpdatedInfo         RPTicketResourceInfo `json:"updated_info"`
+	AuditedOriginalInfo RPTicketResourceInfo `json:"audited_original_info"`
+	AuditedUpdatedInfo  RPTicketResourceInfo `json:"audited_updated_info"`
+}
+
+// RPTicketResourceInfo resource plan ticket resource info.
+type RPTicketResourceInfo struct {
+	Cvm cvmInfo `json:"cvm"`
+	Cbs cbsInfo `json:"cbs"`
+}
+
+type cvmInfo struct {
+	CpuCore *int64 `json:"cpu_core"`
+	Memory  *int64 `json:"memory"`
+}
+
+type cbsInfo struct {
+	DiskSize *int64 `json:"disk_size"`
+}
+
+// NewResourceInfo new resource info.
+func NewResourceInfo(cpuCore, memory, diskSize int64) RPTicketResourceInfo {
+	return RPTicketResourceInfo{
+		Cvm: cvmInfo{
+			CpuCore: &cpuCore,
+			Memory:  &memory,
+		},
+		Cbs: cbsInfo{
+			DiskSize: &diskSize,
+		},
+	}
+}
+
+// NewNullResourceInfo new null resource info.
+func NewNullResourceInfo() RPTicketResourceInfo {
+	return RPTicketResourceInfo{
+		Cvm: cvmInfo{
+			CpuCore: nil,
+			Memory:  nil,
+		},
+		Cbs: cbsInfo{
+			DiskSize: nil,
+		},
+	}
+}
+
+// Append resource info.
+func (i *RPTicketResourceInfo) Append(cpuCore, memory, diskSize int64) {
+	cpuVal := cpuCore
+	if i.Cvm.CpuCore != nil {
+		cpuVal = *i.Cvm.CpuCore + cpuCore
+	}
+
+	memVal := memory
+	if i.Cvm.Memory != nil {
+		memVal = *i.Cvm.Memory + memory
+	}
+
+	diskVal := diskSize
+	if i.Cbs.DiskSize != nil {
+		diskVal = *i.Cbs.DiskSize + diskSize
+	}
+
+	i.Cvm.CpuCore = &cpuVal
+	i.Cvm.Memory = &memVal
+	i.Cbs.DiskSize = &diskVal
+}
+
 // GetResPlanTicketResp is get resource plan ticket response.
 type GetResPlanTicketResp struct {
 	ID         string                 `json:"id"`
@@ -403,10 +510,10 @@ type GetRPTicketBaseInfo struct {
 type GetRPTicketStatusInfo struct {
 	Status     enumor.RPTicketStatus `json:"status"`
 	StatusName string                `json:"status_name"`
-	ItsmSn     string                `json:"itsm_sn"`
-	ItsmUrl    string                `json:"itsm_url"`
-	CrpSn      string                `json:"crp_sn"`
-	CrpUrl     string                `json:"crp_url"`
+	ItsmSN     string                `json:"itsm_sn"`
+	ItsmURL    string                `json:"itsm_url"`
+	CrpSN      string                `json:"crp_sn"`
+	CrpURL     string                `json:"crp_url"`
 	Message    string                `json:"message"`
 }
 
@@ -426,8 +533,8 @@ type GetResPlanTicketAuditResp struct {
 
 // GetRPTicketItsmAudit get resource plan ticket itsm audit.
 type GetRPTicketItsmAudit struct {
-	ItsmSn       string                `json:"itsm_sn"`
-	ItsmUrl      string                `json:"itsm_url"`
+	ItsmSN       string                `json:"itsm_sn"`
+	ItsmURL      string                `json:"itsm_url"`
 	Status       enumor.RPTicketStatus `json:"status"`
 	StatusName   string                `json:"status_name"`
 	Message      string                `json:"message"`
@@ -435,10 +542,17 @@ type GetRPTicketItsmAudit struct {
 	Logs         []*ItsmAuditLog       `json:"logs"`
 }
 
+// GetRPTicketAdminAudit get resource plan ticket admin audit.
+type GetRPTicketAdminAudit struct {
+	Status       enumor.RPAdminAuditStatus `json:"status"`
+	CurrentSteps []*AdminAuditStep         `json:"current_steps"`
+	Logs         []*AdminAuditLog          `json:"logs"`
+}
+
 // GetRPTicketCrpAudit get resource plan ticket crp audit.
 type GetRPTicketCrpAudit struct {
-	CrpSn        string                `json:"crp_sn"`
-	CrpUrl       string                `json:"crp_url"`
+	CrpSN        string                `json:"crp_sn"`
+	CrpURL       string                `json:"crp_url"`
 	Status       enumor.RPTicketStatus `json:"status"`
 	StatusName   string                `json:"status_name"`
 	Message      string                `json:"message"`
@@ -459,6 +573,20 @@ type ItsmAuditLog struct {
 	Operator  string `json:"operator"`
 	OperateAt string `json:"operate_at"`
 	Message   string `json:"message"`
+}
+
+// AdminAuditStep is admin audit step.
+type AdminAuditStep struct {
+	Name           string          `json:"name"`
+	Processors     []string        `json:"processors"`
+	ProcessorsAuth map[string]bool `json:"processors_auth"`
+}
+
+// AdminAuditLog is admin audit log.
+type AdminAuditLog struct {
+	Name      string `json:"name"`
+	Operator  string `json:"operator"`
+	OperateAt string `json:"operate_at"`
 }
 
 // CrpAuditStep is crp audit step.
@@ -536,5 +664,16 @@ type AuditResPlanTicketITSMReq struct {
 
 // Validate ...
 func (r *AuditResPlanTicketITSMReq) Validate() error {
+	return validator.Validate.Struct(r)
+}
+
+// AuditResPlanTicketAdminReq 通过管理员审批需求单请求
+type AuditResPlanTicketAdminReq struct {
+	Approval        *bool `json:"approval" validate:"required"`
+	UseTransferPool *bool `json:"use_transfer_pool" validate:"required"`
+}
+
+// Validate ...
+func (r *AuditResPlanTicketAdminReq) Validate() error {
 	return validator.Validate.Struct(r)
 }

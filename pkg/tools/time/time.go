@@ -24,10 +24,12 @@ import (
 	"go.mongodb.org/mongo-driver/x/bsonx"
 )
 
+// Time ...
 type Time struct {
 	time.Time `bson:",inline" json:",inline"`
 }
 
+// MarshalJSON ...
 func (t Time) MarshalJSON() ([]byte, error) {
 	return json.Marshal(t.Time)
 }

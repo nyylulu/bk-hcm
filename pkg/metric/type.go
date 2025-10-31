@@ -19,12 +19,14 @@ import (
 	"hcm/pkg/tools/metadata"
 )
 
+// MetricFamily ...
 type MetricFamily struct {
 	MetaData     *MetaData                   `json:"metaData"`
 	MetricBundle map[CollectorName][]*Metric `json:"metricBundle"`
 	ReportTimeMs int64                       `json:"reportTimeMs"`
 }
 
+// Metric ...
 type Metric struct {
 	*MetricMeta `json:",inline"`
 	Value       *FloatOrString   `json:"value"`
@@ -63,12 +65,16 @@ func newMetric(m MetricInterf) (*Metric, error) {
 	}, nil
 }
 
+// CollectorName ...
 type CollectorName string
+
+// Collector ...
 type Collector struct {
 	Name      CollectorName
 	Collector CollectInter
 }
 
+// MetaData ...
 type MetaData struct {
 	Module        string            `json:"module"`
 	ServerAddress string            `json:"server_address"`
@@ -76,6 +82,7 @@ type MetaData struct {
 	Labels        map[string]string `json:"label"`
 }
 
+// HealthResponse ...
 type HealthResponse struct {
 	Code    int        `json:"code"`
 	OK      bool       `json:"ok"`
@@ -84,6 +91,7 @@ type HealthResponse struct {
 	Result  bool       `json:"result"`
 }
 
+// HealthInfo ...
 type HealthInfo struct {
 	Module     string `json:"module"`
 	Address    string `json:"address"`
@@ -92,6 +100,7 @@ type HealthInfo struct {
 	Version    map[string]interface{} `json:"version"`
 }
 
+// VersionInfo ...
 type VersionInfo struct {
 	Module    string `json:"module"`
 	Version   string `json:"version"`
@@ -99,6 +108,7 @@ type VersionInfo struct {
 	CommitID  string `json:"commit_id"`
 }
 
+// Action ...
 type Action struct {
 	Method      string
 	Path        string

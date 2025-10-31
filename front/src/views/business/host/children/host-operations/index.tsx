@@ -10,6 +10,7 @@ import { BkButtonGroup } from 'bkui-vue/lib/button';
 import useBatchOperation from './use-batch-operation';
 import HcmDropdown from '@/components/hcm-dropdown/index.vue';
 import { MoaRequestScene } from '@/components/moa-verify/typings';
+import { useHostOperationsStore } from '@/store/host-operations';
 
 export const HOST_SHUTDOWN_STATUS = [
   'TERMINATED',
@@ -211,6 +212,7 @@ export default defineComponent({
       if (type === OperationActions.RECYCLE) {
         await getDiskNumByCvmIds();
       }
+      useHostOperationsStore().setOperationType(type);
     });
 
     return () => (

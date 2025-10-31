@@ -84,7 +84,8 @@ POST /api/v1/cloud/bandwidth_packages/query
         "egress": "egress123",
         "create_time": "2024-05-20T11:19:21Z",
         "deadline": "",
-        "resource_set": []
+        "resource_set": [],
+        "recommend": true
       }
     ]
   }
@@ -120,6 +121,7 @@ POST /api/v1/cloud/bandwidth_packages/query
 | create_time  | string         | 创建时间                                              |
 | deadline     | string         | 预付费带宽包到期时间                                        |
 | resource_set | resource array | 带宽包资源信息                                           |
+| recommend    | bool           | 是否推荐使用                                            |
 
 ##### resource 带宽包资源信息
 

@@ -145,6 +145,7 @@ POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/demands/list
         "zone_name": "上海二区",
         "plan_type": "预测内",
         "obs_project": "常规项目",
+        "technical_class": "高IO型",
         "device_family": "高IO型",
         "core_type": "大核心",
         "disk_type": "CLOUD_PREMIUM",
@@ -222,6 +223,7 @@ POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/demands/list
 | zone_name          | string | 可用区名称                                                                             |
 | plan_type          | string | 计划类型                                                                              |
 | obs_project        | string | OBS项目类型                                                                           |
+| technical_class    | string | 技术分类                                                                              |
 | device_family      | string | 机型族                                                                               |
 | core_type          | string | 核心类型                                                                              |
 | disk_type          | string | 云盘类型                                                                              |

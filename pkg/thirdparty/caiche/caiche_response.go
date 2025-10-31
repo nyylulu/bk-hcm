@@ -106,3 +106,60 @@ type Device struct {
 	VirtualDepartmentName string              `json:"virtual_department_name"`
 	ObgBG                 string              `json:"obg_bg"`
 }
+
+// ListDeviceV2Resp list device v2 response
+type ListDeviceV2Resp struct {
+	JsonRPC  string              `json:"jsonrpc"`
+	Result   *DeviceListV2Result `json:"result"`
+	XTraceID string              `json:"x_trace_id"`
+}
+
+// DeviceListV2Result device list v2 result
+type DeviceListV2Result struct {
+	Data  []DeviceV2 `json:"data"`
+	Total int        `json:"total"`
+}
+
+// DeviceV2 device v2
+type DeviceV2 struct {
+	ID                    int                 `json:"id"`
+	AbolishTime           string              `json:"abolishTime"`
+	ProjectID             int                 `json:"projectId"`
+	ProjectName           string              `json:"projectName"`
+	SerAssetID            string              `json:"serAssetId"`
+	SvrOperator           string              `json:"svrOperator"`
+	SvrBakOperator        string              `json:"svrBakOperator"`
+	ExpectAbolishTime     string              `json:"expectAbolishTime"`
+	RegionName            string              `json:"regionName"`
+	ZoneName              string              `json:"zoneName"`
+	SzoneName             string              `json:"szoneName"`
+	ModuleBsiType         string              `json:"moduleBsiType"`
+	IdcParentName         string              `json:"idcParentName"`
+	IdcName               string              `json:"idcName"`
+	ServerRack            string              `json:"serverRack"`
+	RckID                 int                 `json:"rckId"`
+	PosCode               string              `json:"posCode"`
+	PosID                 int                 `json:"posId"`
+	IdcCity               string              `json:"idcCity"`
+	PlanProductName       string              `json:"planProductName"`
+	OperationProductName  string              `json:"operationProductName"`
+	BsiPath               string              `json:"bsiPath"`
+	AbolishOperator       string              `json:"abolishOperator"`
+	AbolishPhase          enumor.AbolishPhase `json:"abolishPhase"`
+	SvrDeviceClassName    string              `json:"svrDeviceClassName"`
+	CPULogicCoreNum       int                 `json:"cpuLogicCoreNum"`
+	GPUCardType           string              `json:"gpuCardType"`
+	ServerLanIP           string              `json:"serverLanIp"`
+	SvrFirstUseTime       string              `json:"svrFirstUseTime"`
+	SvrTypeName           string              `json:"svrTypeName"`
+	EqsName               string              `json:"eqsName"`
+	ModName               string              `json:"modName"`
+	SvrOwnerAssetId       string              `json:"svrOwnerAssetId"`
+	CmdbDeptName          string              `json:"cmdbDeptName"`
+	VirtualDepartmentName string              `json:"virtualDepartmentName"`
+	ObsBg                 string              `json:"obsBg"`
+	AvailabilityZoneName  string              `json:"availabilityZoneName"`
+	CustomMigrateType     string              `json:"customMigrateType"`
+	ConfirmTime           string              `json:"confirmTime"`
+	TechProduct           string              `json:"techProduct"`
+}

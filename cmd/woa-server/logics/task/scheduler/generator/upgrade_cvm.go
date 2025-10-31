@@ -105,7 +105,7 @@ func (g *Generator) UpgradeCVM(kt *kit.Kit, order *types.ApplyOrder) error {
 	logs.Infof("apply order %s existing device number: %d, rid: %s", order.SubOrderId, existCount, kt.Rid)
 
 	// cvm upgrade do not require separate campus
-	if err := g.generateCVMConcentrate(kt, order, existDevices); err != nil {
+	if err = g.generateCVMConcentrate(kt, order, existDevices, []string{order.Spec.Zone}); err != nil {
 		logs.Errorf("failed to upgrade cvm, suborder id: %s, rid: %s", order.SubOrderId, kt.Rid)
 		return err
 	}

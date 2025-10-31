@@ -20,33 +20,34 @@ import (
 
 // CVM create cvm request param
 type CVM struct {
-	AppId             string            `json:"appId"`
-	ApplyType         int64             `json:"applyType"`
-	AppModuleId       int64             `json:"appModuleId"`
-	Operator          string            `json:"operator"`
-	ApplyNumber       uint              `json:"applyNumber"`
-	NoteInfo          string            `json:"noteInfo"`
-	VPCId             string            `json:"vpcId"`
-	SubnetId          string            `json:"subnetId"`
-	Area              string            `json:"area"`
-	Zone              string            `json:"zone"`
-	ImageId           string            `json:"image_id"`
-	ImageName         string            `json:"image_name"`
-	InstanceType      string            `json:"instanceType"`
-	DiskType          enumor.DiskType   `json:"disk_type"`
-	DiskSize          int64             `json:"disk_size"`
-	SecurityGroupId   string            `json:"securityGroupId"`
-	SecurityGroupName string            `json:"securityGroupName"`
-	SecurityGroupDesc string            `json:"securityGroupDesc"`
-	ChargeType        cvmapi.ChargeType `json:"chargeType"`
-	ChargeMonths      uint              `json:"chargeMonths"`
-	InheritInstanceId string            `json:"inherit_instance_id"`
-	BkProductID       int64             `json:"bk_product_id"`
-	BkProductName     string            `json:"bk_product_name"`
-	VirtualDeptID     int64             `json:"virtual_dept_id"`
-	VirtualDeptName   string            `json:"virtual_dept_name"`
-	SystemDisk        enumor.DiskSpec   `json:"system_disk"`
-	DataDisk          []enumor.DiskSpec `json:"data_disk"`
+	AppId             string                 `json:"appId"`
+	ApplyType         int64                  `json:"applyType"`
+	AppModuleId       int64                  `json:"appModuleId"`
+	Operator          string                 `json:"operator"`
+	ApplyNumber       uint                   `json:"applyNumber"`
+	NoteInfo          string                 `json:"noteInfo"`
+	VPCId             string                 `json:"vpcId"`
+	SubnetId          string                 `json:"subnetId"`
+	Area              string                 `json:"area"`
+	Zone              string                 `json:"zone"`
+	ImageId           string                 `json:"image_id"`
+	ImageName         string                 `json:"image_name"`
+	InstanceType      string                 `json:"instanceType"`
+	DiskType          enumor.DiskType        `json:"disk_type"`
+	DiskSize          int64                  `json:"disk_size"`
+	SecurityGroupId   string                 `json:"securityGroupId"`
+	SecurityGroupName string                 `json:"securityGroupName"`
+	SecurityGroupDesc string                 `json:"securityGroupDesc"`
+	ChargeType        cvmapi.ChargeType      `json:"chargeType"`
+	ChargeMonths      uint                   `json:"chargeMonths"`
+	InheritInstanceId string                 `json:"inherit_instance_id"`
+	BkProductID       int64                  `json:"bk_product_id"`
+	BkProductName     string                 `json:"bk_product_name"`
+	VirtualDeptID     int64                  `json:"virtual_dept_id"`
+	VirtualDeptName   string                 `json:"virtual_dept_name"`
+	SystemDisk        enumor.DiskSpec        `json:"system_disk"`
+	DataDisk          []enumor.DiskSpec      `json:"data_disk"`
+	FuzzyZone         []cvmapi.FuzzyZoneItem `json:"fuzzy_zone"` // 可用区模糊申领，传入多个可用区+vpc+子网
 }
 
 // DeliveredCVMKey delivered cvm key

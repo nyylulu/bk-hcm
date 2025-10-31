@@ -24,7 +24,6 @@ import (
 	"hcm/cmd/woa-server/logics/task/recycler/event"
 	recovertask "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/api/core"
-	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -108,13 +107,13 @@ func (ds *DetectingState) dealDetectTask(kt *kit.Kit, ctx *CommonContext) *event
 		return &event.Event{Type: event.DetectFailed, Error: err}
 	}
 	// run detection tasks
-	if err := ctx.Dispatcher.detector.Detect(kt, ctx.Order); err != nil {
+	if err := ctx.Dispatcher.detector.Detect(kt, ctx.Order, true); err != nil {
 		logs.Errorf("failed to run detection tasks, err: %v, rid: %s", err, kt.Rid)
 		return &event.Event{Type: event.DetectFailed, Error: err}
 	}
 
-	if err := ctx.Dispatcher.detector.CheckDetectStatus(orderId); err != nil {
-		logs.Errorf("%s: detection tasks failed, err: %v, rid: %s", constant.CvmRecycleFailed, err, kt.Rid)
+	if err := ctx.Dispatcher.detector.CheckDetectStatus(kt, orderId); err != nil {
+		logs.Errorf("recycle detection failed, order id: %s, err: %v, rid: %s", orderId, err, kt.Rid)
 		return &event.Event{Type: event.DetectFailed, Error: err}
 	}
 
@@ -162,6 +161,8 @@ func (ds *DetectingState) setNextState(order *table.RecycleOrder, ev *event.Even
 			update["stage"] = table.RecycleStageTransit
 			update["status"] = table.RecycleStatusTransiting
 		}
+		// 清空之前产生的message，比如检测失败，避免影响后续流程展示
+		update["message"] = ""
 	case event.DetectFailed:
 		update["stage"] = table.RecycleStageDetect
 		update["status"] = table.RecycleStatusDetectFailed

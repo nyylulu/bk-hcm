@@ -1,4 +1,4 @@
-import { defineComponent, ref } from 'vue';
+import { defineComponent, ref, computed } from 'vue';
 import Search from './search';
 import Table from './table';
 
@@ -14,10 +14,16 @@ export default defineComponent({
 
     const moduleNames = ref<string[]>([]);
 
+    // 在search中，模块名是 `which_stages__module_name` 的格式，这里需要提取出 module_name
+    const moduleNameList = computed(() => {
+      const names = moduleNames.value.map((item) => item.split('__')[1]).filter(Boolean);
+      return [...new Set(names)];
+    });
+
     return () => (
       <section class={cssModule.home}>
         <Search v-model:moduleNames={moduleNames.value}></Search>
-        <Table moduleNames={moduleNames.value}></Table>
+        <Table moduleNames={moduleNameList.value}></Table>
       </section>
     );
   },

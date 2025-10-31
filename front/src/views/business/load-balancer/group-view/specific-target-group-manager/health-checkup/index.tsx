@@ -83,6 +83,7 @@ export default defineComponent({
     const formData = reactive(getDefaultFormData());
     function resetFormData() {
       const defaultData = getDefaultFormData();
+      // eslint-disable-next-line no-restricted-syntax
       for (const key in formData) {
         formData[key] = defaultData[key];
       }

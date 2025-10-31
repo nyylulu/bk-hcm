@@ -20,14 +20,10 @@
 package plan
 
 import (
-	"sync"
-	"time"
-
 	"hcm/pkg/api/core"
 	rpproto "hcm/pkg/api/data-service/resource-plan"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
-	"hcm/pkg/dal/dao"
 	"hcm/pkg/dal/dao/tools"
 	wdt "hcm/pkg/dal/table/resource-plan/woa-device-type"
 	"hcm/pkg/kit"
@@ -35,57 +31,6 @@ import (
 	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/tools/slice"
 )
-
-// DeviceTypesMap cache of device_type, reducing the pressure of MySQL.
-type DeviceTypesMap struct {
-	lock        sync.RWMutex
-	dao         dao.Set
-	DeviceTypes map[string]wdt.WoaDeviceTypeTable
-	TTL         time.Time
-}
-
-// NewDeviceTypesMap ...
-func NewDeviceTypesMap(dao dao.Set) *DeviceTypesMap {
-	return &DeviceTypesMap{
-		dao:         dao,
-		DeviceTypes: make(map[string]wdt.WoaDeviceTypeTable),
-		TTL:         time.Now(),
-	}
-}
-
-func (d *DeviceTypesMap) updateDeviceTypesMap(kt *kit.Kit) error {
-	d.lock.Lock()
-	defer d.lock.Unlock()
-
-	deviceTypeMap, err := d.dao.WoaDeviceType().GetDeviceTypeMap(kt, tools.AllExpression())
-	if err != nil {
-		logs.Errorf("failed to get device type map, err: %v, rid: %s", err, kt.Rid)
-		return err
-	}
-	d.DeviceTypes = deviceTypeMap
-	d.TTL = time.Now().Add(1 * time.Minute)
-	return nil
-}
-
-// GetDeviceTypes get device type map from cache.
-func (d *DeviceTypesMap) GetDeviceTypes(kt *kit.Kit) (map[string]wdt.WoaDeviceTypeTable, error) {
-	d.lock.RLock()
-	res := make(map[string]wdt.WoaDeviceTypeTable)
-	if time.Now().After(d.TTL) {
-		d.lock.RUnlock()
-		err := d.updateDeviceTypesMap(kt)
-		if err != nil {
-			return nil, err
-		}
-		d.lock.RLock()
-	}
-
-	defer d.lock.RUnlock()
-	for k := range d.DeviceTypes {
-		res[k] = d.DeviceTypes[k]
-	}
-	return res, nil
-}
 
 // IsDeviceMatched return whether each device type in deviceTypeSlice can use deviceType's resource plan.
 func (c *Controller) IsDeviceMatched(kt *kit.Kit, deviceTypeSlice []string, deviceType string) ([]bool, error) {
@@ -111,10 +56,9 @@ func (c *Controller) IsDeviceMatched(kt *kit.Kit, deviceTypeSlice []string, devi
 			continue
 		}
 
-		// if device family and core type of ele and device type are equal, then they are matched.
-		if deviceTypeMap[ele].DeviceFamily == deviceTypeMap[deviceType].DeviceFamily &&
+		// if technical_class of ele and core type are equal, then they are matched.
+		if deviceTypeMap[ele].TechnicalClass == deviceTypeMap[deviceType].TechnicalClass &&
 			deviceTypeMap[ele].CoreType == deviceTypeMap[deviceType].CoreType {
-
 			result[idx] = true
 		}
 	}
@@ -231,6 +175,7 @@ func (c *Controller) listCvmInstanceTypeFromCrp(kt *kit.Kit, deviceTypes []strin
 			CpuCore:         int64(item.CPUAmount),
 			Memory:          int64(item.RamAmount),
 			DeviceTypeClass: item.InstanceTypeClass,
+			TechnicalClass:  item.CvmInstanceTypeClass,
 		}
 	}
 

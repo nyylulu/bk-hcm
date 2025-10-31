@@ -21,11 +21,13 @@ import (
 
 var metricController *MetricController
 
+// MetricController ...
 type MetricController struct {
 	MetaData   *MetaData
 	Collectors map[CollectorName]CollectInter
 }
 
+// PackMetrics ...
 func (mc *MetricController) PackMetrics() (*[]byte, error) {
 	mf := MetricFamily{
 		MetaData:     mc.MetaData,

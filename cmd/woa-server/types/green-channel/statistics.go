@@ -121,7 +121,15 @@ func (u *UpdateConfigsReq) Validate() error {
 
 // Config is config.
 type Config struct {
-	BizQuota       int64 `json:"biz_quota"`
-	IEGQuota       int64 `json:"ieg_quota"`
-	AuditThreshold int64 `json:"audit_threshold"`
+	BizQuota       int64          `json:"biz_quota"`
+	IEGQuota       int64          `json:"ieg_quota"`
+	AuditThreshold int64          `json:"audit_threshold"`
+	CvmApplyConfig CvmApplyConfig `json:"cvm_apply_config"`
+}
+
+// CvmApplyConfig is cvm apply config.
+type CvmApplyConfig struct {
+	Enabled      bool     `json:"enabled"`
+	DeviceGroups []string `json:"device_groups"` // 机型族
+	CpuMaxLimit  int64    `json:"cpu_max_limit"` // 核心数
 }

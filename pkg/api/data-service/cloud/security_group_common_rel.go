@@ -142,3 +142,25 @@ func (req SGCommonRelListReq) Validate() error {
 
 	return nil
 }
+
+// SGCommonRelCountBizInfoReq ...
+type SGCommonRelCountBizInfoReq struct {
+	SgID    string                   `json:"sg_id" validate:"required"`
+	ResType enumor.CloudResourceType `json:"res_type" validate:"required"`
+}
+
+// Validate SGCommonRelCountBizInfo.
+func (req SGCommonRelCountBizInfoReq) Validate() error {
+	return validator.Validate.Struct(req)
+}
+
+// ListSGRelBusinessItem item of list security group related business
+type ListSGRelBusinessItem struct {
+	BkBizID  int64 `json:"bk_biz_id"`
+	ResCount int64 `json:"res_count"`
+}
+
+// SGCommonRelCountBizInfoResp ...
+type SGCommonRelCountBizInfoResp struct {
+	Items []ListSGRelBusinessItem `json:"items"`
+}

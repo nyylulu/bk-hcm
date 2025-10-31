@@ -141,6 +141,7 @@ type PlanOrderChangeItem struct {
 	ProjectName       enumor.ObsProject `json:"projectName"`
 	CityName          string            `json:"cityName"`
 	ZoneName          string            `json:"zoneName"`
+	TechnicalClass    string            `json:"technicalClass"`
 	InstanceFamily    string            `json:"instanceFamily"`
 	InstanceType      string            `json:"instanceType"`
 	InstanceModel     string            `json:"instanceModel"`
@@ -257,7 +258,7 @@ type CvmCbsPlanQueryItem struct {
 	PlanProductName    string             `json:"planProductName"`
 	ProductId          int                `json:"productId"`
 	ProductName        string             `json:"productName"`
-	ProjectName        string             `json:"projectName"`
+	ProjectName        enumor.ObsProject  `json:"projectName"`
 	OrderId            string             `json:"orderId"`
 	CityId             int                `json:"cityId"`
 	CityName           string             `json:"cityName"`
@@ -295,25 +296,27 @@ type CvmCbsPlanQueryItem struct {
 	ExpiredCoreAmount int64   `json:"expiredCoreAmount"`
 	ExpiredDiskAmount int64   `json:"expiredDiskAmount"`
 	// RealCvmAmount 未过期的未执行数
-	RealCvmAmount         float64 `json:"realCvmAmount"`
-	RealRamAmount         float64 `json:"realRamAmount"`
-	RealCoreAmount        int64   `json:"realCoreAmount"`
-	RealDiskAmount        int64   `json:"realDiskAmount"`
-	MjOrderId             string  `json:"mjOrderId"`
-	RequirementStatus     int     `json:"requirementStatus"`
-	RequirementStatusName string  `json:"requirementStatusName"`
-	RequirementWeekType   string  `json:"requirementWeekType"`
-	IsManualWeekType      int     `json:"isManualWeekType"`
-	IsInProcessing        int     `json:"isInProcessing"`
-	ProcessingOrderId     string  `json:"processingOrderId"`
-	DemandId              string  `json:"demandId"`
-	ResourcePoolType      int     `json:"resourcePoolType"`
-	ResourcePoolName      string  `json:"resourcePoolName"`
-	ResourceMode          string  `json:"resourceMode"`
-	StatisticalClass      string  `json:"statisticalClass"`
-	VagueStatus           int     `json:"vagueStatus"`
-	ReviewStatus          string  `json:"reviewStatus"`
-	GenerationType        string  `json:"generation_type"`
+	RealCvmAmount         float64                    `json:"realCvmAmount"`
+	RealRamAmount         float64                    `json:"realRamAmount"`
+	RealCoreAmount        int64                      `json:"realCoreAmount"`
+	RealDiskAmount        int64                      `json:"realDiskAmount"`
+	MjOrderId             string                     `json:"mjOrderId"`
+	RequirementStatus     int                        `json:"requirementStatus"`
+	RequirementStatusName string                     `json:"requirementStatusName"`
+	RequirementWeekType   string                     `json:"requirementWeekType"`
+	IsManualWeekType      int                        `json:"isManualWeekType"`
+	IsInProcessing        int                        `json:"isInProcessing"`
+	ProcessingOrderId     string                     `json:"processingOrderId"`
+	DemandId              string                     `json:"demandId"`
+	ResourcePoolType      int                        `json:"resourcePoolType"`
+	ResourcePoolName      string                     `json:"resourcePoolName"`
+	ResourceMode          string                     `json:"resourceMode"`
+	StatisticalClass      string                     `json:"statisticalClass"`
+	TechnicalClass        string                     `json:"technicalClass"`
+	VagueStatus           int                        `json:"vagueStatus"`
+	ReviewStatus          enumor.ResPlanReviewStatus `json:"reviewStatus"`
+	ForecastType          string                     `json:"forecastType"` // 需求类型（常规需求、年度预算）
+	GenerationType        string                     `json:"generation_type"`
 }
 
 // Clone return a clone CvmCbsPlanQueryItem.
@@ -389,6 +392,7 @@ func (i *CvmCbsPlanQueryItem) Clone() *CvmCbsPlanQueryItem {
 		StatisticalClass:      i.StatisticalClass,
 		VagueStatus:           i.VagueStatus,
 		ReviewStatus:          i.ReviewStatus,
+		ForecastType:          i.ForecastType,
 		GenerationType:        i.GenerationType,
 	}
 }
@@ -436,6 +440,7 @@ type PlanOrderData struct {
 	BaseInfo PlanOrderBaseInfo `json:"baseInfo"`
 }
 
+// PlanOrderStatus cvm and cbs plan order status
 type PlanOrderStatus int
 
 const (
@@ -729,6 +734,7 @@ type QueryCvmInstanceTypeItem struct {
 	GPUAmount             float64           `json:"gpuAmount"`             // GPU卡数量
 	InstanceClass         string            `json:"instanceClass"`         // 实例类型
 	CoreType              int               `json:"coreType"`              // 1.2.3 分别标识，小核心，中核心，大核心
+	CvmInstanceTypeClass  string            `json:"cvmInstanceTypeClass"`  //技术分类
 }
 
 // GetApproveLogResp get approve log response

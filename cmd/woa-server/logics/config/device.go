@@ -185,11 +185,18 @@ func (d *device) GetDeviceType(kt *kit.Kit, input *types.GetDeviceParam) (*types
 	if err != nil {
 		return nil, err
 	}
+
+	// 如果没有数据，直接返回
+	if len(insts) == 0 {
+		return &types.GetDeviceTypeResult{}, nil
+	}
+
 	instTypes := make([]string, 0)
 	for _, inst := range insts {
 		instStr := utils.GetStrByInterface(inst)
 		instTypes = append(instTypes, instStr)
 	}
+	// instTypes为空时，CRP接口会返回全部机型列表，导致前端传入不符合条件的机型，也会返回全部机型
 	req := &cvmapi.QueryCvmInstanceTypeReq{
 		ReqMeta: cvmapi.ReqMeta{
 			Id:      cvmapi.CvmId,

@@ -58,6 +58,7 @@ var ResPlanDemandColumnDescriptor = utils.ColumnDescriptors{
 	{Column: "region_name", NamedC: "region_name", Type: enumor.String},
 	{Column: "zone_id", NamedC: "zone_id", Type: enumor.String},
 	{Column: "zone_name", NamedC: "zone_name", Type: enumor.String},
+	{Column: "technical_class", NamedC: "technical_class", Type: enumor.String},
 	{Column: "device_family", NamedC: "device_family", Type: enumor.String},
 	{Column: "device_class", NamedC: "device_class", Type: enumor.String},
 	{Column: "device_type", NamedC: "device_type", Type: enumor.String},
@@ -123,6 +124,8 @@ type ResPlanDemandTable struct {
 	ZoneID string `db:"zone_id" json:"zone_id" validate:"lte=64"`
 	// ZoneName 可用区名称
 	ZoneName string `db:"zone_name" json:"zone_name" validate:"lte=64"`
+	// TechnicalClass 技术分类
+	TechnicalClass string `db:"technical_class" json:"technical_class" validate:"lte=64"`
 	// DeviceFamily 机型族
 	DeviceFamily string `db:"device_family" json:"device_family" validate:"lte=64"`
 	// DeviceClass 机型类型
@@ -416,7 +419,7 @@ func (r ResPlanDemandTable) resourceUpdateValidate() error {
 		return errors.New("locked cpu core should be >= 0")
 	}
 
-	if r.OS.Sign() < 0 {
+	if r.OS != nil && r.OS.Sign() < 0 {
 		return errors.New("os should be >= 0")
 	}
 

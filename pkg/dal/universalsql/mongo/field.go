@@ -19,11 +19,13 @@ import (
 	"hcm/pkg/dal/universalsql"
 )
 
+// FieldItem ...
 type FieldItem struct {
 	Key string
 	Val mapstr.MapStr
 }
 
+// ToSQL ...
 func (k *FieldItem) ToSQL() (string, error) {
 	sql, err := json.Marshal(*k)
 	return string(sql), err
@@ -38,6 +40,7 @@ func (k *FieldItem) legal() bool {
 	return true
 }
 
+// ToMapStr ...
 func (k *FieldItem) ToMapStr() mapstr.MapStr {
 	rst := mapstr.New()
 
@@ -113,7 +116,7 @@ func (k *FieldItem) Nin(val interface{}) *FieldItem {
 	return k
 }
 
-// Comparision operator end
+// Exists Comparision operator end
 // Elements operator start
 // Exists add an element like { <field>: { $exists: bool } } for the field
 func (k *FieldItem) Exists(val bool) *FieldItem {
@@ -133,6 +136,8 @@ func (k *FieldItem) All(val interface{}) *FieldItem {
 	k.Val[universalsql.ALL] = val
 	return k
 }
+
+// ElemMatch ...
 func (k *FieldItem) ElemMatch() *FieldItem {
 	// TODO:too complicated
 	return k

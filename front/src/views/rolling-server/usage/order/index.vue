@@ -34,7 +34,7 @@ const getList = async (query: LocationQuery) => {
     suborder_id: [],
     bk_biz_id: [],
   });
-  const { roll_date, bk_biz_id, suborder_id } = condition.value;
+  const { roll_date, bk_biz_id = [], suborder_id } = condition.value;
   let bk_biz_ids = bk_biz_id.length === 1 && bk_biz_id[0] === -1 ? undefined : bk_biz_id;
   // 业务下需要传入当前业务用于查询
   if (isBusinessPage) bk_biz_ids = [getBizsId()];

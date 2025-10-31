@@ -6,6 +6,7 @@ import { Message } from 'bkui-vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
+import { MENU_BUSINESS_TICKET_DETAILS } from '@/constants/menu-symbol';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 
@@ -251,7 +252,7 @@ export default (cond: Cond) => {
       if (isResourcePage) router.back();
       else {
         router.push({
-          path: '/business/applications/detail',
+          name: MENU_BUSINESS_TICKET_DETAILS,
           query: { id: data.id },
         });
       }

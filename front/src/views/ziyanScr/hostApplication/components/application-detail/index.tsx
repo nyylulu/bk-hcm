@@ -11,21 +11,24 @@ import { useUserStore } from '@/store';
 import { timeFormatter } from '@/common/util';
 import { getBusinessNameById } from '@/views/ziyanScr/host-recycle/field-dictionary';
 import { GLOBAL_BIZS_KEY } from '@/common/constant';
-import { MENU_SERVICE_HOST_APPLICATION } from '@/constants/menu-symbol';
+import { MENU_SERVICE_HOST_APPLICATION, MENU_BUSINESS_TICKET_MANAGEMENT } from '@/constants/menu-symbol';
 import http from '@/http';
 
-import { Button, Table, Message, PopConfirm } from 'bkui-vue';
-import { Copy } from 'bkui-vue/lib/icon';
+import { Button, Table, Message, PopConfirm, OverflowTitle } from 'bkui-vue';
+import { Copy, Info } from 'bkui-vue/lib/icon';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import DetailInfo from '@/views/resource/resource-manage/common/info/detail-info';
 import Panel from '@/components/panel';
 import WName from '@/components/w-name';
+import { useDissolveQuotaStore, type ICpuCoreSummary } from '@/store/dissolve/quota';
+
 import ModifyRecord from './modify-record';
 import ItsmTicketAudit, { type IItsmTicketAudit } from './itsm-ticket-audit.vue';
 import type { IQueryResData } from '@/typings';
 import ApprovalStatus from './approval-status.vue';
 import { ScrResourceType } from '@/constants';
 import UpgradeCvmTable from './upgrade-cvm-table.vue';
+import { RequirementType } from '@/store/config/requirement';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 
@@ -38,12 +41,14 @@ export default defineComponent({
     const route = useRoute();
     const router = useRouter();
     const userStore = useUserStore();
-    const { whereAmI, getBusinessApiPath, getBizsId } = useWhereAmI();
+    const dissolveQuotaStore = useDissolveQuotaStore();
+
+    const { whereAmI, getBusinessApiPath, getBizsId, isBusinessPage } = useWhereAmI();
 
     const backRoute = computed(() => {
       if (whereAmI.value === Senarios.business) {
         return {
-          name: 'ApplicationsManage',
+          name: MENU_BUSINESS_TICKET_MANAGEMENT,
           query: { [GLOBAL_BIZS_KEY]: detail.value?.bk_biz_id, type: 'host_apply' },
         };
       }
@@ -51,6 +56,8 @@ export default defineComponent({
     });
 
     const isUpgradeCvm = computed(() => route.query.resource_type === ScrResourceType.UPGRADECVM);
+
+    const isDissolve = computed(() => detail.value.require_type === RequirementType.Dissolve);
 
     const ips = ref<{ [key: string]: any }>({});
     const detail: Ref<{
@@ -68,10 +75,18 @@ export default defineComponent({
         label: '总数',
         field: 'total_num',
         width: 120,
+        showOverflowTooltip: false,
         render: ({ row, cell }: any) => {
-          if (detail.value?.stage === 'AUDIT') return row.replicas;
-          if (row.modify_time > 0) return `${row.total_num}(原总数${row.origin_num})`;
-          return cell;
+          let totalNum = cell;
+          if (detail.value?.stage === 'AUDIT') totalNum = row.replicas;
+          return (
+            <div style={{ display: 'flex', width: '100%', gap: '4px' }}>
+              {row.modify_time > 0 && (
+                <Info style={{ color: '#e9a24c' }} v-bk-tooltips={{ content: `原始值：${row.origin_num}` }} />
+              )}
+              {totalNum}
+            </div>
+          );
         },
       },
       {
@@ -125,6 +140,23 @@ export default defineComponent({
         label: '机型',
         field: 'spec.device_type',
         width: 140,
+        showOverflowTooltip: false,
+        render: ({ row }: any) => (
+          <div style={{ display: 'flex', width: '100%', gap: '4px' }}>
+            {row.original.spec.device_type !== row.spec.device_type && (
+              <Info
+                style={{ flex: 'none', color: '#e9a24c' }}
+                v-bk-tooltips={{ content: `原始值：${row.original.spec.device_type}` }}
+              />
+            )}
+            <OverflowTitle
+              type='tips'
+              resizeable={true}
+              style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {row.spec.device_type}
+            </OverflowTitle>
+          </div>
+        ),
       },
       // 给物理机添加num字段
       ...numColumns,
@@ -162,16 +194,37 @@ export default defineComponent({
       const message = !clipHostIp.value.length ? '仅复制已交付IP' : '已复制';
       Message({ message, theme: 'success', duration: 1500 });
     };
+
     const suborders = ref([]);
+    const subordersOriginal = ref([]);
+
+    const dissolveSummary = ref<ICpuCoreSummary>({ total_core: 0, delivered_core: 0 });
+
     const cloudMachineList = computed(() => {
-      return suborders.value.filter((item) => {
-        return item.resource_type === 'QCLOUDCVM';
-      });
+      return suborders.value
+        .filter((item) => item.resource_type === 'QCLOUDCVM')
+        .map((item) => {
+          const originalIndex = suborders.value.indexOf(item);
+          const original = subordersOriginal.value[originalIndex];
+          return {
+            ...item,
+            original,
+          };
+        });
     });
     const physicMachineList = computed(() => {
-      return suborders.value.filter((item) => {
-        return ['IDCPM', 'IDCDVM'].includes(item.resource_type);
-      });
+      return suborders.value
+        .filter((item) => {
+          return ['IDCPM', 'IDCDVM'].includes(item.resource_type);
+        })
+        .map((item) => {
+          const originalIndex = suborders.value.indexOf(item);
+          const original = subordersOriginal.value[originalIndex];
+          return {
+            ...item,
+            original,
+          };
+        });
     });
 
     const demandDetailTimer: any = { id: null, count: 0 };
@@ -215,6 +268,7 @@ export default defineComponent({
         { order_id: +orderId },
       );
       detail.value = data;
+      subordersOriginal.value = (data?.suborders || []).slice();
       suborders.value = data?.suborders || [];
     };
 
@@ -298,6 +352,13 @@ export default defineComponent({
         getDemandDetail();
         getItsmTicketAudit();
       }
+
+      if (isDissolve.value) {
+        const orderBizId = Number(route.query.bkBizId);
+        dissolveSummary.value = await dissolveQuotaStore.getCpuCoreSummary(orderBizId, {
+          bk_biz_id: isBusinessPage ? undefined : orderBizId,
+        });
+      }
     });
 
     onUnmounted(() => {
@@ -377,13 +438,33 @@ export default defineComponent({
               <UpgradeCvmTable suborders={suborders.value} />
             ) : (
               <>
-                <Button
-                  class={'mr8'}
-                  v-clipboard:copy={clipHostIp.value.join('\n')}
-                  v-clipboard:success={batchMessage}
-                  disabled={selections.value.length === 0}>
-                  批量复制IP
-                </Button>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <Button
+                    class={'mr8'}
+                    v-clipboard:copy={clipHostIp.value.join('\n')}
+                    v-clipboard:success={batchMessage}
+                    disabled={selections.value.length === 0}>
+                    批量复制IP
+                  </Button>
+                  {isDissolve.value && !dissolveQuotaStore.cpuCoreSummaryLoading && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginLeft: '24px' }}>
+                      <div>
+                        申请CPU核数：
+                        <span>{subordersOriginal.value.reduce((acc, cur) => acc + cur.applied_core, 0)}</span>
+                      </div>
+                      <div>
+                        裁撤总核数：
+                        <span>{dissolveSummary.value.total_core}</span>
+                      </div>
+                      <div>
+                        裁撤可申领核数：
+                        <span>
+                          {Math.max(dissolveSummary.value.total_core - dissolveSummary.value.delivered_core, 0)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
                 {cloudMachineList.value.length > 0 && (
                   <>
                     <p class={'mt16 mb8'}>云主机</p>

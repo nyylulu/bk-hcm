@@ -61,7 +61,7 @@ func (r *RespError) Error() string {
 	return string(js)
 }
 
-// NewSuccessResp
+// NewSuccessResp ...
 // data is the data you want to return to client.
 func NewSuccessResp(data interface{}) *Response {
 	return &Response{

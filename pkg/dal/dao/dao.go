@@ -156,6 +156,7 @@ type Set interface {
 	TCloudZiyanSGRule() securitygroup.TCloudZiyanSGRule
 
 	ResPlanTicket() resplan.ResPlanTicketInterface
+	ResPlanSubTicket() resplan.ResPlanSubTicketInterface
 	ResPlanDemand() resplan.ResPlanDemandInterface
 	ResPlanDemandPenaltyBase() resplan.DemandPenaltyBaseInterface
 	ResPlanDemandChangelog() resplan.DemandChangelogInterface
@@ -165,6 +166,7 @@ type Set interface {
 	ResPlanWeek() resplan.ResPlanWeekInterface
 	WoaZone() resplan.WoaZoneInterface
 	WoaDeviceType() resplan.WoaDeviceTypeInterface
+	ResPlanTransferAppliedRecord() resplan.TransferAppliedRecordInterface
 
 	RecycleModule() module.RecycleModule
 	RecycleHost() host.RecycleHost
@@ -228,7 +230,7 @@ func connect(opt cc.ResourceDB) (*sqlx.DB, error) {
 
 // uri generate the standard db connection string format uri.
 func uri(opt cc.ResourceDB) string {
-	return fmt.Sprintf(
+	baseURI := fmt.Sprintf(
 		"%s:%s@tcp(%s)/%s?parseTime=true&timeout=%ds&readTimeout=%ds&writeTimeout=%ds&charset=%s&loc=%s",
 		opt.User,
 		opt.Password,
@@ -240,6 +242,35 @@ func uri(opt cc.ResourceDB) string {
 		"utf8mb4",
 		url.PathEscape(opt.TimeZone),
 	)
+	// Add SSL/TLS parameters if configured
+	if opt.TLS.Enable() {
+		sslParams := make([]string, 0)
+
+		// 根据配置设置SSL模式
+		if opt.TLS.InsecureSkipVerify {
+			// 跳过证书验证，但仍使用TLS加密
+			sslParams = append(sslParams, "tls=skip-verify")
+		} else {
+			// 有证书文件时，启用TLS连接
+			sslParams = append(sslParams, "tls=true")
+		}
+		// Add certificate files if specified
+		if opt.TLS.CAFile != "" {
+			sslParams = append(sslParams, "ssl-ca="+url.QueryEscape(opt.TLS.CAFile))
+		}
+		if opt.TLS.CertFile != "" {
+			sslParams = append(sslParams, "ssl-cert="+url.QueryEscape(opt.TLS.CertFile))
+		}
+		if opt.TLS.KeyFile != "" {
+			sslParams = append(sslParams, "ssl-key="+url.QueryEscape(opt.TLS.KeyFile))
+		}
+
+		if len(sslParams) > 0 {
+			baseURI += "&" + strings.Join(sslParams, "&")
+		}
+	}
+
+	return baseURI
 }
 
 type set struct {
@@ -854,6 +885,15 @@ func (s *set) ResPlanTicket() resplan.ResPlanTicketInterface {
 	}
 }
 
+// ResPlanSubTicket resource plan sub ticket dao.
+func (s *set) ResPlanSubTicket() resplan.ResPlanSubTicketInterface {
+	return &resplan.ResPlanSubTicketDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
 // ResPlanDemand resource plan demand dao.
 func (s *set) ResPlanDemand() resplan.ResPlanDemandInterface {
 	return &resplan.ResPlanDemandDao{
@@ -929,6 +969,15 @@ func (s *set) WoaZone() resplan.WoaZoneInterface {
 // WoaDeviceType woa device type dao.
 func (s *set) WoaDeviceType() resplan.WoaDeviceTypeInterface {
 	return &resplan.WoaDeviceTypeDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
+// ResPlanTransferAppliedRecord resource plan transfer record dao.
+func (s *set) ResPlanTransferAppliedRecord() resplan.TransferAppliedRecordInterface {
+	return &resplan.TransferAppliedRecordDao{
 		Orm:   s.orm,
 		IDGen: s.idGen,
 		Audit: s.audit,

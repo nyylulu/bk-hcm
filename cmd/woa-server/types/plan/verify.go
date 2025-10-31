@@ -50,7 +50,7 @@ func (req *VerifyResPlanDemandReq) Validate() error {
 	}
 
 	for _, suborder := range req.Suborders {
-		if _, err := suborder.Validate(); err != nil {
+		if err := suborder.Validate(); err != nil {
 			return err
 		}
 	}
@@ -113,4 +113,5 @@ type GetCvmChargeTypeDeviceTypeElem struct {
 type DeviceTypeAvailable struct {
 	DeviceType string `json:"device_type"`
 	Available  bool   `json:"available"`
+	RemainCore int64  `json:"remain_core"`
 }

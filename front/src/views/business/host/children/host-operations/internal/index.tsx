@@ -1,4 +1,4 @@
-import { PropType, defineComponent, ref, toRefs, useTemplateRef, withDirectives } from 'vue';
+import { PropType, defineComponent, ref, toRefs, useTemplateRef, watch, withDirectives } from 'vue';
 import { useRouter } from 'vue-router';
 import cssModule from '../index.module.scss';
 
@@ -23,6 +23,8 @@ import { MoaRequestScene } from '@/components/moa-verify/typings';
 
 import { useVerify } from '@/hooks';
 import { useGlobalPermissionDialog } from '@/store/useGlobalPermissionDialog';
+import { useHostOperationsStore } from '@/store/host-operations';
+import { MENU_BUSINESS_TICKET_MANAGEMENT } from '@/constants/menu-symbol';
 
 export enum OperationActions {
   NONE = 'none',
@@ -112,6 +114,10 @@ export default defineComponent({
       onFinished: props.onFinished,
     });
 
+    watch(operationType, (type) => {
+      useHostOperationsStore().setOperationType(type);
+    });
+
     const getOperationConfig = (type: OperationActions) => {
       // 点击事件（值缺省时，为默认点击事件）
       const clickHandler = () => handleClickMenu(type);
@@ -183,7 +189,7 @@ export default defineComponent({
         }
         Message({ message: '操作成功', theme: 'success' });
         props.onFinished?.('confirm');
-        router.push({ name: 'ApplicationsManage', query: { bizs: getBizsId(), type: 'host_recycle' } });
+        router.push({ name: MENU_BUSINESS_TICKET_MANAGEMENT, query: { bizs: getBizsId(), type: 'host_recycle' } });
         operationType.value = OperationActions.NONE;
       } catch (error: any) {
         console.error(error);

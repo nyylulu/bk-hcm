@@ -37,11 +37,13 @@ var WoaDeviceTypeColumns = utils.MergeColumns(nil, WoaDeviceTypeColumnDescriptor
 var WoaDeviceTypeColumnDescriptor = utils.ColumnDescriptors{
 	{Column: "id", NamedC: "id", Type: enumor.String},
 	{Column: "device_type", NamedC: "device_type", Type: enumor.String},
+	{Column: "device_type_class", NamedC: "device_type_class", Type: enumor.String},
 	{Column: "device_class", NamedC: "device_class", Type: enumor.String},
 	{Column: "device_family", NamedC: "device_family", Type: enumor.String},
 	{Column: "core_type", NamedC: "core_type", Type: enumor.String},
 	{Column: "cpu_core", NamedC: "cpu_core", Type: enumor.Numeric},
 	{Column: "memory", NamedC: "memory", Type: enumor.Numeric},
+	{Column: "technical_class", NamedC: "technical_class", Type: enumor.String},
 	{Column: "created_at", NamedC: "created_at", Type: enumor.Time},
 	{Column: "updated_at", NamedC: "updated_at", Type: enumor.Time},
 }
@@ -64,6 +66,8 @@ type WoaDeviceTypeTable struct {
 	Memory int64 `db:"memory" json:"memory"`
 	// DeviceTypeClass 通/专用机型，SpecialType专用，CommonType通用
 	DeviceTypeClass cvmapi.InstanceTypeClass `db:"device_type_class" json:"device_type_class" validate:"lte=64"`
+	// TechnicalClass 技术分类
+	TechnicalClass string `db:"technical_class" json:"technical_class" validate:"lte=64"`
 	// CreatedAt 创建时间
 	CreatedAt types.Time `db:"created_at" validate:"isdefault" json:"created_at"`
 	// UpdatedAt 更新时间

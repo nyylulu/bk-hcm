@@ -532,6 +532,7 @@ func buildCreateListenerOption(req *protolb.ListenerWithRuleCreateReq, lbInfo co
 		SniSwitch:         req.SniSwitch,
 		SessionType:       cvt.ValToPtr(req.SessionType),
 		Certificate:       req.Certificate,
+		EndPort:           req.EndPort,
 	}
 	if req.Protocol.IsLayer4Protocol() {
 		lblOpt.HealthCheck = &corelb.TCloudHealthCheckInfo{}
@@ -600,6 +601,7 @@ func (svc *clbSvc) insertListenerWithRule(kt *kit.Kit, req *protolb.ListenerWith
 				SniSwitch:          req.SniSwitch,
 				Certificate:        req.Certificate,
 				Region:             lbInfo.Region,
+				EndPort:            cvt.ValToPtr(int64(req.EndPort)),
 			},
 		},
 	}

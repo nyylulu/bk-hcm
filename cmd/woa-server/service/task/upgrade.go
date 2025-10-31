@@ -155,7 +155,7 @@ func (s *service) getInstanceDetails(kt *kit.Kit, bkBizID int64, user string, up
 			InstanceID:           cvmDetail.CloudID,
 			PrivateIPv4Addresses: cvmDetail.PrivateIPv4Addresses,
 			PrivateIPv6Addresses: cvmDetail.PrivateIPv6Addresses,
-			BkAssetID:            cvmDetail.Extension.BkAssetID,
+			BkAssetID:            cvmDetail.BkAssetID,
 			DeviceType:           cvmDetail.MachineType,
 			RegionID:             cvmDetail.Region,
 			ZoneID:               cvmDetail.Zone,

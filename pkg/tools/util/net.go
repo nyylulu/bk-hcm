@@ -21,8 +21,8 @@ import (
 )
 
 // GetDailAddress returns the address for net.Dail
-func GetDailAddress(URL string) (string, error) {
-	uri, err := url.Parse(URL)
+func GetDailAddress(inputUrl string) (string, error) {
+	uri, err := url.Parse(inputUrl)
 	if err != nil {
 		return "", err
 	}

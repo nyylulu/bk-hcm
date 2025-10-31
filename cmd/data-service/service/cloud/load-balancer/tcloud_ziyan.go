@@ -109,6 +109,8 @@ func convZiyanTableToBaseTCloudLbURLRule(kt *kit.Kit, one *tablelb.TCloudZiyanLb
 		Domain:             one.Domain,
 		URL:                one.URL,
 		Scheduler:          one.Scheduler,
+		AccountID:          one.AccountID,
+		BkBizID:            one.BkBizID,
 		SessionType:        one.SessionType,
 		SessionExpire:      one.SessionExpire,
 		HealthCheck:        healthCheck,
@@ -256,6 +258,8 @@ func (svc *lbSvc) convZiyanRule(kt *kit.Kit, rule dataproto.TCloudUrlRuleCreate)
 		SessionType:        rule.SessionType,
 		SessionExpire:      rule.SessionExpire,
 		Memo:               rule.Memo,
+		BkBizID:            rule.BkBizID,
+		AccountID:          rule.AccountID,
 
 		Creator: kt.User,
 		Reviser: kt.User,

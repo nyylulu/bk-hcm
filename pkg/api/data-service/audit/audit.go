@@ -143,6 +143,8 @@ func (o *OperationAction) ConvAuditAction() (enumor.AuditAction, error) {
 		return enumor.Associate, nil
 	case Disassociate:
 		return enumor.Disassociate, nil
+	case IdleCheck:
+		return enumor.IdleCheck, nil
 
 	default:
 		return "", fmt.Errorf("action is not corresponding audit action")
@@ -156,6 +158,7 @@ const (
 	Reboot      OperationAction = "reboot"
 	ResetPwd    OperationAction = "reset_pwd"
 	ResetSystem OperationAction = "reset_system"
+	IdleCheck   OperationAction = "idle_check"
 	// Associate 绑定、挂载等操作
 	Associate OperationAction = "associate"
 	// Disassociate 解绑、解挂载等操作

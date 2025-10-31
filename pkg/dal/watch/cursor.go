@@ -25,7 +25,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// this cursor means there is no event occurs.
+// NoEventCursor this cursor means there is no event occurs.
 // we send this cursor to our the watcher and if we
 // received a NoEventCursor, then we need to fetch event
 // from the head cursor
@@ -47,20 +47,31 @@ func init() {
 	NoEventCursor = cursor
 }
 
+// CursorType ...
 type CursorType string
 
 const (
-	NoEvent                 CursorType = "no_event"
-	UnknownType             CursorType = "unknown"
-	Host                    CursorType = "host"
-	ModuleHostRelation      CursorType = "host_relation"
-	Biz                     CursorType = "biz"
-	Set                     CursorType = "set"
-	Module                  CursorType = "module"
-	ObjectBase              CursorType = "object_instance"
-	Process                 CursorType = "process"
+	// NoEvent ...
+	NoEvent CursorType = "no_event"
+	// UnknownType ...
+	UnknownType CursorType = "unknown"
+	// Host ...
+	Host CursorType = "host"
+	// ModuleHostRelation ...
+	ModuleHostRelation CursorType = "host_relation"
+	// Biz ...
+	Biz CursorType = "biz"
+	// Set ...
+	Set CursorType = "set"
+	// Module ...
+	Module CursorType = "module"
+	// ObjectBase ...
+	ObjectBase CursorType = "object_instance"
+	// Process ...
+	Process CursorType = "process"
+	// ProcessInstanceRelation ...
 	ProcessInstanceRelation CursorType = "process_instance_relation"
-	// a mixed event type, which contains host, host relation, process events etc.
+	// HostIdentifier a mixed event type, which contains host, host relation, process events etc.
 	// and finally converted to host identifier event.
 	HostIdentifier CursorType = "host_identifier"
 	// MainlineInstance specified for mainline instance event watch, filtered from object instance events
@@ -69,6 +80,7 @@ const (
 	InstAsst CursorType = "inst_asst"
 )
 
+// ToInt ...
 func (ct CursorType) ToInt() int {
 	switch ct {
 	case NoEvent:
@@ -100,6 +112,7 @@ func (ct CursorType) ToInt() int {
 	}
 }
 
+// ParseInt ...
 func (ct *CursorType) ParseInt(typ int) {
 	switch typ {
 	case 1:
@@ -161,6 +174,7 @@ type Cursor struct {
 
 const cursorVersion = "1"
 
+// Encode ...
 func (c Cursor) Encode() (string, error) {
 	if c.Type == "" {
 		return "", errors.New("unsupported type")
@@ -215,6 +229,7 @@ func (c Cursor) Encode() (string, error) {
 	return base64.StdEncoding.EncodeToString(pool.Bytes()), nil
 }
 
+// Decode ...
 func (c *Cursor) Decode(cur string) error {
 	byt, err := base64.StdEncoding.DecodeString(cur)
 	if err != nil {

@@ -12,6 +12,8 @@ import SearchString from './search/string.vue';
 import SearchBusiness from './search/business.vue';
 import SearchReqType from './search/req-type.vue';
 import SearchReqStage from './search/req-stage.vue';
+import SearchList from './search/list.vue';
+import SearchRegion from './search/region.vue';
 
 // 展示值组件
 import DisplayValue from './display-value/index.vue';
@@ -29,6 +31,7 @@ import FormBusiness from './form/business.vue';
 import FormUser from './form/user.vue';
 import FormReqType from './form/req-type.vue';
 import FormReqStage from './form/req-stage.vue';
+import FormList from './form/list.vue';
 
 // 权限组件
 import Auth from './auth/auth.vue';
@@ -36,6 +39,7 @@ import Auth from './auth/auth.vue';
 const components = [
   PermissionDialog,
   SearchAccount,
+  SearchRegion,
   SearchEnum,
   SearchDatetime,
   SearchUser,
@@ -44,6 +48,7 @@ const components = [
   SearchBusiness,
   SearchReqType,
   SearchReqStage,
+  SearchList,
   DisplayValue,
   FormBool,
   FormEnum,
@@ -57,6 +62,7 @@ const components = [
   FormUser,
   FormReqType,
   FormReqStage,
+  FormList,
   Auth,
 ];
 export default {

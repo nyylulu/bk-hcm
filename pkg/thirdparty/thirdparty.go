@@ -23,6 +23,7 @@ package thirdparty
 import (
 	"hcm/pkg/cc"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/api-gateway/bkbotapproval"
 	"hcm/pkg/thirdparty/api-gateway/bkchatapi"
 	"hcm/pkg/thirdparty/api-gateway/bkdbm"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
@@ -67,6 +68,7 @@ type Client struct {
 	CaiChe          caiche.CaiCheClientInterface
 	UserMgr         usermgr.Client
 	BkDbm           bkdbm.Client
+	BkBotApproval   bkbotapproval.Client
 }
 
 // NewClient new third party client
@@ -224,6 +226,13 @@ func newApiGWClient(opts cc.ClientConfig, reg prometheus.Registerer, client *Cli
 		return nil, err
 	}
 	client.BkDbm = dbmCli
+
+	bkBotApprovalCli, err := bkbotapproval.NewClient(&opts.BkBotApproval, reg)
+	if err != nil {
+		logs.Errorf("create bkbotapproval client failed, err: %v", err)
+		return nil, err
+	}
+	client.BkBotApproval = bkBotApprovalCli
 
 	return client, nil
 }

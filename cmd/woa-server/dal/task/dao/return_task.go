@@ -24,16 +24,16 @@ import (
 
 // ReturnTask recycle return task operation interface
 type ReturnTask interface {
-	// CreateRecycleTask creates recycle return task in db
+	// CreateReturnTask creates recycle return task in db
 	CreateReturnTask(ctx context.Context, inst *table.ReturnTask) error
-	// GetRecycleTask gets recycle return task by filter from db
+	// GetReturnTask gets recycle return task by filter from db
 	GetReturnTask(ctx context.Context, filter *mapstr.MapStr) (*table.ReturnTask, error)
-	// CountRecycleTask gets recycle return task count by filter from db
+	// CountReturnTask gets recycle return task count by filter from db
 	CountReturnTask(ctx context.Context, filter map[string]interface{}) (uint64, error)
-	// FindManyRecycleTask gets recycle return task list by filter from db
+	// FindManyReturnTask gets recycle return task list by filter from db
 	FindManyReturnTask(ctx context.Context, page metadata.BasePage, filter map[string]interface{}) (
 		[]*table.ReturnTask, error)
-	// UpdateRecycleTask updates recycle return task by filter and doc in db
+	// UpdateReturnTask updates recycle return task by filter and doc in db
 	UpdateReturnTask(ctx context.Context, filter *mapstr.MapStr, doc *mapstr.MapStr) error
 }
 

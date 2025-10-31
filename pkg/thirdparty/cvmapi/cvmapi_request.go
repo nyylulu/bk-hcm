@@ -67,6 +67,7 @@ type OrderCreateParams struct {
 	ChargeType        ChargeType      `json:"chargeType,omitempty"`
 	ChargeMonths      uint            `json:"chargeMonths,omitempty"`
 	InheritInstanceId string          `json:"inheritInstanceId,omitempty"`
+	FuzzyZone         []FuzzyZoneItem `json:"fuzzy_zone"` // 可用区模糊申领，传入多个可用区+vpc+子网
 }
 
 // ResourceType 申请类型
@@ -164,6 +165,7 @@ type PlanOrderChangeReq struct {
 	Params  *PlanOrderChangeParam `json:"params"`
 }
 
+// PlanOrderChangeParam ...
 type PlanOrderChangeParam struct {
 	Page            *Page    `json:"page"`
 	Period          *Period  `json:"period,omitempty"`
@@ -236,6 +238,7 @@ type CvmCbsPlanQueryParam struct {
 	ProjectName     []string `json:"projectName,omitempty"`
 	CityName        []string `json:"cityName,omitempty"`
 	ZoneName        []string `json:"zoneName,omitempty"`
+	TechnicalClass  []string `json:"technicalClass,omitempty"`
 	NotNeedWeekType bool     `json:"notNeedWeekType,omitempty"`
 	UserName        string   `json:"userName,omitempty"`
 }
@@ -620,4 +623,11 @@ type RevokeCvmOrderReq struct {
 // RevokeCvmOrderParams ...
 type RevokeCvmOrderParams struct {
 	OrderId string `json:"order_id"`
+}
+
+// FuzzyZoneItem fuzzy zone item
+type FuzzyZoneItem struct {
+	Zone     string `json:"zone"`
+	VpcID    string `json:"vpcId"`
+	SubnetID string `json:"subnetId"`
 }

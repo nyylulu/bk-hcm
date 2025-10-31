@@ -29,13 +29,15 @@ import (
 
 // Client is woa-server api client.
 type Client struct {
-	rest.ClientInterface
+	client rest.ClientInterface
+	Task   *TaskClient
 }
 
 // NewClient create a new server api client.
 func NewClient(c *client.Capability, version string) *Client {
 	restCli := rest.NewClient(c, fmt.Sprintf("/api/%s/woa", version))
 	return &Client{
-		ClientInterface: restCli,
+		client: restCli,
+		Task:   NewTaskClient(restCli),
 	}
 }

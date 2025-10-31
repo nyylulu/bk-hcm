@@ -19,20 +19,19 @@ import { GLOBAL_BIZS_KEY } from '@/common/constant';
 import { type ICondition } from '../../typings';
 import { deviceGroups } from '../../constants';
 
-dayjs.extend(isoWeek);
-
-interface Props {
-  requireType: number;
-  bizId?: number;
-  initialCondition?: ICondition;
-}
-
 const props = withDefaults(defineProps<Props>(), {});
 
 const emit = defineEmits<{
   apply: [data: IResourcesDemandItem];
 }>();
 
+dayjs.extend(isoWeek);
+
+interface Props {
+  requireType: RequirementType;
+  bizId?: number;
+  initialCondition?: ICondition;
+}
 const { pagination, pageParams, handlePageChange, handlePageSizeChange, handleSort } = usePage(false);
 
 const resourcePlanStore = useResourcePlanStore();
@@ -150,7 +149,7 @@ const handleReset = () => {
 
 <template>
   <div class="search">
-    <grid-container layout="vertical" :column="2" :content-min-width="300" :gap="[16, 24]">
+    <grid-container layout="vertical" :column="2" :content-min-width="'1fr'" :gap="[16, 24]">
       <grid-item-form-element label="地域">
         <area-selector
           ref="areaSelector"
@@ -280,16 +279,20 @@ const handleReset = () => {
   margin-bottom: 16px;
   padding-bottom: 16px;
   border-bottom: 1px solid #dcdee5;
+
   .row-action {
     padding: 4px 0;
+
     :deep(.item-content) {
       gap: 10px;
     }
+
     .bk-button {
       min-width: 86px;
     }
   }
 }
+
 .list {
   margin-top: 16px;
 }
@@ -328,6 +331,7 @@ const handleReset = () => {
 
         &:hover {
           box-shadow: 0 2px 4px 0 #0000001a;
+
           .icon-down {
             color: #3a84ff;
           }

@@ -24,14 +24,15 @@ export default defineComponent({
     const businessGlobalStore = useBusinessGlobalStore();
     const defaultDeviceForm = () => ({
       bk_biz_id: businessGlobalStore.getCacheSelected(serviceShareBizSelectedKey) ?? [0],
-      order_id: [],
-      suborder_id: [],
-      ip: [],
-      device_type: [],
-      bk_zone_name: [],
-      sub_zone: [],
-      stage: [],
-      bk_username: [],
+      order_id: [] as any[],
+      suborder_id: [] as any[],
+      ip: [] as any[],
+      device_type: [] as any[],
+      bk_zone_name: [] as any[],
+      sub_zone: [] as any[],
+      stage: [] as any[],
+      bk_username: [] as any[],
+      bk_asset_id: [] as any[],
     });
     const defaultTime = () => [new Date(dayjs().subtract(30, 'day').format('YYYY-MM-DD')), new Date()];
     const deviceForm = ref(defaultDeviceForm());
@@ -39,8 +40,8 @@ export default defineComponent({
     const handleTime = (time) => (!time ? '' : dayjs(time).format('YYYY-MM-DD'));
     const timeObj = computed(() => {
       return {
-        start: handleTime(timeForm.value[0]),
-        end: handleTime(timeForm.value[1]),
+        start: handleTime(timeForm.value[0]) as string,
+        end: handleTime(timeForm.value[1]) as string,
       };
     });
     const deviceTypeList = ref([]);
@@ -67,9 +68,9 @@ export default defineComponent({
     });
     const tableColumns = [...columns];
     const pageInfo = ref({
-      start: 0,
-      limit: 10,
-      enable_count: false,
+      start: 0 as number,
+      limit: 10 as number,
+      enable_count: false as boolean,
     });
     const requestListParams = computed(() => {
       const params = {
@@ -92,8 +93,8 @@ export default defineComponent({
       requestOption: {
         dataPath: 'data.info',
         sortOption: {
-          sort: 'ip',
-          order: 'ASC',
+          sort: 'ip' as string,
+          order: 'ASC' as string,
         },
         immediate: false,
       },
@@ -192,6 +193,9 @@ export default defineComponent({
             </FormItem>
             <FormItem label='回收人'>
               <hcm-form-user v-model={deviceForm.value.bk_username} />
+            </FormItem>
+            <FormItem label='固资号'>
+              <FloatInput v-model={deviceForm.value.bk_asset_id} placeholder='请输入单号，多个换行分割' />
             </FormItem>
             <FormItem label='完成时间'>
               <DatePicker v-model={timeForm.value} type='daterange' />

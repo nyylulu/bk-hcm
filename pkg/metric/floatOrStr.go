@@ -19,6 +19,7 @@ import (
 	"strconv"
 )
 
+// FormFloatOrString ...
 func FormFloatOrString(val interface{}) (*FloatOrString, error) {
 	valueof := reflect.ValueOf(val)
 	switch valueof.Kind() {
@@ -37,19 +38,24 @@ func FormFloatOrString(val interface{}) (*FloatOrString, error) {
 	}
 }
 
+// ValueType ...
 type ValueType string
 
 const (
-	Float  ValueType = "Float"
+	// Float ...
+	Float ValueType = "Float"
+	// String ...
 	String ValueType = "String"
 )
 
+// FloatOrString ...
 type FloatOrString struct {
 	Type   ValueType
 	Float  float64
 	String string
 }
 
+// MarshalJSON ...
 func (fs FloatOrString) MarshalJSON() ([]byte, error) {
 	switch fs.Type {
 	case Float:
@@ -61,6 +67,7 @@ func (fs FloatOrString) MarshalJSON() ([]byte, error) {
 	}
 }
 
+// UnmarshalJSON ...
 func (fs *FloatOrString) UnmarshalJSON(b []byte) error {
 	f, err := strconv.ParseFloat(string(b), 10)
 	if nil == err {

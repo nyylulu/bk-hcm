@@ -19,8 +19,8 @@ import (
 func Test_ccDefaultErrorHelper_New(t *testing.T) {
 	type fields struct {
 		language  string
-		errorStr  func(language string, ErrorCode int) error
-		errorStrf func(language string, ErrorCode int, args ...interface{}) error
+		errorStr  func(language string, errorCode int) error
+		errorStrf func(language string, errorCode int, args ...interface{}) error
 	}
 	type args struct {
 		errorCode int
@@ -55,8 +55,8 @@ func Test_ccDefaultErrorHelper_New(t *testing.T) {
 func Test_ccDefaultErrorHelper_Error(t *testing.T) {
 	type fields struct {
 		language  string
-		errorStr  func(language string, ErrorCode int) error
-		errorStrf func(language string, ErrorCode int, args ...interface{}) error
+		errorStr  func(language string, errorCode int) error
+		errorStrf func(language string, errorCode int, args ...interface{}) error
 	}
 	type args struct {
 		errCode int
@@ -90,8 +90,8 @@ func Test_ccDefaultErrorHelper_Error(t *testing.T) {
 func Test_ccDefaultErrorHelper_Errorf(t *testing.T) {
 	type fields struct {
 		language  string
-		errorStr  func(language string, ErrorCode int) error
-		errorStrf func(language string, ErrorCode int, args ...interface{}) error
+		errorStr  func(language string, errorCode int) error
+		errorStrf func(language string, errorCode int, args ...interface{}) error
 	}
 	type args struct {
 		errCode int

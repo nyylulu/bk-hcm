@@ -22,6 +22,7 @@ data:
     database:
       {{- include "common.tplvalues.render" (dict "value" (include "bk-hcm.databaseConfig" .) "context" $) | nindent 6 }}
     bkHcmUrl: {{ .Values.bkHCMUrl }}
+    bkApigwHCMUrl: {{ .Values.bkApigwHCMUrl }}
     useMongo: {{ .Values.useMongo }}
     mongodb:
       {{- toYaml .Values.mongodb | nindent 6 }}
@@ -105,3 +106,5 @@ data:
       {{- toYaml .Values.stuckCheck | nindent 6 }}
     cmdb:
       {{- toYaml .Values.cmdb | nindent 6 }}
+    bkbotapproval:
+      {{- toYaml .Values.bkbotapproval | nindent 6 }}

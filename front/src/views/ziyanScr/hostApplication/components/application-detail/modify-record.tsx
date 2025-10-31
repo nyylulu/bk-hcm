@@ -27,7 +27,7 @@ export default defineComponent({
     // 需要跟后端、产品确定哪些字段不展示
     const FIELD_BLACK_LIST = ['replicas', 'disk_size', 'disk_type'];
 
-    const { getBusinessApiPath } = useWhereAmI();
+    const { getBusinessApiPath, isBusinessPage } = useWhereAmI();
     const { getFieldCn, getFieldCnVal } = useFieldVal();
     const isDisplay = ref(false);
     watch(
@@ -46,6 +46,8 @@ export default defineComponent({
       emit('update:modelValue', false);
     };
     const recordList = ref([]);
+
+    const statusNames = { 0: '待审批', 1: '已调整需求', 2: '审批失败', 3: '审批拒绝', 4: '审批超时/作废' };
     const recordColumns = [
       {
         type: 'expand',
@@ -66,6 +68,15 @@ export default defineComponent({
         },
       },
     ];
+
+    if (!isBusinessPage) {
+      recordColumns.splice(3, 0, {
+        label: '状态',
+        field: 'status',
+        render: ({ row }: { row: { status: keyof typeof statusNames } }) => <>{statusNames[row.status]}</>,
+      });
+    }
+
     const expandRowTable = [
       {
         label: '修改属性',
@@ -112,7 +123,7 @@ export default defineComponent({
     const fetchRecord = async () => {
       const res = await http.post(
         `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/${getBusinessApiPath()}task/find/apply/record/modify`,
-        { suborder_id: [props.showObj.suborderId] },
+        { suborder_id: [props.showObj.suborderId], status: isBusinessPage ? [1] : undefined },
       );
       const list = res.data?.info || [];
       list.forEach((item: any) => {

@@ -117,6 +117,7 @@ var (
 		"杭州":     "vpc-puhasca0",
 		"巴里":     "vpc-drefwt2v",
 		"北京":     "vpc-bhb0y6g8",
+		"张家口":   "vpc-bhb0y6g8",
 		"成都":     "vpc-r1wicnlq",
 		"沈阳":     "vpc-rea7a2kc",
 		"合肥":     "vpc-e0a5jxa7",
@@ -479,7 +480,11 @@ func checkCLB(kt *kit.Kit, clients *tencentCloudClients, host *cmdb.Host) (strin
 	request := NewDescribeLBListenersRequest()
 	vpcId, ok := _vpcIdMap[host.BkZoneName]
 	if !ok {
-		return "", false, fmt.Errorf("predefine vpcid map has no such zone: %s", host.BkZoneName)
+		if len(host.BkCloudVpcID) == 0 {
+			return "", false, fmt.Errorf("predefine vpcid map has no such zone: %s", host.BkZoneName)
+		}
+		// _vpcIdMap未配置的话，以bkcc的云VPCID为准
+		vpcId = host.BkCloudVpcID
 	}
 
 	request.Backends = []Backend{

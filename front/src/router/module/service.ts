@@ -5,7 +5,7 @@ import {
   MENU_SERVICE_HOST_RECYCLE_ENTRY,
   MENU_SERVICE_HOST_RECYCLE,
 } from '@/constants/menu-symbol';
-import Meta from '../meta';
+import ticketRoutes from '@/views/ticket/route-config';
 
 const { t } = i18n.global;
 
@@ -13,60 +13,16 @@ const serviceMenus: RouteRecordRaw[] = [
   {
     path: '/service',
     children: [
-      {
-        path: '/service/service-apply',
-        name: 'serviceApply',
-        component: () => import('@/views/service/service-apply/index.vue'),
-        meta: {
-          title: t('服务申请'),
-          activeKey: 'serviceApply',
-          // breadcrumb: [t('服务'), t('服务申请')],
-          notMenu: true,
-          isShowBreadcrumb: true,
-        },
-      },
-      {
-        path: '/service/my-apply',
-        name: 'myApply',
-        component: () => import('@/views/service/apply-list/index'),
-        // component: () => import('@/views/service/my-apply/index.vue'),
-        meta: {
-          activeKey: 'myApply',
-          title: t('单据管理'),
-          // breadcrumb: [t('服务'), t('我的申请')],
-          isShowBreadcrumb: true,
-          icon: 'hcm-icon bkhcm-icon-my-apply',
-        },
-      },
+      ...ticketRoutes,
       // 单据管理 tab 资源预测详情
       {
         path: '/service/my-apply/resource-plan/detail',
-        name: 'OpInvoiceResourceDetail',
-        component: () => import('@/views/service/resource-plan/applications/detail/index'),
+        redirect: '/service/ticket/resource-plan/detail',
         meta: {
-          activeKey: 'myApply',
           notMenu: true,
         },
       },
-      {
-        path: '/service/my-apply/detail',
-        name: 'serviceMyApplyDetail',
-        component: () => import('@/views/service/apply-detail/index'),
-        meta: {
-          activeKey: 'myApply',
-          notMenu: true,
-        },
-      },
-      {
-        path: '/service/my-approval',
-        name: t('我的审批'),
-        component: () => import('@/views/service/my-approval/page'),
-        meta: {
-          // breadcrumb: [t('服务'), t('我的审批')],
-          isShowBreadcrumb: true,
-          notMenu: true,
-        },
-      },
+
       {
         path: '/service/dissolve',
         component: () => import('@/views/ziyanScr/recycle-server-room'),
@@ -159,13 +115,11 @@ const serviceMenus: RouteRecordRaw[] = [
         name: 'host-application-detail',
         component: () => import('@/views/ziyanScr/hostApplication/components/application-detail/index'),
         meta: {
-          ...new Meta({
-            activeKey: 'apply',
-            notMenu: true,
-            menu: {
-              relative: MENU_SERVICE_HOST_APPLICATION,
-            },
-          }),
+          activeKey: 'apply',
+          notMenu: true,
+          menu: {
+            relative: MENU_SERVICE_HOST_APPLICATION,
+          },
         },
       },
       {

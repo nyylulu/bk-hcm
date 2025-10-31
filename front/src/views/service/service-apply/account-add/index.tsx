@@ -5,10 +5,11 @@ import { ProjectModel, FormItems } from '@/typings';
 import { CLOUD_TYPE, ACCOUNT_TYPE, BUSINESS_TYPE, SITE_TYPE, DESC_ACCOUNT } from '@/constants';
 import { VendorEnum } from '@/common/constant';
 import { useI18n } from 'vue-i18n';
-import MemberSelect from '@/components/MemberSelect';
+import HcmFormUser from '@/components/form/user.vue';
 import { useAccountStore } from '@/store';
 import './index.scss';
 import { ACCOUNT_TYPE_ENUM } from '@/constants/account';
+import { MENU_SERVICE_TICKET_MANAGEMENT } from '@/constants/menu-symbol';
 
 const { FormItem } = Form;
 const { Option } = Select;
@@ -207,7 +208,7 @@ export default defineComponent({
         });
         // router.go(-1);
         router.push({
-          path: '/service/my-apply', // 返回审批列表
+          name: MENU_SERVICE_TICKET_MANAGEMENT, // 返回审批列表
         });
       } catch (error: any) {
         console.error(error);
@@ -763,7 +764,7 @@ export default defineComponent({
         property: 'managers',
         content: () => (
           <section>
-            <MemberSelect class='w450' v-model={projectModel.managers} />
+            <HcmFormUser class='w450' {...{ allowCreate: true }} v-model={projectModel.managers} />
           </section>
         ),
       },

@@ -40,6 +40,8 @@ const (
 	ObsProjectMigrate ObsProject = "轻量云徙"
 	// ObsProjectRollServer is obs roll server project.
 	ObsProjectRollServer ObsProject = "滚服项目"
+	// ObsProjectShortLease is obs short lease project.
+	ObsProjectShortLease ObsProject = "短租项目"
 )
 
 // GetObsProjectMembers get ObsProject's members.
@@ -77,6 +79,11 @@ func (o ObsProject) Validate() error {
 
 // ValidateResPlan validate obs project used in resource plan.
 func (o ObsProject) ValidateResPlan() error {
+	// TODO 临时 支持同步短租项目到本地。待后续正式支持短租项目时去除此独立逻辑
+	if o == ObsProjectShortLease {
+		return nil
+	}
+
 	obsProjects := GetObsProjectMembersForResPlan()
 	obsProjectMap := converter.SliceToMap(obsProjects, func(obj ObsProject) (ObsProject, struct{}) {
 		return obj, struct{}{}
@@ -122,8 +129,10 @@ func getSpringObsProjectForResPlan() []ObsProject {
 	// 春保窗口期：12月1日～次年3月25日
 
 	// 因预测的提前性，1月1日～次年3月25日均允许提次年的春保项目预测单
-	prefixYear := strconv.Itoa(nowYear + 1)
-	projects = append(projects, ObsProject(prefixYear+"春节保障"))
+	projects = append(projects, ObsProject(strconv.Itoa(nowYear+1)+"春节保障"))
+
+	// 因预算提前一年追加，需要允许提后年的春保项目预测（在次年底即可使用，提前一年追加预测）
+	projects = append(projects, ObsProject(strconv.Itoa(nowYear+2)+"春节保障"))
 
 	// 3月25日前允许申请当年的春保项目预测单
 	ddl := time.Date(nowYear, time.March, 25, 0, 0, 0, 0, time.Local)
@@ -471,3 +480,50 @@ const (
 	// CvmInstanceStatusRunning CVM实例-运行中
 	CvmInstanceStatusRunning = "RUNNING"
 )
+
+// CvmModifyRecordStatus is cvm modify record status
+type CvmModifyRecordStatus int
+
+const (
+	// ApprovalPendingCvmModifyStatus CVM变更记录-待审批
+	ApprovalPendingCvmModifyStatus CvmModifyRecordStatus = 0
+	// ApprovedCvmModifyStatus CVM变更记录-审批通过
+	ApprovedCvmModifyStatus CvmModifyRecordStatus = 1
+	// ApprovalFailedCvmModifyStatus CVM变更记录-审批失败
+	ApprovalFailedCvmModifyStatus CvmModifyRecordStatus = 2
+	// ApprovalRejectedCvmModifyStatus CVM变更记录-审批拒绝
+	ApprovalRejectedCvmModifyStatus CvmModifyRecordStatus = 3
+	// ApprovalTimeoutCvmModifyStatus CVM变更记录-审批超时/作废
+	ApprovalTimeoutCvmModifyStatus CvmModifyRecordStatus = 4
+)
+
+// CvmModifyRecordStatusMap cvm modify record status map
+var CvmModifyRecordStatusMap = map[CvmModifyRecordStatus]string{
+	ApprovalPendingCvmModifyStatus:  "待审批",
+	ApprovedCvmModifyStatus:         "审批通过",
+	ApprovalFailedCvmModifyStatus:   "审批失败",
+	ApprovalRejectedCvmModifyStatus: "审批拒绝",
+	ApprovalTimeoutCvmModifyStatus:  "审批超时",
+}
+
+// ResAssign 资源分配方式（1表示“有资源区域优先”、2表示“分Campus生产”）
+type ResAssign uint
+
+const (
+	// ResPriorityResAssign 有资源区域优先
+	ResPriorityResAssign ResAssign = 1
+	// CampusResAssign 分Campus生产
+	CampusResAssign ResAssign = 2
+)
+
+// Validate ResAssign.
+func (r ResAssign) Validate() error {
+	switch r {
+	case ResPriorityResAssign:
+	case CampusResAssign:
+	default:
+		return fmt.Errorf("unsupported verify res assign result: %d", r)
+	}
+
+	return nil
+}

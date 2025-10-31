@@ -144,7 +144,7 @@ func (act BatchTaskCvmResetAction) resetTCloudZiyanCvm(kt *kit.Kit, detail coret
 		return err
 	}
 
-	if err = validateCvmSvrStatus(kt, cvms, detail); err != nil {
+	if err = act.validateCvmSvrStatus(kt, cvms, detail); err != nil {
 		logs.Errorf("fail to validate cvm status, err: %v, req: %+v, rid: %s")
 		return err
 	}
@@ -159,9 +159,9 @@ func (act BatchTaskCvmResetAction) resetTCloudZiyanCvm(kt *kit.Kit, detail coret
 
 	// update cmdb cvm srv_status
 	for _, cvm := range cvms {
-		if err = updateCMDBCvmOSAndSvrStatus(kt, cvm.Extension.BkAssetID, constant.ResetingSrvStatus, ""); err != nil {
+		if err = updateCMDBCvmOSAndSvrStatus(kt, cvm.BkAssetID, constant.ResetingSrvStatus, ""); err != nil {
 			logs.Errorf("update cmdb cvm os failed, err: %v, bkAssetID: %s, rid: %s",
-				err, cvm.Extension.BkAssetID, kt.Rid)
+				err, cvm.BkAssetID, kt.Rid)
 			return err
 		}
 	}
@@ -199,12 +199,12 @@ func (act BatchTaskCvmResetAction) resetTCloudZiyanCvm(kt *kit.Kit, detail coret
 	}
 	for _, cvm := range cvms {
 		// update cmdb cvm os info
-		if err = updateCMDBCvmOSAndSvrStatus(kt, cvm.Extension.BkAssetID, cvm.Extension.SrvStatus,
+		if err = updateCMDBCvmOSAndSvrStatus(kt, cvm.BkAssetID, cvm.Extension.SrvStatus,
 			newImageName); err != nil {
 
 			logs.Errorf("update cmdb cvm os failed, err: %v, bkAssetID: %s, cvmCloudID: %s, taskManageID: %s, "+
 				"flowID: %s, rid: %s", err, cvm.CloudID, detail.TaskManagementID, detail.FlowID,
-				cvm.Extension.BkAssetID, kt.Rid)
+				cvm.BkAssetID, kt.Rid)
 			return err
 		}
 	}
@@ -238,8 +238,8 @@ func (act BatchTaskCvmResetAction) resetTCloudZiyanCvm(kt *kit.Kit, detail coret
 	return nil
 }
 
-func validateCvmSvrStatus(kt *kit.Kit, cvms []corecvm.Cvm[corecvm.TCloudZiyanHostExtension],
-	detail coretask.Detail) error {
+func (act BatchTaskCvmResetAction) validateCvmSvrStatus(kt *kit.Kit,
+	cvms []corecvm.Cvm[corecvm.TCloudZiyanHostExtension], detail coretask.Detail) error {
 
 	// get cvm info from cc, and check the srv_status isn't resetting
 	mapBizToHostIDs := make(map[int64][]int64)
@@ -269,10 +269,10 @@ func validateCvmSvrStatus(kt *kit.Kit, cvms []corecvm.Cvm[corecvm.TCloudZiyanHos
 
 		for _, host := range hostResult.Info {
 			logs.Infof("cvm reset check status loop, hostID: %d, srv_status: %s, hostInnerIP: %s, operator: %s, "+
-				"bkOperator: %s, detailCreator: %s, rid: %s", host.BkHostID, host.SrvStatus, host.BkHostInnerIP,
-				host.Operator, host.BkBakOperator, detail.Creator, kt.Rid)
-			// 校验主备负责人
-			if !strings.Contains(host.Operator, detail.Creator) &&
+				"bkOperator: %s, detailCreator: %s, skipVerify: %v, rid: %s", host.BkHostID, host.SrvStatus,
+				host.BkHostInnerIP, host.Operator, host.BkBakOperator, detail.Creator, act.skipOperatorVerify, kt.Rid)
+			// 不允许跳过主备负责人校验时，再校验主备负责人
+			if !act.skipOperatorVerify && !strings.Contains(host.Operator, detail.Creator) &&
 				!strings.Contains(host.BkBakOperator, detail.Creator) {
 
 				logs.Errorf("cvm reset check operator failed, hostID: %d, 重装的主机负责人校验失败："+

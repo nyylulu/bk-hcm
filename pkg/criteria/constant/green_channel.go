@@ -28,4 +28,6 @@ const (
 	ConfigTypeGCIEGQuota = "ieg_quota"
 	// ConfigTypeGCAuditThreshold this is the config key for audit threshold.
 	ConfigTypeGCAuditThreshold = "audit_threshold"
+	// ConfigKeyCvmApply 主机申请[小额绿通]时的配置.
+	ConfigKeyCvmApply = "cvm_apply"
 )

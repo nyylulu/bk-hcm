@@ -214,6 +214,9 @@ func (d *Dispatcher) generateDevices(kt *kit.Kit, order *types.ApplyOrder) error
 	if d.generator == nil {
 		return fmt.Errorf("failed to generate device, for generator is nil")
 	}
+	if order.Spec == nil {
+		return fmt.Errorf("failed to generate device, for order spec is nil")
+	}
 
 	switch order.ResourceType {
 	case types.ResourceTypeCvm:

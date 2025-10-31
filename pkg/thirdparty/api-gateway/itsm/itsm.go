@@ -66,6 +66,10 @@ type Client interface {
 	GetTicketLog(kt *kit.Kit, id string) (*GetTicketLogResp, error)
 	// ApproveNode 通过/拒绝 ITSM指定节点 自动识别 `审批意见`、`备注` 字段
 	ApproveNode(kt *kit.Kit, param *ApproveNodeOpt) error
+	// GetItsmConfig 获取itsm配置
+	GetItsmConfig() *cc.ApiGateway
+	// GetApproveNodeResult gets the result of an approval node
+	GetApproveNodeResult(kt *kit.Kit, sn string, stateID int64) (*ApproveNodeResult, error)
 }
 
 // NewClient initialize a new itsm client
@@ -109,6 +113,11 @@ func (i *itsm) header(kt *kit.Kit) http.Header {
 	header.Set(constant.RidKey, kt.Rid)
 	header.Set(constant.BKGWAuthKey, i.config.GetAuthValue())
 	return header
+}
+
+// GetItsmConfig 获取itsm配置
+func (i *itsm) GetItsmConfig() *cc.ApiGateway {
+	return i.config
 }
 
 // CreateApplyTicket create itsm ticket
@@ -180,4 +189,14 @@ func (i *itsm) GetTicketLog(kt *kit.Kit, id string) (*GetTicketLogResp, error) {
 		Into(resp)
 
 	return resp, err
+}
+
+// GetApproveNodeResult gets the result of the approve node
+func (i *itsm) GetApproveNodeResult(kt *kit.Kit, sn string, stateID int64) (*ApproveNodeResult, error) {
+	params := map[string]string{
+		"sn":       sn,
+		"state_id": fmt.Sprintf("%d", stateID),
+	}
+	return apigateway.ApiGatewayCallWithoutReq[ApproveNodeResult](i.client, i.config, rest.GET, kt, params,
+		"/get_approve_node_result")
 }

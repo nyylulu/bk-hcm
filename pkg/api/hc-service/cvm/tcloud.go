@@ -206,3 +206,4 @@ func (opt TCloudInstanceConfigListOption) Validate() error {
 	}
 	return validator.Validate.Struct(opt)
 }
+

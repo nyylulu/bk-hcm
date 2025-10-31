@@ -66,6 +66,22 @@ const valueComps: Record<
   'cloud-area': CloudAreaValue,
 };
 
+// 添加类型检查逻辑
+const validateValueType = (type: ModelPropertyType, value: any) => {
+  switch (type) {
+    case 'bool':
+      return typeof value === 'boolean' ? value : false;
+    case 'number':
+      return typeof value === 'number' ? value : 0;
+    case 'string':
+      return typeof value === 'string' ? value : '';
+    case 'array':
+      return Array.isArray(value) ? value : [];
+    default:
+      return value;
+  }
+};
+
 const attrs = useAttrs();
 </script>
 
@@ -73,7 +89,7 @@ const attrs = useAttrs();
   <component
     v-if="valueComps[property.type]"
     :is="valueComps[property.type]"
-    :value="value"
+    :value="validateValueType(property.type, value)"
     :option="property.option"
     :display="props.display"
     v-bind="attrs"

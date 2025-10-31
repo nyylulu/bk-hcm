@@ -24,6 +24,8 @@ import (
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/criteria/validator"
+	"hcm/pkg/thirdparty/api-gateway/bkbotapproval"
+	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/tools/metadata"
 	"hcm/pkg/tools/querybuilder"
@@ -129,6 +131,7 @@ const (
 	ApplyStatusTerminate    ApplyStatus = "TERMINATE"
 	// ApplyStatusGracefulTerminate 比起 ApplyStatusTerminate，将不再发起重试，但是后续的流程仍会继续流转
 	ApplyStatusGracefulTerminate ApplyStatus = "GRACEFUL_TERMINATE"
+	ApplyStatusConfirming        ApplyStatus = "CONFIRMING" // 修改需求后-待用户确认
 )
 
 // GenerateRecord apply order vm generate record
@@ -480,13 +483,36 @@ type TicketStage string
 
 // TicketStage resource apply ticket stage
 const (
-	TicketStageUncommit  TicketStage = "UNCOMMIT"
-	TicketStageAudit     TicketStage = "AUDIT"
-	TicketStageTerminate TicketStage = "TERMINATE"
-	TicketStageRunning   TicketStage = "RUNNING"
-	TicketStageSuspend   TicketStage = "SUSPEND"
-	TicketStageDone      TicketStage = "DONE"
+	TicketStageUncommit   TicketStage = "UNCOMMIT"
+	TicketStageAudit      TicketStage = "AUDIT"
+	TicketStageTerminate  TicketStage = "TERMINATE"
+	TicketStageRunning    TicketStage = "RUNNING"
+	TicketStageSuspend    TicketStage = "SUSPEND"
+	TicketStageDone       TicketStage = "DONE"
+	TicketStageConfirming TicketStage = "CONFIRMING" // 修改需求后-待用户确认
 )
+
+// TicketStageEnums ticket stage enum
+var TicketStageEnums = map[TicketStage]string{
+	TicketStageUncommit:   "未提交",
+	TicketStageAudit:      "待审核",
+	TicketStageTerminate:  "终止",
+	TicketStageRunning:    "备货中",
+	TicketStageSuspend:    "备货异常",
+	TicketStageDone:       "完成",
+	TicketStageConfirming: "待确认(需求调整)",
+}
+
+// TicketStageOrder defines the order of ticket stages
+var TicketStageOrder = []TicketStage{
+	TicketStageUncommit,
+	TicketStageAudit,
+	TicketStageTerminate,
+	TicketStageRunning,
+	TicketStageSuspend,
+	TicketStageDone,
+	TicketStageConfirming,
+}
 
 // GetApplyTicketReq get apply ticket request parameter
 type GetApplyTicketReq struct {
@@ -721,7 +747,7 @@ func (req *ApplyReq) Validate() error {
 	}
 
 	for _, suborder := range req.Suborders {
-		if _, err := suborder.Validate(); err != nil {
+		if err := suborder.Validate(); err != nil {
 			return err
 		}
 	}
@@ -767,29 +793,29 @@ type Suborder struct {
 // Validate whether Suborder is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (s *Suborder) Validate() (errKey string, err error) {
+func (s *Suborder) Validate() error {
 	if util.InArray(s.ResourceType, AllResourceType) != true {
-		return "resource_type", fmt.Errorf("unkown resource_type")
+		return fmt.Errorf("unkown resource_type")
 	}
 
 	if s.Replicas <= 0 {
-		return "replicas", fmt.Errorf("invalid replicas <= 0")
+		return fmt.Errorf("invalid replicas <= 0")
 	}
 	// replicas limit 1000
 	if s.Replicas > ApplyLimit {
-		return "replicas", fmt.Errorf("exceed apply limit: %d", ApplyLimit)
+		return fmt.Errorf("replicas exceed apply limit: %d", ApplyLimit)
 	}
 
 	remarkLimit := 256
 	if len(s.Remark) > remarkLimit {
-		return "remark", fmt.Errorf("exceed size limit %d", remarkLimit)
+		return fmt.Errorf("remark exceed size limit %d", remarkLimit)
 	}
 
-	if key, err := s.Spec.Validate(s.ResourceType); err != nil {
-		return fmt.Sprintf("spec.%s", key), err
+	if err := s.Spec.Validate(s.ResourceType); err != nil {
+		return err
 	}
 
-	return "", nil
+	return nil
 }
 
 // ResourceSpec resource specifications
@@ -824,85 +850,104 @@ type ResourceSpec struct {
 	FailedZoneIDs []string          `json:"failed_zone_ids" bson:"failed_zone_ids"`
 	SystemDisk    enumor.DiskSpec   `json:"system_disk" bson:"system_disk"`
 	DataDisk      []enumor.DiskSpec `json:"data_disk" bson:"data_disk"`
+	Zones         []string          `json:"zones" bson:"zones"` //  多可用区
+	// ResAssign 资源分配方式（1表示“有资源区域优先”、2表示“分Campus生产”）
+	ResAssign enumor.ResAssign `json:"res_assign" bson:"res_assign"`
 }
 
 // Validate whether ResourceSpec is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (s *ResourceSpec) Validate(resType ResourceType) (errKey string, err error) {
+func (s *ResourceSpec) Validate(resType ResourceType) error {
 	if len(s.Region) == 0 {
-		return "region", fmt.Errorf("region cannot be empty")
+		return fmt.Errorf("spec.region cannot be empty")
 	}
 
 	if len(s.Vpc) > 0 && len(s.Subnet) == 0 {
-		return "subnet", fmt.Errorf("subnet cannot be empty while vpc is set")
+		return fmt.Errorf("spec.subnet cannot be empty while vpc is set")
 	}
 
 	if len(s.DeviceType) == 0 {
-		return "device_type", fmt.Errorf("device_type cannot be empty")
+		return fmt.Errorf("spec.device_type cannot be empty")
 	}
 
 	// 磁盘校验
-	if errKey, err = s.ValidateDisk(); err != nil {
-		return errKey, err
+	if err := s.ValidateDisk(); err != nil {
+		return err
 	}
 
 	switch resType {
 	case ResourceTypeCvm:
 		if len(s.ImageId) == 0 {
-			return "image_id", fmt.Errorf("image_id cannot be empty")
+			return fmt.Errorf("spec.image_id cannot be empty")
 		}
 	}
 
 	// 计费模式校验
 	if len(s.ChargeType) > 0 {
-		if err = s.ChargeType.Validate(); err != nil {
-			return "charge_type", err
+		if err := s.ChargeType.Validate(); err != nil {
+			return err
 		}
 
 		// 包年包月时，计费时长必传
 		if s.ChargeType == cvmapi.ChargeTypePrePaid && s.ChargeMonths < 1 {
-			return "charge_months", fmt.Errorf("charge_months invalid value < 1")
+			return fmt.Errorf("spec.charge_months invalid value < 1")
 		}
 	}
 
-	return "", nil
+	// 可用区校验
+	if len(s.Zone) == 0 && len(s.Zones) == 0 {
+		return fmt.Errorf("spec.zone or spec.zones cannot be empty")
+	}
+
+	// 如果是多可用区或“全部”可用区，那么Vpc和Subnet不能指定，必须为空
+	if (len(s.Zones) == 1 && s.Zones[0] == cvmapi.CvmZoneAll) || len(s.Zones) > 1 {
+		// 资源分配方式校验
+		if err := s.ResAssign.Validate(); err != nil {
+			return err
+		}
+		// VPC、子网校验
+		if len(s.Vpc) > 0 || len(s.Subnet) > 0 {
+			return fmt.Errorf("spec.vpc and spec.subnet cannot be set at multiple spec.zones num > 1")
+		}
+	}
+
+	return nil
 }
 
 // ValidateDisk validate disk spec
-func (s *ResourceSpec) ValidateDisk() (string, error) {
+func (s *ResourceSpec) ValidateDisk() error {
 	// 兼容旧的数据盘校验
 	if len(s.DataDisk) == 0 {
 		if s.DiskSize < 0 {
-			return "disk_size", fmt.Errorf("disk_size invalid value < 0")
+			return fmt.Errorf("spec.disk_size invalid value < 0")
 		}
 
 		diskLimit := int64(constant.DataDiskMaxSize)
 		if s.DiskSize > diskLimit {
-			return "disk_size", fmt.Errorf("disk_size exceed limit %d", diskLimit)
+			return fmt.Errorf("spec.disk_size exceed limit %d", diskLimit)
 		}
 
 		// 规格为 10 的倍数
 		diskUnit := int64(constant.DataDiskMultiple)
 		modDisk := s.DiskSize % diskUnit
 		if modDisk != 0 {
-			return "disk_size", fmt.Errorf("disk_size must be in multiples of %d", diskUnit)
+			return fmt.Errorf("spec.disk_size must be in multiples of %d", diskUnit)
 		}
 	}
 
 	// 系统盘类型校验
 	if len(s.SystemDisk.DiskType) > 0 {
 		if err := s.SystemDisk.Validate(); err != nil {
-			return "system_disk", err
+			return err
 		}
 		if s.SystemDisk.DiskSize < constant.SystemDiskMinSize || s.SystemDisk.DiskSize > constant.SystemDiskMaxSize {
-			return "system_disk.disk_size", fmt.Errorf("system_disk_size invalid value, must be in range [%d, %d]",
+			return fmt.Errorf("spec.system_disk_size invalid value, must be in range [%d, %d]",
 				constant.SystemDiskMinSize, constant.SystemDiskMaxSize)
 		}
 		// 系统盘大小必须是50的倍数
 		if s.SystemDisk.DiskSize%constant.SystemDiskMultiple != 0 {
-			return "system_disk.disk_size", fmt.Errorf("system_disk_size must be a multiple of %d",
-				constant.SystemDiskMultiple)
+			return fmt.Errorf("spec.system_disk_size must be a multiple of %d", constant.SystemDiskMultiple)
 		}
 	}
 
@@ -910,26 +955,24 @@ func (s *ResourceSpec) ValidateDisk() (string, error) {
 	dataDiskTotalNum := uint(0)
 	for _, dd := range s.DataDisk {
 		if err := dd.Validate(); err != nil {
-			return "data_disk", err
+			return err
 		}
 		if dd.DiskSize < constant.DataDiskMinSize || dd.DiskSize > constant.DataDiskMaxSize {
-			return "data_disk.disk_size", fmt.Errorf("data_disk_size invalid value, must be in range [%d, %d]",
+			return fmt.Errorf("spec.data_disk_size invalid value, must be in range [%d, %d]",
 				constant.DataDiskMinSize, constant.DataDiskMaxSize)
 		}
 		// 数据盘大小必须是10的倍数
 		if dd.DiskSize%constant.DataDiskMultiple != 0 {
-			return "data_disk.disk_size", fmt.Errorf("data_disk_size must be a multiple of %d",
-				constant.DataDiskMultiple)
+			return fmt.Errorf("spec.data_disk_size must be a multiple of %d", constant.DataDiskMultiple)
 		}
 		dataDiskTotalNum += dd.DiskNum
 	}
 	// 数据盘总数量不能超过20块
 	if dataDiskTotalNum < 0 || dataDiskTotalNum > constant.DataDiskTotalNum {
-		return "data_disk.disk_total_num", fmt.Errorf("data_disk_total_num invalid value, must be in range [0, %d]",
-			constant.DataDiskTotalNum)
+		return fmt.Errorf("spec.data_disk_total_num invalid value, must be in range [0, %d]", constant.DataDiskTotalNum)
 	}
 
-	return "", nil
+	return nil
 }
 
 // CreateApplyOrderResult result of create apply order
@@ -1507,16 +1550,16 @@ type ModifyApplyReq struct {
 // Validate whether ModifyApplyReq is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *ModifyApplyReq) Validate() (errKey string, err error) {
+func (param *ModifyApplyReq) Validate() error {
 	if len(param.SuborderID) == 0 {
-		return "suborder_id", fmt.Errorf("suborder_id should be set")
+		return fmt.Errorf("suborder_id should be set")
 	}
 
-	if key, err := param.Spec.Validate(ResourceTypeCvm); err != nil {
-		return fmt.Sprintf("spec.%s", key), err
+	if err := param.Spec.Validate(ResourceTypeCvm); err != nil {
+		return err
 	}
 
-	return "", nil
+	return nil
 }
 
 // RecommendApplyReq get apply order modification recommendation request
@@ -1544,8 +1587,10 @@ type RecommendApplyRst struct {
 
 // GetApplyModifyReq get apply order modify record request
 type GetApplyModifyReq struct {
-	SuborderID []string          `json:"suborder_id"`
-	Page       metadata.BasePage `json:"page" bson:"page"`
+	ID         []uint64                       `json:"id"`
+	SuborderID []string                       `json:"suborder_id"`
+	Status     []enumor.CvmModifyRecordStatus `json:"status"`
+	Page       metadata.BasePage              `json:"page" bson:"page"`
 }
 
 // Validate whether GetApplyModifyReq is valid
@@ -1577,6 +1622,18 @@ func (param *GetApplyModifyReq) GetFilter() (map[string]interface{}, error) {
 	if len(param.SuborderID) > 0 {
 		filter["suborder_id"] = mapstr.MapStr{
 			pkg.BKDBIN: param.SuborderID,
+		}
+	}
+
+	if len(param.Status) > 0 {
+		filter["status"] = mapstr.MapStr{
+			pkg.BKDBIN: param.Status,
+		}
+	}
+
+	if len(param.ID) > 0 {
+		filter["id"] = mapstr.MapStr{
+			pkg.BKDBIN: param.ID,
 		}
 	}
 
@@ -1639,4 +1696,85 @@ type DeviceInitMsg struct {
 	JobUrl string
 	JobID  string
 	BizID  int64
+}
+
+// ConfirmApplyModifyCompare confirm apply modify compare
+type ConfirmApplyModifyCompare struct {
+	PreDeviceType string `json:"pre_device_type"`
+	PreZone       string `json:"pre_zone"`
+	PreNum        string `json:"pre_num"`
+	PreVpc        string `json:"pre_vpc"`
+	PreSubnet     string `json:"pre_subnet"`
+	CurDeviceType string `json:"cur_device_type"`
+	CurZone       string `json:"cur_zone"`
+	CurNum        string `json:"cur_num"`
+	CurVpc        string `json:"cur_vpc"`
+	CurSubnet     string `json:"cur_subnet"`
+}
+
+// ConfirmApplyModifyReq confirm apply modify request
+type ConfirmApplyModifyReq struct {
+	BkUsername                                      string `json:"bk_username" validate:"required"`
+	bkbotapproval.CvmApplyModifyConfirmCallbackData `json:",inline"`
+}
+
+// Validate validate
+func (c *ConfirmApplyModifyReq) Validate() error {
+	return validator.Validate.Struct(c)
+}
+
+// ConfirmApplyModifyResp confirm modify response
+type ConfirmApplyModifyResp struct {
+	ResponseMsg   string                    `json:"response_msg"`   // 点击按钮后回显的信息
+	ResponseColor bkbotapproval.ButtonColor `json:"response_color"` // 点击按钮后回显的颜色
+	RequestID     string                    `json:"request_id"`
+}
+
+// ListApplyAuditInfoReq list apply audit info request
+type ListApplyAuditInfoReq struct {
+	TicketIDs []uint64 `json:"ticket_ids" validate:"required,min=1,max=100"`
+}
+
+// Validate ...
+func (l *ListApplyAuditInfoReq) Validate() error {
+	return validator.Validate.Struct(l)
+}
+
+// ListApplyAuditInfoResp list apply audit info response
+type ListApplyAuditInfoResp struct {
+	Details []ListApplyAuditInfo `json:"details"`
+}
+
+// ListApplyAuditInfo list apply audit info
+type ListApplyAuditInfo struct {
+	TicketID     uint64                `json:"ticket_id"`
+	Status       itsm.Status           `json:"status"`
+	CurrentSteps []*ApplyAuditItsmStep `json:"current_steps"`
+	TicketInfo   *GetApplyTicketRst    `json:"ticket_info"`
+	EndAt        *time.Time            `json:"end_at,omitempty"`
+}
+
+// ApproveApplyTicketNodeReq audit apply ticket node request parameter
+type ApproveApplyTicketNodeReq struct {
+	TicketID uint64 `json:"ticket_id" validate:"required"`
+	StateID  int64  `json:"state_id" validate:"required"`
+	Operator string `json:"operator" validate:"required"`
+	Approval *bool  `json:"approval" validate:"required"`
+	Remark   string `json:"remark"`
+}
+
+// Validate ...
+func (a *ApproveApplyTicketNodeReq) Validate() error {
+	return validator.Validate.Struct(a)
+}
+
+// FindApproveNodeResultReq find approve node result request
+type FindApproveNodeResultReq struct {
+	TicketID uint64 `json:"ticket_id" validate:"required"`
+	StateID  int64  `json:"state_id" validate:"required"`
+}
+
+// Validate ...
+func (g *FindApproveNodeResultReq) Validate() error {
+	return validator.Validate.Struct(g)
 }

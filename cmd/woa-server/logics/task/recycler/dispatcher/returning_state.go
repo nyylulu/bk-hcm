@@ -90,7 +90,7 @@ func (rs *ReturningState) Execute(ctx EventContext) error {
 	// run return tasks
 	ev := taskCtx.Dispatcher.returner.DealRecycleOrder(kt, taskCtx.Order)
 	// 记录日志，方便排查问题
-	logs.Infof("recycler:logics:cvm:ReturningState:start, subOrderID: %s, ev: %+v, rid: %s",
+	logs.Infof("recycler:logics:cvm:ReturningState:end, subOrderID: %s, ev: %+v, rid: %s",
 		orderId, cvt.PtrToVal(ev), kt.Rid)
 	return rs.UpdateState(ctx, ev)
 }
@@ -116,6 +116,8 @@ func (rs *ReturningState) setNextState(order *table.RecycleOrder, ev *event.Even
 		}
 	case event.ReturnHandling:
 		logs.Infof("recycle return order is handling, subOrderId: %s, type: %s", order.SuborderID, ev.Type)
+		// CRP侧未更新，不修改DB中Order状态
+		return nil
 	default:
 		logs.Errorf("unknown event type: %s, subOrderId: %s, status: %s", ev.Type, order.SuborderID, order.Status)
 		return fmt.Errorf("unknown event type: %s, subOrderId: %s, status: %s", ev.Type, order.SuborderID, order.Status)

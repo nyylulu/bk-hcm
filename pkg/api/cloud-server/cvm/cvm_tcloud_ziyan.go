@@ -64,3 +64,9 @@ type CmdbHostQueryReq struct {
 	BkHostIDs      []int64        `json:"bk_host_ids" validate:"omitempty"`
 	Page           *cmdb.BasePage `json:"page" validate:"required"`
 }
+
+// CvmResetConfigValue cvm reset config value.
+type CvmResetConfigValue struct {
+	BkBizIDs  []string `json:"bk_biz_ids"`
+	UserNames []string `json:"user_names"`
+}

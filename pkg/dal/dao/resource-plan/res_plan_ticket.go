@@ -26,7 +26,6 @@ import (
 
 	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/constant"
-	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/audit"
 	idgenerator "hcm/pkg/dal/dao/id-generator"
@@ -53,7 +52,6 @@ type ResPlanTicketInterface interface {
 	DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression) error
 	// ListWithStatus list resource plan ticket with corresponding status.
 	ListWithStatus(kt *kit.Kit, opt *types.ListOption) (*rtypes.RPTicketWithStatusListRst, error)
-	ListWithStatusAndRes(kt *kit.Kit, opt *types.ListOption) (*rtypes.RPTicketWithStatusAndResListRst, error)
 }
 
 var _ ResPlanTicketInterface = new(ResPlanTicketDao)
@@ -277,95 +275,4 @@ func (d ResPlanTicketDao) ListWithStatus(kt *kit.Kit, opt *types.ListOption) (
 	}
 
 	return &rtypes.RPTicketWithStatusListRst{Count: 0, Details: details}, nil
-}
-
-// ListWithStatusAndRes list resource plan ticket with status and resource.
-func (d ResPlanTicketDao) ListWithStatusAndRes(kt *kit.Kit, opt *types.ListOption) (
-	*rtypes.RPTicketWithStatusAndResListRst, error) {
-
-	if opt == nil {
-		return nil, errf.New(errf.InvalidParameter, "list res plan ticket options is nil")
-	}
-
-	// append status col type to col types.
-	colTypes := rpt.ResPlanTicketColumns.ColumnTypes()
-	statusColType := rpts.ResPlanTicketStatusColumns.ColumnTypes()["status"]
-	colTypes["status"] = statusColType
-
-	exprOpt := filter.NewExprOption(
-		filter.RuleFields(colTypes),
-		filter.MaxInLimit(constant.BkBizIDMaxLimit),
-	)
-
-	if err := opt.Validate(exprOpt, core.NewDefaultPageOption()); err != nil {
-		return nil, err
-	}
-
-	whereExpr, whereValue, err := opt.Filter.SQLWhereExpr(tools.DefaultSqlWhereOption)
-	if err != nil {
-		return nil, err
-	}
-
-	if opt.Page.Count {
-		// this is a count request, then do count operation only.
-		sql := fmt.Sprintf(`SELECT COUNT(*) FROM %s rpt JOIN %s rpts ON rpt.id = rpts.ticket_id %s`,
-			table.ResPlanTicketTable, table.ResPlanTicketStatusTable, whereExpr)
-
-		count, err := d.Orm.Do().Count(kt.Ctx, sql, whereValue)
-		if err != nil {
-			logs.ErrorJson("count res plan ticket failed, err: %v, filter: %v, rid: %s", err, opt.Filter, kt.Rid)
-			return nil, err
-		}
-
-		return &rtypes.RPTicketWithStatusAndResListRst{Count: count}, nil
-	}
-
-	pageExpr, err := types.PageSQLExpr(opt.Page, types.DefaultPageSQLOption)
-	if err != nil {
-		return nil, err
-	}
-
-	// convert resource plan ticket columns to rpt.column.
-	columns := make([]string, 0, len(rpt.ResPlanTicketColumns.Columns()))
-	for _, col := range rpt.ResPlanTicketColumns.Columns() {
-		columns = append(columns, "rpt."+col)
-	}
-	sql := fmt.Sprintf(`SELECT %s, rpts.status FROM %s rpt JOIN %s rpts ON rpt.id = rpts.ticket_id %s %s`,
-		strings.Join(columns, ","), table.ResPlanTicketTable, table.ResPlanTicketStatusTable, whereExpr, pageExpr)
-
-	details := make([]rtypes.RPTicketWithStatusAndRes, 0)
-	if err = d.Orm.Do().Select(kt.Ctx, &details, sql, whereValue); err != nil {
-		return nil, err
-	}
-
-	return &rtypes.RPTicketWithStatusAndResListRst{Count: 0, Details: appendFieldToListResPlanTickets(details)}, nil
-}
-
-func appendFieldToListResPlanTickets(details []rtypes.RPTicketWithStatusAndRes) []rtypes.RPTicketWithStatusAndRes {
-	for idx, detail := range details {
-		// set status name.
-		details[idx].StatusName = detail.Status.Name()
-		// set ticket type name.
-		details[idx].TicketTypeName = detail.Type.Name()
-		// set resource
-		switch detail.Type {
-		case enumor.RPTicketTypeAdd:
-			details[idx].OriginalInfo = rtypes.NewNullResourceInfo()
-			details[idx].UpdatedInfo = rtypes.NewResourceInfo(detail.UpdatedCpuCore, detail.UpdatedMemory,
-				detail.UpdatedDiskSize)
-		case enumor.RPTicketTypeAdjust:
-			details[idx].OriginalInfo = rtypes.NewResourceInfo(detail.OriginalCpuCore, detail.OriginalMemory,
-				detail.OriginalDiskSize)
-			details[idx].UpdatedInfo = rtypes.NewResourceInfo(detail.UpdatedCpuCore, detail.UpdatedMemory,
-				detail.UpdatedDiskSize)
-		case enumor.RPTicketTypeDelete:
-			details[idx].OriginalInfo = rtypes.NewResourceInfo(detail.OriginalCpuCore, detail.OriginalMemory,
-				detail.OriginalDiskSize)
-			details[idx].UpdatedInfo = rtypes.NewNullResourceInfo()
-		default:
-			logs.Warnf("failed to append field to list res plan tickets: unsupported ticket type: %s, ticket id: %s",
-				detail.Type, detail.ID)
-		}
-	}
-	return details
 }

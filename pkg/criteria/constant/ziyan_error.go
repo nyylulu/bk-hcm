@@ -33,6 +33,8 @@ const (
 	ResPlanExpireNotificationPushFailed WarnSign = "res_plan_expire_notification_push_failed"
 	// RollingServerReturnNotificationPushFailed rolling server return notification push failed.
 	RollingServerReturnNotificationPushFailed WarnSign = "rolling_server_return_notification_push_failed"
+	// ResPlanRefreshTransferQuotaFailed res plan refresh transfer quota failed.
+	ResPlanRefreshTransferQuotaFailed WarnSign = "res_plan_refresh_transfer_quota_failed"
 
 	// CvmResetSystemUpdatePwdFailed cvm reset system update pwd failed.
 	CvmResetSystemUpdatePwdFailed WarnSign = "cvm_reset_system_update_pwd_failed"

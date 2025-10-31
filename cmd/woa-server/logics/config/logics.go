@@ -30,6 +30,7 @@ type Logics interface {
 	CvmImage() CvmImageIf
 	Device() DeviceIf
 	Capacity() CapacityIf
+	BatchCapacity() CapacityIf
 	LeftIP() LeftIPIf
 	Sg() ziyan.SgIf
 }
@@ -44,6 +45,7 @@ type logics struct {
 	cvmImage       CvmImageIf
 	device         DeviceIf
 	capacity       CapacityIf
+	batchCapacity  CapacityIf
 	leftIP         LeftIPIf
 	sg             ziyan.SgIf
 }
@@ -51,6 +53,7 @@ type logics struct {
 // New create a logics manager
 func New(client *client.ClientSet, thirdCli *thirdparty.Client, cmdbCli cmdb.Client) Logics {
 	vpcOp := NewVpcOp(client, thirdCli)
+	capacityOp := NewCapacityOp(vpcOp, thirdCli, cmdbCli)
 	return &logics{
 		requirement:    NewRequirementOp(),
 		region:         NewRegionOp(),
@@ -60,7 +63,8 @@ func New(client *client.ClientSet, thirdCli *thirdparty.Client, cmdbCli cmdb.Cli
 		deviceRestrict: NewDeviceRestrictOp(),
 		cvmImage:       NewCvmImageOp(),
 		device:         NewDeviceOp(thirdCli),
-		capacity:       NewCapacityOp(vpcOp, thirdCli, cmdbCli),
+		capacity:       capacityOp,
+		batchCapacity:  capacityOp,
 		leftIP:         NewLeftIPOp(vpcOp, thirdCli),
 		sg:             ziyan.NewSgOp(client),
 	}
@@ -109,6 +113,11 @@ func (l *logics) Device() DeviceIf {
 // Capacity capacity interface
 func (l *logics) Capacity() CapacityIf {
 	return l.capacity
+}
+
+// BatchCapacity batch capacity interface
+func (l *logics) BatchCapacity() CapacityIf {
+	return l.batchCapacity
 }
 
 // LeftIP left ip interface

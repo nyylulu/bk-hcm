@@ -33,6 +33,7 @@ export interface IDissolve {
       host_count: number | string;
       cpu_count: number;
     };
+    delivered_core: number;
   };
   progress: string;
   [key: string]: any;

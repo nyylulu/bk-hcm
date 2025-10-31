@@ -13,6 +13,7 @@ import usageOrderViewProperties from '@/model/rolling-server/usage-order.view';
 import { GLOBAL_BIZS_KEY } from '@/common/constant';
 import { timeFormatter } from '@/common/util';
 import { RollingServerRecordItem } from '@/store';
+import { MENU_BUSINESS_TICKET_MANAGEMENT } from '@/constants/menu-symbol';
 
 withDefaults(defineProps<IDataListProps>(), {});
 
@@ -50,7 +51,7 @@ const columConfig: Record<string, PropertyColumnConfig> = {
           onClick() {
             const searchQs = useSearchQs();
             routerAction.open({
-              name: 'ApplicationsManage',
+              name: MENU_BUSINESS_TICKET_MANAGEMENT,
               query: {
                 [GLOBAL_BIZS_KEY]: data.bk_biz_id,
                 type: 'host_apply',

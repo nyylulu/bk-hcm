@@ -27,11 +27,14 @@ import (
 
 	"hcm/cmd/cloud-server/logics/audit"
 	"hcm/cmd/cloud-server/service/capability"
+	adaptortype "hcm/pkg/adaptor/types"
 	cloudserver "hcm/pkg/api/cloud-server"
+	csbwpkg "hcm/pkg/api/cloud-server/bandwidth-package"
 	"hcm/pkg/api/core"
 	"hcm/pkg/api/data-service/cloud"
 	bwpkg "hcm/pkg/api/hc-service/bandwidth-packages"
 	"hcm/pkg/client"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/tools"
@@ -41,6 +44,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
+	"hcm/pkg/tools/converter"
 	"hcm/pkg/tools/hooks/handler"
 )
 
@@ -57,6 +61,8 @@ func InitService(c *capability.Capability) {
 	// clb apis in res
 	h.Add("QueryBandPackage", http.MethodPost, "/bandwidth_packages/query", svc.QueryBandPackage)
 	h.Add("QueryBizBandPackage", http.MethodPost, "/bizs/{bk_biz_id}/bandwidth_packages/query", svc.QueryBizBandPackage)
+	h.Add("UpdateRecommendBandPackage", http.MethodPatch, "/bandwidth_packages/recommend",
+		svc.UpdateRecommendBandPackage)
 
 	h.Load(c.WebService)
 }
@@ -152,5 +158,65 @@ func (svc *bandSvc) ListTCloudZiyanBwPkg(kt *kit.Kit, data json.RawMessage) (any
 		logs.Errorf("fail to list bandwidth package, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
-	return bandwidthPackage, nil
+
+	packages, err := svc.fillRecommend(kt, bandwidthPackage.Packages)
+	if err != nil {
+		logs.Errorf("fail to fill recommend, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+	resp := &csbwpkg.ListTCloudBwPkgResp{
+		TotalCount: bandwidthPackage.TotalCount,
+		Packages:   packages,
+	}
+	return resp, nil
+}
+
+func (svc *bandSvc) fillRecommend(kt *kit.Kit, packages []adaptortype.TCloudBandwidthPackage) (
+	[]csbwpkg.ListTCloudBwPkgResult, error) {
+
+	if len(packages) == 0 {
+		return nil, nil
+	}
+	result := make([]csbwpkg.ListTCloudBwPkgResult, 0, len(packages))
+	_, recommendMap, err := svc.getRecommendConfig(kt)
+	if err != nil {
+		logs.Errorf("fail to get recommend config, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	for _, pkg := range packages {
+		tmp := csbwpkg.ListTCloudBwPkgResult{
+			TCloudBandwidthPackage: pkg,
+		}
+		_, ok := recommendMap[pkg.ID]
+		if ok {
+			tmp.Recommend = true
+		}
+		result = append(result, tmp)
+	}
+	return result, nil
+}
+
+func (svc *bandSvc) getRecommendConfig(kt *kit.Kit) (string, map[string]struct{}, error) {
+	listReq := &core.ListReq{
+		Filter: tools.ExpressionAnd(
+			tools.RuleEqual("config_type", constant.GlobalConfigTypeCLBBandwidthPackageRecommend),
+			tools.RuleEqual("config_key", constant.GlobalConfigTypeCLBBandwidthPackageRecommend),
+		),
+		Page: core.NewDefaultBasePage(),
+	}
+	resp, err := svc.client.DataService().Global.GlobalConfig.List(kt, listReq)
+	if err != nil {
+		logs.Errorf("fail to list global config, err: %v, rid: %s", err, kt.Rid)
+		return "", nil, err
+	}
+	if len(resp.Details) == 0 {
+		return "", nil, nil
+	}
+	bandwidthPackage := make([]string, 0)
+	if err := json.Unmarshal([]byte(resp.Details[0].ConfigValue), &bandwidthPackage); err != nil {
+		logs.Errorf("fail to unmarshal global config, err: %v, rid: %s", err, kt.Rid)
+		return resp.Details[0].ID, nil, err
+	}
+	return resp.Details[0].ID, converter.StringSliceToMap(bandwidthPackage), nil
 }

@@ -240,8 +240,8 @@ func (r *Returner) processPmReturnResult(kt *kit.Kit, task *table.ReturnTask, ho
 			r.rollbackTransit(kt, hosts)
 		}
 
-		if err := r.UpdateReturnTaskInfo(context.Background(), task, "", table.ReturnStatusFailed, msg); err != nil {
-			logs.Errorf("failed to update return task info, order id: %s, err: %v, rid: %s",
+		if err := r.UpdateReturnTaskStatus(kt, task.SuborderID, table.ReturnStatusFailed, msg); err != nil {
+			logs.Errorf("failed to update return task status, order id: %s, err: %v, rid: %s",
 				task.SuborderID, err, kt.Rid)
 			return &event.Event{Type: event.ReturnFailed, Error: err}
 		}
@@ -254,8 +254,8 @@ func (r *Returner) processPmReturnResult(kt *kit.Kit, task *table.ReturnTask, ho
 		return &event.Event{Type: event.ReturnFailed, Error: nil}
 	}
 
-	if err := r.UpdateReturnTaskInfo(context.Background(), task, "", table.ReturnStatusSuccess, "success"); err != nil {
-		logs.Errorf("failed to update return task info, order id: %s, err: %v, rid: %s", task.SuborderID, err, kt.Rid)
+	if err := r.UpdateReturnTaskStatus(kt, task.SuborderID, table.ReturnStatusSuccess, "success"); err != nil {
+		logs.Errorf("failed to update return task status, order id: %s, err: %v, rid: %s", task.SuborderID, err, kt.Rid)
 		return &event.Event{Type: event.ReturnFailed, Error: err}
 	}
 

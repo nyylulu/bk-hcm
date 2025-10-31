@@ -75,6 +75,7 @@ import dayjs from 'dayjs';
 
 import GridContainer from '@/components/layout/grid-container/grid-container.vue';
 import GridItem from '@/components/layout/grid-container/grid-item.vue';
+import { MENU_BUSINESS_TICKET_RESOURCE_PLAN_DETAILS } from '@/constants/menu-symbol';
 
 interface IProps {
   data: IListResourcesDemandsItem;
@@ -145,7 +146,7 @@ const handleConfirm = async () => {
   const { data } = await planStore.adjust_biz_resource_plan_demand({ adjusts: [info] });
   if (!data.id) return;
   router.push({
-    path: '/business/applications/resource-plan/detail',
+    name: MENU_BUSINESS_TICKET_RESOURCE_PLAN_DETAILS,
     query: { id: data.id },
   });
 };

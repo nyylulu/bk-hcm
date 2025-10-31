@@ -98,6 +98,8 @@ func (g GcpCreditMonthTask) Pull(kt *kit.Kit, opt *MonthTaskActionOption, index 
 			CreditInfos:            item.Credits,
 			UsageStartTime:         cvt.ValToPtr(beginDate),
 			UsageEndTime:           cvt.ValToPtr(endDate),
+			SkuID:                  cvt.ValToPtr(item.SkuID),
+			SkuDescription:         cvt.ValToPtr(item.SkuDescription),
 		}
 		recordList = append(recordList, record)
 	}
@@ -154,20 +156,36 @@ func (g GcpCreditMonthTask) Split(kt *kit.Kit, opt *MonthTaskActionOption, rawIt
 		}
 		for _, credit := range gcpRaw.CreditInfos {
 			creditOwnerSummary := creditToSummary[credit.ID]
-			if creditOwnerSummary == nil {
+			if creditOwnerSummary != nil {
+				ownerItems, err := g.convCreditToOwnerRaw(gcpRaw, credit, creditOwnerSummary)
+				if err != nil {
+					logs.Errorf("fail to conv credit to owner raw bill item, err: %v, rid: %s", err, kt.Rid)
+					return nil, err
+				}
+				result = append(result, ownerItems...)
+				if cvt.PtrToVal(gcpRaw.ProjectID) == "" {
+					// cost do not belong to any project, handled by support month task
+					continue
+				}
+				// if match credit return info return to owner account(negative cost) and usage account(positive cost)
+				usageSummary := summaryMap[cvt.PtrToVal(gcpRaw.ProjectID)]
+				if usageSummary == nil {
+					logs.Errorf("gcp credit usage summary for project %s not found, rid: %s",
+						cvt.PtrToVal(gcpRaw.ProjectID), kt.Rid)
+					return nil, fmt.Errorf("gcp credit usage summary for project %s not found",
+						cvt.PtrToVal(gcpRaw.ProjectID))
+				}
+				usageItems, err := g.convCreditToUsageRaw(gcpRaw, credit, usageSummary)
+				if err != nil {
+					logs.Errorf("fail to conv credit to usage raw bill item, err: %v, rid: %s", err, kt.Rid)
+					return nil, err
+				}
+				result = append(result, usageItems...)
 				continue
 			}
-			ownerItems, err := g.convCreditToOwnerRaw(gcpRaw, credit, creditOwnerSummary)
-			if err != nil {
-				logs.Errorf("fail to conv credit to owner raw bill item, err: %v, rid: %s", err, kt.Rid)
-				return nil, err
-			}
-			result = append(result, ownerItems...)
-			if cvt.PtrToVal(gcpRaw.ProjectID) == "" {
-				// cost do not belong to any project, handled by support month task
+			if !enumor.IsAIBillItem(cvt.PtrToVal(gcpRaw.SkuDescription)) || cvt.PtrToVal(gcpRaw.ProjectID) == "" {
 				continue
 			}
-			// if match credit return info return to owner account(negative cost) and usage account(positive cost)
 			usageSummary := summaryMap[cvt.PtrToVal(gcpRaw.ProjectID)]
 			if usageSummary == nil {
 				logs.Errorf("gcp credit usage summary for project %s not found, rid: %s",
@@ -175,13 +193,12 @@ func (g GcpCreditMonthTask) Split(kt *kit.Kit, opt *MonthTaskActionOption, rawIt
 				return nil, fmt.Errorf("gcp credit usage summary for project %s not found",
 					cvt.PtrToVal(gcpRaw.ProjectID))
 			}
-			usageItems, err := g.convCreditToUsageRaw(gcpRaw, credit, usageSummary)
+			usageItems, err := g.convAiDeductToUsageRaw(gcpRaw, credit, usageSummary)
 			if err != nil {
-				logs.Errorf("fail to conv credit to usage raw bill item, err: %v, rid: %s", err, kt.Rid)
+				logs.Errorf("fail to conv ai deduct to usage raw bill item, err: %v, rid: %s", err, kt.Rid)
 				return nil, err
 			}
 			result = append(result, usageItems...)
-
 		}
 	}
 	return result, nil
@@ -237,6 +254,54 @@ func (g GcpCreditMonthTask) convCreditToUsageRaw(gcpRaw billcore.GcpRawBillItem,
 	return []dsbill.BillItemCreateReq[json.RawMessage]{itemUsage}, nil
 }
 
+func (g GcpCreditMonthTask) convAiDeductToUsageRaw(gcpRaw billcore.GcpRawBillItem, credit billcore.GcpCredit,
+	usageSummary *dsbill.BillSummaryMain) ([]dsbill.BillItemCreateReq[json.RawMessage], error) {
+
+	ext := billcore.GcpRawBillItem{
+		BillingAccountID:       gcpRaw.BillingAccountID,
+		Cost:                   credit.Amount,
+		Currency:               gcpRaw.Currency,
+		CurrencyConversionRate: gcpRaw.CurrencyConversionRate,
+		Month:                  gcpRaw.Month,
+		ProjectID:              gcpRaw.ProjectID,
+		ProjectName:            gcpRaw.ProjectName,
+		ProjectNumber:          gcpRaw.ProjectNumber,
+		ServiceID:              cvt.ValToPtr(credit.ID),
+		ServiceDescription:     cvt.ValToPtr(credit.Name),
+		SkuDescription:         gcpRaw.SkuDescription,
+		SkuID:                  gcpRaw.SkuID,
+		TotalCost:              credit.Amount,
+		ReturnCost:             credit.Amount,
+		UsageEndTime:           gcpRaw.UsageEndTime,
+		UsagePricingUnit:       gcpRaw.UsagePricingUnit,
+		UsageStartTime:         gcpRaw.UsageStartTime,
+		CreditInfos:            []billcore.GcpCredit{credit},
+	}
+
+	extByte, err := json.Marshal(ext)
+	if err != nil {
+		return nil, fmt.Errorf("fail to marshal ai deduct user extension, err: %v", err)
+	}
+	itemUsage := dsbill.BillItemCreateReq[json.RawMessage]{
+		RootAccountID: usageSummary.RootAccountID,
+		MainAccountID: usageSummary.MainAccountID,
+		Vendor:        usageSummary.Vendor,
+		ProductID:     usageSummary.ProductID,
+		BkBizID:       usageSummary.BkBizID,
+		BillYear:      usageSummary.BillYear,
+		BillMonth:     usageSummary.BillMonth,
+		BillDay:       enumor.MonthTaskSpecialBillDay,
+		VersionID:     usageSummary.CurrentVersion,
+		Currency:      usageSummary.Currency,
+		Cost:          cvt.PtrToVal(credit.Amount),
+		HcProductCode: constant.GcpAIDeductProductCodeReverse,
+		HcProductName: constant.AddBillItemAIPrefix(cvt.PtrToVal(ext.ServiceID)),
+		Extension:     cvt.ValToPtr[json.RawMessage](extByte),
+	}
+
+	return []dsbill.BillItemCreateReq[json.RawMessage]{itemUsage}, nil
+}
+
 func (g GcpCreditMonthTask) convCreditToOwnerRaw(gcpRaw billcore.GcpRawBillItem, credit billcore.GcpCredit,
 	ownerSummary *dsbill.BillSummaryMain) ([]dsbill.BillItemCreateReq[json.RawMessage], error) {
 
@@ -285,5 +350,6 @@ func (g GcpCreditMonthTask) convCreditToOwnerRaw(gcpRaw billcore.GcpRawBillItem,
 
 // GetHcProductCodes type to product codes
 func (g GcpCreditMonthTask) GetHcProductCodes() []string {
-	return []string{constant.GcpCreditReturnCost, constant.GcpCreditReturnCostReverse}
+	return []string{constant.GcpCreditReturnCost, constant.GcpCreditReturnCostReverse,
+		constant.GcpAIDeductProductCodeReverse}
 }

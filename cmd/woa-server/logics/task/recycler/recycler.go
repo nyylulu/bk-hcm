@@ -113,7 +113,7 @@ type Interface interface {
 	// RunRecycleTask(task *table.DetectTask, startStep uint)
 
 	// CheckDetectStatus check whether detection is finished or not
-	CheckDetectStatus(orderId string) error
+	CheckDetectStatus(kt *kit.Kit, orderId string) error
 	// CheckUworkOpenTicket check whether uwork has open ticket
 	CheckUworkOpenTicket(kt *kit.Kit, assetID string) ([]string, error)
 	// TransitCvm transit CVM resource
@@ -132,9 +132,8 @@ type Interface interface {
 	QueryReturnStatus(kt *kit.Kit, task *table.ReturnTask, hosts []*table.RecycleHost) *event.Event
 	// UpdateOrderInfo update recycle order info
 	UpdateOrderInfo(kt *kit.Kit, orderId, handler string, success, failed, pending uint, msg string) error
-	// UpdateReturnTaskInfo update return task info
-	UpdateReturnTaskInfo(ctx context.Context, task *table.ReturnTask, taskId string, status table.ReturnStatus,
-		msg string) error
+	// UpdateReturnTaskStatus update return task status
+	UpdateReturnTaskStatus(kt *kit.Kit, suborderID string, status table.ReturnStatus, msg string) error
 
 	StartStuckCheckLoop(kt *kit.Kit)
 }
@@ -206,11 +205,9 @@ func (r *recycler) GetDispatcher() *dispatcher.Dispatcher {
 	return r.dispatcher
 }
 
-// UpdateReturnTaskInfo update return task info
-func (r *recycler) UpdateReturnTaskInfo(ctx context.Context, task *table.ReturnTask, taskId string,
-	status table.ReturnStatus, msg string) error {
-
-	return r.dispatcher.GetReturn().UpdateReturnTaskInfo(ctx, task, taskId, status, msg)
+// UpdateReturnTaskStatus update return task status
+func (r *recycler) UpdateReturnTaskStatus(kt *kit.Kit, suborderID string, status table.ReturnStatus, msg string) error {
+	return r.dispatcher.GetReturn().UpdateReturnTaskStatus(kt, suborderID, status, msg)
 }
 
 // RecycleCheck check whether hosts can be recycled or not
@@ -305,8 +302,10 @@ func (r *recycler) checkRecycleAbility(kt *kit.Kit, hostBase []*cmdb.Host,
 			bizName = "业务资源池"
 		}
 		var moduleDefaultVal int64
+		var topoModule string
 		if module, ok := mapModuleIdToModule[moduleId]; ok {
 			moduleDefaultVal = module.Default
+			topoModule = module.BkModuleName
 		}
 		hasPermission := false
 		if permission, ok := mapBizPermission[bizId]; ok {
@@ -320,6 +319,7 @@ func (r *recycler) checkRecycleAbility(kt *kit.Kit, hostBase []*cmdb.Host,
 			BizID:            bizId,
 			BizName:          bizName,
 			ModuleDefaultVal: moduleDefaultVal,
+			TopoModule:       topoModule,
 			Operator:         host.Operator,
 			BakOperator:      host.BkBakOperator,
 			DeviceType:       host.SvrDeviceClass,
@@ -387,10 +387,18 @@ func (r *recycler) fillCheckInfo(host *types.RecycleCheckInfo, user string, hasP
 	} else if strings.Contains(host.Operator, user) == false && strings.Contains(host.BakOperator, user) == false {
 		host.Recyclable = false
 		host.Message = "必须为主机负责人或备份负责人"
+	} else if !r.hasInnnerIP(host.IP) {
+		host.Recyclable = false
+		host.Message = "主机没有内网IP，不可回收"
 	} else {
 		host.Recyclable = true
 		host.Message = "可回收"
 	}
+}
+
+// hasInnnerIP 检查主机是否有内网IP
+func (r *recycler) hasInnnerIP(ip string) bool {
+	return strings.TrimSpace(ip) != ""
 }
 
 // getHostBaseInfo get host detail info for recycle
@@ -1873,8 +1881,8 @@ func (r *recycler) GetDetectStepCfg(kit *kit.Kit) (*types.GetDetectStepCfgRst, e
 }
 
 // CheckDetectStatus check recycle task info
-func (r *recycler) CheckDetectStatus(orderId string) error {
-	return r.dispatcher.GetDetector().CheckDetectStatus(orderId)
+func (r *recycler) CheckDetectStatus(kt *kit.Kit, orderId string) error {
+	return r.dispatcher.GetDetector().CheckDetectStatus(kt, orderId)
 }
 
 // CheckUworkOpenTicket ckeck host uwork ticket status

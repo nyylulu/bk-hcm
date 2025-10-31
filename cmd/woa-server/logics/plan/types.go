@@ -35,36 +35,6 @@ import (
 	"hcm/pkg/tools/times"
 )
 
-// TicketInfo resource plan ticket info.
-type TicketInfo struct {
-	ID               string                `json:"id"`
-	Type             enumor.RPTicketType   `json:"type"`
-	Applicant        string                `json:"applicant"`
-	BkBizID          int64                 `json:"bk_biz_id"`
-	BkBizName        string                `json:"bk_biz_name"`
-	OpProductID      int64                 `json:"op_product_id"`
-	OpProductName    string                `json:"op_product_name"`
-	PlanProductID    int64                 `json:"plan_product_id"`
-	PlanProductName  string                `json:"plan_product_name"`
-	VirtualDeptID    int64                 `json:"virtual_dept_id"`
-	VirtualDeptName  string                `json:"virtual_dept_name"`
-	DemandClass      enumor.DemandClass    `json:"demand_class"`
-	OriginalCpuCore  float64               `json:"original_cpu_core"`
-	OriginalMemory   float64               `json:"original_memory"`
-	OriginalDiskSize float64               `json:"original_disk_size"`
-	UpdatedCpuCore   float64               `json:"updated_cpu_core"`
-	UpdatedMemory    float64               `json:"updated_memory"`
-	UpdatedDiskSize  float64               `json:"updated_disk_size"`
-	Remark           string                `json:"remark"`
-	Demands          rpt.ResPlanDemands    `json:"demands"`
-	SubmittedAt      string                `json:"submitted_at"`
-	Status           enumor.RPTicketStatus `json:"status"`
-	ItsmSn           string                `json:"itsm_sn"`
-	ItsmUrl          string                `json:"itsm_url"`
-	CrpSn            string                `json:"crp_sn"`
-	CrpUrl           string                `json:"crp_url"`
-}
-
 // CreateResPlanTicketReq is create resource plan ticket request.
 type CreateResPlanTicketReq struct {
 	TicketType  enumor.RPTicketType `json:"ticket_type" validate:"required"`
@@ -134,15 +104,16 @@ func (r *CreateResPlanTicketReq) Validate() error {
 
 // QueryIEGDemandsReq query IEG demands request.
 type QueryIEGDemandsReq struct {
-	ExpectTimeRange *times.DateRange `json:"expect_time_range" validate:"omitempty"`
-	CrpDemandIDs    []int64          `json:"crp_demand_ids" validate:"omitempty"`
-	CrpSns          []string         `json:"crp_sns" validate:"omitempty"`
-	DeviceClasses   []string         `json:"device_classes" validate:"omitempty"`
-	PlanProdNames   []string         `json:"plan_prod_names" validate:"omitempty"`
-	OpProdNames     []string         `json:"op_prod_names" validate:"omitempty"`
-	ObsProjects     []string         `json:"obs_projects" validate:"omitempty"`
-	RegionNames     []string         `json:"region_names" validate:"omitempty"`
-	ZoneNames       []string         `json:"zone_names" validate:"omitempty"`
+	ExpectTimeRange  *times.DateRange `json:"expect_time_range" validate:"omitempty"`
+	CrpDemandIDs     []int64          `json:"crp_demand_ids" validate:"omitempty"`
+	CrpSns           []string         `json:"crp_sns" validate:"omitempty"`
+	DeviceClasses    []string         `json:"device_classes" validate:"omitempty"`
+	PlanProdNames    []string         `json:"plan_prod_names" validate:"omitempty"`
+	OpProdNames      []string         `json:"op_prod_names" validate:"omitempty"`
+	ObsProjects      []string         `json:"obs_projects" validate:"omitempty"`
+	RegionNames      []string         `json:"region_names" validate:"omitempty"`
+	ZoneNames        []string         `json:"zone_names" validate:"omitempty"`
+	TechnicalClasses []string         `json:"technical_classes" validate:"omitempty"`
 }
 
 // Validate whether QueryIEGDemandsReq is valid.

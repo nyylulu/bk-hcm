@@ -25,6 +25,7 @@ import (
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
+	"hcm/pkg/iam/meta"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 	"hcm/pkg/tools/hooks/handler"
@@ -55,7 +56,7 @@ func (svc *cvmSvc) batchAsyncStopCvmSvc(cts *rest.Contexts, bkBizID int64, valid
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	if err := svc.validateAuthorize(cts, req.IDs, validHandler); err != nil {
+	if err := svc.validateAuthorize(cts, req.IDs, meta.Stop, validHandler); err != nil {
 		logs.Errorf("validate authorize and create audit failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}

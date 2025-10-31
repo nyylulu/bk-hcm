@@ -65,6 +65,12 @@ const (
 	GlobalConfigTypeRegionDefaultVpc = "region_default_vpc"
 	// GlobalConfigTypeRegionDefaultSecGroup 地域默认安全组
 	GlobalConfigTypeRegionDefaultSecGroup = "region_default_security_group"
+	// DefaultTechnicalClass 预测转移额度-默认的技术类型
+	DefaultTechnicalClass = "DEFAULT"
+	// GlobalConfigTypeCvmResetBizIDList 主机重装的业务白名单
+	GlobalConfigTypeCvmResetBizIDList = "cvm_reset_biz_id_list"
+	// GlobalConfigTypeCLBBandwidthPackageRecommend CLB带宽推荐
+	GlobalConfigTypeCLBBandwidthPackageRecommend = "clb_bandwidth_package_recommend"
 )
 
 const (
@@ -96,3 +102,18 @@ const (
 	// SystemDiskMultiple 数据盘大小倍数
 	SystemDiskMultiple = 50
 )
+
+const (
+	// ResourcePlanTransferKey this is the config type for resource plan transfer.
+	ResourcePlanTransferKey = "resource_plan_transfer"
+	// TransferQuotaKey this is the config key for transfer quota.
+	TransferQuotaKey = "quota"
+	// TransferAuditQuotaKey this is the config key for transfer audit quota.
+	TransferAuditQuotaKey = "audit_quota"
+)
+
+// AdminAuditStepName 管理员审批阶段名称
+const AdminAuditStepName = "管理员审批"
+
+// AdminHandler 管理员用户列表，兜底
+const AdminHandler = "dommyzhang;forestchen"

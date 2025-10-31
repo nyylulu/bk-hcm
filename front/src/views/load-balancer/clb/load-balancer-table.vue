@@ -48,6 +48,8 @@ import HoverCopy from '@/components/copy-to-clipboard/hover-copy.vue';
 
 defineOptions({ name: 'load-balancer-table' });
 
+const emit = defineEmits<(e: 'delete-listener') => void>();
+
 const route = useRoute();
 const { t } = useI18n();
 const { getAllVendorRegion } = useRegionStore();
@@ -116,7 +118,7 @@ const actionConfig: Record<LoadBalancerActionType, ActionItemType> = {
   },
   [LoadBalancerActionType.BATCH_EXPORT]: {
     value: LoadBalancerActionType.BATCH_EXPORT,
-    render: () => h(BatchExportButton, { selections: selections.value }),
+    render: () => h(BatchExportButton, { selections: selections.value, bizId: currentGlobalBusinessId.value }),
   },
 };
 const loadBalancerActionList = computed<ActionItemType[]>(() => {
@@ -295,6 +297,7 @@ const handleSingleDelete = (row: any) => {
     await loadBalancerClbStore.batchDeleteLoadBalancer({ ids: [row.id] }, currentGlobalBusinessId.value);
     Message({ message: '删除成功', theme: 'success' });
     routerAction.redirect({ query: { ...route.query, _t: Date.now() } });
+    emit('delete-listener');
   });
 };
 
@@ -417,7 +420,7 @@ const syncDialogState = reactive({ isShow: false, isHidden: true });
           <bk-table-column :label="t('操作')" width="120" fixed="right" :show-overflow-tooltip="false">
             <template #default="{ row }">
               <div class="operation-cell">
-                <single-export-button :data="row" />
+                <single-export-button :data="row" :biz-id="currentGlobalBusinessId" />
                 <hcm-auth
                   :sign="getAuthSignByBusinessId(currentGlobalBusinessId, AUTH_DELETE_CLB, AUTH_BIZ_DELETE_CLB)"
                   v-slot="{ noPerm }"

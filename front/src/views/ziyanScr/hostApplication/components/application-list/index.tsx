@@ -1,4 +1,4 @@
-import { defineComponent, onMounted, ref, computed, watch, reactive } from 'vue';
+import { defineComponent, onMounted, ref, watch, reactive } from 'vue';
 import './index.scss';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
 import { Button, Message, Table, Sideslider } from 'bkui-vue';
@@ -79,35 +79,63 @@ export default defineComponent({
     const route = useRoute();
     const orderClipboard = ref({});
     columns.splice(3, 0);
-    const opBtnDisabled = computed(() => {
-      return (row) => {
-        if (row.stage === 'RUNNING' && row.status === 'MATCHING') {
-          return true;
-        }
-        if (!row.suborder_id) {
-          return true;
-        }
-        if (
-          ['wait', 'MATCHED_SOME', 'MATCHING'].includes(row.status) ||
-          (row.stage === 'SUSPEND' && row.status === 'TERMINATE')
-        ) {
-          return false;
-        }
-        if (['UNCOMMIT', 'PAUSED'].includes(row.status)) {
-          return true;
-        }
-        if (['AUDIT'].includes(row.stage) && !row.status) {
-          return true;
-        }
-        if (['TERMINATE'].includes(row.stage)) {
-          return true;
-        }
-        if (row.stage === 'DONE' && row.status === 'DONE') {
-          return true;
-        }
+
+    const opBtnDisabled = (row: any) => {
+      if (row.stage === 'RUNNING' && row.status === 'MATCHING') {
+        return true;
+      }
+      if (!row.suborder_id) {
+        return true;
+      }
+      if (
+        ['wait', 'MATCHED_SOME', 'MATCHING'].includes(row.status) ||
+        (row.stage === 'SUSPEND' && row.status === 'TERMINATE')
+      ) {
         return false;
-      };
-    });
+      }
+      if (['UNCOMMIT', 'PAUSED'].includes(row.status)) {
+        return true;
+      }
+      if (['AUDIT'].includes(row.stage) && !row.status) {
+        return true;
+      }
+      if (['TERMINATE'].includes(row.stage)) {
+        return true;
+      }
+      if (row.stage === 'DONE' && row.status === 'DONE') {
+        return true;
+      }
+      return false;
+    };
+
+    // 原opBtnDisabled方法重试与终止操作共用了，可能是一个错误的实现，这里将其拆开
+    const retryBtnDisabled = (row: any) => {
+      if (row.stage === 'RUNNING' && row.status === 'MATCHING') {
+        return true;
+      }
+      if (!row.suborder_id) {
+        return true;
+      }
+      if (
+        ['wait', 'MATCHED_SOME', 'MATCHING'].includes(row.status) ||
+        (row.stage === 'SUSPEND' && row.status === 'TERMINATE')
+      ) {
+        return false;
+      }
+      if (['UNCOMMIT', 'PAUSED'].includes(row.status)) {
+        return true;
+      }
+      if (['AUDIT'].includes(row.stage) && !row.status) {
+        return true;
+      }
+      if (['TERMINATE', 'CONFIRMING'].includes(row.stage)) {
+        return true;
+      }
+      if (row.stage === 'DONE' && row.status === 'DONE') {
+        return true;
+      }
+      return false;
+    };
 
     const searchFields = getModel(HostApplySearchNonBusiness).getProperties();
     const searchQs = useSearchQs({ key: 'filter', properties: searchFields });
@@ -185,6 +213,7 @@ export default defineComponent({
               const modifyButton = () => {
                 const isDisabled = isIdcpm || isUpgradeCvm;
                 const tooltipsOption = {
+                  // eslint-disable-next-line no-nested-ternary
                   disabled: isDisabled ? (isIdcpm ? !isIdcpm : !isUpgradeCvm) : true,
                   content: `${resourceTypeName}不支持修改,请联系ICR(IEG资源服务助手)`,
                 };
@@ -366,15 +395,15 @@ export default defineComponent({
             label: '操作',
             fixed: 'right',
             width: 200,
-            render: ({ data }: any) => {
-              const isUpgradeCvm = ScrResourceType.UPGRADECVM === data.resource_type;
+            render: ({ row }: any) => {
+              const isUpgradeCvm = ScrResourceType.UPGRADECVM === row.resource_type;
               return (
                 <div>
                   <Button
                     // 滚服项目暂不支持再次申请
-                    disabled={data.status === 'UNCOMMIT' || data.require_type === 6 || isUpgradeCvm}
+                    disabled={row.status === 'UNCOMMIT' || row.require_type === 6 || isUpgradeCvm}
                     size='small'
-                    onClick={() => reapply(data)}
+                    onClick={() => reapply(row)}
                     text
                     theme={'primary'}
                     class='mr8'>
@@ -385,9 +414,9 @@ export default defineComponent({
                     text
                     theme={'primary'}
                     class='mr8'
-                    disabled={opBtnDisabled.value(data) || isUpgradeCvm}
+                    disabled={retryBtnDisabled(row) || isUpgradeCvm}
                     onClick={async () => {
-                      await scrStore.retryOrder({ suborder_id: [data.suborder_id] });
+                      await scrStore.retryOrder({ suborder_id: [row.suborder_id] });
                       Message({ theme: 'success', message: '重试成功' });
                       getListData();
                     }}>
@@ -398,9 +427,9 @@ export default defineComponent({
                     text
                     theme={'primary'}
                     class='mr8'
-                    disabled={opBtnDisabled.value(data)}
+                    disabled={opBtnDisabled(row)}
                     onClick={async () => {
-                      await scrStore.stopOrder({ suborder_id: [data.suborder_id] });
+                      await scrStore.stopOrder({ suborder_id: [row.suborder_id] });
                       Message({ theme: 'success', message: '终止成功' });
                       getListData();
                     }}>
@@ -471,11 +500,16 @@ export default defineComponent({
       pagination.start = 0;
 
       // 将子单号从主单号条件中分离
-      const { order_id: orderId, ...rest } = searchValues.value;
+      const { order_id: orderId, bk_biz_id: bkBizId, ...rest } = searchValues.value;
       const orderIds = orderId.filter((item: string) => /^\d+$/.test(item));
       const suborderIds = orderId.filter((item: string) => /^\d+-\d+$/.test(item));
 
-      searchQs.set({ ...rest, order_id: orderIds, suborder_id: suborderIds });
+      searchQs.set({
+        ...rest,
+        order_id: orderIds,
+        suborder_id: suborderIds,
+        bk_biz_id: bkBizId?.length ? bkBizId : [0],
+      });
     };
 
     const handleReset = () => {
@@ -593,7 +627,7 @@ export default defineComponent({
     return () => (
       <div class={'apply-list-container scr-application-list'}>
         <div class={'filter-container'} style={{ margin: '0 24px 20px 24px' }}>
-          <GridContainer layout='vertical' column={4} content-min-width={300} gap={[16, 60]}>
+          <GridContainer layout='vertical' column={4} content-min-width={'1fr'} gap={[16, 60]}>
             {searchFields
               // 子单号不单独作为一个搜索框，而是集成到主单号框内
               .filter((field) => field.id !== 'suborder_id')

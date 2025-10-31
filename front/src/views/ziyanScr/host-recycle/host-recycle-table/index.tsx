@@ -294,7 +294,10 @@ export default defineComponent({
     };
 
     const handleSearch = () => {
-      searchQs.set(searchValues.value);
+      searchQs.set({
+        ...searchValues.value,
+        bk_biz_id: searchValues.value.bk_biz_id?.length ? searchValues.value.bk_biz_id : [0],
+      });
     };
 
     const handleReset = () => {
@@ -336,7 +339,7 @@ export default defineComponent({
       return (
         <div class={'apply-list-container'}>
           <div class={'filter-container'} style={{ margin: '0 24px 20px 24px' }}>
-            <GridContainer layout='vertical' column={4} content-min-width={300} gap={[16, 60]}>
+            <GridContainer layout='vertical' column={4} content-min-width={'1fr'} gap={[16, 60]}>
               {searchFields.map((field) => (
                 <GridItemFormElement key={field.id} label={field.name}>
                   <HocSearch

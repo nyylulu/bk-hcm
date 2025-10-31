@@ -51,7 +51,7 @@ type VpcIf interface {
 	SyncVpc(kt *kit.Kit, param *types.GetVpcParam) error
 	// GetRegionDftVpc gets the default vpc of a region.
 	GetRegionDftVpc(kt *kit.Kit, region string) (string, error)
-	// IsDftRegionVpc check if given vpc is the default vpc of a region.
+	// IsRegionDftVpc check if given vpc is the default vpc of a region.
 	IsRegionDftVpc(kt *kit.Kit, vpc string) (bool, error)
 	// UpsertRegionDftVpc upsert the default vpc of region.
 	UpsertRegionDftVpc(kt *kit.Kit, input []types.RegionDftVpc) error

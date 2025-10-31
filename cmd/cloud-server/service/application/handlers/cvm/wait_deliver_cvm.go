@@ -139,6 +139,10 @@ func handleDeliverCvm(kt *kit.Kit, dsCli *dataservice.Client, tsCli *taskserver.
 	detail := map[string]interface{}{
 		"result": result,
 	}
+	if len(result.FailedMessage) > 0 {
+		detail["error"] = result.FailedMessage
+	}
+
 	if len(result.SuccessCloudIDs) != 0 {
 		req := &core.ListReq{
 			Filter: tools.EqualWithOpExpression(filter.And, map[string]interface{}{
@@ -250,6 +254,9 @@ func queryAndParseEndStateFlowByFlowID(kt *kit.Kit, cli *taskserver.Client, flow
 		result.SuccessCloudIDs = append(result.SuccessCloudIDs, tmp.SuccessCloudIDs...)
 		result.FailedCloudIDs = append(result.FailedCloudIDs, tmp.FailedCloudIDs...)
 		result.UnknownCloudIDs = append(result.UnknownCloudIDs, tmp.UnknownCloudIDs...)
+		if task.State == enumor.TaskFailed {
+			result.FailedMessage += task.Reason.Message
+		}
 	}
 
 	return flowResultMap, nil

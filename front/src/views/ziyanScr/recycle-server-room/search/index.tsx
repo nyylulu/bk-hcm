@@ -34,11 +34,24 @@ export default defineComponent({
     const recycleAreaGroups = ref<RecycleArea[]>([]);
     const loading = ref(false);
 
+    const expanded = ref<number[]>([-1]);
+
     const isGroupChecked = (areaGroup: RecycleArea) => {
-      return areaGroup.children.every((group) => props.moduleNames.includes(group.name));
+      return areaGroup.children.every((group) =>
+        props.moduleNames.includes(`${areaGroup.which_stages}__${group.name}`),
+      );
     };
     const isGroupHalfChecked = (areaGroup: RecycleArea) => {
-      return areaGroup.children.some((group) => props.moduleNames.includes(group.name));
+      return areaGroup.children.some((group) => props.moduleNames.includes(`${areaGroup.which_stages}__${group.name}`));
+    };
+
+    const groupCheckedCount = (areaGroup: RecycleArea) => {
+      return areaGroup.children.reduce((acc, group) => {
+        if (props.moduleNames.includes(`${areaGroup.which_stages}__${group.name}`)) {
+          acc += 1;
+        }
+        return acc;
+      }, 0);
     };
 
     const isAllChecked = computed(() => {
@@ -64,7 +77,7 @@ export default defineComponent({
     const handleCheckAll = (isChecked: boolean) => {
       const moduleNames = isChecked
         ? recycleAreaGroups.value.reduce((acc, cur) => {
-            acc.push(...cur.children.map((item) => item.name));
+            acc.push(...cur.children.map((item) => `${cur.which_stages}__${item.name}`));
             return acc;
           }, [])
         : [];
@@ -75,15 +88,26 @@ export default defineComponent({
     const handleCheckGroupAll = (recycleAreaGroup: RecycleArea, isChecked: boolean) => {
       const moduleNames = [...props.moduleNames];
       recycleAreaGroup.children.forEach((item) => {
-        const index = moduleNames.findIndex((moduleName) => moduleName === item.name);
+        const index = moduleNames.findIndex(
+          (moduleName) => moduleName === `${recycleAreaGroup.which_stages}__${item.name}`,
+        );
         if (index > -1 && !isChecked) {
           moduleNames.splice(index, 1);
         }
         if (index < 0 && isChecked) {
-          moduleNames.push(item.name);
+          moduleNames.push(`${recycleAreaGroup.which_stages}__${item.name}`);
         }
       });
       emit('update:moduleNames', moduleNames);
+    };
+
+    const handleExpandAll = () => {
+      if (expanded.value?.[0] === -1) {
+        expanded.value = recycleAreaGroups.value.map((recycleAreaGroup) => recycleAreaGroup.which_stages);
+      } else {
+        // collapse组件使用[]时无法触发收起，所以使用[-1]强制不命中所有来收起
+        expanded.value = [-1];
+      }
     };
 
     const handleInitRecycleArea = async () => {
@@ -129,7 +153,7 @@ export default defineComponent({
 
     return () => (
       <bk-loading loading={loading.value}>
-        <Panel class={cssModule.gap}>
+        <Panel class={cssModule['all-toolbar']}>
           <bk-checkbox
             onChange={handleCheckAll}
             checked={isAllChecked.value}
@@ -137,31 +161,52 @@ export default defineComponent({
             immediateEmitChange={false}>
             {t('全选所有区间')}
           </bk-checkbox>
+          <bk-button text theme='primary' onClick={handleExpandAll}>
+            {expanded.value?.[0] === -1 ? t('全部展开') : t('全部收起')}
+          </bk-button>
         </Panel>
 
-        {recycleAreaGroups.value.map((recycleAreaGroup) => (
-          <Panel class={cssModule.gap}>
-            <section class={cssModule.title}>
-              {t('日期区间')}：{recycleAreaGroup.start_time} {t('至')} {recycleAreaGroup.end_time}
-              <bk-checkbox
-                class={cssModule.chooseAll}
-                checked={isGroupChecked(recycleAreaGroup)}
-                indeterminate={!isGroupChecked(recycleAreaGroup) && isGroupHalfChecked(recycleAreaGroup)}
-                immediateEmitChange={false}
-                onChange={(isChecked: boolean) => handleCheckGroupAll(recycleAreaGroup, isChecked)}>
-                {t('全选')}
-              </bk-checkbox>
-            </section>
-            {recycleAreaGroup.children.map((recycleArea) => (
-              <bk-checkbox
-                class={cssModule.choose}
-                modelValue={props.moduleNames.includes(recycleArea.name)}
-                onChange={() => handleCheck(recycleArea.name)}>
-                {recycleArea.name}
-              </bk-checkbox>
-            ))}
-          </Panel>
-        ))}
+        <bk-collapse use-card-theme v-model={expanded.value}>
+          {recycleAreaGroups.value.map((recycleAreaGroup) => (
+            <bk-collapse-panel
+              key={recycleAreaGroup.which_stages}
+              name={recycleAreaGroup.which_stages}
+              class={cssModule['collapse-panel']}>
+              {{
+                default: () => (
+                  <section class={cssModule.title}>
+                    {t('日期区间')}：{recycleAreaGroup.start_time} {t('至')} {recycleAreaGroup.end_time}
+                    <bk-checkbox
+                      class={cssModule['choose-all']}
+                      checked={isGroupChecked(recycleAreaGroup)}
+                      indeterminate={!isGroupChecked(recycleAreaGroup) && isGroupHalfChecked(recycleAreaGroup)}
+                      immediateEmitChange={false}
+                      onChange={(isChecked: boolean) => handleCheckGroupAll(recycleAreaGroup, isChecked)}>
+                      {t('全选')}
+                    </bk-checkbox>
+                    <span class={cssModule['choose-count']}>
+                      已选择 <em class={cssModule['num']}>{groupCheckedCount(recycleAreaGroup)}</em> 个，共{' '}
+                      {recycleAreaGroup.children.length} 个
+                    </span>
+                  </section>
+                ),
+                content: () => (
+                  <>
+                    {recycleAreaGroup.children.map((recycleArea) => (
+                      <bk-checkbox
+                        class={cssModule.choose}
+                        modelValue={props.moduleNames.includes(`${recycleAreaGroup.which_stages}__${recycleArea.name}`)}
+                        key={`${recycleAreaGroup.which_stages}__${recycleArea.name}`}
+                        onChange={() => handleCheck(`${recycleAreaGroup.which_stages}__${recycleArea.name}`)}>
+                        {recycleArea.name}
+                      </bk-checkbox>
+                    ))}
+                  </>
+                ),
+              }}
+            </bk-collapse-panel>
+          ))}
+        </bk-collapse>
       </bk-loading>
     );
   },

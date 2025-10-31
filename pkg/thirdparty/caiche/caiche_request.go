@@ -62,3 +62,16 @@ type ListDeviceReq struct {
 func (d *ListDeviceReq) Validate() error {
 	return validator.Validate.Struct(d)
 }
+
+// ListDeviceV2Req list device v2 request
+type ListDeviceV2Req struct {
+	PageNo      uint                   `json:"pageNo" validate:"required,min=1"`
+	PageSize    uint                   `json:"pageSize" validate:"required,min=1,max=1000"`
+	Filter      map[string]interface{} `json:"filter" validate:"omitempty"`
+	ReturnTotal bool                   `json:"returnTotal" validate:"omitempty"`
+}
+
+// Validate ...
+func (l *ListDeviceV2Req) Validate() error {
+	return validator.Validate.Struct(l)
+}
