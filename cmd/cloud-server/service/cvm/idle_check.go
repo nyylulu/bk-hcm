@@ -37,6 +37,7 @@ import (
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 	"hcm/pkg/tools/converter"
+	"hcm/pkg/tools/maps"
 	"hcm/pkg/tools/metadata"
 )
 
@@ -211,7 +212,7 @@ func (svc *cvmSvc) getIdleCheckCvmResult(kt *kit.Kit, suborderID string, page *c
 		details = append(details, rspItem)
 	}
 	listDetectStepReq := &types.GetDetectStepReq{
-		SuborderID: []string{suborderID},
+		TaskID: maps.Keys(taskIDToRspItem),
 	}
 	steps, err := svc.client.WoaServer().Task.ListDetectStep(kt, listDetectStepReq)
 	if err != nil {

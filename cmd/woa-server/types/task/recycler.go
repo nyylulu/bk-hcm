@@ -655,6 +655,7 @@ type GetDetectStepReq struct {
 	User       []string             `json:"bk_username"`
 	Start      string               `json:"start"`
 	End        string               `json:"end"`
+	TaskID     []string             `json:"task_id"`
 	Page       metadata.BasePage    `json:"page"`
 }
 
@@ -787,6 +788,12 @@ func (param *GetDetectStepReq) GetFilter() (map[string]interface{}, error) {
 
 	if len(timeCond) > 0 {
 		filter["create_at"] = timeCond
+	}
+
+	if len(param.TaskID) > 0 {
+		filter["task_id"] = mapstr.MapStr{
+			pkg.BKDBIN: param.TaskID,
+		}
 	}
 
 	// 防止前端不传任何参数的情况
