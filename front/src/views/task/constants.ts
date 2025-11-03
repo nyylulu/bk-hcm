@@ -12,6 +12,9 @@ export const TASK_CLB_TYPE_NAME = {
   [TaskClbType.MODIFY_LAYER7_RS_WEIGHT]: '权重调整-HTTP/HTTPS',
   [TaskClbType.TARGET_GROUP_MODIFY_WEIGHT]: '权重调整',
   [TaskClbType.TARGET_GROUP_REMOVE_RS]: '解绑RS',
+  [TaskClbType.TARGET_GROUP_MODIFY_PORT]: '更新目标组-调整RS权重',
+  [TaskClbType.LISTENER_ADD_TARGET]: '创建监听器-关联目标组',
+  [TaskClbType.TARGET_GROUP_ADD_RS]: '更新目标组-绑定RS',
 };
 
 export const TASK_CVM_TYPE_NAME = {
@@ -19,6 +22,7 @@ export const TASK_CVM_TYPE_NAME = {
   [TaskCvmType.START]: '开机',
   [TaskCvmType.STOP]: '关机',
   [TaskCvmType.REBOOT]: '重启',
+  [TaskCvmType.IDLE_CHECK]: '空闲检查',
 };
 
 export const TASK_TYPE_NAME = {

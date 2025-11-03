@@ -72,4 +72,15 @@ export class DetailCvmView {
 
   @Column('string', { name: '新镜像名称' })
   'param.image_name': string;
+
+  @Column('string', { name: '内网IP' })
+  'param.ip': string;
+
+  @Column('number', {
+    name: '已执行',
+    render: ({ row }: { row: any }) => {
+      return `${row.param.success_num || '--'}/${row.param.total_num || '--'}`;
+    },
+  })
+  'param.success_num/param.total_num': string;
 }
