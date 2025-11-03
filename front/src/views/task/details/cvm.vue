@@ -15,6 +15,7 @@ import { getPrivateIPs } from '@/utils/common';
 import CopyToClipboard from '@/components/copy-to-clipboard/index.vue';
 import BasicInfo from './children/basic-info/basic-info.vue';
 import ActionList from './children/action-list/action-list.vue';
+import Cancel from './children/cancel/cancel.vue';
 
 import { TASK_TYPE_NAME } from '../constants';
 import { TaskDetailStatus } from '../typings';
@@ -44,25 +45,6 @@ const statusPoolIds = computed(() => {
   return taskDetailList.value
     .filter((item) => [TaskDetailStatus.INIT, TaskDetailStatus.RUNNING].includes(item.state))
     .map((item) => item.id);
-});
-
-const allStatusIPs = computed(() => {
-  return taskDetailList.value.map((item) => ({ ip: getPrivateIPs(item.param), status: item.state }));
-});
-const allIPs = computed(() => {
-  return allStatusIPs.value.map((item) => item.ip).join('\n');
-});
-const allSuccessIPs = computed(() => {
-  return allStatusIPs.value
-    .filter((item) => item.status === TaskDetailStatus.SUCCESS)
-    .map((item) => item.ip)
-    .join('\n');
-});
-const allFailIPs = computed(() => {
-  return allStatusIPs.value
-    .filter((item) => item.status === TaskDetailStatus.FAILED)
-    .map((item) => item.ip)
-    .join('\n');
 });
 
 const fetchCountAndStatus = async () => {
@@ -234,6 +216,7 @@ onMounted(() => {
       :selectable="false"
     />
   </common-card>
+  <cancel :resource="ResourceTypeEnum.CVM" :info="taskDetails" :status="taskDetails?.state" />
 </template>
 
 <style lang="scss" scoped>
@@ -241,29 +224,35 @@ onMounted(() => {
   + .content-card {
     margin-top: 20px;
   }
+
   :deep(.common-card-content) {
     width: 100%;
   }
 }
+
 .toolbar {
   display: flex;
   flex-direction: column;
   gap: 12px;
   margin: 16px 0;
 }
+
 .stats {
   display: flex;
   align-items: center;
   gap: 16px;
+
   .count-item {
     display: flex;
     align-items: center;
     gap: 4px;
+
     .num {
       font-style: normal;
     }
   }
 }
+
 .action-buttons {
   display: flex;
   align-items: center;

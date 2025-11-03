@@ -165,6 +165,7 @@ const cvmFieldIds = {
   [TaskCvmType.STOP]: [...cvmBaseFieldIds, 'state', 'reason'],
   [TaskCvmType.REBOOT]: [...cvmBaseFieldIds, 'state', 'reason'],
   [TaskCvmType.RESET]: [...cvmBaseFieldIds, 'param.image_name_old', 'param.image_name', 'state', 'reason'],
+  [TaskCvmType.IDLE_CHECK]: [...baseFieldIds, 'param.ip', 'param.success_num/param.total_num'],
 };
 
 const clbBaseRerunParamFieldIds = {

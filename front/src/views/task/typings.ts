@@ -14,6 +14,9 @@ export enum TaskClbType {
   MODIFY_LAYER7_RS_WEIGHT = 'listener_layer7_rs_weight',
   TARGET_GROUP_MODIFY_WEIGHT = 'target_group_modify_weight',
   TARGET_GROUP_REMOVE_RS = 'target_group_remove_rs',
+  TARGET_GROUP_MODIFY_PORT = 'target_group_modify_port',
+  LISTENER_ADD_TARGET = 'listener_add_target',
+  TARGET_GROUP_ADD_RS = 'target_group_add_rs',
 }
 
 export enum TaskCvmType {
@@ -21,6 +24,7 @@ export enum TaskCvmType {
   STOP = 'stop_cvm',
   REBOOT = 'reboot_cvm',
   RESET = 'cvm_reset_system',
+  IDLE_CHECK = 'idle_check_cvm',
 }
 
 export type TaskType = TaskClbType | TaskCvmType;
