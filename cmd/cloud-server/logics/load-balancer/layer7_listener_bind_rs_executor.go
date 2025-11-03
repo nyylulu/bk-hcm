@@ -258,6 +258,8 @@ func (c *Layer7ListenerBindRSExecutor) buildFlowTask(kt *kit.Kit, lb corelb.Load
 	switch c.vendor {
 	case enumor.TCloud:
 		return c.buildTCloudFlowTask(kt, lb, details, generator)
+	case enumor.TCloudZiyan:
+		return c.buildTCloudZiyanFlowTask(kt, lb, details, generator)
 	default:
 		return nil, fmt.Errorf("layer7 listener bind rs validate, not support vendor: %s", c.vendor)
 	}

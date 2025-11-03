@@ -298,6 +298,8 @@ func (c *Layer4ListenerBindRSExecutor) buildFlowTask(kt *kit.Kit, lb corelb.Load
 	switch c.vendor {
 	case enumor.TCloud:
 		return c.buildTCloudFlowTask(kt, lb, details, generator)
+	case enumor.TCloudZiyan:
+		return c.buildTCloudZiyanFlowTask(kt, lb, details, generator)
 	default:
 		return nil, fmt.Errorf("not support vendor: %s", c.vendor)
 	}

@@ -65,8 +65,7 @@ func (c *CreateLayer7ListenerPreviewExecutor) getTCloudZiyanListenersByPort(kt *
 }
 
 func (c *Layer4ListenerBindRSExecutor) buildTCloudZiyanFlowTask(kt *kit.Kit, lb corelb.LoadBalancerRaw,
-	targetGroupID string, details []*layer4ListenerBindRSTaskDetail,
-	generator func() (cur string, prev string), tgToListenerCloudIDs map[string]string) ([]ts.CustomFlowTask, error) {
+	details []*layer4ListenerBindRSTaskDetail, generator func() (cur string, prev string)) ([]ts.CustomFlowTask, error) {
 
 	result := make([]ts.CustomFlowTask, 0)
 	for _, taskDetails := range slice.Split(details, constant.BatchTaskMaxLimit) {
@@ -95,9 +94,13 @@ func (c *Layer4ListenerBindRSExecutor) buildTCloudZiyanFlowTask(kt *kit.Kit, lb 
 			targets = append(targets, target)
 		}
 
+		if len(taskDetails) == 0 {
+			logs.Errorf("taskDetails is empty, skip this batch, rid: %s", kt.Rid)
+			continue
+		}
+		firstDetail := taskDetails[0]
 		req := &hclb.BatchRegisterTCloudTargetReq{
-			CloudListenerID: tgToListenerCloudIDs[targetGroupID],
-			TargetGroupID:   targetGroupID,
+			CloudListenerID: firstDetail.listenerCloudID,
 			RuleType:        enumor.Layer4RuleType,
 			Targets:         targets,
 		}
@@ -129,8 +132,7 @@ func (c *Layer4ListenerBindRSExecutor) buildTCloudZiyanFlowTask(kt *kit.Kit, lb 
 }
 
 func (c *Layer7ListenerBindRSExecutor) buildTCloudZiyanFlowTask(kt *kit.Kit, lb corelb.LoadBalancerRaw,
-	targetGroupID string, details []*layer7ListenerBindRSTaskDetail, generator func() (cur string, prev string),
-	tgToListenerCloudIDs map[string]string, tgToCloudRuleIDs map[string]string) ([]ts.CustomFlowTask, error) {
+	details []*layer7ListenerBindRSTaskDetail, generator func() (cur string, prev string)) ([]ts.CustomFlowTask, error) {
 
 	result := make([]ts.CustomFlowTask, 0)
 	for _, taskDetails := range slice.Split(details, constant.BatchTaskMaxLimit) {
@@ -159,10 +161,14 @@ func (c *Layer7ListenerBindRSExecutor) buildTCloudZiyanFlowTask(kt *kit.Kit, lb 
 			targets = append(targets, target)
 		}
 
+		if len(taskDetails) == 0 {
+			logs.Errorf("taskDetails is empty, skip this batch, rid: %s", kt.Rid)
+			continue
+		}
+		firstDetail := taskDetails[0]
 		req := &hclb.BatchRegisterTCloudTargetReq{
-			CloudListenerID: tgToListenerCloudIDs[targetGroupID],
-			CloudRuleID:     tgToCloudRuleIDs[targetGroupID],
-			TargetGroupID:   targetGroupID,
+			CloudListenerID: firstDetail.listenerCloudID,
+			CloudRuleID:     firstDetail.urlRuleCloudID,
 			RuleType:        enumor.Layer7RuleType,
 			Targets:         targets,
 		}
