@@ -369,6 +369,8 @@ func (g *Generator) generateCvmAcrossCampus(kt *kit.Kit, order *types.ApplyOrder
 			order.SubOrderId, maxCount, createdTotalCount, zoneCapacity, zoneCreatedCount, zone,
 			len(orderZones), replicas, kt.Rid)
 		if replicas <= 0 {
+			// 当某一个可用区交付超过一半后，不会被计入 failedSkipNum，导致失败的可用区无法清空
+			failedSkipNum++
 			continue
 		}
 
