@@ -28,6 +28,7 @@ import (
 	"hcm/pkg/api/core"
 	corelb "hcm/pkg/api/core/cloud/load-balancer"
 	"hcm/pkg/api/data-service/cloud"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/tools"
@@ -230,7 +231,7 @@ func (svc *lbSvc) getTargetTopoInfoByReq(kt *kit.Kit, bizID int64, vendor enumor
 	ruleCond := make([]filter.RuleFactory, 0)
 	ruleCond = append(ruleCond, tools.RuleIn("lbl_id", lblIDs))
 	ruleCond = append(ruleCond, req.GetRuleCond()...)
-	ruleMap, err := svc.getRuleByCond(kt, vendor, ruleCond)
+	ruleMap, err := svc.getRuleByCond(kt, vendor, ruleCond, []string{"id", "url", "domain"})
 	if err != nil {
 		logs.Errorf("get rule by cond failed, err: %v, ruleCond: %v, rid: %s", err, ruleCond, kt.Rid)
 		return nil, err
@@ -259,7 +260,7 @@ func (svc *lbSvc) getTargetTopoInfoByReq(kt *kit.Kit, bizID int64, vendor enumor
 	// 根据条件查询目标组
 	tgIDs := maps.Keys(tgIDMap)
 	tgCond := []filter.RuleFactory{tools.RuleIn("id", tgIDs)}
-	tgMap, err := svc.getTgByCond(kt, tgCond)
+	tgMap, err := svc.getTgByCond(kt, tgCond, []string{"id", "name"})
 	if err != nil {
 		logs.Errorf("get tg by cond failed, err: %v, tgCond: %v, rid: %s", err, tgCond, kt.Rid)
 		return nil, err
@@ -405,7 +406,11 @@ func (svc *lbSvc) getLblByCond(kt *kit.Kit, vendor enumor.Vendor, lblCond []filt
 
 	lblReq := core.ListReq{
 		Filter: &filter.Expression{Op: filter.And, Rules: lblCond},
-		Page:   core.NewDefaultBasePage(),
+		Page: &core.BasePage{
+			Count: false,
+			Start: 0,
+			Limit: constant.CLBTopoFindPageLimit,
+		},
 	}
 	lblMap := make(map[string]corelb.TCloudListener)
 	for {
@@ -431,17 +436,17 @@ func (svc *lbSvc) getLblByCond(kt *kit.Kit, vendor enumor.Vendor, lblCond []filt
 		for _, lbl := range resp.Details {
 			lblMap[lbl.ID] = lbl
 		}
-		if uint(len(resp.Details)) < core.DefaultMaxPageLimit {
+		if uint(len(resp.Details)) < lblReq.Page.Limit {
 			break
 		}
-		lblReq.Page.Start += uint32(core.DefaultMaxPageLimit)
+		lblReq.Page.Start += uint32(lblReq.Page.Limit)
 	}
 
 	return lblMap, nil
 }
 
 // getRuleByCond get rule by condition
-func (svc *lbSvc) getRuleByCond(kt *kit.Kit, vendor enumor.Vendor, ruleCond []filter.RuleFactory) (
+func (svc *lbSvc) getRuleByCond(kt *kit.Kit, vendor enumor.Vendor, ruleCond []filter.RuleFactory, fields []string) (
 	map[string]corelb.TCloudLbUrlRule, error) {
 
 	if len(ruleCond) == 0 {
@@ -450,7 +455,14 @@ func (svc *lbSvc) getRuleByCond(kt *kit.Kit, vendor enumor.Vendor, ruleCond []fi
 
 	ruleReq := core.ListReq{
 		Filter: &filter.Expression{Op: filter.And, Rules: ruleCond},
-		Page:   core.NewDefaultBasePage(),
+		Page: &core.BasePage{
+			Count: false,
+			Start: 0,
+			Limit: constant.CLBTopoFindPageLimit,
+		},
+	}
+	if len(fields) != 0 {
+		ruleReq.Fields = fields
 	}
 	ruleMap := make(map[string]corelb.TCloudLbUrlRule)
 	for {
@@ -476,10 +488,10 @@ func (svc *lbSvc) getRuleByCond(kt *kit.Kit, vendor enumor.Vendor, ruleCond []fi
 		for _, rule := range resp.Details {
 			ruleMap[rule.ID] = rule
 		}
-		if uint(len(resp.Details)) < core.DefaultMaxPageLimit {
+		if uint(len(resp.Details)) < ruleReq.Page.Limit {
 			break
 		}
-		ruleReq.Page.Start += uint32(core.DefaultMaxPageLimit)
+		ruleReq.Page.Start += uint32(ruleReq.Page.Limit)
 	}
 
 	return ruleMap, nil
@@ -495,7 +507,11 @@ func (svc *lbSvc) getTgLbRelByCond(kt *kit.Kit, tgLbRelCond []filter.RuleFactory
 
 	tgLbRelReq := core.ListReq{
 		Filter: &filter.Expression{Op: filter.And, Rules: tgLbRelCond},
-		Page:   core.NewDefaultBasePage(),
+		Page: &core.BasePage{
+			Count: false,
+			Start: 0,
+			Limit: constant.CLBTopoFindPageLimit,
+		},
 	}
 	tgLbRels := make([]corelb.BaseTargetListenerRuleRel, 0)
 	for {
@@ -506,24 +522,33 @@ func (svc *lbSvc) getTgLbRelByCond(kt *kit.Kit, tgLbRelCond []filter.RuleFactory
 		}
 
 		tgLbRels = append(tgLbRels, resp.Details...)
-		if uint(len(resp.Details)) < core.DefaultMaxPageLimit {
+		if uint(len(resp.Details)) < tgLbRelReq.Page.Limit {
 			break
 		}
-		tgLbRelReq.Page.Start += uint32(core.DefaultMaxPageLimit)
+		tgLbRelReq.Page.Start += uint32(tgLbRelReq.Page.Limit)
 	}
 
 	return tgLbRels, nil
 }
 
 // getTgByCond get target group by condition
-func (svc *lbSvc) getTgByCond(kt *kit.Kit, tgCond []filter.RuleFactory) (map[string]corelb.BaseTargetGroup, error) {
+func (svc *lbSvc) getTgByCond(kt *kit.Kit, tgCond []filter.RuleFactory, fields []string) (
+	map[string]corelb.BaseTargetGroup, error) {
+
 	if len(tgCond) == 0 {
 		return nil, errors.New("no tg condition")
 	}
 
 	tgReq := core.ListReq{
 		Filter: &filter.Expression{Op: filter.And, Rules: tgCond},
-		Page:   core.NewDefaultBasePage(),
+		Page: &core.BasePage{
+			Count: false,
+			Start: 0,
+			Limit: constant.CLBTopoFindPageLimit,
+		},
+	}
+	if len(fields) != 0 {
+		tgReq.Fields = fields
 	}
 	tgMap := make(map[string]corelb.BaseTargetGroup)
 	for {
@@ -536,10 +561,10 @@ func (svc *lbSvc) getTgByCond(kt *kit.Kit, tgCond []filter.RuleFactory) (map[str
 		for _, detail := range resp.Details {
 			tgMap[detail.ID] = detail
 		}
-		if uint(len(resp.Details)) < core.DefaultMaxPageLimit {
+		if uint(len(resp.Details)) < tgReq.Page.Limit {
 			break
 		}
-		tgReq.Page.Start += uint32(core.DefaultMaxPageLimit)
+		tgReq.Page.Start += uint32(tgReq.Page.Limit)
 	}
 
 	return tgMap, nil
@@ -553,7 +578,11 @@ func (svc *lbSvc) getTargetByCond(kt *kit.Kit, targetCond []filter.RuleFactory) 
 
 	targetReq := core.ListReq{
 		Filter: &filter.Expression{Op: filter.And, Rules: targetCond},
-		Page:   core.NewDefaultBasePage(),
+		Page: &core.BasePage{
+			Count: false,
+			Start: 0,
+			Limit: constant.CLBTopoFindPageLimit,
+		},
 	}
 	targets := make([]corelb.BaseTarget, 0)
 	for {
@@ -564,10 +593,10 @@ func (svc *lbSvc) getTargetByCond(kt *kit.Kit, targetCond []filter.RuleFactory) 
 		}
 
 		targets = append(targets, resp.Details...)
-		if uint(len(resp.Details)) < core.DefaultMaxPageLimit {
+		if uint(len(resp.Details)) < targetReq.Page.Limit {
 			break
 		}
-		targetReq.Page.Start += uint32(core.DefaultMaxPageLimit)
+		targetReq.Page.Start += uint32(targetReq.Page.Limit)
 	}
 
 	return targets, nil
@@ -729,7 +758,7 @@ func (svc *lbSvc) getListenerRelInfo(kt *kit.Kit, vendor enumor.Vendor, listener
 	}
 	lblIDRulesMap := make(map[string][]corelb.TCloudLbUrlRule)
 	ruleCond := []filter.RuleFactory{tools.RuleIn("lbl_id", lblIDs)}
-	ruleMap, err := svc.getRuleByCond(kt, vendor, ruleCond)
+	ruleMap, err := svc.getRuleByCond(kt, vendor, ruleCond, make([]string, 0))
 	if err != nil {
 		logs.Errorf("get rule by cond failed, err: %v, req: %+v, rid: %s", err, ruleCond, kt.Rid)
 		return nil, nil, nil, nil, err
@@ -821,7 +850,7 @@ func (svc *lbSvc) getLblTopoInfoByReq(kt *kit.Kit, bizID int64, vendor enumor.Ve
 		ruleCond := make([]filter.RuleFactory, 0)
 		ruleCond = append(ruleCond, tools.RuleIn("lb_id", lbIDs))
 		ruleCond = append(ruleCond, reqRuleCond...)
-		ruleMap, err := svc.getRuleByCond(kt, vendor, ruleCond)
+		ruleMap, err := svc.getRuleByCond(kt, vendor, ruleCond, []string{"id", "lbl_id"})
 		if err != nil {
 			logs.Errorf("get rule by cond failed, err: %v, ruleCond: %v, rid: %s", err, ruleCond, kt.Rid)
 			return nil, err
