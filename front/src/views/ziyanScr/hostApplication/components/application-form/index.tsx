@@ -21,7 +21,11 @@ import HostApplyTips from './host-apply-tips/common-tips.vue';
 import HostApplySpringPoolTips from './host-apply-tips/spring-pool-tips.vue';
 import CvmMaxCapacity from '@/views/ziyanScr/components/cvm-max-capacity/index.vue';
 import ReqTypeValue from '@/components/display-value/req-type-value.vue';
-import { MENU_SERVICE_HOST_APPLICATION, MENU_BUSINESS_TICKET_MANAGEMENT } from '@/constants/menu-symbol';
+import {
+  MENU_SERVICE_HOST_APPLICATION,
+  MENU_BUSINESS_TICKET_MANAGEMENT,
+  MENU_BUSINESS_HOST_MANAGEMENT,
+} from '@/constants/menu-symbol';
 import { useAccountStore, useUserStore } from '@/store';
 import usePlanStore from '@/store/usePlanStore';
 import useCvmChargeType from '@/views/ziyanScr/hooks/use-cvm-charge-type';
@@ -946,7 +950,7 @@ export default defineComponent({
     const handleCancel = () => {
       if (props.isbusiness) {
         router.push({
-          name: 'hostBusinessList',
+          name: MENU_BUSINESS_HOST_MANAGEMENT,
         });
       } else {
         router.go(-1);

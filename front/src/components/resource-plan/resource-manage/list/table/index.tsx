@@ -394,7 +394,7 @@ export default defineComponent({
         <BatchCancellationDialog v-model:isShow={isShow.value} data={currentRowsData.value} onRefresh={triggerApi} />
         {!batchPostponeSidesliderState.isHidden && (
           <BatchPostponeSideslider
-            v-model:isShow={batchPostponeSidesliderState.isShow}
+            v-model={batchPostponeSidesliderState.isShow}
             data={batchPostponeSidesliderState.data}
             onHidden={() => {
               batchPostponeSidesliderState.isHidden = true;
