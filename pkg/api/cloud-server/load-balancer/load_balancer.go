@@ -986,7 +986,7 @@ func (e *ExportTargetReq) Validate() error {
 // LbTopoCond lb topo condition
 type LbTopoCond struct {
 	AccountID      string                                `json:"account_id" validate:"required"`
-	LbRegions      []string                              `json:"lb_regions" validate:"max=500"`
+	LbRegions      []string                              `json:"lb_regions" validate:"required,min=1,max=500"`
 	LbNetworkTypes []loadbalancer.TCloudLoadBalancerType `json:"lb_network_types" validate:"max=500"`
 	LbIpVersions   []enumor.IPAddressType                `json:"lb_ip_versions" validate:"max=500"`
 	CloudLbIDs     []string                              `json:"cloud_lb_ids" validate:"max=500"`
