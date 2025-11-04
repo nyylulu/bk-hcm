@@ -32,6 +32,19 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/cvmapi"
+	"hcm/pkg/tools/retry"
+)
+
+const (
+	// CreateCrpTicketRespRateLimitCode 创建crp单据响应限流错误码
+	CreateCrpTicketRespRateLimitCode = -254
+
+	// CreateCrpTicketDefaultRetryTimes 创建crp单据默认重试次数
+	CreateCrpTicketDefaultRetryTimes = 3
+	// CreateCrpTicketDefaultRetryDelayMinMS 创建crp单据默认重试最小延迟时间
+	CreateCrpTicketDefaultRetryDelayMinMS = 5000 // 5s
+	// CreateCrpTicketDefaultRetryDelayMaxMS 创建crp单据默认重试最大延迟时间
+	CreateCrpTicketDefaultRetryDelayMaxMS = 10000 // 10s
 )
 
 // createCrpTicket create crp ticket.
@@ -84,11 +97,29 @@ func (c *CrpTicketCreator) createAddCrpTicket(kt *kit.Kit, subTicket *ptypes.Sub
 		return "", err
 	}
 
-	resp, err := c.crpCli.AddCvmCbsPlan(kt.Ctx, kt.Header(), addReq)
-	if err != nil {
-		logs.Errorf("failed to add cvm & cbs plan order, err: %v, sub_ticket_id: %s, rid: %s", err, subTicket.ID,
-			kt.Rid)
-		return "", err
+	resp := new(cvmapi.AddCvmCbsPlanResp)
+	rangeMS := [2]uint{CreateCrpTicketDefaultRetryDelayMinMS, CreateCrpTicketDefaultRetryDelayMaxMS}
+	policy := retry.NewRetryPolicy(0, rangeMS)
+	for {
+		resp, err = c.crpCli.AddCvmCbsPlan(kt.Ctx, kt.Header(), addReq)
+		if err != nil {
+			logs.Errorf("failed to add cvm & cbs plan order, err: %v, sub_ticket_id: %s, rid: %s", err, subTicket.ID,
+				kt.Rid)
+			return "", err
+		}
+		// 仅在碰到限频错误时进行重试
+		if resp.Error.Code == CreateCrpTicketRespRateLimitCode {
+			if policy.RetryCount()+1 < CreateCrpTicketDefaultRetryTimes {
+				// 	非最后一次重试，继续sleep
+				logs.Warnf(
+					"call crp rate limit, will sleep for retry, retry count: %d, err: %v, crp_trace: %s, rid: %s",
+					policy.RetryCount(), resp.Error, resp.TraceId, kt.Rid)
+				policy.Sleep()
+				continue
+			}
+		}
+		// 其他情况都跳过
+		break
 	}
 
 	if resp.Error.Code != 0 {

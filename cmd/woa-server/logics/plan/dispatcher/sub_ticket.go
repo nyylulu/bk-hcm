@@ -36,6 +36,7 @@ import (
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/cvmapi"
 	cvt "hcm/pkg/tools/converter"
+	"hcm/pkg/tools/retry"
 )
 
 // listAndWatchTickets list and watch tickets
@@ -161,32 +162,55 @@ func (d *Dispatcher) checkCrpTicket(kt *kit.Kit, subTicket *ptypes.SubTicketInfo
 			OrderIds: []string{subTicket.CrpSN},
 		},
 	}
-	resp, err := d.crpCli.QueryPlanOrder(kt.Ctx, nil, req)
-	if err != nil {
-		logs.Errorf("failed to query crp plan order, err: %v, rid: %s", err, kt.Rid)
-		return err
-	}
-	if resp.Error.Code != 0 {
-		logs.Errorf("%s: failed to query crp plan order, code: %d, msg: %s, crp_sn: %s, rid: %s",
-			constant.ResPlanTicketWatchFailed, resp.Error.Code, resp.Error.Message, subTicket.CrpSN, kt.Rid)
-		return fmt.Errorf("failed to query crp plan order, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
-	}
-	if resp.Result == nil {
-		logs.Errorf("%s: failed to query crp plan order, for result is empty, crp_sn: %s, rid: %s",
-			constant.ResPlanTicketWatchFailed, subTicket.CrpSN, kt.Rid)
-		return errors.New("failed to query crp plan order, for result is empty")
-	}
-	planItem, ok := resp.Result[subTicket.CrpSN]
-	if !ok {
-		logs.Errorf("%s: query crp plan order return no result by sn: %s, rid: %s",
-			constant.ResPlanTicketWatchFailed, subTicket.CrpSN, kt.Rid)
-		return fmt.Errorf("query crp plan order return no result by sn: %s", subTicket.CrpSN)
-	}
-	// CRP返回状态码为： 1 追加单， 2 调整单， 3 订单不存在， 4 其它错误（只有1 和 2 是正确的）
-	if planItem.Code != 1 && planItem.Code != 2 {
-		logs.Errorf("%s: failed to query crp plan order, order status is incorrect, code: %d, data: %+v, rid: %s",
-			constant.ResPlanTicketWatchFailed, planItem.Code, planItem.Data, kt.Rid)
-		return fmt.Errorf("crp plan order status is incorrect, code: %d, sn: %s", planItem.Code, subTicket.CrpSN)
+
+	var planItem *cvmapi.QueryPlanOrderRst
+	rangeMS := [2]uint{CreateCrpTicketDefaultRetryDelayMinMS, CreateCrpTicketDefaultRetryDelayMaxMS}
+	policy := retry.NewRetryPolicy(0, rangeMS)
+	for {
+		resp, err := d.crpCli.QueryPlanOrder(kt.Ctx, nil, req)
+		if err != nil {
+			logs.Errorf("failed to add cvm & cbs plan order, err: %v, sub_ticket_id: %s, rid: %s", err, subTicket.ID,
+				kt.Rid)
+			return err
+		}
+
+		if resp.Error.Code != 0 {
+			logs.Errorf("%s: failed to query crp plan order, code: %d, msg: %s, crp_sn: %s, crp_trace: %s, rid: %s",
+				constant.ResPlanTicketWatchFailed, resp.Error.Code, resp.Error.Message, subTicket.CrpSN, resp.TraceId, kt.Rid)
+			return fmt.Errorf("failed to query crp plan order, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
+		}
+		if resp.Result == nil {
+			logs.Errorf("%s: failed to query crp plan order, for result is empty, crp_sn: %s, rid: %s",
+				constant.ResPlanTicketWatchFailed, subTicket.CrpSN, kt.Rid)
+			return errors.New("failed to query crp plan order, for result is empty")
+		}
+		var ok bool
+		planItem, ok = resp.Result[subTicket.CrpSN]
+		if !ok {
+			logs.Errorf("%s: query crp plan order return no result by sn: %s, rid: %s",
+				constant.ResPlanTicketWatchFailed, subTicket.CrpSN, kt.Rid)
+			return fmt.Errorf("query crp plan order return no result by sn: %s", subTicket.CrpSN)
+		}
+		// CRP返回状态码为： 1 追加单， 2 调整单， 3 订单不存在， 4 其它错误（只有1 和 2 是正确的）
+		if planItem.Code == 4 {
+			// 进行重试
+			if policy.RetryCount()+1 < CreateCrpTicketDefaultRetryTimes {
+				// 	非最后一次重试，继续sleep
+				logs.Warnf(
+					"call crp rate limit, will sleep for retry, retry count: %d, err: %v, crp_trace: %s, rid: %s",
+					policy.RetryCount(), resp.Error, resp.TraceId, kt.Rid)
+				policy.Sleep()
+				continue
+			}
+		}
+		if planItem.Code != 1 && planItem.Code != 2 {
+			logs.Errorf("%s: failed to query crp plan order, order status is incorrect, code: %d, data: %+v,"+
+				" crp_trace: %s, rid: %s",
+				constant.ResPlanTicketWatchFailed, planItem.Code, planItem.Data, resp.TraceId, kt.Rid)
+			return fmt.Errorf("crp plan order status is incorrect, code: %d, sn: %s", planItem.Code, subTicket.CrpSN)
+		}
+		// 其他情况都跳过
+		break
 	}
 
 	update := &rpproto.ResPlanSubTicketUpdateReq{

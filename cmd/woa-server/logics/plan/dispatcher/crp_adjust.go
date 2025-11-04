@@ -36,6 +36,7 @@ import (
 	"hcm/pkg/thirdparty/cvmapi"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/math"
+	"hcm/pkg/tools/retry"
 	"hcm/pkg/tools/uuid"
 
 	"github.com/shopspring/decimal"
@@ -125,12 +126,28 @@ func (c *CrpTicketCreator) CreateCRPTicket(kt *kit.Kit, subTicket *ptypes.SubTic
 			subTicket.DemandClass, kt.Rid)
 	}
 
-	// 3. 发起调整提单
-	resp, err := c.crpCli.AdjustCvmCbsPlans(kt.Ctx, kt.Header(), adjustReq)
-	if err != nil {
-		logs.Errorf("failed to adjust cvm & cbs plan order, subTicketID: %s, err: %v, rid: %s", subTicket.ID,
-			err, kt.Rid)
-		return "", err
+	resp := new(cvmapi.CvmCbsPlanAdjustResp)
+	rangeMS := [2]uint{CreateCrpTicketDefaultRetryDelayMinMS, CreateCrpTicketDefaultRetryDelayMaxMS}
+	policy := retry.NewRetryPolicy(0, rangeMS)
+	for {
+		resp, err = c.crpCli.AdjustCvmCbsPlans(kt.Ctx, kt.Header(), adjustReq)
+		if err != nil {
+			logs.Errorf("failed to add cvm & cbs plan order, err: %v, sub_ticket_id: %s, rid: %s", err, subTicket.ID,
+				kt.Rid)
+			return "", err
+		}
+		// 仅在碰到限频错误时进行重试
+		if resp.Error.Code == CreateCrpTicketRespRateLimitCode {
+			if policy.RetryCount()+1 < CreateCrpTicketDefaultRetryTimes {
+				// 	非最后一次重试，继续sleep
+				logs.Warnf("call crp rate limit, will sleep for retry, retry count: %d, err: %v, crp_trace: %s, rid: %s",
+					policy.RetryCount(), resp.Error, resp.TraceId, kt.Rid)
+				policy.Sleep()
+				continue
+			}
+		}
+		// 其他情况都跳过
+		break
 	}
 
 	if resp.Error.Code != 0 {
