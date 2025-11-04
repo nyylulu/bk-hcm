@@ -18,15 +18,12 @@ import (
 	"hcm/cmd/woa-server/logics/task/informer/generate"
 	"hcm/cmd/woa-server/logics/task/informer/notice"
 	"hcm/cmd/woa-server/logics/task/informer/recycle"
-	"hcm/cmd/woa-server/logics/task/informer/ticket"
 	"hcm/cmd/woa-server/storage/dal"
 	"hcm/cmd/woa-server/storage/stream"
 )
 
 // Interface informer interface
 type Interface interface {
-	// Ticket apply ticket informer interface
-	Ticket() ticket.Interface
 	// Apply apply informer interface
 	Apply() apply.Interface
 	// Recycle recycle informer interface
@@ -38,7 +35,6 @@ type Interface interface {
 }
 
 type informer struct {
-	ticket   ticket.Interface
 	apply    apply.Interface
 	recycle  recycle.Interface
 	event    notice.Interface
@@ -47,11 +43,6 @@ type informer struct {
 
 // New create a informer
 func New(loopWatch stream.LoopInterface, watchDB dal.DB) (*informer, error) {
-	ticketIf, err := ticket.New(loopWatch, watchDB)
-	if err != nil {
-		return nil, err
-	}
-
 	applyIf, err := apply.New(loopWatch, watchDB)
 	if err != nil {
 		return nil, err
@@ -68,18 +59,12 @@ func New(loopWatch stream.LoopInterface, watchDB dal.DB) (*informer, error) {
 	}
 
 	informer := &informer{
-		ticket:   ticketIf,
 		apply:    applyIf,
 		event:    eventIf,
 		generate: generateIf,
 	}
 
 	return informer, nil
-}
-
-// Ticket apply ticket informer interface
-func (i *informer) Ticket() ticket.Interface {
-	return i.ticket
 }
 
 // Apply apply informer interface
