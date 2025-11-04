@@ -355,6 +355,10 @@ func isHostChange(cloud cvm.Cvm[cvm.TCloudZiyanHostExtension], db cvm.Cvm[cvm.TC
 		return true
 	}
 
+	if db.BkAssetID != cloud.BkAssetID {
+		return true
+	}
+
 	if !assert.IsStringSliceEqual(db.CloudVpcIDs, cloud.CloudVpcIDs) {
 		return true
 	}
@@ -742,6 +746,7 @@ func convToCreate(hosts []cvm.Cvm[cvm.TCloudZiyanHostExtension]) []cloud.CvmBatc
 			Name:                 host.Name,
 			BkBizID:              host.BkBizID,
 			BkHostID:             host.BkHostID,
+			BkAssetID:            host.BkAssetID,
 			BkCloudID:            host.BkCloudID,
 			AccountID:            host.AccountID,
 			Region:               host.Region,
@@ -799,6 +804,7 @@ func convToUpdate(
 				Name:                 host.Name,
 				BkBizID:              host.BkBizID,
 				BkHostID:             host.BkHostID,
+				BkAssetID:            host.BkAssetID,
 				BkCloudID:            &host.BkCloudID,
 				Region:               host.Region,
 				Zone:                 host.Zone,
@@ -827,7 +833,8 @@ func convToUpdate(
 	return res
 }
 
-func (cli *client) updateHost(kt *kit.Kit, hosts []cloud.CvmBatchUpdateWithExtension[cvm.TCloudZiyanHostExtension]) error {
+func (cli *client) updateHost(kt *kit.Kit,
+	hosts []cloud.CvmBatchUpdateWithExtension[cvm.TCloudZiyanHostExtension]) error {
 	if len(hosts) == 0 {
 		return nil
 	}

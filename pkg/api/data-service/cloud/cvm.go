@@ -43,6 +43,7 @@ type CvmBatchCreate[Extension corecvm.Extension] struct {
 	Name                 string     `json:"name"`
 	BkBizID              int64      `json:"bk_biz_id" validate:"required"`
 	BkHostID             int64      `json:"bk_host_id" validate:"required"`
+	BkAssetID            string     `json:"bk_asset_id"`
 	BkCloudID            int64      `json:"bk_cloud_id" validate:"required"`
 	AccountID            string     `json:"account_id" validate:"required"`
 	Region               string     `json:"region" validate:"required"`
@@ -88,6 +89,7 @@ type CvmBatchUpdate struct {
 	ID                   string   `json:"id" validate:"required"`
 	Name                 string   `json:"name"`
 	BkBizID              int64    `json:"bk_biz_id" validate:"required"`
+	BkAssetID            string   `json:"bk_asset_id"`
 	Region               string   `yaml:"region"`
 	Zone                 string   `yaml:"zone"`
 	BkHostID             int64    `json:"bk_host_id" validate:"required"`
