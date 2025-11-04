@@ -1206,8 +1206,8 @@ func (s *service) checkHostUworkTicketStatus(cts *rest.Contexts, authHandler han
 	resp := new(types.CheckHostUworkTicketResp)
 	resp.Details = make([]types.CheckHostUworkTicketItem, len(req.BkHostIDs))
 	for i, bkHostID := range req.BkHostIDs {
-		if cvmInfos[bkHostID].Extension == nil {
-			logs.Errorf("host extension is nil, host: %v, rid: %s", cvmInfos[bkHostID], cts.Kit.Rid)
+		if cvmInfos[bkHostID].BkAssetID == "" {
+			logs.Errorf("host bk_asset_id is nil, host: %v, rid: %s", cvmInfos[bkHostID], cts.Kit.Rid)
 			return nil, errf.New(errf.InvalidParameter, "host info is invalid, can not find host asset id")
 		}
 
@@ -1245,7 +1245,6 @@ func (s *service) getCVMsByBkHostIDs(kt *kit.Kit, bkHostIDs []int64, authFilter 
 		}
 
 		listReq := &dataproto.CvmListReq{
-			Field:  []string{"id", "bk_host_id", "extension"},
 			Filter: listFilter,
 			Page:   core.NewDefaultBasePage(),
 		}

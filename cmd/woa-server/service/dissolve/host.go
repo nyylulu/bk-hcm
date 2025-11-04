@@ -192,7 +192,6 @@ func (s *service) checkHostDissolveStatus(cts *rest.Contexts, authHandler handle
 		Rules: rules,
 	}
 	listReq := &dataproto.CvmListReq{
-		Field:  []string{"bk_host_id", "extension"},
 		Filter: listFilter,
 		Page:   core.NewDefaultBasePage(),
 	}
@@ -211,8 +210,8 @@ func (s *service) checkHostDissolveStatus(cts *rest.Contexts, authHandler handle
 
 	hostIDAssetIDMap := make(map[int64]string)
 	for _, host := range rst.Details {
-		if host.Extension == nil {
-			logs.Errorf("host extension is nil, host: %v, rid: %s", host, cts.Kit.Rid)
+		if host.BkAssetID == "" {
+			logs.Errorf("host asset id is nil, host: %v, rid: %s", host, cts.Kit.Rid)
 			return nil, errf.New(errf.InvalidParameter, "host info is invalid, can not find host asset id")
 		}
 		hostIDAssetIDMap[host.BkHostID] = host.BkAssetID
