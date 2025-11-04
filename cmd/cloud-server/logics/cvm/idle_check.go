@@ -132,7 +132,7 @@ func (c *cvm) createTaskDetailsForIdleCheck(kt *kit.Kit, bkBizID int64, taskMana
 			TaskManagementID: taskManagementID,
 			Operation:        taskOperation,
 			State:            enumor.TaskDetailInit,
-			Param:            detail,
+			Param:            detail.param,
 		})
 	}
 

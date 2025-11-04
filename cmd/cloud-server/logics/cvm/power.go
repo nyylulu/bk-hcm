@@ -219,7 +219,14 @@ func groupCvmByVendorAndAccountAndRegion(cvmList []corecvm.BaseCvm) (vendorList 
 		if !exist {
 			l = make([]*cvmTaskDetail, 0)
 		}
-		detail := &cvmTaskDetail{cvm: cvm}
+		var ip string
+		if len(cvm.PrivateIPv4Addresses) > 0 {
+			ip = cvm.PrivateIPv4Addresses[0]
+		}
+		param := task.IdleCheckTaskDetailParam{
+			IP: ip,
+		}
+		detail := &cvmTaskDetail{cvm: cvm, param: param}
 		l = append(l, detail)
 		detailList = append(detailList, detail)
 		m[key] = l
@@ -234,7 +241,8 @@ type cvmTaskDetail struct {
 	flowID       string
 	actionID     string
 
-	cvm corecvm.BaseCvm
+	param task.IdleCheckTaskDetailParam
+	cvm   corecvm.BaseCvm
 }
 
 // getCvmWithExtMap map cvm id to cvm with ext

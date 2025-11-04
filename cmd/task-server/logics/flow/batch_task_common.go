@@ -32,7 +32,6 @@ import (
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
-	"hcm/pkg/tools/maps"
 	"hcm/pkg/tools/retry"
 	"hcm/pkg/tools/slice"
 )
@@ -136,35 +135,29 @@ func BatchUpdateTaskDetailResultState(kt *kit.Kit, ids []string, state enumor.Ta
 }
 
 // BatchUpdateTaskDetailStatesIndividually batch update task detail state individually
-func BatchUpdateTaskDetailStatesIndividually(kt *kit.Kit, detailIDToState map[string]enumor.TaskDetailState) error {
-	if detailIDToState == nil {
+func BatchUpdateTaskDetailStatesIndividually(kt *kit.Kit, detailsUpdates []datatask.UpdateTaskDetailField) error {
+
+	if detailsUpdates == nil {
 		logs.Warnf("task detail states map is nil, rid: %s", kt.Rid)
 		return nil
 	}
 
-	// 将 map 转换为 ids 切片用于分批处理
-	ids := maps.Keys(detailIDToState)
-
-	for _, idBatch := range slice.Split(ids, constant.BatchOperationMaxLimit) {
-		detailUpdates := make([]datatask.UpdateTaskDetailField, len(idBatch))
-		for i, id := range idBatch {
-			detailUpdates[i] = datatask.UpdateTaskDetailField{ID: id, State: detailIDToState[id]}
-		}
-		updateTaskReq := &datatask.UpdateDetailReq{Items: detailUpdates}
+	for _, batch := range slice.Split(detailsUpdates, constant.BatchOperationMaxLimit) {
+		updateTaskReq := &datatask.UpdateDetailReq{Items: batch}
 		rangeMS := [2]uint{BatchTaskDefaultRetryDelayMinMS, BatchTaskDefaultRetryDelayMaxMS}
 		policy := retry.NewRetryPolicy(0, rangeMS)
 		err := policy.BaseExec(kt, func() error {
 			err := actcli.GetDataService().Global.TaskDetail.Update(kt, updateTaskReq)
 			if err != nil {
-				logs.Errorf("fail to update task detail, err: %v, ids: %s, rid: %s",
-					err, idBatch, kt.Rid)
+				logs.Errorf("fail to update task detail, err: %v, req: %+v, rid: %s",
+					err, updateTaskReq, kt.Rid)
 				return err
 			}
 			return nil
 		})
 		if err != nil {
-			logs.Errorf("fail to update task detail state after retry, err: %v, ids: %v, rid: %s",
-				err, idBatch, kt.Rid)
+			logs.Errorf("fail to update task detail state after retry, err: %v, req: %+v, rid: %s",
+				err, updateTaskReq, kt.Rid)
 			return err
 		}
 	}

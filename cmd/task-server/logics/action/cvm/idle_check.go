@@ -30,6 +30,7 @@ import (
 	"hcm/cmd/woa-server/dal/task/table"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
+	"hcm/pkg/api/data-service/task"
 	"hcm/pkg/api/task-server/cvm"
 	"hcm/pkg/async/action"
 	"hcm/pkg/async/action/run"
@@ -122,7 +123,6 @@ func (c MonitorIdleCheckAction) monitorIdleCheckCvm(asyncKit *kit.Kit, opt *cvm.
 
 	req := &types.GetRecycleDetectReq{
 		SuborderID: []string{opt.SuborderID},
-		Status:     []table.DetectStatus{table.DetectStatusSuccess, table.DetectStatusFailed},
 		Page:       metadata.BasePage{Limit: pkg.BKMaxInstanceLimit},
 	}
 
@@ -135,7 +135,7 @@ func (c MonitorIdleCheckAction) monitorIdleCheckCvm(asyncKit *kit.Kit, opt *cvm.
 	defer cancel()
 
 	// 记录已经更新过的任务，避免重复更新
-	updatedDetailIDs := make(map[string]bool)
+	finalDetailIDs := make(map[string]struct{})
 
 	for {
 		select {
@@ -152,36 +152,45 @@ func (c MonitorIdleCheckAction) monitorIdleCheckCvm(asyncKit *kit.Kit, opt *cvm.
 				return fmt.Errorf("fail to list detect task, err: %v, suborder: %v, rid: %s",
 					err, req.SuborderID, asyncKit.Rid)
 			}
-			// 没有处于终态的空闲检查主机
-			if len(rst.Info) == 0 {
-				continue
-			}
 
-			// 只更新新完成的任务
-			detailIDToState := make(map[string]enumor.TaskDetailState)
-			for _, task := range rst.Info {
-				detailID, ok := opt.HostIDToTaskDetailID[task.HostID]
+			// 处于终态的主机数量
+			finalNum := 0
+			updateReqs := make([]task.UpdateTaskDetailField, 0, len(rst.Info))
+			for _, item := range rst.Info {
+				detailID, ok := opt.HostIDToTaskDetailID[item.HostID]
 				if !ok {
-					logs.Errorf("host id %s not found in host id to task detail id map", task.HostID)
-					return fmt.Errorf("host id %s not found in host id to task detail id map", task.HostID)
+					logs.Errorf("host id %s not found in host id to task detail id map", item.HostID)
+					return fmt.Errorf("host id %s not found in host id to task detail id map", item.HostID)
 				}
 
-				// 跳过已经更新过的任务
-				if updatedDetailIDs[detailID] {
+				// 跳过已经处于终态的任务
+				if _, ok := finalDetailIDs[detailID]; ok {
 					continue
 				}
 
-				targetState := enumor.TaskDetailSuccess
-				if task.Status == table.DetectStatusFailed {
-					targetState = enumor.TaskDetailFailed
+				updateReq := task.UpdateTaskDetailField{
+					ID: detailID,
+					Param: task.IdleCheckTaskDetailParam{
+						TotalNum:   item.TotalNum,
+						SuccessNum: item.SuccessNum,
+					},
 				}
-				detailIDToState[detailID] = targetState
-				updatedDetailIDs[detailID] = true
+
+				switch item.Status {
+				case table.DetectStatusSuccess:
+					finalNum++
+					updateReq.State = enumor.TaskDetailSuccess
+					finalDetailIDs[detailID] = struct{}{}
+				case table.DetectStatusFailed:
+					finalNum++
+					updateReq.State = enumor.TaskDetailFailed
+					finalDetailIDs[detailID] = struct{}{}
+				}
+				updateReqs = append(updateReqs, updateReq)
 			}
 
-			// 只有新完成的任务才需要更新
-			if len(detailIDToState) > 0 {
-				err = actionflow.BatchUpdateTaskDetailStatesIndividually(asyncKit, detailIDToState)
+			if len(updateReqs) > 0 {
+				err = actionflow.BatchUpdateTaskDetailStatesIndividually(asyncKit, updateReqs)
 				if err != nil {
 					logs.Errorf("fail to update task detail status, err: %v, rid: %s", err, asyncKit.Rid)
 					return err
@@ -189,7 +198,7 @@ func (c MonitorIdleCheckAction) monitorIdleCheckCvm(asyncKit *kit.Kit, opt *cvm.
 			}
 
 			// 全部主机空闲检查结束（全都处于终态即SUCCESS和FAILED）
-			if len(rst.Info) == idleCheckCvmNum {
+			if finalNum == idleCheckCvmNum {
 				return nil
 			}
 		}
