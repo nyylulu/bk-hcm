@@ -768,21 +768,14 @@ func prepareDeductResPlanDemand(updateDemand rpd.ResPlanDemandTable, changeCpuCo
 	return deductCpuNum
 }
 
-func convCreateResPlanDemandReqs(kt *kit.Kit, ticket *ApplyTicketCtx, demand *ptypes.CrpOrderChangeInfo) (
-	rpproto.ResPlanDemandCreateReq, rpproto.DemandChangelogCreate, error) {
-
-	expectTimeFormat, err := time.Parse(constant.DateLayout, demand.ExpectTime)
-	if err != nil {
-		logs.Errorf("failed to parse expect time, err: %v, expect_time: %s, rid: %s", err, demand.ExpectTime,
-			kt.Rid)
-		return rpproto.ResPlanDemandCreateReq{}, rpproto.DemandChangelogCreate{}, err
-	}
+func newResPlanDemandCreateReq(ticket *ApplyTicketCtx, demand *ptypes.CrpOrderChangeInfo,
+	expectTime time.Time) rpproto.ResPlanDemandCreateReq {
 
 	osChange := demand.ChangeOs
 	cpuCoreChange := demand.ChangeCpuCore
 	memoryChange := demand.ChangeMemory
 	diskSizeChange := demand.ChangeDiskSize
-	createReq := rpproto.ResPlanDemandCreateReq{
+	return rpproto.ResPlanDemandCreateReq{
 		BkBizID:         ticket.BkBizID,
 		BkBizName:       ticket.BkBizName,
 		OpProductID:     ticket.OpProductID,
@@ -795,7 +788,7 @@ func convCreateResPlanDemandReqs(kt *kit.Kit, ticket *ApplyTicketCtx, demand *pt
 		DemandResType:   demand.DemandResType,
 		ResMode:         demand.ResMode,
 		ObsProject:      demand.ObsProject,
-		ExpectTime:      expectTimeFormat.Format(constant.DateLayout),
+		ExpectTime:      expectTime.Format(constant.DateLayout),
 		PlanType:        demand.PlanType,
 		AreaID:          demand.AreaID,
 		AreaName:        demand.AreaName,
@@ -816,11 +809,29 @@ func convCreateResPlanDemandReqs(kt *kit.Kit, ticket *ApplyTicketCtx, demand *pt
 		DiskSize:        &diskSizeChange,
 		DiskIO:          demand.DiskIO,
 	}
+}
+
+func convCreateResPlanDemandReqs(kt *kit.Kit, ticket *ApplyTicketCtx, demand *ptypes.CrpOrderChangeInfo) (
+	rpproto.ResPlanDemandCreateReq, rpproto.DemandChangelogCreate, error) {
+
+	expectTimeFormat, err := time.Parse(constant.DateLayout, demand.ExpectTime)
+	if err != nil {
+		logs.Errorf("failed to parse expect time, err: %v, expect_time: %s, rid: %s", err, demand.ExpectTime,
+			kt.Rid)
+		return rpproto.ResPlanDemandCreateReq{}, rpproto.DemandChangelogCreate{}, err
+	}
+
+	osChange := demand.ChangeOs
+	cpuCoreChange := demand.ChangeCpuCore
+	memoryChange := demand.ChangeMemory
+	diskSizeChange := demand.ChangeDiskSize
+	createReq := newResPlanDemandCreateReq(ticket, demand, expectTimeFormat)
+
 	if demand.ObsProject == enumor.ObsProjectShortLease {
 		returnPlanTimeFormat, err := time.Parse(constant.DateLayout, demand.ReturnPlanTime)
 		if err != nil {
-			logs.Errorf("failed to parse return plan time, err: %v, return_plan_time: %s, rid: %s", err, demand.ReturnPlanTime,
-				kt.Rid)
+			logs.Errorf("failed to parse return plan time, err: %v, return_plan_time: %s, rid: %s", err,
+				demand.ReturnPlanTime, kt.Rid)
 			return rpproto.ResPlanDemandCreateReq{}, rpproto.DemandChangelogCreate{}, err
 		}
 		createReq.ReturnPlanTime = returnPlanTimeFormat.Format(constant.DateLayout)
