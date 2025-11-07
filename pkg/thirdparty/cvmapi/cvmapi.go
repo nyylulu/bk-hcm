@@ -82,6 +82,12 @@ type CVMClientInterface interface {
 	// ReportPenaltyRatio report penalty ratio
 	ReportPenaltyRatio(ctx context.Context, header http.Header, req *CvmCbsPlanPenaltyRatioReportReq) (
 		*CvmCbsPlanPenaltyRatioReportResp, error)
+
+	// QueryReturnPlan query return plan
+	QueryReturnPlan(ctx context.Context, header http.Header, req *QueryReturnPlanReq) (*QueryReturnPlanResp, error)
+	// QueryOrderList 根据销毁单据查询预测返还信息
+	QueryOrderList(ctx context.Context, header http.Header, req *QueryOrderListReq) (
+		*QueryOrderListResp, error)
 }
 
 // NewCVMClientInterface creates a cvm api instance
@@ -410,6 +416,24 @@ func (c *cvmApi) ReportPenaltyRatio(ctx context.Context, header http.Header, req
 	return resp, err
 }
 
+// QueryReturnPlan query cvm return plan
+func (c *cvmApi) QueryReturnPlan(ctx context.Context, header http.Header, req *QueryReturnPlanReq) (
+	*QueryReturnPlanResp, error) {
+
+	subPath := "/yunti-return/webapi/cvm"
+	resp := new(QueryReturnPlanResp)
+	err := c.client.Post().
+		WithContext(ctx).
+		Body(req).
+		SubResourcef(subPath).
+		WithParam(CvmApiKey, CvmApiKeyVal).
+		WithHeaders(header).
+		Do().
+		Into(resp)
+
+	return resp, err
+}
+
 // CreateCvmReturnOrder creates cvm return order
 func (c *cvmApi) CreateCvmReturnOrder(ctx context.Context, header http.Header, req *ReturnReq) (*OrderCreateResp,
 	error) {
@@ -600,6 +624,24 @@ func (c *cvmApi) RevokeCvmOrder(ctx context.Context, header http.Header, req *Re
 
 	subPath := "/apply/api/"
 	resp := new(RevokeCvmOrderResp)
+	err := c.client.Post().
+		WithContext(ctx).
+		Body(req).
+		SubResourcef(subPath).
+		WithParam(CvmApiKey, CvmApiKeyVal).
+		WithHeaders(header).
+		Do().
+		Into(resp)
+
+	return resp, err
+}
+
+// QueryOrderList ...
+func (c *cvmApi) QueryOrderList(ctx context.Context, header http.Header, req *QueryOrderListReq) (
+	*QueryOrderListResp, error) {
+
+	subPath := "/yunti-demand/external"
+	resp := new(QueryOrderListResp)
 	err := c.client.Post().
 		WithContext(ctx).
 		Body(req).

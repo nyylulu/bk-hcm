@@ -6,12 +6,16 @@ import dayjs from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';
 import http from '@/http';
 
-import { type IRequirementObsProject } from '@/store/config/requirement';
+import { RequirementType, type IRequirementObsProject } from '@/store/config/requirement';
 import {
   type IListResourcesDemandsItem,
   ResourcesDemandsStatus,
   ResourceDemandResultStatusCode as StatusCode,
 } from '@/typings/resourcePlan';
+
+const props = defineProps<{ data: any; obsProjectMap: IRequirementObsProject; bizId: number }>();
+
+const emit = defineEmits<(e: 'update', val: { code: number; text: string }, data: any) => void>();
 
 dayjs.extend(isoWeek);
 
@@ -23,10 +27,6 @@ interface IParams {
     device_size: string;
   };
 }
-
-const props = defineProps<{ data: any; obsProjectMap: IRequirementObsProject; bizId: number }>();
-
-const emit = defineEmits<(e: 'update', val: { code: number; text: string }, data: any) => void>();
 
 const list = ref<IListResourcesDemandsItem[]>([]);
 
@@ -51,28 +51,29 @@ const combineRequest = CombineRequest.setup<IListResourcesDemandsItem[]>(
       return acc;
     }, []);
 
-    const allReqs = uniqueParams.map((params) =>
-      rollRequest({
-        httpClient: http,
-        pageEnableCountKey: 'count',
-      }).rollReqUseCount<IListResourcesDemandsItem>(
-        `/api/v1/woa/bizs/${props.bizId}/plans/resources/demands/list`,
-        {
-          obs_projects: [props.obsProjectMap[params.require_type]],
-          core_types: [params.label.device_size],
-          device_families: [params.label.device_group],
-          region_ids: [params.region],
-          // 查询当月有效的预测
-          expect_time_range: {
-            // 当前时间所在月份的第1天往前加1周
-            start: dayjs().startOf('month').subtract(1, 'week').startOf('day').format('YYYY-MM-DD'),
-            // 当前时间月份的最后1天往后加1周
-            end: dayjs().endOf('month').add(1, 'week').endOf('day').format('YYYY-MM-DD'),
+    const allReqs = uniqueParams.map(
+      (params) =>
+        rollRequest({
+          httpClient: http,
+          pageEnableCountKey: 'count',
+        }).rollReqUseCount<IListResourcesDemandsItem>(
+          `/api/v1/woa/bizs/${props.bizId}/plans/resources/demands/list`,
+          {
+            obs_projects: [props.obsProjectMap[params.require_type]],
+            core_types: [params.label.device_size],
+            device_families: [params.label.device_group],
+            region_ids: [params.region],
+            // 查询当月有效的预测
+            expect_time_range: {
+              // 当前时间所在月份的第1天往前加1周
+              start: dayjs().startOf('month').subtract(1, 'week').startOf('day').format('YYYY-MM-DD'),
+              // 当前时间月份的最后1天往后加1周
+              end: dayjs().endOf('month').add(1, 'week').endOf('day').format('YYYY-MM-DD'),
+            },
+            statuses: [ResourcesDemandsStatus.CAN_APPLY],
           },
-          statuses: [ResourcesDemandsStatus.CAN_APPLY],
-        },
-        { limit: 100, countGetter: (res) => res.data.count, listGetter: (res) => res.data.details },
-      ),
+          { limit: 100, countGetter: (res) => res.data.count, listGetter: (res) => res.data.details },
+        ) as Promise<IListResourcesDemandsItem[]>,
     );
 
     const results = await Promise.all(allReqs);
@@ -88,13 +89,13 @@ const planStatus = computed(() => {
   };
 
   // 小额绿通
-  if (props.data.require_type === 7) {
+  if (props.data.require_type === RequirementType.GreenChannel) {
     status.code = StatusCode.Default;
     status.text = '默认预测';
   }
 
   // 滚服项目
-  if (props.data.require_type === 6) {
+  if (props.data.require_type === RequirementType.RollServer) {
     if (props.data.capacity_flag === 0) {
       status.code = StatusCode.BGNone;
       status.text = 'BG无预测';
@@ -104,7 +105,11 @@ const planStatus = computed(() => {
     }
   }
 
-  if ([1, 2, 3].includes(props.data.require_type)) {
+  if (
+    [RequirementType.Regular, RequirementType.Spring, RequirementType.Dissolve, RequirementType.ShortRental].includes(
+      props.data.require_type,
+    )
+  ) {
     const demands = list.value.filter(
       (item) =>
         item.obs_project === props.obsProjectMap[props.data.require_type] &&
@@ -112,6 +117,7 @@ const planStatus = computed(() => {
         item.core_type === props.data.label.device_size &&
         item.region_id === props.data.region,
     );
+
     if (demands.length > 0) {
       status.code = StatusCode.BIZHas;
       status.text = '本业务有预测';
@@ -129,8 +135,13 @@ watchEffect(async () => {
     return;
   }
 
-  // 常规、春节保障、机房裁撤
-  if (props.data && [1, 2, 3].includes(props.data.require_type)) {
+  // 常规、春节保障、机房裁撤、短期
+  if (
+    props.data &&
+    [RequirementType.Regular, RequirementType.Spring, RequirementType.Dissolve, RequirementType.ShortRental].includes(
+      props.data.require_type,
+    )
+  ) {
     combineRequest.add(props.data);
   }
 
@@ -165,6 +176,7 @@ watchEffect(async () => {
 <style lang="scss" scoped>
 .demands-result {
   position: relative;
+
   :deep(.bk-loading-size-mini) {
     transform: scale(0.75);
   }
@@ -183,6 +195,7 @@ watchEffect(async () => {
       color: #299e56;
       background: #daf6e5;
     }
+
     &.none {
       color: #979ba5;
       background: #f0f1f5;

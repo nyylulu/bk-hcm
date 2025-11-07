@@ -7,9 +7,10 @@ interface IProps {
   disabled?: boolean;
   clearable?: boolean;
   multiple?: boolean;
-  showRollingServerProject?: boolean; // 滚服项目只有931业务可选。注意回填时要考虑是否要回填滚服项目（业务下切换业务的case）
   showTips?: boolean;
   popoverOptions?: Partial<PopoverPropTypes>;
+  showRollingServerProject?: boolean; // 滚服项目只有931业务可选。注意回填时要考虑是否要回填滚服项目（业务下切换业务的case）
+  showShortRentalProject?: boolean; // 控制短租项目
 }
 
 const model = defineModel<string | string[]>();
@@ -17,8 +18,9 @@ const props = withDefaults(defineProps<IProps>(), {
   disabled: false,
   clearable: true,
   multiple: false,
-  showRollingServerProject: false,
   showTips: false,
+  showRollingServerProject: true,
+  showShortRentalProject: true,
 });
 const emit = defineEmits<{
   change: [value: string | string[]];
@@ -27,9 +29,10 @@ const emit = defineEmits<{
 const resourcePlanStore = useResourcePlanStore();
 
 const list = ref<string[]>([]);
-const displayList = computed(() =>
-  props.showRollingServerProject ? list.value : list.value.filter((item: string) => item !== '滚服项目'),
-);
+const displayList = computed(() => {
+  const filterText = [props.showRollingServerProject ? '' : '滚服项目', props.showShortRentalProject ? '' : '短租项目'];
+  return list.value.filter((item: string) => !filterText.includes(item));
+});
 const loading = ref(false);
 watchEffect(async () => {
   loading.value = true;

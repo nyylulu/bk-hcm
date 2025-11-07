@@ -29,34 +29,60 @@ type RecycleGrpType int
 
 // definition of various recycle host group type
 const (
-	RecycleGrpCVMPriRegularImmediate    RecycleGrpType = iota
-	RecycleGrpCVMPriRegularDelay        RecycleGrpType = iota
-	RecycleGrpCVMPriDissolveImmediate   RecycleGrpType = iota
-	RecycleGrpCVMPriDissolveDelay       RecycleGrpType = iota
-	RecycleGrpCVMPriSpringImmediate     RecycleGrpType = iota
-	RecycleGrpCVMPriSpringDelay         RecycleGrpType = iota
-	RecycleGrpCVMPriRentImmediate       RecycleGrpType = iota
-	RecycleGrpCVMPriRentDelay           RecycleGrpType = iota
-	RecycleGrpCVMPubRegularImmediate    RecycleGrpType = iota
-	RecycleGrpCVMPubRegularDelay        RecycleGrpType = iota
-	RecycleGrpCVMPubDissolveImmediate   RecycleGrpType = iota
-	RecycleGrpCVMPubDissolveDelay       RecycleGrpType = iota
-	RecycleGrpCVMPubSpringImmediate     RecycleGrpType = iota
-	RecycleGrpCVMPubSpringDelay         RecycleGrpType = iota
-	RecycleGrpCVMPubRentImmediate       RecycleGrpType = iota
-	RecycleGrpCVMPubRentDelay           RecycleGrpType = iota
-	RecycleGrpPMRegularImmediate        RecycleGrpType = iota
-	RecycleGrpPMRegularDelay            RecycleGrpType = iota
-	RecycleGrpPMDissolveImmediate       RecycleGrpType = iota
-	RecycleGrpPMDissolveDelay           RecycleGrpType = iota
-	RecycleGrpPMExpiredImmediate        RecycleGrpType = iota
-	RecycleGrpPMExpiredDelay            RecycleGrpType = iota
-	RecycleGrpOthers                    RecycleGrpType = iota
-	RecycleGrpCVMPubRollServerImmediate RecycleGrpType = iota
-	RecycleGrpCVMPubRollServerDelay     RecycleGrpType = iota
-	RecycleGrpCVMPriRollServerImmediate RecycleGrpType = iota
-	RecycleGrpCVMPriRollServerDelay     RecycleGrpType = iota
+	RecycleGrpCVMPriRegularImmediate     RecycleGrpType = iota
+	RecycleGrpCVMPriRegularDelay         RecycleGrpType = iota
+	RecycleGrpCVMPriDissolveImmediate    RecycleGrpType = iota
+	RecycleGrpCVMPriDissolveDelay        RecycleGrpType = iota
+	RecycleGrpCVMPriSpringImmediate      RecycleGrpType = iota
+	RecycleGrpCVMPriSpringDelay          RecycleGrpType = iota
+	RecycleGrpCVMPriRentImmediate        RecycleGrpType = iota
+	RecycleGrpCVMPriRentDelay            RecycleGrpType = iota
+	RecycleGrpCVMPubRegularImmediate     RecycleGrpType = iota
+	RecycleGrpCVMPubRegularDelay         RecycleGrpType = iota
+	RecycleGrpCVMPubDissolveImmediate    RecycleGrpType = iota
+	RecycleGrpCVMPubDissolveDelay        RecycleGrpType = iota
+	RecycleGrpCVMPubSpringImmediate      RecycleGrpType = iota
+	RecycleGrpCVMPubSpringDelay          RecycleGrpType = iota
+	RecycleGrpCVMPubRentImmediate        RecycleGrpType = iota
+	RecycleGrpCVMPubRentDelay            RecycleGrpType = iota
+	RecycleGrpPMRegularImmediate         RecycleGrpType = iota
+	RecycleGrpPMRegularDelay             RecycleGrpType = iota
+	RecycleGrpPMDissolveImmediate        RecycleGrpType = iota
+	RecycleGrpPMDissolveDelay            RecycleGrpType = iota
+	RecycleGrpPMExpiredImmediate         RecycleGrpType = iota
+	RecycleGrpPMExpiredDelay             RecycleGrpType = iota
+	RecycleGrpOthers                     RecycleGrpType = iota
+	RecycleGrpCVMPubRollServerImmediate  RecycleGrpType = iota
+	RecycleGrpCVMPubRollServerDelay      RecycleGrpType = iota
+	RecycleGrpCVMPriRollServerImmediate  RecycleGrpType = iota
+	RecycleGrpCVMPriRollServerDelay      RecycleGrpType = iota
+	RecycleGrpCVMPubShortRentalImmediate RecycleGrpType = iota
+	RecycleGrpCVMPubShortRentalDelay     RecycleGrpType = iota
+	RecycleGrpCVMPriShortRentalImmediate RecycleGrpType = iota
+	RecycleGrpCVMPriShortRentalDelay     RecycleGrpType = iota
 )
+
+// IsRollingServerType check if the recycle group type is rolling server type
+func (r RecycleGrpType) IsRollingServerType() bool {
+	switch r {
+	case RecycleGrpCVMPubRollServerImmediate, RecycleGrpCVMPubRollServerDelay,
+		RecycleGrpCVMPriRollServerImmediate, RecycleGrpCVMPriRollServerDelay:
+		return true
+	default:
+		return false
+	}
+}
+
+// IsShortRentalType check if the recycle group type is short rental type
+func (r RecycleGrpType) IsShortRentalType() bool {
+	switch r {
+	case RecycleGrpCVMPubShortRentalImmediate, RecycleGrpCVMPubShortRentalDelay,
+		RecycleGrpCVMPriShortRentalImmediate, RecycleGrpCVMPriShortRentalDelay:
+		return true
+	default:
+		return false
+	}
+}
 
 // RecycleGroupProperty recycle strategy properties of recycle group
 type RecycleGroupProperty struct {
@@ -221,44 +247,65 @@ var MapGroupProperty = map[RecycleGrpType]RecycleGroupProperty{
 		Pool:          table.PoolPrivate,
 		CostConcerned: false,
 	},
+	RecycleGrpCVMPubShortRentalImmediate: {
+		ResourceType:  table.ResourceTypeCvm,
+		RecycleType:   table.RecycleTypeShortRental,
+		ReturnType:    table.RetPlanImmediate,
+		Pool:          table.PoolPublic,
+		CostConcerned: false,
+	},
+	RecycleGrpCVMPubShortRentalDelay: {
+		ResourceType:  table.ResourceTypeCvm,
+		RecycleType:   table.RecycleTypeShortRental,
+		ReturnType:    table.RetPlanDelay,
+		Pool:          table.PoolPublic,
+		CostConcerned: false,
+	},
+	RecycleGrpCVMPriShortRentalImmediate: {
+		ResourceType:  table.ResourceTypeCvm,
+		RecycleType:   table.RecycleTypeShortRental,
+		ReturnType:    table.RetPlanImmediate,
+		Pool:          table.PoolPrivate,
+		CostConcerned: false,
+	},
+	RecycleGrpCVMPriShortRentalDelay: {
+		ResourceType:  table.ResourceTypeCvm,
+		RecycleType:   table.RecycleTypeShortRental,
+		ReturnType:    table.RetPlanDelay,
+		Pool:          table.PoolPrivate,
+		CostConcerned: false,
+	},
 }
 
 // RecycleGroup recycle group of hosts with the same resource type, recycle type and return plan
 type RecycleGroup map[RecycleGrpType][]*table.RecycleHost
 
 // ClassifyRecycleGroups classify hosts into groups with different recycle strategies
-func ClassifyRecycleGroups(hosts []*table.RecycleHost, plan *types.ReturnPlan) (map[int64]RecycleGroup, error) {
-	// fill host classify info
-	fillClassifyInfo(hosts, plan)
+func ClassifyRecycleGroups(bkBizHostsMap map[int64][]*table.RecycleHost, plan *types.ReturnPlan) (
+	map[int64]RecycleGroup, error) {
 
 	groups := make(map[int64]RecycleGroup)
-	for _, host := range hosts {
-		grpType := getRecycleGrpType(host, plan)
-		if _, ok := groups[host.BizID]; !ok {
-			groups[host.BizID] = RecycleGroup{}
+	for bkBizID, hosts := range bkBizHostsMap {
+		groups[bkBizID] = RecycleGroup{}
+		for _, host := range hosts {
+			grpType := getRecycleGrpType(host, plan)
+			if _, ok := groups[bkBizID][grpType]; !ok {
+				groups[bkBizID][grpType] = make([]*table.RecycleHost, 0)
+			}
+			groups[bkBizID][grpType] = append(groups[bkBizID][grpType], host)
 		}
-		if _, ok := groups[host.BizID][grpType]; !ok {
-			groups[host.BizID][grpType] = make([]*table.RecycleHost, 0)
-		}
-		groups[host.BizID][grpType] = append(groups[host.BizID][grpType], host)
 	}
 
 	return groups, nil
 }
 
-// fillClassifyInfo fill recycle host with classification info
-func fillClassifyInfo(hosts []*table.RecycleHost, plan *types.ReturnPlan) {
+// FillClassifyInfo fill recycle host with classification info
+func FillClassifyInfo(hosts []*table.RecycleHost, plan *types.ReturnPlan) {
 
 	for _, host := range hosts {
 		// fill resource type
 		resType := getResType(host)
 		host.ResourceType = resType
-
-		// fill recycle type
-		recycleType := getRecycleType(host)
-		if table.CanUpdateRecycleType(host.RecycleType, recycleType) {
-			host.RecycleType = recycleType
-		}
 
 		// fill return plan
 		switch resType {
@@ -369,11 +416,10 @@ func isSpecialCvm(deviceType string) bool {
 	return false
 }
 
-// getRecycleType get host recycle type
-func getRecycleType(host *table.RecycleHost) table.RecycleType {
-
+// GetFixedRecycleType get host recycle type if it's a fixed type, otherwise return table.RecycleTypeRegular
+func GetFixedRecycleType(host *table.RecycleHost, isDissolveHost bool) table.RecycleType {
 	// 机房裁撤
-	if isDissolveDevice(host) {
+	if isDissolveHost {
 		return table.RecycleTypeDissolve
 	}
 
@@ -387,17 +433,7 @@ func getRecycleType(host *table.RecycleHost) table.RecycleType {
 		return table.RecycleTypeSpring
 	}
 
-	// 判断“回收类型”是否滚服项目
-	if isRecycleRollProject(host) {
-		return table.RecycleTypeRollServer
-	}
-
 	return table.RecycleTypeRegular
-}
-
-// isDissolveDevice verify if given host is in dissolve plan
-func isDissolveDevice(host *table.RecycleHost) bool {
-	return host.RecycleType == table.RecycleTypeDissolve
 }
 
 // isExpiredPm verify if given host is expired physical machine
@@ -479,19 +515,6 @@ func isSpringWindow() bool {
 	return false
 }
 
-// isRecycleRollProject verify if given host is cvm with obs project "滚服项目"
-func isRecycleRollProject(host *table.RecycleHost) bool {
-	if host.ResourceType != table.ResourceTypeCvm {
-		return false
-	}
-
-	if host.RecycleType == table.RecycleTypeRollServer {
-		return true
-	}
-
-	return false
-}
-
 // getRecycleGrpType get host recycle group type
 func getRecycleGrpType(host *table.RecycleHost, plan *types.ReturnPlan) RecycleGrpType {
 	switch host.ResourceType {
@@ -543,6 +566,14 @@ func cvmPoolPublic(host *table.RecycleHost, plan *types.ReturnPlan) RecycleGrpTy
 			return RecycleGrpCVMPubRollServerDelay
 		}
 	}
+	if host.RecycleType == table.RecycleTypeShortRental { // 短租项目
+		if plan.CvmPlan == table.RetPlanImmediate {
+			return RecycleGrpCVMPubShortRentalImmediate
+		}
+		if plan.CvmPlan == table.RetPlanDelay {
+			return RecycleGrpCVMPubShortRentalDelay
+		}
+	}
 	return RecycleGrpOthers
 }
 
@@ -577,6 +608,14 @@ func cvmPoolPrivate(host *table.RecycleHost, plan *types.ReturnPlan) RecycleGrpT
 		}
 		if plan.CvmPlan == table.RetPlanDelay {
 			return RecycleGrpCVMPriRollServerDelay
+		}
+	}
+	if host.RecycleType == table.RecycleTypeShortRental { // 短租项目
+		if plan.CvmPlan == table.RetPlanImmediate {
+			return RecycleGrpCVMPriShortRentalImmediate
+		}
+		if plan.CvmPlan == table.RetPlanDelay {
+			return RecycleGrpCVMPriShortRentalDelay
 		}
 	}
 	return RecycleGrpOthers

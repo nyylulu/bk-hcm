@@ -20,16 +20,16 @@
 package dispatcher
 
 import (
-	ptypes "hcm/cmd/woa-server/types/plan"
 	rpproto "hcm/pkg/api/data-service/resource-plan"
+	rpt "hcm/pkg/dal/table/resource-plan/res-plan-ticket"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 )
 
 // unlockTicketOriginalDemands 解锁订单中的原始预测需求，用于预测修改失败等特殊情况，避免死锁
-func (d *Dispatcher) unlockTicketOriginalDemands(kt *kit.Kit, ticket *ptypes.TicketInfo) error {
+func (d *Dispatcher) unlockTicketOriginalDemands(kt *kit.Kit, demands rpt.ResPlanDemands) error {
 	allDemandIDs := make([]string, 0)
-	for _, demand := range ticket.Demands {
+	for _, demand := range demands {
 		if demand.Original != nil {
 			allDemandIDs = append(allDemandIDs, demand.Original.DemandID)
 		}

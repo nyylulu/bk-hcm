@@ -9,6 +9,7 @@ export interface IDemandListDetail {
   demand_class: string; // 预期需求类型
   available_year_month: string; // 需求年月
   expect_time: string; // 期望交付日期
+  return_plan_time: string; // 短租返还日期
   device_class: string; // 机型类型
   device_type: string; // 机型
   total_os: string; // 总OS数量

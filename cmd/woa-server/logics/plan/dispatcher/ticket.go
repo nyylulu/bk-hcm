@@ -227,7 +227,7 @@ func (d *Dispatcher) checkItsmTicket(kt *kit.Kit, ticket *ptypes.TicketInfo) (bo
 		return checkSubTicket, nil
 	}
 	// 单据被拒需要释放资源
-	return checkSubTicket, d.unlockTicketOriginalDemands(kt, ticket)
+	return checkSubTicket, d.unlockTicketOriginalDemands(kt, ticket.Demands)
 }
 
 // checkTicketTimeout check ticket timeout
@@ -270,7 +270,7 @@ func (d *Dispatcher) finishAuditFlow(kt *kit.Kit, ticket *ptypes.TicketInfo) err
 	}
 
 	// crp单据通过后更新本地数据表
-	if err := d.applyResPlanDemandChange(kt, ticket); err != nil {
+	if err := d.queryAndApplyResPlanDemandChange(kt, ticket); err != nil {
 		logs.Errorf("%s: failed to upsert crp demand, err: %v, rid: %s", constant.DemandChangeAppliedFailed,
 			err, kt.Rid)
 		return err

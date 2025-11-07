@@ -365,20 +365,22 @@ type AddCvmCbsPlanParam struct {
 
 // AddPlanItem add cvm and cbs plan order item
 type AddPlanItem struct {
-	UseTime         string  `json:"useTime"`
-	ProjectName     string  `json:"projectName"`
-	PlanProductName string  `json:"planProductName"`
-	ProductName     string  `json:"productName"`
-	CityName        string  `json:"cityName"`
-	ZoneName        string  `json:"zoneName"`
-	CoreTypeName    string  `json:"coreTypeName"`
-	InstanceModel   string  `json:"instanceModel"`
-	CvmAmount       float64 `json:"cvmAmount"`
-	CoreAmount      int     `json:"coreAmount"`
-	Desc            string  `json:"desc"`
-	InstanceIO      int     `json:"instanceIO"`
-	DiskTypeName    string  `json:"diskTypeName"`
-	DiskAmount      int     `json:"diskAmount"`
+	UseTime          string  `json:"useTime"`
+	ProjectName      string  `json:"projectName"`
+	PlanProductName  string  `json:"planProductName"`
+	ProductName      string  `json:"productName"`
+	CityName         string  `json:"cityName"`
+	ZoneName         string  `json:"zoneName"`
+	CoreTypeName     string  `json:"coreTypeName"`
+	InstanceModel    string  `json:"instanceModel"`
+	CvmAmount        float64 `json:"cvmAmount"`
+	CoreAmount       int     `json:"coreAmount"`
+	IsAutoReturnPlan bool    `json:"isAutoReturnPlan"`
+	ReturnPlanTime   string  `json:"returnPlanTime"`
+	Desc             string  `json:"desc"`
+	InstanceIO       int     `json:"instanceIO"`
+	DiskTypeName     string  `json:"diskTypeName"`
+	DiskAmount       int     `json:"diskAmount"`
 }
 
 // QueryPlanOrderReq query cvm and cbs plan order request
@@ -390,6 +392,27 @@ type QueryPlanOrderReq struct {
 // QueryPlanOrderParam query cvm and cbs plan order parameters
 type QueryPlanOrderParam struct {
 	OrderIds []string `json:"orderIds,omitempty"`
+}
+
+// QueryReturnPlanReq query cvm return plan request
+type QueryReturnPlanReq struct {
+	ReqMeta `json:",inline"`
+	Params  *QueryReturnPlanParam `json:"params"`
+}
+
+// QueryReturnPlanParam query cvm return plan parameters
+// docs: iwiki/p/4015475872#退回计划查询API
+type QueryReturnPlanParam struct {
+	UserName         string              `json:"userName"`
+	StartDate        string              `json:"startDate"` // 查询的预计退回日期起始，格式YYYY-MM-DD
+	EndDate          string              `json:"endDate"`   // 查询的预计退回日期结束，格式YYYY-MM-DD
+	DeptName         []string            `json:"deptName"`
+	PlanProductName  []string            `json:"planProductName"`
+	ProductName      []string            `json:"productName"`
+	ProjectName      []enumor.ObsProject `json:"projectName"`
+	CityName         []string            `json:"cityName"`
+	DeviceFamilyName []string            `json:"deviceFamilyName"`
+	Page             *Page               `json:"page,omitempty"`
 }
 
 /* CapacityReq request example
@@ -514,6 +537,10 @@ type ReturnParam struct {
 	Force bool `json:"force"`
 	// 选填，是否接受成本分摊。true是，false否。默认：false
 	AcceptCostShare bool `json:"acceptCostShare"`
+	//选填，是否返还预测，默认0；0-不处理，1-返还预测，2-不返还预测
+	ReturnForecast int `json:"returnForecast"`
+	// 选填，期望返回预测时间，不能早于当天/不能晚于当年最后一天，格式是：YYYY-MM-DD .
+	ReturnForecastTime string `json:"returnForecastTime,omitempty"`
 }
 
 // UpgradeReq create cvm upgrade order request
@@ -630,4 +657,16 @@ type FuzzyZoneItem struct {
 	Zone     string `json:"zone"`
 	VpcID    string `json:"vpcId"`
 	SubnetID string `json:"subnetId"`
+}
+
+// QueryOrderListReq query order list request
+type QueryOrderListReq struct {
+	ReqMeta `json:",inline"`
+	Params  *QueryOrderListParam `json:"params"`
+}
+
+// QueryOrderListParam query order list parameters
+type QueryOrderListParam struct {
+	DestroyReturnPlanOrderId []string `json:"destroyReturnPlanOrderId"`
+	UserName                 string   `json:"userName"`
 }

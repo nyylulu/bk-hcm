@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, watchEffect } from 'vue';
+import { computed, ref, watch, watchEffect } from 'vue';
 import { ModelProperty } from '@/model/typings';
 
 defineOptions({ name: 'recycle-type-selector' });
@@ -20,10 +20,18 @@ watchEffect(() => {
 watch(selected, (v) => {
   emit('change', v);
 });
+
+const isChanged = computed(() => selected.value !== props.originValue);
 </script>
 
 <template>
-  <hcm-form-enum v-model="selected" :display="{ on: 'cell' }" :option="option" />
+  <div :class="{ changed: isChanged }">
+    <hcm-form-enum v-model="selected" :display="{ on: 'cell' }" :option="option" />
+  </div>
 </template>
 
-<style scoped></style>
+<style lang="scss" scoped>
+.changed {
+  background-color: #fdf5ea;
+}
+</style>

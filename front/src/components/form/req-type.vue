@@ -61,6 +61,7 @@ const options: Record<IRequirementItem['require_type'], { tags: string[]; icon: 
   6: { tags: ['即时申领', '资源周转'], icon: 'bkhcm-icon-rolling-server', recommend: true },
   7: { tags: ['即时申领', '小额紧急'], icon: 'bkhcm-icon-green-channel-rocket', recommend: true },
   8: { tags: ['2025春节紧急资源', '按量计费'], icon: 'bkhcm-icon-regular', recommend: false },
+  9: { tags: ['提前预测', '短租场景'], icon: 'bkhcm-icon-short-rental', recommend: false },
 };
 
 const handleSelect = (item: IRequirementItem) => {

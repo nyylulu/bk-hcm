@@ -25,18 +25,19 @@ type RecycleType string
 
 // definition of various recycle type
 const (
-	RecycleTypeRegular    RecycleType = "常规项目"
-	RecycleTypeDissolve   RecycleType = "机房裁撤"
-	RecycleTypeExpired    RecycleType = "过保裁撤"
-	RecycleTypeSpring     RecycleType = "春节保障"
-	RecycleTypeRollServer RecycleType = "滚服项目"
+	RecycleTypeRegular     RecycleType = "常规项目"
+	RecycleTypeDissolve    RecycleType = "机房裁撤"
+	RecycleTypeExpired     RecycleType = "过保裁撤"
+	RecycleTypeSpring      RecycleType = "春节保障"
+	RecycleTypeRollServer  RecycleType = "滚服项目"
+	RecycleTypeShortRental RecycleType = "短租项目"
 )
 
 // CanUpdateRecycleType 输入当前的回收类型，以及想要更新的回收类型，根据回收类型的优先级进行判断，
 // 如果当前回收类型优先级高于想要更新的回收类型，则返回false，否则返回true
-func CanUpdateRecycleType(cur, desired RecycleType) bool {
-	curPriority := getRecycleTypePriority(cur)
-	desiredPriority := getRecycleTypePriority(desired)
+func (rt RecycleType) CanUpdateRecycleType(recycleTypeSeq []RecycleType, desired RecycleType) bool {
+	curPriority := rt.getRecycleTypePriority(recycleTypeSeq)
+	desiredPriority := desired.getRecycleTypePriority(recycleTypeSeq)
 
 	// 值越小，优先级越高
 	if curPriority < desiredPriority {
@@ -47,16 +48,37 @@ func CanUpdateRecycleType(cur, desired RecycleType) bool {
 }
 
 // getRecycleTypePriority 返回值越小，优先级越高
-func getRecycleTypePriority(recycleType RecycleType) int {
-	switch recycleType {
-	case RecycleTypeDissolve:
-		return 0
+func (rt RecycleType) getRecycleTypePriority(recycleTypeSeq []RecycleType) int {
+	if rt.IsFixedType() {
+		return math.MinInt
+	}
+
+	// 如果提供了可变回收类型的优先级序列，则按照提供的优先级排序；未提及的回收类型，优先级最低
+	seqNum := len(recycleTypeSeq)
+	for i, r := range recycleTypeSeq {
+		if r == rt {
+			return i
+		}
+	}
+
+	switch rt {
 	case RecycleTypeRollServer:
-		return 1
-	case RecycleTypeSpring:
-		return 2
+		return seqNum + 0
+	case RecycleTypeShortRental:
+		return seqNum + 1
 	default:
 		return math.MaxInt
+	}
+}
+
+// IsFixedType return whether recycle type is fixed
+func (rt RecycleType) IsFixedType() bool {
+	switch rt {
+	// 机房裁撤和春节保障属于固定回收类型，优先级最高
+	case RecycleTypeDissolve, RecycleTypeSpring:
+		return true
+	default:
+		return false
 	}
 }
 
@@ -69,6 +91,8 @@ func (rt RecycleType) ToObsProject() string {
 		return rt.getDissolveObsProject()
 	case RecycleTypeRollServer:
 		return string(RecycleTypeRollServer)
+	case RecycleTypeShortRental:
+		return string(RecycleTypeShortRental)
 	default:
 		return string(RecycleTypeRegular)
 	}
@@ -103,7 +127,7 @@ func (rt RecycleType) getDissolveObsProject() string {
 func (rt RecycleType) Validate() error {
 	switch rt {
 	case RecycleTypeRegular, RecycleTypeDissolve, RecycleTypeExpired,
-		RecycleTypeSpring, RecycleTypeRollServer:
+		RecycleTypeSpring, RecycleTypeRollServer, RecycleTypeShortRental:
 	default:
 		return fmt.Errorf("validate unknown recycle type: %s", rt)
 	}
@@ -115,35 +139,39 @@ type RecycleStatus string
 
 // definition of various recycle status
 const (
-	RecycleStatusDefault       RecycleStatus = "DEFAULT"
-	RecycleStatusUncommit      RecycleStatus = "UNCOMMIT"
-	RecycleStatusCommitted     RecycleStatus = "COMMITTED"
-	RecycleStatusDetecting     RecycleStatus = "DETECTING"
-	RecycleStatusDetectFailed  RecycleStatus = "DETECT_FAILED"
-	RecycleStatusAudit         RecycleStatus = "FOR_AUDIT"
-	RecycleStatusRejected      RecycleStatus = "REJECTED"
-	RecycleStatusTransiting    RecycleStatus = "TRANSITING"
-	RecycleStatusTransitFailed RecycleStatus = "TRANSIT_FAILED"
-	RecycleStatusReturning     RecycleStatus = "RETURNING"
-	RecycleStatusReturnFailed  RecycleStatus = "RETURN_FAILED"
-	RecycleStatusDone          RecycleStatus = "DONE"
-	RecycleStatusTerminate     RecycleStatus = "TERMINATE"
+	RecycleStatusDefault          RecycleStatus = "DEFAULT"
+	RecycleStatusUncommit         RecycleStatus = "UNCOMMIT"
+	RecycleStatusCommitted        RecycleStatus = "COMMITTED"
+	RecycleStatusDetecting        RecycleStatus = "DETECTING"
+	RecycleStatusDetectFailed     RecycleStatus = "DETECT_FAILED"
+	RecycleStatusAudit            RecycleStatus = "FOR_AUDIT"
+	RecycleStatusRejected         RecycleStatus = "REJECTED"
+	RecycleStatusTransiting       RecycleStatus = "TRANSITING"
+	RecycleStatusTransitFailed    RecycleStatus = "TRANSIT_FAILED"
+	RecycleStatusReturning        RecycleStatus = "RETURNING"
+	RecycleStatusReturnFailed     RecycleStatus = "RETURN_FAILED"
+	RecycleStatusReturningPlan    RecycleStatus = "RETURNING_PLAN"
+	RecycleStatusReturnPlanFailed RecycleStatus = "RETURN_PLAN_FAILED"
+	RecycleStatusDone             RecycleStatus = "DONE"
+	RecycleStatusTerminate        RecycleStatus = "TERMINATE"
 )
 
 // definition of various recycle status description
 const (
-	RecycleStatusDescUncommit      string = "未提单"
-	RecycleStatusDescCommitted     string = "已提单"
-	RecycleStatusDescDetecting     string = "预检中"
-	RecycleStatusDescDetectFailed  string = "预检失败"
-	RecycleStatusDescAudit         string = "待审核"
-	RecycleStatusDescRejected      string = "已驳回"
-	RecycleStatusDescTransiting    string = "中转中"
-	RecycleStatusDescTransitFailed string = "中转失败"
-	RecycleStatusDescReturning     string = "退回中"
-	RecycleStatusDescReturnFailed  string = "退回失败"
-	RecycleStatusDescDone          string = "已完成"
-	RecycleStatusDescTerminate     string = "终止"
+	RecycleStatusDescUncommit         string = "未提单"
+	RecycleStatusDescCommitted        string = "已提单"
+	RecycleStatusDescDetecting        string = "预检中"
+	RecycleStatusDescDetectFailed     string = "预检失败"
+	RecycleStatusDescAudit            string = "待审核"
+	RecycleStatusDescRejected         string = "已驳回"
+	RecycleStatusDescTransiting       string = "中转中"
+	RecycleStatusDescTransitFailed    string = "中转失败"
+	RecycleStatusDescReturning        string = "退回中"
+	RecycleStatusDescReturnFailed     string = "退回失败"
+	RecycleStatusDescReturningPlan    string = "返还预测中"
+	RecycleStatusDescReturnPlanFailed string = "返还预测失败"
+	RecycleStatusDescDone             string = "已完成"
+	RecycleStatusDescTerminate        string = "终止"
 )
 
 // RecycleStage recycle stage
@@ -151,13 +179,14 @@ type RecycleStage string
 
 // definition of various recycle stage
 const (
-	RecycleStageCommit    RecycleStage = "COMMIT"
-	RecycleStageDetect    RecycleStage = "DETECT"
-	RecycleStageAudit     RecycleStage = "AUDIT"
-	RecycleStageTransit   RecycleStage = "TRANSIT"
-	RecycleStageReturn    RecycleStage = "RETURN"
-	RecycleStageDone      RecycleStage = "DONE"
-	RecycleStageTerminate RecycleStage = "TERMINATE"
+	RecycleStageCommit     RecycleStage = "COMMIT"
+	RecycleStageDetect     RecycleStage = "DETECT"
+	RecycleStageAudit      RecycleStage = "AUDIT"
+	RecycleStageTransit    RecycleStage = "TRANSIT"
+	RecycleStageReturn     RecycleStage = "RETURN"
+	RecycleStageReturnPlan RecycleStage = "RETURN_PLAN" // 返还预测
+	RecycleStageDone       RecycleStage = "DONE"
+	RecycleStageTerminate  RecycleStage = "TERMINATE"
 )
 
 // definition of various recycle stage description

@@ -22,16 +22,18 @@ import (
 
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
+	"hcm/cmd/woa-server/logics/biz"
 	configLogics "hcm/cmd/woa-server/logics/config"
 	"hcm/cmd/woa-server/logics/dissolve"
+	"hcm/cmd/woa-server/logics/plan"
 	rslogics "hcm/cmd/woa-server/logics/rolling-server"
+	srlogics "hcm/cmd/woa-server/logics/short-rental"
 	"hcm/cmd/woa-server/logics/task/recycler/classifier"
 	"hcm/cmd/woa-server/logics/task/recycler/detector"
 	"hcm/cmd/woa-server/logics/task/recycler/dispatcher"
 	"hcm/cmd/woa-server/logics/task/recycler/event"
 	"hcm/cmd/woa-server/logics/task/recycler/returner"
 	"hcm/cmd/woa-server/logics/task/recycler/transit"
-	rstypes "hcm/cmd/woa-server/types/rolling-server"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
 	"hcm/pkg/client"
@@ -108,6 +110,8 @@ type Interface interface {
 	GetDetectStepCfg(kit *kit.Kit) (*types.GetDetectStepCfgRst, error)
 	// GetDispatcher gets dispatcher instance
 	GetDispatcher() *dispatcher.Dispatcher
+	// GetShortRentalLogic get short rental logic
+	GetShortRentalLogic() srlogics.Logics
 
 	// RunRecycleTask run resource recycle detect task
 	// RunRecycleTask(task *table.DetectTask, startStep uint)
@@ -149,13 +153,15 @@ type recycler struct {
 	authorizer    auth.Authorizer
 	configLogics  configLogics.Logics
 	rsLogic       rslogics.Logics
+	srLogic       srlogics.Logics
+	bizLogic      biz.Logics
 	dissolveLogic dissolve.Logics
 }
 
 // New create a recycler
-func New(ctx context.Context, thirdCli *thirdparty.Client, cmdbCli cmdb.Client, authorizer auth.Authorizer,
-	rsLogic rslogics.Logics, dissolveLogic dissolve.Logics, cliSet *client.ClientSet,
-	configLogics configLogics.Logics) (Interface, error) {
+func New(ctx context.Context, thirdCli *thirdparty.Client, bizLogic biz.Logics, cmdbCli cmdb.Client,
+	authorizer auth.Authorizer, rsLogic rslogics.Logics, srLogics srlogics.Logics, dissolveLogic dissolve.Logics,
+	cliSet *client.ClientSet, configLogics configLogics.Logics, planLogic plan.Logics) (Interface, error) {
 
 	// new detector
 	moduleDetector, err := detector.New(ctx, thirdCli, cmdbCli, cliSet)
@@ -164,7 +170,7 @@ func New(ctx context.Context, thirdCli *thirdparty.Client, cmdbCli cmdb.Client, 
 	}
 
 	// new returner
-	moduleReturner, err := returner.New(ctx, thirdCli, cmdbCli)
+	moduleReturner, err := returner.New(ctx, thirdCli, cmdbCli, planLogic)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +182,7 @@ func New(ctx context.Context, thirdCli *thirdparty.Client, cmdbCli cmdb.Client, 
 	}
 
 	// new dispatcher
-	dispatch, err := dispatcher.New(ctx, moduleDetector, moduleReturner, moduleTransit, rsLogic)
+	dispatch, err := dispatcher.New(ctx, moduleDetector, moduleReturner, moduleTransit, rsLogic, srLogics)
 	if err != nil {
 		return nil, err
 	}
@@ -189,6 +195,8 @@ func New(ctx context.Context, thirdCli *thirdparty.Client, cmdbCli cmdb.Client, 
 		authorizer:    authorizer,
 		configLogics:  configLogics,
 		rsLogic:       rsLogic,
+		srLogic:       srLogics,
+		bizLogic:      bizLogic,
 		dissolveLogic: dissolveLogic,
 	}
 
@@ -203,6 +211,11 @@ func (r *recycler) RecoverReturnCvm(kt *kit.Kit, task *table.ReturnTask, hosts [
 // GetDispatcher get dispatcher
 func (r *recycler) GetDispatcher() *dispatcher.Dispatcher {
 	return r.dispatcher
+}
+
+// GetShortRentalLogic get short rental logic
+func (r *recycler) GetShortRentalLogic() srlogics.Logics {
+	return r.srLogic
 }
 
 // UpdateReturnTaskStatus update return task status
@@ -430,14 +443,7 @@ func (r *recycler) getHostDetailInfo(kt *kit.Kit, ips, assetIds []string, hostId
 	// 3. fill host info
 	hostDetails := r.getHostDetails(kt, hostBase, mapHostToRel, mapBizIdToBiz, mapModuleIdToModule)
 
-	// 4. fill host recycle type info
-	hostDetails, err = r.fillHostRecycleType(kt, hostDetails)
-	if err != nil {
-		logs.Errorf("failed to fill host recycle type, err: %v, rid: %s", err, kt.Rid)
-		return nil, err
-	}
-
-	// 5. fill cvm info
+	// 4. fill cvm info
 	if err = r.fillCvmInfo(kt, hostDetails); err != nil {
 		logs.Errorf("failed to fill cvm info, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -712,54 +718,39 @@ func (r *recycler) PreviewRecycleOrder(kt *kit.Kit, param *types.PreviewRecycleR
 		return nil, err
 	}
 
-	bkBizIDs := make([]int64, 0)
+	// 2. fill host resource type and return plan
+	// Must be done before filling recycle type, as the caiche recycle type depends on the host's resource type
+	classifier.FillClassifyInfo(hosts, param.ReturnPlan)
+
+	// 分业务处理
+	bkBizHostsMap := make(map[int64][]*table.RecycleHost)
 	for _, host := range hosts {
 		// 如果访问的是业务下的接口，但是查出来的业务不属于当前业务，需要报错或过滤掉
 		if _, ok := bkBizIDMap[host.BizID]; !ok && len(bkBizIDMap) > 0 {
 			return nil, errf.Newf(errf.InvalidParameter, "bizID:%d where the hostID:%d is located is not in "+
 				"the bizIDMap:%+v passed in", host.BizID, host.HostID, bkBizIDMap)
 		}
-		bkBizIDs = append(bkBizIDs, host.BizID)
-	}
-	bkBizIDs = slice.Unique(bkBizIDs)
-
-	// 查询当月所有业务总的回收CPU总核心数
-	allBizReturnedCpuCore, err := r.rsLogic.GetCurrentMonthAllReturnedCpuCore(kt)
-	if err != nil {
-		logs.Errorf("query rolling recycle all returned cpu core failed, err: %v, rid: %s", err, kt.Rid)
-		return nil, err
+		bkBizHostsMap[host.BizID] = append(bkBizHostsMap[host.BizID], host)
 	}
 
-	// 查询系统配置的全局总额度
-	globalQuota, err := r.rsLogic.GetRollingGlobalQuota(kt)
-	if err != nil {
-		logs.Errorf("query rolling recycle global quota config failed, err: %v, rid: %s", err, kt.Rid)
-		return nil, err
-	}
-
-	// 对每个业务的主机Host列表，匹配归类为“滚服项目”
-	bkBizIDHostMatchMap := make(map[int64]map[string]*rstypes.RecycleHostMatchInfo, 0)
-	hostMatchMap := make(map[string]*rstypes.RecycleHostMatchInfo, 0)
-	for _, bkBizID := range bkBizIDs {
-		hostMatchMap, hosts, allBizReturnedCpuCore, err = r.rsLogic.CalSplitRecycleHosts(kt, bkBizID, hosts,
-			allBizReturnedCpuCore, globalQuota)
+	for bkBizID, bizHosts := range bkBizHostsMap {
+		// 3. fill host recycle type info
+		bkBizHostsMap[bkBizID], err = r.fillHostRecycleType(kt, bkBizID, bizHosts, param.RecycleTypeSequence)
 		if err != nil {
-			logs.Errorf("failed to preview recycle order, for check recycle quota bkBizID: %d, err: %v, rid: %s",
-				bkBizID, err, kt.Rid)
+			logs.Errorf("failed to fill host recycle type, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
 		}
-		bkBizIDHostMatchMap[bkBizID] = hostMatchMap
 	}
 
-	// 2. classify hosts into groups with different recycle strategies
-	groups, err := classifier.ClassifyRecycleGroups(hosts, param.ReturnPlan)
+	// 4. classify hosts into groups with different recycle strategies
+	groups, err := classifier.ClassifyRecycleGroups(bkBizHostsMap, param.ReturnPlan)
 	if err != nil {
 		logs.Errorf("failed to preview recycle order, for classify hosts err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
-	// 3. 查询每个回收子订单的机型对应的CPU核数并填充到orders里面
-	orders, err := r.createAndSaveRecycleOrders(kt, param.SkipConfirm, param.Remark, groups, bkBizIDHostMatchMap)
+	// 5. 查询每个回收子订单的机型对应的CPU核数并填充到orders里面
+	orders, err := r.createAndSaveRecycleOrders(kt, param.SkipConfirm, param.Remark, groups)
 	if err != nil {
 		logs.Errorf("failed to preview recycle order, create and save recycle orders, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -774,12 +765,11 @@ func (r *recycler) PreviewRecycleOrder(kt *kit.Kit, param *types.PreviewRecycleR
 
 // fillRecycleOrderDeviceList 创建初始化回收Order及主机Hosts并将机型对应的CPU核数填充到orders里面
 func (r *recycler) createAndSaveRecycleOrders(kt *kit.Kit, skipConfirm bool, remark string,
-	bizGroups map[int64]classifier.RecycleGroup,
-	bkBizIDHostMatchMap map[int64]map[string]*rstypes.RecycleHostMatchInfo) ([]*types.RecycleOrderCpuInfo, error) {
+	bizGroups map[int64]classifier.RecycleGroup) ([]*types.RecycleOrderCpuInfo, error) {
 
 	// init and save recycle orders
 	orders, subOrderIDDeviceTypes, err := r.initAndSaveRecycleOrders(kt, skipConfirm, remark,
-		bizGroups, bkBizIDHostMatchMap)
+		bizGroups)
 	if err != nil {
 		logs.Errorf("failed to preview recycle order, init and save orders err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -818,12 +808,9 @@ func (r *recycler) createAndSaveRecycleOrders(kt *kit.Kit, skipConfirm bool, rem
 
 // initRecycleOrder init and save recycle orders
 func (r *recycler) initAndSaveRecycleOrders(kt *kit.Kit, skipConfirm bool, remark string,
-	bizGroups map[int64]classifier.RecycleGroup,
-	bkBizIDHostMatchMap map[int64]map[string]*rstypes.RecycleHostMatchInfo) ([]*table.RecycleOrder,
-	map[string]map[string]int64, error) {
+	bizGroups map[int64]classifier.RecycleGroup) ([]*table.RecycleOrder, map[string]map[string]int64, error) {
 
 	subOrderIDDeviceTypes := make(map[string]map[string]int64, 0)
-	now := time.Now()
 	orders := make([]*table.RecycleOrder, 0)
 	txnErr := dal.RunTransaction(kt, func(sc mongo.SessionContext) error {
 		for biz, groups := range bizGroups {
@@ -838,28 +825,7 @@ func (r *recycler) initAndSaveRecycleOrders(kt *kit.Kit, skipConfirm bool, remar
 				}
 				// 1. init recycle order
 				bizName := group[0].BizName
-				order := &table.RecycleOrder{
-					OrderID:       id,
-					SuborderID:    fmt.Sprintf("%d-%d", id, index),
-					BizID:         biz,
-					BizName:       bizName,
-					User:          kt.User,
-					ResourceType:  classifier.MapGroupProperty[grpType].ResourceType,
-					RecycleType:   classifier.MapGroupProperty[grpType].RecycleType,
-					ReturnPlan:    classifier.MapGroupProperty[grpType].ReturnType,
-					CostConcerned: classifier.MapGroupProperty[grpType].CostConcerned,
-					SkipConfirm:   skipConfirm,
-					Stage:         table.RecycleStageCommit,
-					Status:        table.RecycleStatusUncommit,
-					Handler:       "AUTO",
-					TotalNum:      uint(len(group)),
-					SuccessNum:    0,
-					PendingNum:    0,
-					FailedNum:     0,
-					Remark:        remark,
-					CreateAt:      now,
-					UpdateAt:      now,
-				}
+				order := newRecycleOrder(kt, id, biz, bizName, grpType, skipConfirm, index, len(group), remark)
 				// 记录回收订单日志，方便排查问题
 				logs.Infof("start to create recycle order for save recycle host, orderInfo: %+v, group: %+v, rid: %s",
 					order, cvt.PtrToSlice(group), kt.Rid)
@@ -873,13 +839,15 @@ func (r *recycler) initAndSaveRecycleOrders(kt *kit.Kit, skipConfirm bool, remar
 					logs.Errorf("failed to create recycle order for save recycle order err: %v, rid: %s", err, kt.Rid)
 					return fmt.Errorf("failed to create recycle order for save recycle order err: %v", err)
 				}
-				// 4.插入需要退还的主机匹配记录
-				if err = r.rsLogic.InsertReturnedHostMatched(kt, biz, order.OrderID, order.SuborderID,
-					group, bkBizIDHostMatchMap[biz], enumor.LockedStatus); err != nil {
-					logs.Errorf("failed to create returned host matched for save recycle order err: %v, "+
-						"subOrderID: %s, bkBizIDHostMatchMap: %+v, rid: %s",
-						err, order.SuborderID, bkBizIDHostMatchMap, kt.Rid)
-					return fmt.Errorf("failed to create returned host matched for save recycle order err: %v", err)
+				// 4.插入退还主机的滚服匹配记录
+				if grpType.IsRollingServerType() {
+					if err = r.rsLogic.InsertReturnedHostMatched(kt, biz, order.OrderID, order.SuborderID,
+						group, enumor.LockedStatus); err != nil {
+						logs.Errorf("failed to create returned host matched for save recycle order err: %v, "+
+							"subOrderID: %s, rid: %s",
+							err, order.SuborderID, kt.Rid)
+						return fmt.Errorf("failed to create returned host matched for save recycle order err: %v", err)
+					}
 				}
 				// 5. 记录子订单跟机型的关系
 				for _, groupItem := range group {
@@ -901,6 +869,36 @@ func (r *recycler) initAndSaveRecycleOrders(kt *kit.Kit, skipConfirm bool, remar
 		return nil, nil, fmt.Errorf("failed to init and save recycle orders, err: %v, rid: %s", txnErr, kt.Rid)
 	}
 	return orders, subOrderIDDeviceTypes, nil
+}
+
+func newRecycleOrder(kt *kit.Kit, id uint64, biz int64, bizName string, grpType classifier.RecycleGrpType,
+	skipConfirm bool, index, groupLen int, remark string) *table.RecycleOrder {
+
+	now := time.Now()
+	return &table.RecycleOrder{
+		OrderID:            id,
+		SuborderID:         fmt.Sprintf("%d-%d", id, index),
+		BizID:              biz,
+		BizName:            bizName,
+		User:               kt.User,
+		ResourceType:       classifier.MapGroupProperty[grpType].ResourceType,
+		RecycleType:        classifier.MapGroupProperty[grpType].RecycleType,
+		ReturnPlan:         classifier.MapGroupProperty[grpType].ReturnType,
+		CostConcerned:      classifier.MapGroupProperty[grpType].CostConcerned,
+		SkipConfirm:        skipConfirm,
+		Stage:              table.RecycleStageCommit,
+		Status:             table.RecycleStatusUncommit,
+		Handler:            "AUTO",
+		TotalNum:           uint(groupLen),
+		SuccessNum:         0,
+		PendingNum:         0,
+		FailedNum:          0,
+		Remark:             remark,
+		CreateAt:           now,
+		UpdateAt:           now,
+		ReturnForecast:     false,
+		ReturnForecastTime: "",
+	}
 }
 
 // initAndSaveHosts inits and saves recycle hosts
@@ -977,6 +975,7 @@ func (r *recycler) fillCvmInfo(kt *kit.Kit, hostDetails []*table.RecycleHost) er
 		if host, ok := mapIp2Host[inst.LanIp]; ok {
 			host.InstID = inst.InstanceId
 			host.ObsProject = inst.ObsProject
+			host.CloudRegionID = inst.CloudRegion
 			if inst.Pool == 1 {
 				host.Pool = table.PoolPublic
 			} else {
@@ -988,25 +987,48 @@ func (r *recycler) fillCvmInfo(kt *kit.Kit, hostDetails []*table.RecycleHost) er
 	return nil
 }
 
-func (r *recycler) fillHostRecycleType(kt *kit.Kit, hosts []*table.RecycleHost) ([]*table.RecycleHost, error) {
+// fillHostRecycleType fill host recycle type
+func (r *recycler) fillHostRecycleType(kt *kit.Kit, bkBizID int64, hosts []*table.RecycleHost,
+	recycleTypeSeq []table.RecycleType) ([]*table.RecycleHost, error) {
+
 	assetIDs := make([]string, 0, len(hosts))
 	for _, host := range hosts {
 		assetIDs = append(assetIDs, host.AssetID)
 	}
 
+	// 1. 根据资产编号获取裁撤主机列表
 	dissolveHostMap, err := r.dissolveLogic.RecycledHost().IsDissolveHost(kt, assetIDs)
 	if err != nil {
 		logs.Errorf("failed to check if host is dissolve host, err: %v, assetIDs: %v, rid: %s", err, assetIDs, kt.Rid)
 		return nil, err
 	}
 
+	// 2. 识别固定的回收类型：机房裁撤，春节保障；其中机房裁撤 > 春节保障
 	for _, host := range hosts {
-		if isDissolveHost := dissolveHostMap[host.AssetID]; !isDissolveHost {
-			continue
+		recycleType := classifier.GetFixedRecycleType(host, dissolveHostMap[host.AssetID])
+		if host.RecycleType.CanUpdateRecycleType(recycleTypeSeq, recycleType) {
+			host.RecycleType = recycleType
 		}
+	}
 
-		if table.CanUpdateRecycleType(host.RecycleType, table.RecycleTypeDissolve) {
-			host.RecycleType = table.RecycleTypeDissolve
+	// 3. 识别根据退回计划匹配的回收类型
+	// 3.1. 根据顺序匹配回收类型
+	for _, rType := range recycleTypeSeq {
+		switch rType {
+		case table.RecycleTypeRollServer:
+			hosts, err = r.matchRollingServer(kt, bkBizID, hosts, recycleTypeSeq)
+			if err != nil {
+				logs.Errorf("failed to match rolling server, err: %v, rid: %s", err, kt.Rid)
+				return nil, err
+			}
+		case table.RecycleTypeShortRental:
+			hosts, err = r.matchShortRental(kt, bkBizID, hosts, recycleTypeSeq)
+			if err != nil {
+				logs.Errorf("failed to match short rental, err: %v, rid: %s", err, kt.Rid)
+				return nil, err
+			}
+		default:
+			continue
 		}
 	}
 
@@ -1052,7 +1074,7 @@ func (r *recycler) AuditRecycleOrder(kit *kit.Kit, param *types.AuditRecycleReq)
 		return errors.New("failed to audit recycle order, for operator has no permission")
 	}
 
-	task := dispatcher.NewTask(order.Status)
+	task := dispatcher.NewTask(order.Status, r.srLogic)
 	taskCtx := &dispatcher.AuditContext{
 		Order:      order,
 		Dispatcher: r.dispatcher,
@@ -1293,6 +1315,13 @@ func (r *recycler) StartRecycleOrder(kt *kit.Kit, param *types.StartRecycleOrder
 		return err
 	}
 
+	err = r.updateOrderReturnForecastConfig(kt, insts, param.ReturnForecastConfigs)
+	if err != nil {
+		logs.Errorf("failed to update recycle order return forecast config, err: %v, param: %+v, rid: %s",
+			err, cvt.PtrToVal(param), kt.Rid)
+		return err
+	}
+
 	r.setOrderNextStatus(kt, insts)
 
 	return nil
@@ -1313,6 +1342,16 @@ func (r *recycler) setOrderNextStatus(kt *kit.Kit, orders []*table.RecycleOrder)
 					order.SuborderID, err, kt.Rid)
 				continue
 			}
+			if order.RecycleType == table.RecycleTypeShortRental {
+				// 根据回收子订单ID创建短租退回记录
+				err = r.srLogic.CreateReturnedHostRecord(kt, order.BizID, order.OrderID, order.SuborderID,
+					enumor.ShortRentalStatusReturning)
+				if err != nil {
+					logs.Errorf("failed to create short rental returned record: %v, suborderID: %s, rid: %s",
+						err, order.SuborderID, kt.Rid)
+					continue
+				}
+			}
 		case table.RecycleStatusDetectFailed:
 			nextStatus = table.RecycleStatusDetecting
 		case table.RecycleStatusTransitFailed:
@@ -1320,6 +1359,8 @@ func (r *recycler) setOrderNextStatus(kt *kit.Kit, orders []*table.RecycleOrder)
 		case table.RecycleStatusReturnFailed:
 			nextStatus = table.RecycleStatusReturning
 			failedNum = order.FailedNum
+		case table.RecycleStatusReturnPlanFailed:
+			nextStatus = table.RecycleStatusReturningPlan
 		default:
 			logs.Warnf("failed to set order %s to next status, for unsupported status %s", order.SuborderID,
 				order.Status)
@@ -1454,7 +1495,7 @@ func (r *recycler) ReviseRecycleOrder(kit *kit.Kit, param *types.ReviseRecycleOr
 	}
 
 	// remove detection failed hosts and set order status detecting
-	if err := r.reviseOrder(insts); err != nil {
+	if err := r.reviseOrder(kit, insts); err != nil {
 		logs.Errorf("failed to revise recycle order, err: %v", err)
 		return fmt.Errorf("failed to revise recycle order, err: %v", err)
 	}
@@ -1462,7 +1503,7 @@ func (r *recycler) ReviseRecycleOrder(kit *kit.Kit, param *types.ReviseRecycleOr
 	return nil
 }
 
-func (r *recycler) reviseOrder(orders []*table.RecycleOrder) error {
+func (r *recycler) reviseOrder(kt *kit.Kit, orders []*table.RecycleOrder) error {
 	now := time.Now()
 	for _, order := range orders {
 		// need not set order detecting if it's not detect failed
@@ -1691,6 +1732,13 @@ func (r *recycler) terminateOrder(kt *kit.Kit, orders []*table.RecycleOrder) err
 		if err := r.rsLogic.UpdateReturnedStatusBySubOrderID(kt, order.BizID, order.SuborderID,
 			enumor.TerminateStatus); err != nil {
 			logs.Errorf("failed to update rolling server returned record status, subOrderID: %s, err: %v, rid: %s",
+				order.SuborderID, err, kt.Rid)
+			return fmt.Errorf("failed to terminate order %s, err:%v", order.SuborderID, err)
+		}
+		// 根据回收子订单ID更新短租回收的状态
+		if err := r.srLogic.UpdateReturnedStatusBySubOrderID(kt, order.SuborderID,
+			enumor.ShortRentalStatusTerminate); err != nil {
+			logs.Errorf("failed to update short rental returned record status, subOrderID: %s, err: %v, rid: %s",
 				order.SuborderID, err, kt.Rid)
 			return fmt.Errorf("failed to terminate order %s, err:%v", order.SuborderID, err)
 		}
@@ -1935,9 +1983,15 @@ func (r *recycler) UpdateOrderInfo(kt *kit.Kit, orderId, handler string, success
 func (r *recycler) StartRecycleOrderByRecycleType(kt *kit.Kit, param *types.StartRecycleOrderByRecycleTypeReq) error {
 	subOrderIDs := make([]string, 0)
 	subOrderIDTypeMap := make(map[string]table.RecycleType, 0)
+	configs := make([]*types.RecycleOrderReturnForecastConfig, 0)
 	for _, item := range param.SubOrderIDTypes {
 		subOrderIDs = append(subOrderIDs, item.SuborderID)
 		subOrderIDTypeMap[item.SuborderID] = item.RecycleType
+		configs = append(configs, &types.RecycleOrderReturnForecastConfig{
+			SuborderID:         item.SuborderID,
+			ReturnForecast:     item.ReturnForecast,
+			ReturnForecastTime: item.ReturnForecastTime,
+		})
 	}
 	subOrderIDs = slice.Unique(subOrderIDs)
 
@@ -1969,6 +2023,12 @@ func (r *recycler) StartRecycleOrderByRecycleType(kt *kit.Kit, param *types.Star
 		return err
 	}
 
+	err = r.updateOrderReturnForecastConfig(kt, insts, configs)
+	if err != nil {
+		logs.Errorf("failed to update recycle order return forecast config, err: %v, param: %+v, rid: %s",
+			err, cvt.PtrToVal(param), kt.Rid)
+		return err
+	}
 	r.setOrderNextStatus(kt, insts)
 
 	return nil
@@ -1997,28 +2057,21 @@ func (r *recycler) setRollingServerRecycleHost(kt *kit.Kit, orders []*table.Recy
 			return err
 		}
 
-		bkBizIDHostMatchMap := make(map[int64]map[string]*rstypes.RecycleHostMatchInfo, 0)
 		for _, hostItem := range hostList.Info {
 			// 管理员指定回收类型的话，回收方式为CRP回收
 			hostItem.ReturnedWay = enumor.CrpReturnedWay
-			if _, ok := bkBizIDHostMatchMap[item.BizID]; !ok {
-				bkBizIDHostMatchMap[item.BizID] = make(map[string]*rstypes.RecycleHostMatchInfo, 0)
-			}
-			bkBizIDHostMatchMap[item.BizID][hostItem.IP] = &rstypes.RecycleHostMatchInfo{
-				RecycleHost: hostItem,
-				IsMatched:   true,
-			}
+			hostItem.IsMatchRollServer = true
 		}
 		// 插入需要退还的主机匹配记录
 		if err = r.rsLogic.InsertReturnedHostMatched(kt, item.BizID, item.OrderID, item.SuborderID,
-			hostList.Info, bkBizIDHostMatchMap[item.BizID], enumor.NormalStatus); err != nil {
+			hostList.Info, enumor.NormalStatus); err != nil {
 			logs.Errorf("create returned host matched for save recycle order failed, err: %v, "+
-				"subOrderID: %s, bkBizIDHostMatchMap: %+v, rid: %s",
-				err, item.SuborderID, bkBizIDHostMatchMap, kt.Rid)
+				"subOrderID: %s, bkBizIDHost: %v, rid: %s",
+				err, item.SuborderID, hostList.Info, kt.Rid)
 			return fmt.Errorf("failed to create returned host matched for save recycle order err: %v", err)
 		}
 		logs.Infof("create returned host matched for save recycle order success, subOrderID: %s, "+
-			"bkBizIDHostMatchMap: %+v, rid: %s", item.SuborderID, bkBizIDHostMatchMap, kt.Rid)
+			"bkBizIDHost: %v, rid: %s", item.SuborderID, hostList.Info, kt.Rid)
 	}
 
 	now := time.Now()
@@ -2037,6 +2090,50 @@ func (r *recycler) setRollingServerRecycleHost(kt *kit.Kit, orders []*table.Recy
 		if err := dao.Set().RecycleHost().UpdateRecycleHost(context.Background(), filter, update); err != nil {
 			logs.Errorf("failed to update recycle host status, subOrderID: %s, err: %v, returnedWay: %s, order: %+v, "+
 				"rid: %s", order.SuborderID, err, returnedWay, cvt.PtrToVal(order), kt.Rid)
+			return err
+		}
+	}
+	return nil
+}
+
+// setRollingServerRecycleHost 设置滚服项目的回收Host表的回收记录及退还方式等
+func (r *recycler) updateOrderReturnForecastConfig(kt *kit.Kit, orders []*table.RecycleOrder,
+	configs []*types.RecycleOrderReturnForecastConfig) error {
+
+	configMap := cvt.SliceToMap(configs, func(item *types.RecycleOrderReturnForecastConfig) (
+		string, *types.RecycleOrderReturnForecastConfig) {
+		return item.SuborderID, item
+	})
+	// 把符合条件的主机回收子订单里面的预测配置更新
+	for _, item := range orders {
+		config, ok := configMap[item.SuborderID]
+		if !ok {
+			continue
+		}
+		if item.RecycleType != table.RecycleTypeRegular {
+			logs.Warnf("order(%s) is not a regular order, can not return forecast, rid: %s",
+				item.SuborderID, kt.Rid)
+			continue
+		}
+		item.ReturnForecastTime = config.ReturnForecastTime
+		item.ReturnForecast = config.ReturnForecast
+	}
+
+	now := time.Now()
+	for _, order := range orders {
+		filter := &mapstr.MapStr{
+			"suborder_id": order.SuborderID,
+		}
+
+		update := &mapstr.MapStr{
+			"return_forecast_time": order.ReturnForecastTime,
+			"return_forecast":      order.ReturnForecast,
+			"update_at":            now,
+		}
+
+		if err := dao.Set().RecycleOrder().UpdateRecycleOrder(context.Background(), filter, update); err != nil {
+			logs.Errorf("failed to update recycle order, subOrderID: %s, err: %v, order: %+v, "+
+				"rid: %s", order.SuborderID, err, cvt.PtrToVal(order), kt.Rid)
 			return err
 		}
 	}

@@ -21,7 +21,6 @@
 package rollingserver
 
 import (
-	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/pkg/criteria/enumor"
 )
 
@@ -38,13 +37,6 @@ type RecycleMatchDateRange struct {
 	Start int `json:"start"`
 	// Month 记录账单的月份
 	End int `json:"end"`
-}
-
-// RecycleHostMatchInfo recycle host match info
-type RecycleHostMatchInfo struct {
-	*table.RecycleHost    `json:",inline"`
-	IsMatched             bool             `json:"is_matched"`
-	MatchAppliedIDCoreMap map[string]int64 `json:"match_applied_id_core_map"`
 }
 
 // ReturnedRecordInfo returned record info

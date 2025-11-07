@@ -1,5 +1,5 @@
 <template>
-  <bk-sideslider v-model:is-show="model" :title="title" width="640" @closed="handleClosed" @hidden="emit('hidden')">
+  <bk-sideslider v-model:is-show="model" :title="title" quick-close width="640" @hidden="emit('hidden')">
     <template #default>
       <div class="container">
         <bk-alert theme="info" class="mb16">

@@ -186,16 +186,17 @@ func (s *service) createResPlanTicket(kt *kit.Kit, bkBizID int64, req *ptypes.Cr
 		demands[idx] = rpt.ResPlanDemand{
 			DemandClass: req.DemandClass,
 			Updated: &rpt.UpdatedRPDemandItem{
-				ObsProject:   demand.ObsProject,
-				ExpectTime:   demand.ExpectTime,
-				ZoneID:       demand.ZoneID,
-				ZoneName:     zoneMap[demand.ZoneID],
-				RegionID:     demand.RegionID,
-				RegionName:   regionAreaMap[demand.RegionID].RegionName,
-				AreaID:       regionAreaMap[demand.RegionID].AreaID,
-				AreaName:     regionAreaMap[demand.RegionID].AreaName,
-				DemandSource: demand.DemandSource,
-				Remark:       demand.Remark,
+				ObsProject:     demand.ObsProject,
+				ExpectTime:     demand.ExpectTime,
+				ReturnPlanTime: demand.ReturnPlanTime,
+				ZoneID:         demand.ZoneID,
+				ZoneName:       zoneMap[demand.ZoneID],
+				RegionID:       demand.RegionID,
+				RegionName:     regionAreaMap[demand.RegionID].RegionName,
+				AreaID:         regionAreaMap[demand.RegionID].AreaID,
+				AreaName:       regionAreaMap[demand.RegionID].AreaName,
+				DemandSource:   demand.DemandSource,
+				Remark:         demand.Remark,
 			},
 		}
 

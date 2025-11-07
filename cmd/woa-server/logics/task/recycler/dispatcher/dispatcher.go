@@ -23,6 +23,7 @@ import (
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
 	rslogics "hcm/cmd/woa-server/logics/rolling-server"
+	srlogics "hcm/cmd/woa-server/logics/short-rental"
 	"hcm/cmd/woa-server/logics/task/recycler/detector"
 	"hcm/cmd/woa-server/logics/task/recycler/returner"
 	"hcm/cmd/woa-server/logics/task/recycler/transit"
@@ -45,11 +46,12 @@ type Dispatcher struct {
 	queue    workqueue.RateLimitingInterface
 	ctx      context.Context
 	rsLogic  rslogics.Logics
+	srLogic  srlogics.Logics
 }
 
 // New create a dispatcher
 func New(ctx context.Context, moduleDetector *detector.Detector, moduleReturner *returner.Returner,
-	moduleTransit *transit.Transit, logic rslogics.Logics) (*Dispatcher, error) {
+	moduleTransit *transit.Transit, rsLogic rslogics.Logics, srLogic srlogics.Logics) (*Dispatcher, error) {
 
 	dispatcher := &Dispatcher{
 		queue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "recycle_dispatch"),
@@ -57,7 +59,8 @@ func New(ctx context.Context, moduleDetector *detector.Detector, moduleReturner 
 		detector: moduleDetector,
 		returner: moduleReturner,
 		transit:  moduleTransit,
-		rsLogic:  logic,
+		rsLogic:  rsLogic,
+		srLogic:  srLogic,
 	}
 
 	// TODO: get worker num from config
@@ -158,7 +161,7 @@ func (d *Dispatcher) dispatchHandler(orderId string) (err error) {
 		d.recordMetrics(startAt, order, err)
 	}()
 
-	task := NewTask(order.Status)
+	task := NewTask(order.Status, d.srLogic)
 	taskCtx := &CommonContext{
 		Order:      order,
 		Dispatcher: d,

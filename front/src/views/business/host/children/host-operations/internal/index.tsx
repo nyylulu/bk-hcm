@@ -181,11 +181,20 @@ export default defineComponent({
           const suborder_id_types = ziyanRecycleSelected.value.map((item) => ({
             suborder_id: item.suborder_id,
             recycle_type: item.recycle_type,
+            return_forecast: item.return_forecast,
+            return_forecast_time: item.return_forecast_time,
           }));
           await scrStore.startRecycleOrderByRecycleType({ suborder_id_types });
         } else {
           const suborder_id = ziyanRecycleSelected.value.map((item) => item.suborder_id);
-          await scrStore.startRecycleOrder({ suborder_id });
+          const return_forecast_configs = ziyanRecycleSelected.value.map((item) => {
+            return {
+              suborder_id: item.suborder_id,
+              return_forecast: item.return_forecast,
+              return_forecast_time: item.return_forecast_time,
+            };
+          });
+          await scrStore.startRecycleOrder({ suborder_id, return_forecast_configs });
         }
         Message({ message: '操作成功', theme: 'success' });
         props.onFinished?.('confirm');
@@ -287,7 +296,7 @@ export default defineComponent({
           quickClose={false}
           title={computedTitle.value}
           ref={dialogRef}
-          width={1500}
+          width='80%'
           closeIcon={!isLoading.value}
           onClosed={handleCancelDialog}
           renderDirective='if'>

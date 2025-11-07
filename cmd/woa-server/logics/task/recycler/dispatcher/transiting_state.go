@@ -21,15 +21,20 @@ import (
 
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
+	srlogics "hcm/cmd/woa-server/logics/short-rental"
 	"hcm/cmd/woa-server/logics/task/recycler/event"
 	recovertask "hcm/cmd/woa-server/types/task"
+	"hcm/pkg/api/core"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/logs"
 	cvt "hcm/pkg/tools/converter"
 )
 
 // TransitingState the action to be executed in transiting state
-type TransitingState struct{}
+type TransitingState struct {
+	ShortRentalLogic srlogics.Logics
+}
 
 // UpdateState update next state
 func (ts *TransitingState) UpdateState(ctx EventContext, ev *event.Event) error {
@@ -100,6 +105,8 @@ func (ts *TransitingState) setNextState(order *table.RecycleOrder, ev *event.Eve
 		"update_at": time.Now(),
 	}
 
+	isFinished := false
+	var shortRentalReturnedStatus enumor.ShortRentalStatus
 	switch ev.Type {
 	case event.TransitSuccess:
 		update["stage"] = table.RecycleStageReturn
@@ -112,6 +119,8 @@ func (ts *TransitingState) setNextState(order *table.RecycleOrder, ev *event.Eve
 			update["success_num"] = order.TotalNum
 			update["pending_num"] = 0
 			update["failed_num"] = 0
+			isFinished = true
+			shortRentalReturnedStatus = enumor.ShortRentalStatusDone
 		}
 	case event.TransitFailed:
 		update["status"] = table.RecycleStatusTransitFailed
@@ -127,6 +136,16 @@ func (ts *TransitingState) setNextState(order *table.RecycleOrder, ev *event.Eve
 	if err := dao.Set().RecycleOrder().UpdateRecycleOrder(context.Background(), &filter, &update); err != nil {
 		logs.Warnf("failed to update recycle order %s, err: %v", order.SuborderID, err)
 		return err
+	}
+	if isFinished {
+		tmpKit := core.NewBackendKit()
+		// 根据回收子订单ID更新短租回收的状态
+		if err := ts.ShortRentalLogic.UpdateReturnedStatusBySubOrderID(tmpKit, order.SuborderID,
+			shortRentalReturnedStatus); err != nil {
+			logs.Errorf("failed to update short rental returned record status, subOrderID: %s, err: %v, rid: %s",
+				order.SuborderID, err, tmpKit.Rid)
+			return fmt.Errorf("failed to terminate order %s, err:%v", order.SuborderID, err)
+		}
 	}
 
 	return nil

@@ -213,6 +213,7 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
     remark?: string;
     return_plan: { cvm: string; pm: string };
     skip_confirm: boolean;
+    recycle_type_sequence?: string[];
   }) => {
     return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/${getBusinessApiPath()}task/preview/recycle/order`, data);
   };
@@ -227,7 +228,14 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
   };
 
   // 资源回收单据执行接口
-  const startRecycleOrder = (data: { suborder_id: string[] }) => {
+  const startRecycleOrder = (data: {
+    suborder_id: string[];
+    return_forecast_configs: {
+      suborder_id: string;
+      return_forecast: string;
+      return_forecast_time: string;
+    }[];
+  }) => {
     return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/${getBusinessApiPath()}task/start/recycle/order`, data);
   };
 

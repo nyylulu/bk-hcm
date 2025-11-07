@@ -28,6 +28,7 @@ import (
 	resplansubticket "hcm/cmd/data-service/service/resource-plan/res-plan-sub-ticket"
 	transferappliedrecord "hcm/cmd/data-service/service/resource-plan/res-plan-transfer-applied-record"
 	resplanweek "hcm/cmd/data-service/service/resource-plan/res-plan-week"
+	shortrentalreturnedrecord "hcm/cmd/data-service/service/resource-plan/short-rental-returned-record"
 )
 
 // InitService initial the resource plan service.
@@ -38,4 +39,5 @@ func InitService(cap *capability.Capability) {
 	resplanweek.InitService(cap)
 	transferappliedrecord.InitService(cap)
 	resplansubticket.InitService(cap)
+	shortrentalreturnedrecord.InitService(cap)
 }

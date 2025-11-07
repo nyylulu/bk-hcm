@@ -12,11 +12,10 @@ interface IProps {
   tooltipsOption?: IOverflowTooltipProp;
 }
 
+const model = defineModel<string>();
 const props = withDefaults(defineProps<IProps>(), {
   disabled: false,
 });
-const model = defineModel<string>();
-
 const attrs: any = useAttrs();
 const { t } = useI18n();
 const { cvmChargeTypes, cvmChargeTypeNames, cvmChargeTypeTips } = useCvmChargeType();

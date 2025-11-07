@@ -157,3 +157,30 @@ func (s *service) SyncDeviceType(cts *rest.Contexts) (any, error) {
 
 	return nil, nil
 }
+
+// CreateDeviceTypePhysicalRel create device type physical rel.
+func (s *service) CreateDeviceTypePhysicalRel(cts *rest.Contexts) (any, error) {
+	req := new(rpproto.WoaDeviceTypePhysicalRelBatchCreateReq)
+	if err := cts.DecodeInto(req); err != nil {
+		logs.Errorf("failed to create device type phy rel, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		logs.Errorf("failed to validate create device type parameter, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 权限校验
+	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.GlobalConfig, Action: meta.Create}}
+	if err := s.authorizer.AuthorizeWithPerm(cts.Kit, authRes); err != nil {
+		return nil, err
+	}
+
+	result, err := s.client.DataService().Global.ResourcePlan.BatchCreateWoaDeviceTypePhysicalRel(cts.Kit, req)
+	if err != nil {
+		logs.Errorf("failed to create device type, err: %v, req: %+v, rid: %s", err, req, cts.Kit.Rid)
+		return nil, err
+	}
+	return result.IDs, nil
+}

@@ -168,6 +168,9 @@ type Logics interface {
 	RepairResPlanDemandFromTicket(kt *kit.Kit, bkBizIDs []int64, ticketTimeRange times.DateRange) error
 	// SyncDemandFromCRPOrder sync demand from crp order.
 	SyncDemandFromCRPOrder(kt *kit.Kit, crpSN string, priorBizIDs []int64, opProdToBizID map[string]int64) error
+
+	// ApplyDestroyOrderToResPlanDemand 将销毁单返还的预测预算保存到本地
+	ApplyDestroyOrderToResPlanDemand(kt *kit.Kit, destroyOrderID string) error
 }
 
 // Controller motivates the resource plan ticket status flow.

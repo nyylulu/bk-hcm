@@ -124,6 +124,8 @@ const (
 	CvmReturnStatusMethod = "queryCvmReturnOrder"
 	// CvmReturnDetailMethod 根据单号查询退回CVM方法
 	CvmReturnDetailMethod = "queryReturnCvmByOrder"
+	// CvmReturnPlanMethod 查询CVM退回计划方法
+	CvmReturnPlanMethod = "queryReturnPlanItem"
 	// QueryCvmInstanceType 查询CVM机型信息
 	QueryCvmInstanceType = "queryCvmInstanceType"
 	// GetApproveLogMethod 查询审批日志
@@ -170,6 +172,8 @@ const (
 	CvmCbsPlanOrderQueryMethod = "queryYuntiOrder"
 	// CvmCbsPlanPenaltyRatioReportMethod 需求预测罚金分摊比例上报接口
 	CvmCbsPlanPenaltyRatioReportMethod = "reportForecastPartition"
+	// CvmQueryOrderList 根据销毁单据查询预测返还信息
+	CvmQueryOrderList = "queryOrderList"
 )
 
 // CVMCli yunti client options
@@ -234,6 +238,18 @@ func NewCvmUpgradeDetailReq(params *UpgradeDetailParam) *UpgradeDetailReq {
 			Id:      CvmId,
 			JsonRpc: CvmJsonRpc,
 			Method:  CvmUpgradeDetailMethod,
+		},
+		Params: params,
+	}
+}
+
+// NewQueryReturnPlanReq CVM退回计划查询请求元数据
+func NewQueryReturnPlanReq(params *QueryReturnPlanParam) *QueryReturnPlanReq {
+	return &QueryReturnPlanReq{
+		ReqMeta: ReqMeta{
+			Id:      CvmId,
+			JsonRpc: CvmJsonRpc,
+			Method:  CvmReturnPlanMethod,
 		},
 		Params: params,
 	}

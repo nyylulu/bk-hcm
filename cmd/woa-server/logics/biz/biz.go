@@ -109,6 +109,40 @@ func (l *logics) GetBizOrgRel(kt *kit.Kit, bkBizID int64) (*mtypes.BizOrgRel, er
 	return rst, nil
 }
 
+// ListBizsOrgRel list bizs org rel.
+func (l *logics) ListBizsOrgRel(kt *kit.Kit, bkBizIDs []int64) (map[int64]*mtypes.BizOrgRel, error) {
+	// search cmdb business belonging.
+	req := &cmdb.SearchBizCompanyCmdbInfoParams{
+		BizIDs: bkBizIDs,
+	}
+
+	resp, err := l.cmdbCli.SearchBizCompanyCmdbInfo(kt, req)
+	if err != nil {
+		logs.Errorf("failed to search biz belonging, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	if resp == nil || len(*resp) != len(bkBizIDs) {
+		logs.Errorf("search biz belonging, but resp is empty or resp != biz list length, rid: %s", kt.Rid)
+		return nil, errors.New("search biz belonging, but resp is empty or resp != biz list length")
+	}
+
+	rst := make(map[int64]*mtypes.BizOrgRel)
+	for _, bizBelong := range *resp {
+		rst[bizBelong.BkBizID] = &mtypes.BizOrgRel{
+			BkBizID:         bizBelong.BkBizID,
+			BkBizName:       bizBelong.BizName,
+			OpProductID:     bizBelong.BkProductID,
+			OpProductName:   bizBelong.BkProductName,
+			PlanProductID:   bizBelong.PlanProductID,
+			PlanProductName: bizBelong.PlanProductName,
+			VirtualDeptID:   bizBelong.VirtualDeptID,
+			VirtualDeptName: bizBelong.VirtualDeptName,
+		}
+	}
+	return rst, nil
+}
+
 // BatchCheckUserBizAccessAuth batch check user biz access auth.
 func (l *logics) BatchCheckUserBizAccessAuth(kt *kit.Kit, bkBizID int64, userNames []string) (map[string]bool, error) {
 	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: bkBizID}
