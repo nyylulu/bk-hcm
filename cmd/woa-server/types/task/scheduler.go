@@ -975,6 +975,14 @@ func (s *ResourceSpec) ValidateDisk() error {
 	return nil
 }
 
+// IsCVMSeparateCampus 是否分Campus申请单
+func (s *ResourceSpec) IsCVMSeparateCampus() bool {
+	if s.ResAssign == enumor.CampusResAssign || s.Zone == cvmapi.CvmSeparateCampus {
+		return true
+	}
+	return false
+}
+
 // CreateApplyOrderResult result of create apply order
 type CreateApplyOrderResult struct {
 	OrderId uint64 `json:"order_id"`

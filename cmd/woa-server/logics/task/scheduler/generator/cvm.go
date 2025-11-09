@@ -111,8 +111,9 @@ func (g *Generator) createCVM(kt *kit.Kit, cvm *types.CVM, order *types.ApplyOrd
 		order.SubOrderId, string(jsonReq), respStr, kt.Rid)
 
 	if resp.Error.Code != 0 {
-		return "", fmt.Errorf("cvm order create task failed, code: %d, msg: %s, crpTraceID: %s",
-			resp.Error.Code, resp.Error.Message, resp.TraceId)
+		return "", fmt.Errorf("cvm order create task failed, code: %d, msg: %s, crpTraceID: %s, zone: %s, "+
+			"fuzzyZones: %+v", resp.Error.Code, resp.Error.Message, resp.TraceId, createReq.Params.Zone,
+			createReq.Params.FuzzyZone)
 	}
 
 	if resp.Result.OrderId == "" {

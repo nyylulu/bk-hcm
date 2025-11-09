@@ -23,6 +23,8 @@ import (
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
+	"hcm/pkg/logs"
+	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/querybuilder"
 	"hcm/pkg/tools/util"
 )
@@ -164,7 +166,7 @@ func (g *Generator) getCapacity(kt *kit.Kit, order *task.ApplyOrder, zone, vpc, 
 
 // getCapacityDetail get resource apply capacity detail info
 func (g *Generator) getCapacityDetail(kt *kit.Kit, order *types.ApplyOrder, zone, vpc, subnet string) (
-	*cfgtype.CapacityInfo, error) {
+	[]*cfgtype.CapacityInfo, error) {
 
 	param := &cfgtype.GetCapacityParam{
 		RequireType: order.RequireType,
@@ -189,5 +191,9 @@ func (g *Generator) getCapacityDetail(kt *kit.Kit, order *types.ApplyOrder, zone
 		return nil, errors.New("get no capacity info")
 	}
 
-	return rst.Info[0], nil
+	logs.Infof("get order zone capacity detail, subOrderID: %s, zone: %s, vpc: %s, subnet: %s, param: %+v, "+
+		"rstList: %+v, rid: %s", order.SubOrderId, zone, vpc, subnet, cvt.PtrToVal(param),
+		cvt.PtrToSlice(rst.Info), kt.Rid)
+
+	return rst.Info, nil
 }

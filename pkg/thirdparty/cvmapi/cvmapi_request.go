@@ -67,7 +67,7 @@ type OrderCreateParams struct {
 	ChargeType        ChargeType      `json:"chargeType,omitempty"`
 	ChargeMonths      uint            `json:"chargeMonths,omitempty"`
 	InheritInstanceId string          `json:"inheritInstanceId,omitempty"`
-	FuzzyZone         []FuzzyZoneItem `json:"fuzzy_zone"` // 可用区模糊申领，传入多个可用区+vpc+子网
+	FuzzyZone         []FuzzyZoneItem `json:"fuzzyZone"` // 可用区模糊申领，传入多个可用区+vpc+子网
 }
 
 // ResourceType 申请类型

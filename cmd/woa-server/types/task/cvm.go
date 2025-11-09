@@ -47,7 +47,7 @@ type CVM struct {
 	VirtualDeptName   string                 `json:"virtual_dept_name"`
 	SystemDisk        enumor.DiskSpec        `json:"system_disk"`
 	DataDisk          []enumor.DiskSpec      `json:"data_disk"`
-	FuzzyZone         []cvmapi.FuzzyZoneItem `json:"fuzzy_zone"` // 可用区模糊申领，传入多个可用区+vpc+子网
+	FuzzyZone         []cvmapi.FuzzyZoneItem `json:"fuzzyZone"` // 可用区模糊申领，传入多个可用区+vpc+子网
 }
 
 // DeliveredCVMKey delivered cvm key
