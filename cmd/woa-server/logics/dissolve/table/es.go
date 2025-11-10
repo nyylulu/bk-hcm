@@ -160,6 +160,7 @@ func (l *logics) fillHostDataByES(kt *kit.Kit, ccHosts []cmdb.Host, esHostMap ma
 			AppName:           bizName,
 			BizID:             bizID,
 			DeviceType:        ccHost.SvrDeviceClass,
+			SvrTypeName:       ccHost.SvrTypeName,
 			ModuleName:        ccHost.ModuleName,
 			IdcUnitName:       ccHost.IdcUnitName,
 			SfwNameVersion:    ccHost.BkOsVersion,

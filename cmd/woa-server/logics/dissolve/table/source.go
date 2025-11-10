@@ -24,7 +24,7 @@ var (
 	ReqForGetHost = &reqSource{
 		source: "host",
 		ccHostFields: []string{"bk_host_id", "bk_asset_id", "module_name", "operator", "bk_bak_operator",
-			"bk_host_innerip", "bk_host_outerip", "svr_device_class", "idc_unit_name", "bk_os_version",
+			"bk_host_innerip", "bk_host_outerip", "svr_device_class", "svr_type_name", "idc_unit_name", "bk_os_version",
 			"svr_input_time", "raid_name", "logic_domain", "bk_disk", "bk_cpu"},
 		esHostFields: []string{"server_asset_id", "ip", "outer_ip", "app_name", "bk_biz_id", "module", "device_type",
 			"module_name", "idc_unit_name", "sfw_name_version", "go_up_date", "raid_name", "logic_area",
