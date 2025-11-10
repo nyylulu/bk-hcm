@@ -419,9 +419,9 @@ const businessMenus: RouteRecordRaw[] = [
   {
     path: '/business',
     children: [
-      ...operationLogBizRouteConfig,
-      ...taskRouteConfig,
       ...ticketRoutesBiz,
+      ...taskRouteConfig,
+      ...operationLogBizRouteConfig,
       {
         path: '/business/applications',
         children: [
