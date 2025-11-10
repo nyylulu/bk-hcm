@@ -1,3 +1,4 @@
+// 被index.vue替换，可删除
 import { computed, defineComponent, onMounted, ref, nextTick } from 'vue';
 import { Input, Button, Sideslider, Form, Alert, Message } from 'bkui-vue';
 import CommonCard from '@/components/CommonCard';

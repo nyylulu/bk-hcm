@@ -55,6 +55,8 @@ import QcloudZoneValue from '@/views/ziyanScr/components/qcloud-resource/zone-va
 import QcloudRegionValue from '@/views/ziyanScr/components/qcloud-resource/region-value.vue';
 import CvmSystemDiskDisplay from '@/views/ziyanScr/components/cvm-system-disk/display.vue';
 import CvmDataDiskDisplay from '@/views/ziyanScr/components/cvm-data-disk/display.vue';
+import isEqual from 'lodash/isEqual';
+import { RES_ASSIGN_TYPE } from '@/components/device-type-selector/constants';
 
 interface LinkFieldOptions {
   type: string; // 资源类型
@@ -251,22 +253,36 @@ export default (type: string, isSimpleShow = false) => {
       field: 'spec.zone',
       width: 160,
       showOverflowTooltip: false,
-      render: ({ row }: any) => (
-        <div style={{ display: 'flex', width: '100%', gap: '4px' }}>
-          {row.original.spec.zone !== row.spec.zone && (
-            <Info
-              style={{ flex: 'none', color: '#e9a24c' }}
-              v-bk-tooltips={{ content: `原始值：${getZoneCn(row.original.spec.zone)}` }}
-            />
-          )}
-          <OverflowTitle
-            type='tips'
-            resizeable={true}
-            style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {getZoneCn(row.spec.zone)}
-          </OverflowTitle>
-        </div>
-      ),
+      render: ({ row }: any) => {
+        const getZoneName = (zones: string[]) => {
+          if (zones?.[0] === 'all') {
+            return '全部可用区';
+          }
+          return zones?.map((zone: string) => getZoneCn(zone))?.join('，') ?? '--';
+        };
+        return (
+          <div style={{ display: 'flex', width: '100%', gap: '4px' }}>
+            {!isEqual(row.original.spec.zones, row.spec.zones) && (
+              <Info
+                style={{ flex: 'none', color: '#e9a24c' }}
+                v-bk-tooltips={{ content: `原始值：${getZoneName(row.original.spec.zones)}` }}
+              />
+            )}
+            <OverflowTitle
+              type='tips'
+              resizeable={true}
+              style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {getZoneName(row.spec.zones)}
+            </OverflowTitle>
+          </div>
+        );
+      },
+    },
+    {
+      label: '资源分布方式',
+      field: 'spec.res_assign',
+      render: ({ row }: any) => RES_ASSIGN_TYPE[row.spec.res_assign as keyof typeof RES_ASSIGN_TYPE]?.label ?? '--',
+      width: 120,
     },
     {
       label: '反亲和性',
@@ -406,7 +422,7 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '机型',
       field: 'spec.device_type',
-      minWidth: 120,
+      minWidth: 150,
       isDefaultShow: true,
     },
     {
@@ -431,9 +447,22 @@ export default (type: string, isSimpleShow = false) => {
     },
     {
       label: '园区',
-      field: 'spec.zone',
+      field: 'spec.zones',
       minWidth: 150,
-      render: ({ row }: any) => getZoneCn(row.spec.zone),
+      render: ({ row }: any) => {
+        const { zones } = row.spec;
+        if (zones?.[0] === 'all') {
+          return '全部可用区';
+        }
+        return zones?.map((zone: string) => getZoneCn(zone))?.join('，') ?? '--';
+      },
+      isDefaultShow: true,
+    },
+    {
+      label: '资源分布方式',
+      field: 'spec.res_assign',
+      render: ({ row }: any) => RES_ASSIGN_TYPE[row.spec.res_assign as keyof typeof RES_ASSIGN_TYPE]?.label ?? '--',
+      minWidth: 120,
       isDefaultShow: true,
     },
     {

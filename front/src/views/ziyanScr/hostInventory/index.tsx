@@ -139,6 +139,7 @@ export default defineComponent({
         path: '/service/hostApplication/apply',
         query: {
           ...row,
+          from: 'serviceCvmInventory',
         },
       });
     };

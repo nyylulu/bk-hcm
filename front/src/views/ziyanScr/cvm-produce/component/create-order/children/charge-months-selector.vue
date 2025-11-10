@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, useAttrs } from 'vue';
 import useCvmChargeType from '@/views/ziyanScr/hooks/use-cvm-charge-type';
 
 interface IProps {
@@ -8,12 +8,11 @@ interface IProps {
   isGpuDeviceType?: boolean;
 }
 
+const model = defineModel<number>();
 const props = withDefaults(defineProps<IProps>(), {
   disabled: false,
   isGpuDeviceType: false,
 });
-const model = defineModel<number>();
-
 const { getMonthName } = useCvmChargeType();
 
 const isRollingServer = computed(() => props.requireType === 6);
@@ -29,10 +28,18 @@ const chargeMonthsOption = computed(() => {
 
   return months.reduce((acc, month) => ({ ...acc, [month]: getMonthName(month) }), {});
 });
+
+const attrs = useAttrs();
 </script>
 
 <template>
-  <hcm-form-enum v-model.number="model" :option="chargeMonthsOption" :filterable="false" :disabled="disabled" />
+  <hcm-form-enum
+    v-model.number="model"
+    :option="chargeMonthsOption"
+    :filterable="false"
+    :disabled="disabled"
+    v-bind="attrs"
+  />
 </template>
 
 <style scoped lang="scss"></style>

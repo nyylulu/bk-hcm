@@ -75,6 +75,7 @@ export interface IListConfigCvmChargeTypeDeviceTypeData {
 export interface IDemandSpec {
   region: string; // 地域
   zone: string; // 可用区
+  zones: string[]; // 可用区
   device_type: string; // 机型
   image_id: string; // 镜像ID
   disk_size: number; // 数据盘盘大小，单位G

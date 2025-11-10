@@ -7,7 +7,7 @@ import { VendorEnum } from '@/common/constant';
 export const useItDeviceType = (
   isBusiness: boolean,
   deviceType: Ref<string>,
-  getParams: () => { region: string; zone: string; chargeType: string },
+  getParams: () => { region: string; zone: string | string[]; chargeType: string },
 ) => {
   const ziyanScrStore = useZiyanScrStore();
   const accountSelectorStore = useAccountSelectorStore();
@@ -24,8 +24,14 @@ export const useItDeviceType = (
     if (!isItDeviceType.value) return;
 
     const { region, zone, chargeType } = getParams();
-    const zoneFilters: Array<{ name: 'zone'; values: string[] }> =
-      zone === 'cvm_separate_campus' ? [] : [{ name: 'zone', values: [zone] }];
+
+    // 兼容单可用区与多可用区，在cvm生产仍然使用的是单可用区
+    let zoneFilters: Array<{ name: 'zone'; values: string[] }> = [];
+    if (Array.isArray(zone)) {
+      zoneFilters = zone?.[0] === 'all' ? [] : [{ name: 'zone', values: zone }];
+    } else {
+      zoneFilters = zone === 'cvm_separate_campus' ? [] : [{ name: 'zone', values: [zone] }];
+    }
 
     const cloudInstanceConfigList = await ziyanScrStore.queryCloudInstanceConfig({
       account_id: ziyanAccountId.value,
@@ -37,9 +43,8 @@ export const useItDeviceType = (
       ],
     });
 
-    // 分Campus的结果以第1条为准
-    currentCloudInstanceConfig.value =
-      cloudInstanceConfigList.find((item) => item.zone === zone) ?? cloudInstanceConfigList[0];
+    // 只取第1条
+    currentCloudInstanceConfig.value = cloudInstanceConfigList?.[0];
   });
 
   return {

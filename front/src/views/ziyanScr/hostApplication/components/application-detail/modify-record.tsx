@@ -24,8 +24,8 @@ export default defineComponent({
   },
   emits: ['update:modelValue'],
   setup(props, { attrs, emit }) {
-    // 需要跟后端、产品确定哪些字段不展示
-    const FIELD_BLACK_LIST = ['replicas', 'disk_size', 'disk_type'];
+    // 需要跟后端、产品确定哪些字段不展示，zone被zones替代
+    const FIELD_BLACK_LIST = ['replicas', 'disk_size', 'disk_type', 'zone'];
 
     const { getBusinessApiPath, isBusinessPage } = useWhereAmI();
     const { getFieldCn, getFieldCnVal } = useFieldVal();

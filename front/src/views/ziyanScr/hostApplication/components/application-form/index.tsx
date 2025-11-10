@@ -1,7 +1,7 @@
 import { defineComponent, onMounted, ref, watch, nextTick, computed, reactive, useTemplateRef } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import './index.scss';
-import { Input, Button, Sideslider, Message, Dropdown, Radio, Form, Alert } from 'bkui-vue';
+import { Input, Button, Sideslider, Message, Dropdown, Alert } from 'bkui-vue';
 import { Plus } from 'bkui-vue/lib/icon';
 import CommonCard from '@/components/CommonCard';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
@@ -12,15 +12,13 @@ import CvmSystemDisk from '@/views/ziyanScr/components/cvm-system-disk/form.vue'
 import CvmDataDisk from '@/views/ziyanScr/components/cvm-data-disk/form.vue';
 import NetworkInfoCollapsePanel from '../network-info-collapse-panel/index.vue';
 import AntiAffinityLevelSelect from '../AntiAffinityLevelSelect';
-import CvmDevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/cvm-devicetype-selector.vue';
 import FormCvmImageSelector from '@/views/ziyanScr/components/ostype-selector/form-cvm-image-selector.vue';
-import ChargeMonthsSelector from '@/views/ziyanScr/cvm-produce/component/create-order/children/charge-months-selector.vue';
 import applicationSideslider from '../application-sideslider/index.vue';
 import WName from '@/components/w-name';
 import HostApplyTips from './host-apply-tips/common-tips.vue';
 import HostApplySpringPoolTips from './host-apply-tips/spring-pool-tips.vue';
-import CvmMaxCapacity from '@/views/ziyanScr/components/cvm-max-capacity/index.vue';
 import ReqTypeValue from '@/components/display-value/req-type-value.vue';
+import DeviceTypeCvmSelector from '@/components/device-type-selector/cvm-apply/cvm-apply.vue';
 import {
   MENU_SERVICE_HOST_APPLICATION,
   MENU_BUSINESS_TICKET_MANAGEMENT,
@@ -36,7 +34,7 @@ import apiService from '@/api/scrApi';
 import { VendorEnum, GLOBAL_BIZS_KEY } from '@/common/constant';
 import { VerifyStatus, VerifyStatusMap } from './constants';
 import { ChargeType } from '@/typings/plan';
-import { cloneDeep } from 'lodash';
+import { cloneDeep, isEqual } from 'lodash';
 import { timeFormatter, expectedDeliveryTime } from '@/common/util';
 import http from '@/http';
 
@@ -44,25 +42,20 @@ import { useItDeviceType } from '@/views/ziyanScr/cvm-produce/component/create-o
 import { ICvmSystemDisk } from '@/views/ziyanScr/components/cvm-system-disk/typings';
 // 滚服项目
 import RollingServerTips from './host-apply-tips/rolling-server-tips.vue';
-import InheritPackageFormItem, {
-  type RollingServerHost,
-} from '@/views/ziyanScr/rolling-server/inherit-package-form-item/index.vue';
 import RollingServerCpuCoreLimits from '@/views/ziyanScr/rolling-server/cpu-core-limits/index.vue';
-import { CvmDeviceType } from '@/views/ziyanScr/components/devicetype-selector/types';
 // 小额绿通
 import GreenChannelTips from './host-apply-tips/green-channel-tips.vue';
 import GreenChannelCpuCoreLimits from './green-channel/cpu-core-limits.vue';
 // 机房裁撤
 import DissolveCpuCoreLimits from './dissolve/cpu-core-limits.vue';
-// 预测
-import usePlanDeviceType from '@/views/ziyanScr/hostApplication/plan/usePlanDeviceType';
-import PlanLinkAlert from '../../plan/plan-link-alert.vue';
 import ShortRentalTips from './host-apply-tips/short-rental-tips.vue';
+
+import type { ICvmDeviceTypeFormData } from '@/components/device-type-selector/typings';
 import { RequirementType } from '@/store/config/requirement';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 const { DropdownMenu, DropdownItem } = Dropdown;
-const { Group: RadioGroup, Button: RadioButton } = Radio;
+
 export default defineComponent({
   components: {
     applicationSideslider,
@@ -76,12 +69,11 @@ export default defineComponent({
   setup(props) {
     const accountStore = useAccountStore();
 
-    const { cvmChargeTypes, cvmChargeTypeNames, cvmChargeTypeTips } = useCvmChargeType();
+    const { cvmChargeTypes } = useCvmChargeType();
 
     const IDCPMformRef = ref();
     const QCLOUDCVMformRef = ref();
 
-    const networkInfoFormRef = ref();
     const networkInfoPanelRef = useTemplateRef<typeof NetworkInfoCollapsePanel>('network-info-panel');
 
     const router = useRouter();
@@ -130,6 +122,7 @@ export default defineComponent({
       enable_disk_check: false,
       region: '', // 地域
       zone: '', // 园区
+      zones: [], // 园区，cvm支持多可用区，使用此字段
       charge_type: cvmChargeTypes.PREPAID,
       charge_months: 36, // 计费时长
       bk_asset_id: '', // 继承套餐的机器代表固资号
@@ -148,18 +141,9 @@ export default defineComponent({
         network_type: 'TENTHOUSAND',
         inherit_instance_id: '', // 继承套餐的机器代表实例ID
         cpu: undefined,
+        res_assign: undefined,
       },
     });
-
-    const cvmDevicetypeSelectorRef = useTemplateRef<typeof CvmDevicetypeSelector>('cvm-devicetype-selector');
-    const selectedChargeType = computed(() => resourceForm.value.charge_type);
-    const {
-      isPlanedDeviceTypeLoading,
-      availableDeviceTypeSet,
-      computedAvailableDeviceTypeSet,
-      hasPlanedDeviceType,
-      getPlanedDeviceType,
-    } = usePlanDeviceType(cvmDevicetypeSelectorRef, selectedChargeType);
 
     const formRef = ref();
     const IDCPMIndex = ref(-1);
@@ -183,25 +167,20 @@ export default defineComponent({
     const isRollingServerLike = computed(() => isRollingServer.value || isSpringPool.value);
     const isSpecialRequirement = computed(() => isRollingServer.value || isGreenChannel.value);
 
-    const chargeMonthsDisabledState = ref(null);
-    const handleDeviceTypeChange = (result: {
-      deviceType: CvmDeviceType;
-      chargeMonths: number;
-      chargeMonthsDisabledState: { disabled: boolean; content: string };
-    }) => {
-      QCLOUDCVMForm.value.spec.cpu = result?.deviceType?.cpu_amount;
-      resourceForm.value.charge_months = result?.chargeMonths;
-      chargeMonthsDisabledState.value = result?.chargeMonthsDisabledState;
+    const handleDeviceTypeChange = (data: Partial<ICvmDeviceTypeFormData>, from: 'confirm' | 'auto') => {
+      if (from === 'confirm') {
+        const { deviceTypeList, inheritInstanceId, inheritAssetId } = data;
+        QCLOUDCVMForm.value.spec.cpu = deviceTypeList?.[0]?.cpu_amount;
+        QCLOUDCVMForm.value.spec.inherit_instance_id = inheritInstanceId;
+        resourceForm.value.bk_asset_id = inheritAssetId;
+      }
     };
 
     const currentSpecDeviceType = computed(() => QCLOUDCVMForm.value.spec.device_type);
     const { currentCloudInstanceConfig, isItDeviceType } = useItDeviceType(true, currentSpecDeviceType, () => {
-      const { region, zone, charge_type: chargeType } = resourceForm.value;
-      return { region, zone, chargeType };
+      const { region, zones, charge_type: chargeType } = resourceForm.value;
+      return { region, zone: zones, chargeType };
     });
-
-    // 滚服继承套餐的机器
-    let rollingServerHost: RollingServerHost = null;
 
     const PhysicalMachineoperation = ref({
       label: '操作',
@@ -355,9 +334,6 @@ export default defineComponent({
       },
     ]);
 
-    // 镜像列表
-    const images = ref([]);
-
     // 侧边栏物理机CVM
     const pmForm = ref({
       spec: {
@@ -392,20 +368,12 @@ export default defineComponent({
 
     // 云地域变更时, 清空zone, vpc, subnet, device_type
     const handleRegionChange = () => {
-      resourceForm.value.zone = '';
-      handleZoneChange();
-
       if (resourceForm.value.resourceType === 'QCLOUDCVM') {
         QCLOUDCVMForm.value.spec.vpc = '';
+        resourceForm.value.zones = [];
       } else {
+        resourceForm.value.zone = '';
         pmForm.value.spec.device_type = '';
-      }
-    };
-    // 可用区变更时, 清空subnet, device_type
-    const handleZoneChange = () => {
-      if (resourceForm.value.resourceType === 'QCLOUDCVM') {
-        QCLOUDCVMForm.value.spec.subnet = '';
-        QCLOUDCVMForm.value.spec.device_type = '';
       }
     };
 
@@ -413,11 +381,6 @@ export default defineComponent({
       pmForm.value.spec.anti_affinity_level = val;
     };
 
-    // 获取QCLOUDCVM镜像列表
-    const loadImages = async () => {
-      const { info } = await apiService.getImages([resourceForm.value.region]);
-      images.value = info;
-    };
     // 获取 IDCPM机型列表
     const IDCPMOsTypes = async () => {
       const { info } = await apiService.getOsTypes();
@@ -443,11 +406,27 @@ export default defineComponent({
     const onResourceTypeChange = (resourceType: string) => {
       resourceForm.value.region = '';
       resourceForm.value.zone = '';
+      resourceForm.value.zones = [];
       const { osTypes, deviceTypes, isps } = pmForm.value.options;
       if (resourceType === 'IDCPM' && osTypes.length === 0 && deviceTypes.length === 0 && isps.length === 0) {
         IDCPMlist();
       }
     };
+
+    // 监听cvm的zones
+    watch(
+      () => resourceForm.value.zones,
+      (value, oldValue) => {
+        if (!isEqual(oldValue, value)) {
+          QCLOUDCVMForm.value.spec.subnet = '';
+          // 选择了多个可用区
+          if (value?.length !== 1 || value?.[0] === 'all') {
+            QCLOUDCVMForm.value.spec.vpc = '';
+          }
+        }
+      },
+    );
+
     // 监听物理机机型变化
     watch(
       () => pmForm.value.spec.device_type,
@@ -476,14 +455,16 @@ export default defineComponent({
     const modifylist = (originRow: any, index: number, resourceType: string) => {
       const cloneRow = cloneDeep(originRow);
 
+      // 控制一键申请的slider是否显示
       CVMapplication.value = false;
+
       resourceForm.value.resourceType = resourceType;
       modifyresourceType.value = resourceType;
 
       const { anti_affinity_level, bk_asset_id, remark, replicas, spec } = cloneRow;
-      const { region, zone, charge_type, charge_months } = spec;
+      const { region, zone, zones, charge_type, charge_months } = spec;
 
-      Object.assign(resourceForm.value, { bk_asset_id, region, zone, remark });
+      Object.assign(resourceForm.value, { bk_asset_id, region, zone, zones, remark });
 
       if (resourceType === 'QCLOUDCVM') {
         QCLOUDCVMForm.value.spec = { ...spec, anti_affinity_level, replicas: +replicas };
@@ -503,30 +484,12 @@ export default defineComponent({
         physicalTableData.value.splice(index, 1);
       }
     };
-    watch(
-      () => resourceForm.value.zone,
-      () => {
-        loadImages();
-      },
-    );
-    // 计费模式变更时，处理购买时长默认值
-    watch(
-      () => resourceForm.value.charge_type,
-      (chargeType) => {
-        if (chargeType === cvmChargeTypes.POSTPAID_BY_HOUR) {
-          resourceForm.value.charge_months = undefined;
-        } else {
-          // 这里需要将calculateChargeMonthsState放到下一个tick中执行，避免计算时用的还是旧的计费模式值
-          nextTick(() => {
-            const { chargeMonths } = cvmDevicetypeSelectorRef.value?.calculateChargeMonthsState() || {};
-            resourceForm.value.charge_months = chargeMonths;
-          });
-        }
-      },
-    );
 
     const resolveSpecDataDiskInReApply = (spec: any) => {
       const { data_disk, disk_type, disk_size } = spec;
+      if (spec.zones === null && spec.zone === 'cvm_separate_campus') {
+        spec.zones = ['all'];
+      }
       // 兼容旧单据数据
       if (!data_disk) {
         return disk_type ? { ...spec, data_disk: [{ disk_type, disk_size, disk_num: 1 }] } : { ...spec, data_disk: [] };
@@ -534,7 +497,10 @@ export default defineComponent({
       return spec;
     };
 
+    const isQueryAutoComplete = ref(false);
     const unReapply = async () => {
+      isQueryAutoComplete.value = true;
+      // 来源于单据-再次申请
       if (route?.query?.order_id) {
         const data = await apiService.getOrderDetail(+route?.query?.order_id);
 
@@ -576,9 +542,11 @@ export default defineComponent({
       if (route?.query?.id) {
         assignment(route?.query);
 
-        // 来源为业务下CVM库存一键或资源预测申请时，需要回填需求类型
-        if (route.query.from === 'businessCvmInventory' || route.query.from === 'businessResourcePlan') {
+        const { from } = route?.query;
+        // 来源为业务/服务下CVM库存一键或资源预测申请时，需要回填需求类型
+        if (from === 'businessCvmInventory' || from === 'serviceCvmInventory' || from === 'businessResourcePlan') {
           order.value.model.requireType = Number(route.query.require_type);
+          isOneClickApplication.value = true;
         }
 
         addResourceRequirements.value = true;
@@ -624,47 +592,12 @@ export default defineComponent({
     // 一键申请按钮点击事件
     const handleApplication = () => {
       CVMapplication.value = true;
+      isOneClickApplication.value = true;
     };
-    watch(
-      () => resourceForm.value.region,
-      () => {
-        if (resourceForm.value.resourceType === 'QCLOUDCVM') {
-          loadImages();
-        }
-      },
-    );
 
     const computedBiz = computed(() => {
       return whereAmI.value === Senarios.business ? getBizsId() : order.value.model.bkBizId;
     });
-
-    watch(
-      [
-        () => computedBiz.value,
-        () => order.value.model.requireType,
-        () => resourceForm.value.region,
-        () => resourceForm.value.zone,
-      ],
-      async ([bk_biz_id, require_type, region, zone]) => {
-        // 查询有效预测范围内的机型
-        if (
-          !bk_biz_id ||
-          !require_type ||
-          !region ||
-          !zone ||
-          resourceForm.value.resourceType !== 'QCLOUDCVM' ||
-          isSpecialRequirement.value
-        )
-          return;
-
-        await getPlanedDeviceType(!isSpringPool.value ? bk_biz_id : 931, require_type, region, zone);
-
-        if (availableDeviceTypeSet.prepaid.size === 0) {
-          resourceForm.value.charge_type = cvmChargeTypes.POSTPAID_BY_HOUR;
-        }
-      },
-      { deep: true },
-    );
 
     const assignment = (data: any) => {
       resourceForm.value.resourceType = 'QCLOUDCVM';
@@ -680,39 +613,59 @@ export default defineComponent({
         network_type: 'TENTHOUSAND',
         inherit_instance_id: '',
         cpu: data.cpu,
+        res_assign: data.res_assign,
       };
       resourceForm.value.region = data.region;
       resourceForm.value.zone = data.zone;
+      resourceForm.value.zones = data.zone ? [data.zone] : data.zones;
       resourceForm.value.charge_months = 36;
     };
+
+    // 是否处理一键申请模式
     const isOneClickApplication = ref(false);
-    const OneClickApplication = (row: any, val: boolean) => {
+
+    // 应用一键申请
+    const onOneClickApply = (row: any, val: boolean) => {
       isOneClickApplication.value = true;
+
+      // 控制一键申请slider的显示状态
       CVMapplication.value = val;
+
+      // 初始化配置表单的数据
       assignment(row);
+
+      // 显示配置（添加/修改）资源需求的slider
       title.value = '增加资源需求';
       addResourceRequirements.value = true;
     };
+
+    // 配置（添加/修改）资源需求的slider的close回调
     const ARtriggerShow = (isShow: boolean) => {
       emptyForm();
       addResourceRequirements.value = isShow;
-      CVMapplication.value = isOneClickApplication.value;
-      isOneClickApplication.value = false;
+
+      // 是否继续显示一键申请slider
+      CVMapplication.value = isOneClickApplication.value && !isQueryAutoComplete.value;
+
       nextTick(() => {
         resourceFormRef.value?.clearValidate();
         QCLOUDCVMformRef.value?.clearValidate();
         IDCPMformRef.value?.clearValidate();
-        networkInfoFormRef.value?.clearValidate();
       });
     };
+
+    // 一键申请的slider的close回调
     const CAtriggerShow = (isShow: boolean) => {
       CVMapplication.value = isShow;
+      isOneClickApplication.value = false;
     };
+
     const emptyForm = () => {
       resourceForm.value = {
         resourceType: 'QCLOUDCVM',
         region: '', // 地域
         zone: '', // 园区
+        zones: [],
         remark: '',
         enable_disk_check: false,
         charge_type: cvmChargeTypes.PREPAID,
@@ -732,6 +685,7 @@ export default defineComponent({
           network_type: 'TENTHOUSAND',
           inherit_instance_id: QCLOUDCVMForm.value.spec.inherit_instance_id, // 继承套餐的机器实例id不用清除
           cpu: undefined,
+          res_assign: undefined,
         },
       };
       pmForm.value.spec = {
@@ -751,6 +705,7 @@ export default defineComponent({
         enable_disk_check,
         region,
         zone,
+        zones,
         charge_type,
         charge_months,
         bk_asset_id,
@@ -767,6 +722,7 @@ export default defineComponent({
           ...QCLOUDCVMForm.value.spec,
           region,
           zone,
+          zones,
           charge_type,
           charge_months,
         },
@@ -815,6 +771,13 @@ export default defineComponent({
           trigger: 'change',
         },
       ],
+      subnet: [
+        {
+          validator: (value: string) => (QCLOUDCVMForm.value.spec.vpc ? !!value : true),
+          message: '选择 VPC 后必须选择子网',
+          trigger: 'change',
+        },
+      ],
     }));
     const resourceFormrules = ref({
       resourceType: [{ required: true, message: '请选择主机类型', trigger: 'change' }],
@@ -824,17 +787,14 @@ export default defineComponent({
     const handleSubmit = async () => {
       await resourceFormRef.value.validate();
       if (resourceForm.value.resourceType === 'QCLOUDCVM') {
-        await QCLOUDCVMformRef.value.validate();
+        try {
+          await QCLOUDCVMformRef.value.validate();
+        } catch (error) {
+          networkInfoPanelRef.value?.handleToggle(true);
+          return Promise.reject(error);
+        }
       } else {
         await IDCPMformRef.value.validate();
-      }
-
-      // 需要注意当主机类型为物理机时不会存在networkInfoFormRef
-      try {
-        await networkInfoFormRef.value?.validate();
-      } catch (error) {
-        networkInfoPanelRef.value?.handleToggle(true);
-        return Promise.reject(error);
       }
 
       if (title.value === '增加资源需求') {
@@ -961,13 +921,6 @@ export default defineComponent({
     const handleVpcChange = () => {
       QCLOUDCVMForm.value.spec.subnet = '';
     };
-
-    const cvmMaxCapacityQueryParams = computed(() => {
-      const { requireType: require_type } = order.value.model;
-      const { device_type, vpc, subnet } = QCLOUDCVMForm.value.spec;
-      const { region, zone, charge_type } = resourceForm.value;
-      return { require_type, region, zone, device_type, vpc, subnet, charge_type };
-    });
 
     watch(
       isSpecialRequirement,
@@ -1208,6 +1161,7 @@ export default defineComponent({
                   outline
                   onClick={() => {
                     addResourceRequirements.value = true;
+                    isOneClickApplication.value = false;
                     title.value = '增加资源需求';
                     IDCPMlist();
                   }}
@@ -1388,7 +1342,7 @@ export default defineComponent({
             </bk-form-item>
           </bk-form>
 
-          {/* 增加资源需求 */}
+          {/* 增加/修改资源需求 */}
           <Sideslider
             class='add-resource-requirements-sideslider'
             width={1200}
@@ -1437,203 +1391,26 @@ export default defineComponent({
                           popoverOptions={{ boundary: 'parent' }}
                           onChange={handleRegionChange}></AreaSelector>
                       </bk-form-item>
-                      <bk-form-item label='可用区' required property='zone'>
-                        <ZoneTagSelector
-                          class={'selection-box'}
-                          key={resourceForm.value.region}
-                          style={{ width: '760px' }}
-                          v-model={resourceForm.value.zone}
-                          vendor={VendorEnum.ZIYAN}
-                          region={resourceForm.value.region}
-                          resourceType={resourceForm.value.resourceType}
-                          separateCampus={true}
-                          emptyText='请先选择云地域'
-                          minWidth={184}
-                          maxWidth={184}
-                          autoExpand={'selected'}
-                          onChange={handleZoneChange}
-                        />
-                      </bk-form-item>
-                      {/* 预测指引 */}
-                      {!isSpecialRequirement.value &&
-                        resourceForm.value.zone &&
-                        resourceForm.value.resourceType === 'QCLOUDCVM' &&
-                        !hasPlanedDeviceType.value &&
-                        !isPlanedDeviceTypeLoading.value && (
-                          <PlanLinkAlert
-                            bkBizId={computedBiz.value}
-                            showSuggestions={!isSpringPool.value}
-                            style='margin: -12px 0 24px'
+                      {resourceForm.value.resourceType === 'IDCPM' && (
+                        <bk-form-item label='可用区' required property='zone'>
+                          <ZoneTagSelector
+                            class={'selection-box'}
+                            key={resourceForm.value.region}
+                            style={{ width: '760px' }}
+                            v-model={resourceForm.value.zone}
+                            vendor={VendorEnum.ZIYAN}
+                            region={resourceForm.value.region}
+                            resourceType={resourceForm.value.resourceType}
+                            separateCampus={true}
+                            emptyText='请先选择云地域'
+                            minWidth={184}
+                            maxWidth={184}
+                            autoExpand={'selected'}
                           />
-                        )}
-                      {resourceForm.value.resourceType === 'QCLOUDCVM' && (
-                        <>
-                          {/* 滚服项目 - 继承套餐 */}
-                          {isRollingServer.value && (
-                            <InheritPackageFormItem
-                              v-model={resourceForm.value.bk_asset_id}
-                              bizs={order.value.model.bkBizId}
-                              region={resourceForm.value.region}
-                              onValidateSuccess={(host) => {
-                                const { instance_charge_type: chargeType, charge_months: chargeMonths } = host;
-                                resourceForm.value.charge_type = chargeType;
-                                resourceForm.value.charge_months =
-                                  chargeType === cvmChargeTypes.PREPAID ? chargeMonths : undefined;
-                                QCLOUDCVMForm.value.spec.inherit_instance_id = host.bk_cloud_inst_id;
-                                // 机型族与上次数据不一致时需要清除机型选择
-                                if (
-                                  rollingServerHost &&
-                                  host.device_group !== rollingServerHost.device_group &&
-                                  QCLOUDCVMForm.value.spec.device_type
-                                ) {
-                                  QCLOUDCVMForm.value.spec.device_type = '';
-                                }
-                                rollingServerHost = host;
-                              }}
-                              onValidateFailed={() => {
-                                // 恢复默认值
-                                resourceForm.value.charge_type = cvmChargeTypes.PREPAID;
-                                resourceForm.value.charge_months = 36;
-                                if (QCLOUDCVMForm.value.spec.device_type) {
-                                  QCLOUDCVMForm.value.spec.device_type = '';
-                                }
-                                rollingServerHost = null;
-                              }}
-                            />
-                          )}
-                          <bk-form-item label='计费模式' required property='charge_type'>
-                            {isSpecialRequirement.value ? (
-                              // 滚服项目、小额绿通
-                              <RadioGroup
-                                v-model={resourceForm.value.charge_type}
-                                type='card'
-                                style={{ width: '260px' }}
-                                // 滚服不支持选择计费模式
-                                disabled={isRollingServer.value}
-                                v-bk-tooltips={{
-                                  content: '继承原有套餐，计费模式不可选',
-                                  disabled: !isRollingServer.value,
-                                }}>
-                                <RadioButton label={cvmChargeTypes.PREPAID}>
-                                  {cvmChargeTypeNames[cvmChargeTypes.PREPAID]}
-                                </RadioButton>
-                                <RadioButton label={cvmChargeTypes.POSTPAID_BY_HOUR}>
-                                  {cvmChargeTypeNames[cvmChargeTypes.POSTPAID_BY_HOUR]}
-                                </RadioButton>
-                              </RadioGroup>
-                            ) : (
-                              // 其他需求类型
-                              <RadioGroup
-                                v-model={resourceForm.value.charge_type}
-                                type='card'
-                                style={{ width: '260px' }}>
-                                <RadioButton
-                                  label={cvmChargeTypes.PREPAID}
-                                  disabled={availableDeviceTypeSet.prepaid.size === 0}
-                                  v-bk-tooltips={{
-                                    content: '当前地域无有效的预测需求，请提预测单后再按量申请',
-                                    disabled: !resourceForm.value.zone || availableDeviceTypeSet.prepaid.size > 0,
-                                  }}>
-                                  {cvmChargeTypeNames[cvmChargeTypes.PREPAID]}
-                                </RadioButton>
-                                <RadioButton
-                                  label={cvmChargeTypes.POSTPAID_BY_HOUR}
-                                  disabled={availableDeviceTypeSet.postpaid.size === 0}
-                                  v-bk-tooltips={{
-                                    content: '当前地域无有效的预测需求，请提预测单后再按量申请',
-                                    disabled: !resourceForm.value.zone || availableDeviceTypeSet.postpaid.size > 0,
-                                  }}>
-                                  {cvmChargeTypeNames[cvmChargeTypes.POSTPAID_BY_HOUR]}
-                                </RadioButton>
-                              </RadioGroup>
-                            )}
-                            <bk-alert theme='info' class='form-item-tips'>
-                              {{
-                                title: () => (
-                                  <>
-                                    {cvmChargeTypeTips[resourceForm.value.charge_type]}
-                                    <bk-link
-                                      href='https://crp.woa.com/crp-outside/yunti/news/20'
-                                      theme='primary'
-                                      target='_blank'>
-                                      计费模式说明
-                                    </bk-link>
-                                  </>
-                                ),
-                              }}
-                            </bk-alert>
-                            {/* 包年包月时提示短租信息 */}
-                            {resourceForm.value.charge_type === cvmChargeTypes.PREPAID && isShortRental.value && (
-                              <bk-alert theme='warning' class='form-item-tips'>
-                                {{
-                                  title: () => (
-                                    <>
-                                      <span style={{ color: 'red' }}>
-                                        注意：短租项目，需要按退回计划如期退回，如超时不退，会有罚金产生，请关注CRP机器退回通知，
-                                      </span>
-                                      如有疑问请咨询
-                                      <bk-link
-                                        href='https://crp.woa.com/crp-outside/yunti/news/20'
-                                        theme='primary'
-                                        target='_blank'>
-                                        云梯助手
-                                      </bk-link>
-                                    </>
-                                  ),
-                                }}
-                              </bk-alert>
-                            )}
-                          </bk-form-item>
-                          {resourceForm.value.charge_type === cvmChargeTypes.PREPAID && (
-                            <bk-form-item label='购买时长' required property='charge_months'>
-                              <ChargeMonthsSelector
-                                style={{ width: '260px' }}
-                                v-model={resourceForm.value.charge_months}
-                                requireType={order.value.model.requireType}
-                                isGpuDeviceType={cvmDevicetypeSelectorRef.value?.isGpuDeviceType}
-                                disabled={chargeMonthsDisabledState.value?.disabled}
-                                v-bk-tooltips={{
-                                  content: chargeMonthsDisabledState.value?.content,
-                                  disabled: !chargeMonthsDisabledState.value?.disabled,
-                                }}
-                              />
-                            </bk-form-item>
-                          )}
-                        </>
+                        </bk-form-item>
                       )}
                     </bk-form>
                   </CommonCard>
-
-                  {resourceForm.value.resourceType === 'QCLOUDCVM' && (
-                    <Form
-                      model={QCLOUDCVMForm.value.spec}
-                      formType='vertical'
-                      class='mt15'
-                      ref={networkInfoFormRef}
-                      rules={{
-                        subnet: [
-                          {
-                            validator: (value: string) => (QCLOUDCVMForm.value.spec.vpc ? !!value : true),
-                            message: '选择 VPC 后必须选择子网',
-                            trigger: 'change',
-                          },
-                        ],
-                      }}>
-                      <NetworkInfoCollapsePanel
-                        ref={'network-info-panel'}
-                        class='network-info-collapse-panel'
-                        v-model:vpc={QCLOUDCVMForm.value.spec.vpc}
-                        v-model:subnet={QCLOUDCVMForm.value.spec.subnet}
-                        region={resourceForm.value.region}
-                        zone={resourceForm.value.zone}
-                        vpcProperty={'vpc'}
-                        subnetProperty={'subnet'}
-                        disabledVpc={resourceForm.value.zone === 'cvm_separate_campus'}
-                        disabledSubnet={resourceForm.value.zone === 'cvm_separate_campus'}
-                        onChangeVpc={handleVpcChange}
-                      />
-                    </Form>
-                  )}
 
                   <CommonCard
                     title={() => '实例配置'}
@@ -1646,25 +1423,25 @@ export default defineComponent({
                             rules={QCLOUDCVMformRules.value}
                             ref={QCLOUDCVMformRef}
                             form-type='vertical'>
-                            <bk-form-item label='机型' required property='device_type'>
-                              <CvmDevicetypeSelector
-                                ref='cvm-devicetype-selector'
-                                v-model={QCLOUDCVMForm.value.spec.device_type}
-                                selectorClass='commonCard-form-select'
-                                tipClass='mt4 form-item-tips'
-                                region={resourceForm.value.region}
-                                zone={resourceForm.value.zone}
-                                requireType={order.value.model.requireType}
-                                chargeType={resourceForm.value.charge_type}
-                                computedAvailableDeviceTypeSet={computedAvailableDeviceTypeSet.value}
-                                rollingServerHost={rollingServerHost}
-                                disabled={resourceForm.value.zone === ''}
-                                isLoading={isPlanedDeviceTypeLoading.value}
-                                placeholder={resourceForm.value.zone === '' ? '请先选择可用区' : '请选择机型'}
-                                showTip
-                                popoverOptions={{ boundary: 'parent' }}
-                                onChange={handleDeviceTypeChange}
-                              />
+                            <bk-form-item label='机型配置' required property='device_type'>
+                              {addResourceRequirements.value && (
+                                <DeviceTypeCvmSelector
+                                  v-model={QCLOUDCVMForm.value.spec.device_type}
+                                  v-model:zones={resourceForm.value.zones}
+                                  v-model:chargeType={resourceForm.value.charge_type}
+                                  v-model:chargeMonths={resourceForm.value.charge_months}
+                                  v-model:res-assign-type={QCLOUDCVMForm.value.spec.res_assign}
+                                  bizId={computedBiz.value}
+                                  vendor={VendorEnum.ZIYAN}
+                                  requireType={order.value.model.requireType}
+                                  region={resourceForm.value.region}
+                                  assetId={resourceForm.value.bk_asset_id}
+                                  instanceId={QCLOUDCVMForm.value.spec.inherit_instance_id}
+                                  disabled={resourceForm.value.region === ''}
+                                  isEditing={isOneClickApplication.value || title.value === '修改资源需求'}
+                                  editMode={false}
+                                  onChange={handleDeviceTypeChange}></DeviceTypeCvmSelector>
+                              )}
                             </bk-form-item>
                             <bk-form-item label='镜像' required property='image_id'>
                               <FormCvmImageSelector
@@ -1719,10 +1496,24 @@ export default defineComponent({
                                 min={1}
                                 max={1000}
                               />
-                              {resourceForm.value.resourceType === 'QCLOUDCVM' && (
-                                <CvmMaxCapacity params={cvmMaxCapacityQueryParams.value} />
-                              )}
                             </bk-form-item>
+                            <NetworkInfoCollapsePanel
+                              ref={'network-info-panel'}
+                              class='network-info-collapse-panel'
+                              v-model:vpc={QCLOUDCVMForm.value.spec.vpc}
+                              v-model:subnet={QCLOUDCVMForm.value.spec.subnet}
+                              region={resourceForm.value.region}
+                              zone={resourceForm.value.zones?.[0]}
+                              vpcProperty={'vpc'}
+                              subnetProperty={'subnet'}
+                              disabledVpc={
+                                resourceForm.value.zones?.length !== 1 || resourceForm.value.zones?.[0] === 'all'
+                              }
+                              disabledSubnet={
+                                resourceForm.value.zones?.length !== 1 || resourceForm.value.zones?.[0] === 'all'
+                              }
+                              onChangeVpc={handleVpcChange}
+                            />
                             <bk-form-item label='备注'>
                               <Input
                                 type='textarea'
@@ -1812,24 +1603,7 @@ export default defineComponent({
               ),
               footer: () => (
                 <>
-                  <Button
-                    theme='primary'
-                    onClick={handleSubmit}
-                    v-bk-tooltips={{
-                      content: '当前地域无资源预测，提预测单后再按量申请',
-                      disabled: !(
-                        !isSpecialRequirement.value &&
-                        !!resourceForm.value.zone &&
-                        resourceForm.value.resourceType === 'QCLOUDCVM' &&
-                        !hasPlanedDeviceType.value
-                      ),
-                    }}
-                    disabled={
-                      !isSpecialRequirement.value &&
-                      !!resourceForm.value.zone &&
-                      resourceForm.value.resourceType === 'QCLOUDCVM' &&
-                      !hasPlanedDeviceType.value
-                    }>
+                  <Button theme='primary' onClick={handleSubmit}>
                     保存需求
                   </Button>
                   <Button class='ml16' onClick={() => ARtriggerShow(false)}>
@@ -1865,7 +1639,7 @@ export default defineComponent({
                   isShow={CVMapplication.value}
                   requireType={device.value.filter.require_type}
                   bizId={computedBiz.value}
-                  onApply={OneClickApplication}
+                  onApply={onOneClickApply}
                 />
               ),
             }}

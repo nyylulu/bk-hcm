@@ -216,6 +216,7 @@ export interface IApplyOrderItem {
   spec: {
     region: string;
     zone: string;
+    zones: string[];
     device_group: string;
     device_size: string;
     device_type: string;
@@ -236,6 +237,7 @@ export interface IApplyOrderItem {
     charge_months: number;
     inherit_instance_id: string;
     failed_zone_ids: string[];
+    res_assign: number;
   };
   anti_affinity_level: string;
   enable_disk_check: boolean;

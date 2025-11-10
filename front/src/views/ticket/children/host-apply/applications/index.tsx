@@ -22,7 +22,7 @@ import useSearchQs from '@/hooks/use-search-qs';
 import { useRequireTypes } from '@/views/ziyanScr/hooks/use-require-types';
 import { useApplyStages } from '@/views/ziyanScr/hooks/use-apply-stages';
 import { getResourceTypeName } from '@/views/ziyanScr/hostApplication/components/transform';
-import { getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
+import { getRegionCn, getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
 import http from '@/http';
 import useTimeoutPoll from '@/hooks/use-timeout-poll';
 import { getDateRange, transformFlatCondition } from '@/utils/search';
@@ -30,8 +30,10 @@ import type { ModelProperty } from '@/model/typings';
 import { getModel } from '@/model/manager';
 import HocSearch from '@/model/hoc-search.vue';
 import { HostApplySearch } from '@/model/order/host-apply-search';
-import { GLOBAL_BIZS_KEY, VendorEnum } from '@/common/constant';
+import { GLOBAL_BIZS_KEY } from '@/common/constant';
 import { SCR_RESOURCE_TYPE_NAME, ScrResourceType } from '@/constants';
+import { RES_ASSIGN_TYPE } from '@/components/device-type-selector/constants';
+import type { ICvmDeviceTypeFormData } from '@/components/device-type-selector/typings';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 
@@ -340,25 +342,30 @@ export default defineComponent({
             render: ({ data }: any) => {
               const isUpgradeCvm = ScrResourceType.UPGRADECVM === data.resource_type;
               return (
-                <div>
-                  <div style={'height: 30px!important;line-height: 30px;'}>
-                    {t('资源类型')}：{getResourceTypeName(data?.resource_type)}
+                <div style={{ lineHeight: '30px' }}>
+                  <div>
+                    {t('资源类型')}：{data?.resource_type ? getResourceTypeName(data?.resource_type) : '--'}
                   </div>
                   {/* 机型配置调整不展示机型、园区 */}
                   {!isUpgradeCvm && (
                     <>
-                      <div style={'height: 20px!important;line-height: 20px;'}>
+                      <div>
                         {t('机型')}：{data.spec?.device_type || '--'}
                       </div>
-                      <div style={'height: 30px!important;line-height: 30px;'}>
-                        {t('园区')}：{getZoneCn(data.spec?.zone)}
-                        {data.spec?.zone === 'cvm_separate_campus' && (
-                          <display-value
-                            value={data.spec.region}
-                            property={{ type: 'region' }}
-                            vendor={VendorEnum.ZIYAN}
-                          />
-                        )}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr' }}>
+                        <div>{t('园区')}：</div>
+                        <div>
+                          {data.spec?.zones?.[0] === 'all'
+                            ? `${getRegionCn(data.spec.region)}(全部可用区)`
+                            : data.spec?.zones?.map((zone: string) => {
+                                return <div>{getZoneCn(zone)}</div>;
+                              }) || '--'}
+                        </div>
+                      </div>
+                      <div>
+                        {t('分布')}：
+                        {RES_ASSIGN_TYPE[data.spec?.res_assign as ICvmDeviceTypeFormData['resAssignType']]?.label ??
+                          '--'}
                       </div>
                     </>
                   )}

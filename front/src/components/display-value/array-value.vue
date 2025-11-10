@@ -4,8 +4,14 @@ import { DisplayType } from './typings';
 
 const props = defineProps<{ value: string[] | number[]; display: DisplayType }>();
 
+const format = computed(() => props.display?.format);
+
 const displayValue = computed(() => {
   const vals = Array.isArray(props.value) ? props.value : [props.value];
+  if (typeof format.value === 'function') {
+    const formattedVals = vals.map((item) => format.value(item));
+    return formattedVals.join(', ') || '--';
+  }
   return vals?.join?.(', ') || '--';
 });
 </script>
