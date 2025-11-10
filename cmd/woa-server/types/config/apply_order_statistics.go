@@ -20,83 +20,8 @@
 package config
 
 import (
-	"errors"
-	"strings"
 	"time"
 )
-
-// CreateApplyOrderStatisticsConfigParam 创建申请单统计配置请求参数
-type CreateApplyOrderStatisticsConfigParam struct {
-	YearMonth   string   `json:"year_month" validate:"required"`
-	SubOrderIDs []string `json:"sub_order_ids"`
-	StartAt     string   `json:"start_at"`
-	EndAt       string   `json:"end_at"`
-	Memo        string   `json:"memo" validate:"required,max=255"`
-}
-
-// Validate 验证创建申请单统计配置请求参数
-func (c *CreateApplyOrderStatisticsConfigParam) Validate() error {
-	if len(c.YearMonth) == 0 {
-		return errors.New("year_month is required")
-	}
-
-	// 验证年月格式 YYYY-MM
-	parts := strings.Split(c.YearMonth, "-")
-	if len(parts) != 2 {
-		return errors.New("year_month format must be YYYY-MM")
-	}
-
-	if len(c.Memo) == 0 {
-		return errors.New("memo is required")
-	}
-
-	if len(c.Memo) > 255 {
-		return errors.New("memo length must not exceed 255 characters")
-	}
-
-	// 子单号和时间段必须二选一
-	hasSubOrderIDs := len(c.SubOrderIDs) > 0
-	hasTimeRange := len(c.StartAt) > 0 && len(c.EndAt) > 0
-
-	if !hasSubOrderIDs && !hasTimeRange {
-		return errors.New("sub_order_ids and time range (start_at, end_at) must choose one")
-	}
-
-	if hasSubOrderIDs && hasTimeRange {
-		return errors.New("sub_order_ids and time range (start_at, end_at) can not both be set")
-	}
-
-	// 验证子单号数量
-	if hasSubOrderIDs && len(c.SubOrderIDs) > 100 {
-		return errors.New("sub_order_ids length must not exceed 100")
-	}
-
-	// 验证时间段
-	if hasTimeRange {
-		if len(c.StartAt) == 0 {
-			return errors.New("start_at is required when using time range")
-		}
-		if len(c.EndAt) == 0 {
-			return errors.New("end_at is required when using time range")
-		}
-		// 验证日期格式 YYYY-MM-DD
-		startParts := strings.Split(c.StartAt, "-")
-		if len(startParts) != 3 {
-			return errors.New("start_at format must be YYYY-MM-DD")
-		}
-		endParts := strings.Split(c.EndAt, "-")
-		if len(endParts) != 3 {
-			return errors.New("end_at format must be YYYY-MM-DD")
-		}
-	}
-
-	return nil
-}
-
-// CreateApplyOrderStatisticsConfigResult 创建申请单统计配置响应结果
-type CreateApplyOrderStatisticsConfigResult struct {
-	ID string `json:"id"`
-}
 
 // CvmApplyOrderStatisticsConfig 申请单统计配置实体
 type CvmApplyOrderStatisticsConfig struct {
