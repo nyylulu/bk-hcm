@@ -20,6 +20,7 @@ import (
 	gclogics "hcm/cmd/woa-server/logics/green-channel"
 	planLogics "hcm/cmd/woa-server/logics/plan"
 	taskLogics "hcm/cmd/woa-server/logics/task"
+	taskStatistics "hcm/cmd/woa-server/logics/task/statistics"
 	"hcm/cmd/woa-server/service/capability"
 	"hcm/pkg/client"
 	"hcm/pkg/iam/auth"
@@ -29,7 +30,7 @@ import (
 
 // InitService initial the service
 func InitService(c *capability.Capability) {
-	logics := taskLogics.New(c.SchedulerIf, c.RecyclerIf, c.InformerIf, c.OperationIf)
+	logics := taskLogics.New(c.SchedulerIf, c.RecyclerIf, c.InformerIf, c.OperationIf, taskStatistics.New())
 	s := &service{
 		client:         c.Client,
 		logics:         logics,
@@ -70,6 +71,8 @@ type service struct {
 
 func (s *service) initOperationService(h *rest.Handler) {
 	h.Add("GetApplyStatistics", http.MethodPost, "/find/operation/apply/statistics", s.GetApplyStatistics)
+	h.Add("CreateApplyOrderStatisticsConfig", http.MethodPost, "/config/create/apply/order/statistics",
+		s.CreateApplyOrderStatisticsConfig)
 }
 
 func (s *service) initRecyclerService(h *rest.Handler) {

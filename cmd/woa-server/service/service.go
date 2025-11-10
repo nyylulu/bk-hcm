@@ -44,6 +44,7 @@ import (
 	"hcm/cmd/woa-server/logics/task/recoverer"
 	"hcm/cmd/woa-server/logics/task/recycler"
 	"hcm/cmd/woa-server/logics/task/scheduler"
+	taskStatistics "hcm/cmd/woa-server/logics/task/statistics"
 	"hcm/cmd/woa-server/service/capability"
 	"hcm/cmd/woa-server/service/config"
 	"hcm/cmd/woa-server/service/cvm"
@@ -448,7 +449,9 @@ func newOtherClient(kt *kit.Kit, service *Service, itsmCli itsm.Client, sd servi
 		return nil, err
 	}
 
-	taskLogic := taskLogics.New(service.schedulerIf, recyclerIf, service.informerIf, operationIf)
+	statisticsIf := taskStatistics.New()
+
+	taskLogic := taskLogics.New(service.schedulerIf, recyclerIf, service.informerIf, operationIf, statisticsIf)
 	service.taskLogic = taskLogic
 
 	cvmLogic := cvmlogic.New(service.thirdCli, service.clientConf.ClientConfig,

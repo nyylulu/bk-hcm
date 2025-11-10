@@ -21,17 +21,18 @@ import (
 )
 
 type model struct {
-	requirement    Requirement
-	region         Region
-	zone           Zone
-	vpc            Vpc
-	subnet         Subnet
-	idcZone        IdcZone
-	deviceRestrict DeviceRestrict
-	cvmImage       CvmImage
-	cvmDevice      CvmDevice
-	dvmDevice      DvmDevice
-	pmDevice       PmDevice
+	requirement                Requirement
+	region                     Region
+	zone                       Zone
+	vpc                        Vpc
+	subnet                     Subnet
+	idcZone                    IdcZone
+	deviceRestrict             DeviceRestrict
+	cvmImage                   CvmImage
+	cvmDevice                  CvmDevice
+	dvmDevice                  DvmDevice
+	pmDevice                   PmDevice
+	applyOrderStatisticsConfig CvmApplyOrderStatisticsConfig
 }
 
 // Requirement get requirement operation interface
@@ -89,21 +90,27 @@ func (m *model) PmDevice() PmDevice {
 	return m.pmDevice
 }
 
+// CvmApplyOrderStatisticsConfig get apply order statistics config operation interface
+func (m *model) CvmApplyOrderStatisticsConfig() CvmApplyOrderStatisticsConfig {
+	return m.applyOrderStatisticsConfig
+}
+
 var operation *model
 
 func init() {
 	operation = &model{
-		requirement:    &requirement{},
-		region:         &region{},
-		zone:           &zone{},
-		vpc:            &vpc{},
-		subnet:         &subnet{},
-		idcZone:        &idcZone{},
-		deviceRestrict: &deviceRestrict{},
-		cvmImage:       &cvmImage{},
-		cvmDevice:      &cvmDevice{},
-		dvmDevice:      &dvmDevice{},
-		pmDevice:       &pmDevice{},
+		requirement:                &requirement{},
+		region:                     &region{},
+		zone:                       &zone{},
+		vpc:                        &vpc{},
+		subnet:                     &subnet{},
+		idcZone:                    &idcZone{},
+		deviceRestrict:             &deviceRestrict{},
+		cvmImage:                   &cvmImage{},
+		cvmDevice:                  &cvmDevice{},
+		dvmDevice:                  &dvmDevice{},
+		pmDevice:                   &pmDevice{},
+		applyOrderStatisticsConfig: &cvmApplyOrderStatisticsConfig{},
 	}
 }
 
@@ -125,6 +132,7 @@ type Model interface {
 	CvmDevice() CvmDevice
 	DvmDevice() DvmDevice
 	PmDevice() PmDevice
+	CvmApplyOrderStatisticsConfig() CvmApplyOrderStatisticsConfig
 }
 
 // Requirement requirement operation interface
@@ -328,4 +336,15 @@ type PmDevice interface {
 	UpdateDevice(ctx context.Context, filter *mapstr.MapStr, doc *mapstr.MapStr) error
 	// DeleteDevice deletes device config from db
 	DeleteDevice(ctx context.Context, filter *mapstr.MapStr) error
+}
+
+// CvmApplyOrderStatisticsConfig apply order statistics config operation interface
+type CvmApplyOrderStatisticsConfig interface {
+	NextSequence(ctx context.Context) (uint64, error)
+	Create(ctx context.Context, inst *types.CvmApplyOrderStatisticsConfig) error
+	Get(ctx context.Context, filter *mapstr.MapStr) (*types.CvmApplyOrderStatisticsConfig, error)
+	Count(ctx context.Context, filter map[string]interface{}) (uint64, error)
+	FindMany(ctx context.Context, page metadata.BasePage, filter map[string]interface{}) ([]*types.CvmApplyOrderStatisticsConfig, error)
+	Update(ctx context.Context, filter, doc map[string]interface{}) error
+	Delete(ctx context.Context, filter map[string]interface{}) error
 }
