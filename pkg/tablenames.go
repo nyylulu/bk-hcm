@@ -74,6 +74,9 @@ const (
 	// BKTableNameCfgSubnet the table name of cvm subnet config
 	BKTableNameCfgSubnet = "cr_CfgSubnet"
 
+	// BKTableNameCfgCvmApplyOrderStatisticsConfig the table name of cvm apply order statistics config
+	BKTableNameCfgCvmApplyOrderStatisticsConfig = "cvm_apply_order_statistics_config"
+
 	// BKTableNameCfgCvmImage the table name of cvm image config
 	BKTableNameCfgCvmImage = "cr_CfgCvmImage"
 
