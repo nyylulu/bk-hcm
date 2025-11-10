@@ -22,6 +22,7 @@ package task
 // IdleCheckTaskDetailParam ...
 type IdleCheckTaskDetailParam struct {
 	IP         string `json:"ip,omitempty"`
+	SubOrderID string `json:"sub_order_id,omitempty"`
 	TotalNum   uint   `json:"total_num,omitempty"`
 	SuccessNum uint   `json:"success_num,omitempty"`
 }

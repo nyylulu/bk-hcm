@@ -373,6 +373,7 @@ func (c *cvm) updateTaskDetailsForCvm(kt *kit.Kit, details []*cvmTaskDetail) err
 			ID:            detail.taskDetailID,
 			FlowID:        detail.flowID,
 			TaskActionIDs: []string{detail.actionID},
+			Param:         detail.param,
 		})
 	}
 	updateDetailsReq := &task.UpdateDetailReq{

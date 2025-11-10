@@ -110,6 +110,10 @@ func (c *cvm) CvmIdleCheck(kt *kit.Kit, bkBizID int64, bkHostIDs []int64, source
 		return "", "", err
 	}
 
+	for _, detail := range detailList {
+		detail.param.SubOrderID = result.SuborderID
+	}
+
 	if err = c.updateTaskManagementAndDetailsForCvm(kt, taskManagementID, flowID, detailList); err != nil {
 		logs.Errorf("update task management and details failed, err: %v, rid: %s", err, kt.Rid)
 		return "", "", err
