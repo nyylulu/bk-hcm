@@ -124,6 +124,7 @@ export interface CurrentListParam {
   max_cpu_core_amount: number;
   group_name: string;
   center: string;
+  svr_type_name: string;
 }
 
 export type IDissolveHostCurrentListResult = IListResData<CurrentListParam[]>;

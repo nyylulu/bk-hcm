@@ -2691,6 +2691,7 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '固资号',
       field: 'server_asset_id',
+      width: 170,
       isDefaultShow: true,
     },
     {
@@ -2728,6 +2729,11 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: 'SCM设备类型',
       field: 'device_type',
+      isDefaultShow: true,
+    },
+    {
+      label: '服务器类型',
+      field: 'svr_type_name',
       isDefaultShow: true,
     },
     {
