@@ -44,7 +44,8 @@ func (c *cvmApplyOrderStatisticsConfig) Create(ctx context.Context, inst *types.
 // Get gets config by filter from db
 func (c *cvmApplyOrderStatisticsConfig) Get(ctx context.Context, filter *mapstr.MapStr) (*types.CvmApplyOrderStatisticsConfig, error) {
 	inst := new(types.CvmApplyOrderStatisticsConfig)
-	if err := mongodb.Client().Table(pkg.BKTableNameCfgCvmApplyOrderStatisticsConfig).Find(filter).One(ctx, inst); err != nil {
+	table := mongodb.Client().Table(pkg.BKTableNameCfgCvmApplyOrderStatisticsConfig)
+	if err := table.Find(filter).One(ctx, inst); err != nil {
 		return nil, err
 	}
 	return inst, nil
@@ -61,7 +62,8 @@ func (c *cvmApplyOrderStatisticsConfig) FindMany(ctx context.Context, page metad
 
 	limit := uint64(page.Limit)
 	start := uint64(page.Start)
-	query := mongodb.Client().Table(pkg.BKTableNameCfgCvmApplyOrderStatisticsConfig).Find(filter).Limit(limit).Start(start)
+	table := mongodb.Client().Table(pkg.BKTableNameCfgCvmApplyOrderStatisticsConfig)
+	query := table.Find(filter).Limit(limit).Start(start)
 	if len(page.Sort) > 0 {
 		query = query.Sort(page.Sort)
 	} else {
