@@ -31,11 +31,12 @@ export default defineComponent({
           return <i class='hcm-icon bkhcm-icon-7chenggong-01'></i>;
         case 'failed':
         case 'partial_failed':
+        case 'terminated':
           return <i class='hcm-icon bkhcm-icon-close-circle-fill'></i>;
         case 'revoked':
           return <img src={StatusUnknown} style={{ width: '22px', marginRight: '10px' }} />;
         default:
-          return <i class='hcm-icon bkhcm-icon-jiazai'></i>;
+          return <img src={StatusUnknown} style={{ width: '22px', marginRight: '10px' }} />;
       }
     };
 

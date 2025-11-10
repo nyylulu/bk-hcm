@@ -14,7 +14,12 @@ import { useResSubTicketStore, SubTicketItem, STATUS_ENUM, STAGE_ENUM } from '@/
 import { GLOBAL_BIZS_KEY } from '@/common/constant';
 import { debounce } from 'lodash';
 import StatusText from './components/status-text.vue';
+import { TicketStatus } from '@/typings/resourcePlan';
 
+interface Props {
+  ticketStatus: TicketStatus; // 主单状态
+}
+const props = defineProps<Props>();
 // 补全类型泛型
 const emits = defineEmits<{
   retryTicket: [];
@@ -157,6 +162,11 @@ const successMsg = computed(() => {
 const hasFailedTicket = computed(() => {
   return tableData.value.some((item) => item.status === 'failed');
 });
+// 是否禁止终止按钮
+const terminatedBtnDisabled = computed(
+  () => !(props.ticketStatus === 'failed' || props.ticketStatus === 'partial_failed'),
+);
+
 // 方法
 const handleFailedTicket = () => {
   retryBtnLoading.value = true;
@@ -190,6 +200,24 @@ const handleSubTicketShowById = async (id: string) => {
     detailRef.value.open(subTicketItem);
   }
 };
+
+const terminateBtnLoading = ref(false);
+const isShowTerminalDialog = ref(false);
+const isTerminated = computed(() => props.ticketStatus === 'terminated');
+const handleTerminate = () => {
+  subTicketStore
+    .terminateTicket(route.query?.id as string, bizId.value)
+    .then(() => {
+      Message({ theme: 'success', message: '终止成功' });
+    })
+    .catch(() => {
+      Message({ theme: 'error', message: `终止失败` });
+    })
+    .finally(() => {
+      terminateBtnLoading.value = false;
+      emits('retryTicket');
+    });
+};
 // 监听 route.query.subId
 watch(
   () => route.query.subId,
@@ -208,7 +236,7 @@ defineExpose({
   <Panel class="panel" :title="t('子单信息')">
     <template #title-extra>
       <bk-button
-        :disabled="!hasFailedTicket"
+        :disabled="isTerminated || !hasFailedTicket"
         style="margin-left: 21px"
         :loading="retryBtnLoading"
         @click="handleFailedTicketDebounce"
@@ -224,6 +252,14 @@ defineExpose({
           复制CRP待审批链接
         </bk-button>
       </copy-to-clipboard>
+      <bk-button
+        :disabled="terminatedBtnDisabled"
+        style="margin-left: 21px"
+        :loading="terminateBtnLoading"
+        @click="isShowTerminalDialog = true"
+      >
+        终止
+      </bk-button>
     </template>
     <bk-loading :loading="isLoading">
       <bk-table
@@ -240,6 +276,10 @@ defineExpose({
     </bk-loading>
   </Panel>
   <SubTicketDetail ref="detailRef" />
+
+  <bk-dialog v-model:is-show="isShowTerminalDialog" title="终止单据" quick-close @confirm="handleTerminate">
+    <div>注意：终止单据会将单据置为结束状态</div>
+  </bk-dialog>
 </template>
 
 <style lang="scss" scoped>

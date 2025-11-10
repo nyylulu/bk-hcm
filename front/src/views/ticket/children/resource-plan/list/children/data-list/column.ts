@@ -24,7 +24,7 @@ export const properties: ModelPropertyColumn[] = [
             success: ['done'],
             fail: ['failed', 'partial_failed', 'rejected', 'partial_rejected'],
             ing: ['auditing'],
-            stop: ['revoked'],
+            stop: ['revoked', 'terminated'],
           },
         },
       },
