@@ -41,10 +41,14 @@ func InitService(c *capability.Capability) {
 		client:         c.Client,
 	}
 	h := rest.NewHandler()
-
 	s.initPlanService(h)
 
+	bizH := rest.NewHandler()
+	bizH.Path("/bizs/{bk_biz_id}")
+	s.initBizPlanService(bizH)
+
 	h.Load(c.WebService)
+	bizH.Load(c.WebService)
 }
 
 type service struct {
@@ -56,9 +60,6 @@ type service struct {
 }
 
 func (s *service) initPlanService(h *rest.Handler) {
-	// biz
-	h.Add("GetBizOrgRel", http.MethodGet, "/bizs/{bk_biz_id}/org/relation", s.GetBizOrgRel)
-
 	// meta
 	// TODO: 这里的url跟meta包里的url边界划分不清晰
 	h.Add("ListDemandClass", http.MethodGet, "/plan/demand_class/list", s.ListDemandClass)
@@ -69,58 +70,30 @@ func (s *service) initPlanService(h *rest.Handler) {
 
 	// ticket
 	h.Add("ListResPlanTicket", http.MethodPost, "/plans/resources/tickets/list", s.ListResPlanTicket)
-	h.Add("ListBizResPlanTicket", http.MethodPost, "/bizs/{bk_biz_id}/plans/resources/tickets/list",
-		s.ListBizResPlanTicket)
-	h.Add("CreateBizResPlanTicket", http.MethodPost, "/bizs/{bk_biz_id}/plans/resources/tickets/create",
-		s.CreateBizResPlanTicket)
 	h.Add("GetResPlanTicket", http.MethodGet, "/plans/resources/tickets/{id}", s.GetResPlanTicket)
-	h.Add("GetBizResPlanTicket", http.MethodGet,
-		"/bizs/{bk_biz_id}/plans/resources/tickets/{id}", s.GetBizResPlanTicket)
 	h.Add("GetResPlanTicketAudit", http.MethodGet,
 		"/plans/resources/tickets/{ticket_id}/audit", s.GetResPlanTicketAudit)
-	h.Add("GetBizResPlanTicketAudit", http.MethodGet,
-		"/bizs/{bk_biz_id}/plans/resources/tickets/{ticket_id}/audit", s.GetBizResPlanTicketAudit)
 	h.Add("ApproveResPlanTicketITSMNode", http.MethodPost,
 		"/plans/resources/tickets/{ticket_id}/approve_itsm_node", s.ApproveResPlanTicketITSMNode)
-	h.Add("ApproveBizResPlanTicketITSMNode", http.MethodPost,
-		"/bizs/{bk_biz_id}/plans/resources/tickets/{ticket_id}/approve_itsm_node", s.ApproveBizResPlanTicketITSMNode)
 	h.Add("RetryResPlanTicket", http.MethodPost,
 		"/plans/resources/tickets/{ticket_id}/retry", s.RetryResPlanTicket)
-	h.Add("RetryBizResPlanTicket", http.MethodPost,
-		"/bizs/{bk_biz_id}/plans/resources/tickets/{ticket_id}/retry", s.RetryBizResPlanTicket)
+	h.Add("TerminateResPlanTicket", http.MethodPost,
+		"/plans/resources/tickets/{ticket_id}/terminate", s.TerminateResPlanTicket)
 
 	// sub_ticket
-	h.Add("ListBizResPlanSubTicket", http.MethodPost, "/bizs/{bk_biz_id}/plans/resources/sub_tickets/list",
-		s.ListBizResPlanSubTicket)
 	h.Add("ListResPlanSubTicket", http.MethodPost, "/plans/resources/sub_tickets/list",
 		s.ListResPlanSubTicket)
 	h.Add("GetResPlanSubTicketDetail", http.MethodGet, "/plans/resources/sub_tickets/{sub_ticket_id}",
 		s.GetResPlanSubTicketDetail)
-	h.Add("GetBizResPlanSubTicketDetail", http.MethodGet,
-		"/bizs/{bk_biz_id}/plans/resources/sub_tickets/{sub_ticket_id}", s.GetBizResPlanSubTicketDetail)
 	h.Add("GetResPlanSubTicketAudit", http.MethodGet, "/plans/resources/sub_tickets/{sub_ticket_id}/audit",
 		s.GetResPlanSubTicketAudit)
-	h.Add("GetBizResPlanSubTicketAudit", http.MethodGet,
-		"/bizs/{bk_biz_id}/plans/resources/sub_tickets/{sub_ticket_id}/audit", s.GetBizResPlanSubTicketAudit)
 	h.Add("ApproveResPlanTicketAdminNode", http.MethodPost,
 		"/plans/resources/sub_tickets/{sub_ticket_id}/approve_admin_node", s.ApproveResPlanSubTicketAdminNode)
-	h.Add("ApproveBizResPlanTicketAdminNode", http.MethodPost,
-		"/bizs/{bk_biz_id}/plans/resources/sub_tickets/{sub_ticket_id}/approve_admin_node",
-		s.ApproveBizResPlanSubTicketAdminNode)
 
 	// demand
 	h.Add("ListResPlanDemand", http.MethodPost, "/plans/resources/demands/list", s.ListResPlanDemand)
-	h.Add("ListBizResPlanDemand", http.MethodPost, "/bizs/{bk_biz_id}/plans/resources/demands/list",
-		s.ListBizResPlanDemand)
 	h.Add("GetPlanDemandDetail", http.MethodGet, "/plans/demands/{id}", s.GetPlanDemandDetail)
-	h.Add("GetBizPlanDemandDetail", http.MethodGet, "/bizs/{bk_biz_id}/plans/demands/{id}", s.GetBizPlanDemandDetail)
-	h.Add("ListBizPlanDemandChangeLog", http.MethodPost, "/bizs/{bk_biz_id}/plans/demands/change_logs/list",
-		s.ListBizPlanDemandChangeLog)
 	h.Add("ListPlanDemandChangelog", http.MethodPost, "/plans/demands/change_logs/list", s.ListPlanDemandChangeLog)
-	h.Add("AdjustBizResPlanDemand", http.MethodPost, "/bizs/{bk_biz_id}/plans/resources/demands/adjust",
-		s.AdjustBizResPlanDemand)
-	h.Add("CancelBizResPlanDemand", http.MethodPost, "/bizs/{bk_biz_id}/plans/resources/demands/cancel",
-		s.CancelBizResPlanDemand)
 	h.Add("BatchUpdateResPlanDemand", http.MethodPatch, "/plans/resources/demands/batch", s.BatchUpdateResPlanDemand)
 
 	// verify
@@ -156,11 +129,55 @@ func (s *service) initPlanService(h *rest.Handler) {
 		"/plans/resources/transfer_quotas/configs", s.GetTransferQuotaConfigs)
 	h.Add("ListResPlanTransferQuotaSummary", http.MethodPost,
 		"/plans/resources/transfer_quotas/summary", s.ListResPlanTransferQuotaSummary)
-	h.Add("ListBizResPlanTransferQuotaSummary", http.MethodPost,
-		"/bizs/{bk_biz_id}/plans/resources/transfer_quotas/summary", s.ListBizResPlanTransferQuotaSummary)
 	// resource plan transfer applied record
 	h.Add("ListResPlanTransferAppliedRecord", http.MethodPost,
 		"/plans/resources/transfer_applied_records/list", s.ListResPlanTransferAppliedRecord)
+}
+
+// initBizService 初始化业务下接口
+func (s *service) initBizPlanService(h *rest.Handler) {
+	// biz
+	h.Add("GetBizOrgRel", http.MethodGet, "/org/relation", s.GetBizOrgRel)
+
+	// ticket
+	h.Add("ListBizResPlanTicket", http.MethodPost, "/plans/resources/tickets/list",
+		s.ListBizResPlanTicket)
+	h.Add("CreateBizResPlanTicket", http.MethodPost, "/plans/resources/tickets/create",
+		s.CreateBizResPlanTicket)
+	h.Add("GetBizResPlanTicket", http.MethodGet, "/plans/resources/tickets/{id}", s.GetBizResPlanTicket)
+	h.Add("GetBizResPlanTicketAudit", http.MethodGet, "/plans/resources/tickets/{ticket_id}/audit",
+		s.GetBizResPlanTicketAudit)
+	h.Add("ApproveBizResPlanTicketITSMNode", http.MethodPost,
+		"/plans/resources/tickets/{ticket_id}/approve_itsm_node", s.ApproveBizResPlanTicketITSMNode)
+	h.Add("RetryBizResPlanTicket", http.MethodPost, "/plans/resources/tickets/{ticket_id}/retry",
+		s.RetryBizResPlanTicket)
+	h.Add("TerminateBizResPlanTicket", http.MethodPost,
+		"/plans/resources/tickets/{ticket_id}/terminate", s.TerminateBizResPlanTicket)
+
+	// sub_ticket
+	h.Add("ListBizResPlanSubTicket", http.MethodPost, "/plans/resources/sub_tickets/list",
+		s.ListBizResPlanSubTicket)
+	h.Add("GetBizResPlanSubTicketDetail", http.MethodGet, "/plans/resources/sub_tickets/{sub_ticket_id}",
+		s.GetBizResPlanSubTicketDetail)
+	h.Add("GetBizResPlanSubTicketAudit", http.MethodGet,
+		"/plans/resources/sub_tickets/{sub_ticket_id}/audit", s.GetBizResPlanSubTicketAudit)
+	h.Add("ApproveBizResPlanTicketAdminNode", http.MethodPost,
+		"/plans/resources/sub_tickets/{sub_ticket_id}/approve_admin_node", s.ApproveBizResPlanSubTicketAdminNode)
+
+	// demand
+	h.Add("ListBizResPlanDemand", http.MethodPost, "/plans/resources/demands/list", s.ListBizResPlanDemand)
+	h.Add("GetBizPlanDemandDetail", http.MethodGet, "/plans/demands/{id}", s.GetBizPlanDemandDetail)
+	h.Add("ListBizPlanDemandChangeLog", http.MethodPost, "/plans/demands/change_logs/list",
+		s.ListBizPlanDemandChangeLog)
+	h.Add("AdjustBizResPlanDemand", http.MethodPost, "/plans/resources/demands/adjust",
+		s.AdjustBizResPlanDemand)
+	h.Add("CancelBizResPlanDemand", http.MethodPost, "/plans/resources/demands/cancel",
+		s.CancelBizResPlanDemand)
+
+	// resource plan transfer quota
+	h.Add("ListBizResPlanTransferQuotaSummary", http.MethodPost, "/plans/resources/transfer_quotas/summary",
+		s.ListBizResPlanTransferQuotaSummary)
+	// resource plan transfer applied record
 	h.Add("ListBizResPlanTransferAppliedRecord", http.MethodPost,
-		"/bizs/{bk_biz_id}/plans/resources/transfer_applied_records/list", s.ListBizResPlanTransferAppliedRecord)
+		"/plans/resources/transfer_applied_records/list", s.ListBizResPlanTransferAppliedRecord)
 }

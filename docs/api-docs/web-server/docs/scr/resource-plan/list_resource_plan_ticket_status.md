@@ -49,7 +49,7 @@ GET /api/v1/woa/plan/res_plan_ticket_status/list
 
 #### data.details[n]
 
-| 参数名称        | 参数类型   | 描述                                               |
-|-------------|--------|--------------------------------------------------|
-| status      | string | 单据状态（枚举值：init, auditing, rejected, done, failed） |
-| status_name | string | 单据状态名称                                           |
+| 参数名称        | 参数类型   | 描述                                                                                                      |
+|-------------|--------|---------------------------------------------------------------------------------------------------------|
+| status      | string | 单据状态（枚举值：init, auditing, rejected, partial_rejected, done, failed, partial_failed, revoked, terminated） |
+| status_name | string | 单据状态名称                                                                                                  |

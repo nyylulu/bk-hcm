@@ -153,6 +153,8 @@ type Logics interface {
 		req *ptypes.AuditResPlanTicketAdminReq) error
 	// RetryResPlanFailedSubTickets retry res plan failed sub tickets.
 	RetryResPlanFailedSubTickets(kt *kit.Kit, ticketID string) error
+	// TerminateResPlanFailedTicket terminate res plan failed ticket.
+	TerminateResPlanFailedTicket(kt *kit.Kit, ticketID string) error
 
 	// CreateDemandWeek create demand week.
 	CreateDemandWeek(kt *kit.Kit, createReqs []rpproto.ResPlanWeekCreateReq) (*core.BatchCreateResult, error)

@@ -577,7 +577,7 @@ func (s *service) RetryResPlanTicket(cts *rest.Contexts) (any, error) {
 	}
 
 	// authorize ticket resource plan access.
-	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.Application, Action: meta.Find}}
+	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.Application, Action: meta.Update}}
 	if err := s.authorizer.AuthorizeWithPerm(cts.Kit, authRes); err != nil {
 		return nil, err
 	}
@@ -610,6 +610,53 @@ func (s *service) RetryBizResPlanTicket(cts *rest.Contexts) (any, error) {
 
 	if err := s.planController.RetryResPlanFailedSubTickets(cts.Kit, ticketID); err != nil {
 		logs.Errorf("failed to retry res plan ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// TerminateResPlanTicket 终止失败的资源预测单，审批中的单据不可终止
+func (s *service) TerminateResPlanTicket(cts *rest.Contexts) (any, error) {
+	ticketID := cts.PathParameter("ticket_id").String()
+	if len(ticketID) == 0 {
+		return nil, errf.NewFromErr(errf.InvalidParameter, errors.New("ticket id can not be empty"))
+	}
+
+	// authorize ticket resource plan access.
+	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.Application, Action: meta.Update}}
+	if err := s.authorizer.AuthorizeWithPerm(cts.Kit, authRes); err != nil {
+		return nil, err
+	}
+
+	if err := s.planController.TerminateResPlanFailedTicket(cts.Kit, ticketID); err != nil {
+		logs.Errorf("failed to terminate res plan ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// TerminateBizResPlanTicket 业务下 终止失败的资源预测单，审批中的单据不可终止
+func (s *service) TerminateBizResPlanTicket(cts *rest.Contexts) (any, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+
+	ticketID := cts.PathParameter("ticket_id").String()
+	if len(ticketID) == 0 {
+		return nil, errf.NewFromErr(errf.InvalidParameter, errors.New("ticket id can not be empty"))
+	}
+
+	// authorize biz access.
+	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: bkBizID}
+	if err = s.authorizer.AuthorizeWithPerm(cts.Kit, authRes); err != nil {
+		return nil, err
+	}
+
+	if err := s.planController.TerminateResPlanFailedTicket(cts.Kit, ticketID); err != nil {
+		logs.Errorf("failed to terminate res plan ticket, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
