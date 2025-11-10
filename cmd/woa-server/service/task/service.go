@@ -71,8 +71,6 @@ type service struct {
 
 func (s *service) initOperationService(h *rest.Handler) {
 	h.Add("GetApplyStatistics", http.MethodPost, "/find/operation/apply/statistics", s.GetApplyStatistics)
-	h.Add("CreateApplyOrderStatisticsConfig", http.MethodPost, "/config/create/apply/order/statistics",
-		s.CreateApplyOrderStatisticsConfig)
 }
 
 func (s *service) initRecyclerService(h *rest.Handler) {

@@ -17,6 +17,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
+// Package statistics package
 package statistics
 
 import (
@@ -27,6 +28,7 @@ import (
 
 	configModel "hcm/cmd/woa-server/model/config"
 	taskModel "hcm/cmd/woa-server/model/task"
+	configTypes "hcm/cmd/woa-server/types/config"
 	"hcm/pkg"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -48,88 +50,19 @@ type statistics struct{}
 
 // ListExcludedSubOrderIDs 根据查询时间范围，将配置表内容统一转换为需要排除的主机申请子订单号列表
 func (s *statistics) ListExcludedSubOrderIDs(kt *kit.Kit, queryStart, queryEnd time.Time) ([]string, error) {
-	if queryStart.IsZero() || queryEnd.IsZero() {
-		return nil, fmt.Errorf("query start/end time can not be empty")
+	if err := validateQueryRange(queryStart, queryEnd); err != nil {
+		return nil, err
 	}
-	if queryStart.After(queryEnd) {
-		return nil, fmt.Errorf("query start time can not be after end time")
-	}
-	// 构建查询月份集合
+	// 从配置表中加载所有相关月份的配置
 	monthSet, monthSlice := buildQueryMonths(queryStart, queryEnd)
 
-	page := metadata.BasePage{
-		Limit: pkg.BKNoLimit,
-	}
-
-	filter := map[string]interface{}{}
-	if len(monthSlice) > 0 {
-		filter["year_month"] = map[string]interface{}{pkg.BKDBIN: monthSlice}
-	}
-	// 根据查询区间涉及的月份，拉取配置表中对应的配置记录
-	configs, err := configModel.Operation().CvmApplyOrderStatisticsConfig().FindMany(kt.Ctx, page, filter)
+	configs, err := s.loadConfigs(kt, monthSlice)
 	if err != nil {
 		return nil, fmt.Errorf("list statistics config failed: %w", err)
 	}
 
-	explicitIDs := make([]string, 0)
-	timeRanges := make([]timeRangeConfig, 0)
-
-	for _, cfg := range configs {
-		if cfg == nil {
-			continue
-		}
-
-		// 再次校验是否真的落在查询月份集合
-		if len(monthSet) > 0 && !monthSet[cfg.YearMonth] {
-			continue
-		}
-
-		if strings.TrimSpace(cfg.SubOrderID) != "" {
-			explicitIDs = append(explicitIDs, splitSubOrderIDs(cfg.SubOrderID)...)
-		}
-
-		if strings.TrimSpace(cfg.StartAt) != "" && strings.TrimSpace(cfg.EndAt) != "" {
-			start, startDateOnly, err := parseConfigTime(cfg.StartAt)
-			if err != nil {
-				logs.Warnf("parse start_at failed, cfg_id: %s, start_at: %s, rid: %s, err: %v",
-					cfg.ID, cfg.StartAt, kt.Rid, err)
-				continue
-			}
-			end, endDateOnly, err := parseConfigTime(cfg.EndAt)
-			if err != nil {
-				logs.Warnf("parse end_at failed, cfg_id: %s, end_at: %s, rid: %s, err: %v",
-					cfg.ID, cfg.EndAt, kt.Rid, err)
-				continue
-			}
-
-			if endDateOnly {
-				end = end.AddDate(0, 0, 1).Add(-time.Nanosecond)
-			}
-
-			if startDateOnly {
-				start = time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, start.Location())
-			}
-
-			if end.Before(start) {
-				logs.Warnf("invalid config time range, cfg_id: %s, start_at: %s, end_at: %s, rid: %s",
-					cfg.ID, cfg.StartAt, cfg.EndAt, kt.Rid)
-				continue
-			}
-
-			if end.Before(queryStart) || start.After(queryEnd) {
-				continue
-			}
-
-			// 只有时间段的配置先记录交集，后续统一到申请单库反查子单号
-			rangeCfg := timeRangeConfig{
-				start: maxTime(start, queryStart),
-				end:   minTime(end, queryEnd),
-			}
-			timeRanges = append(timeRanges, rangeCfg)
-		}
-	}
-
-	//先把显式子单号放入结果集合
+	explicitIDs, timeRanges := s.extractConfigInfo(configs, monthSet, queryStart, queryEnd)
+	// 从配置中提取出所有显式指定的子订单号
 	resultSet := make(map[string]struct{})
 	for _, id := range explicitIDs {
 		if id == "" {
@@ -137,9 +70,8 @@ func (s *statistics) ListExcludedSubOrderIDs(kt *kit.Kit, queryStart, queryEnd t
 		}
 		resultSet[id] = struct{}{}
 	}
-
 	if len(timeRanges) > 0 {
-		//用时间段的配置到申请单集合按时间反查子单号
+		// 从申请单中反查所有符合时间范围的子订单号
 		queryIDs, err := s.fetchSubOrderIDsFromOrders(kt, timeRanges)
 		if err != nil {
 			return nil, err
@@ -151,8 +83,6 @@ func (s *statistics) ListExcludedSubOrderIDs(kt *kit.Kit, queryStart, queryEnd t
 			resultSet[id] = struct{}{}
 		}
 	}
-
-	//结果去重并排序后返回
 	result := make([]string, 0, len(resultSet))
 	for id := range resultSet {
 		result = append(result, id)
@@ -281,4 +211,101 @@ func minTime(a, b time.Time) time.Time {
 		return a
 	}
 	return b
+}
+
+func validateQueryRange(queryStart, queryEnd time.Time) error {
+	if queryStart.IsZero() || queryEnd.IsZero() {
+		return fmt.Errorf("query start/end time can not be empty")
+	}
+	if queryStart.After(queryEnd) {
+		return fmt.Errorf("query start time can not be after end time")
+	}
+	return nil
+}
+
+func (s *statistics) loadConfigs(kt *kit.Kit, monthSlice []string) ([]*configTypes.CvmApplyOrderStatisticsConfig, error) {
+	page := metadata.BasePage{
+		Limit: pkg.BKNoLimit,
+	}
+
+	filter := map[string]interface{}{}
+	if len(monthSlice) > 0 {
+		filter["year_month"] = map[string]interface{}{pkg.BKDBIN: monthSlice}
+	}
+
+	return configModel.Operation().CvmApplyOrderStatisticsConfig().FindMany(kt.Ctx, page, filter)
+}
+
+func (s *statistics) extractConfigInfo(configs []*configTypes.CvmApplyOrderStatisticsConfig,
+	monthSet map[string]bool, queryStart, queryEnd time.Time) ([]string, []timeRangeConfig) {
+
+	explicitIDs := make([]string, 0)
+	timeRanges := make([]timeRangeConfig, 0)
+
+	for _, cfg := range configs {
+		if !s.monthMatched(cfg, monthSet) {
+			continue
+		}
+		explicitIDs = append(explicitIDs, splitSubOrderIDs(cfg.SubOrderID)...)
+
+		rangeCfg, ok := s.buildTimeRange(cfg, queryStart, queryEnd)
+		if ok {
+			timeRanges = append(timeRanges, rangeCfg)
+		}
+	}
+
+	return explicitIDs, timeRanges
+}
+
+func (s *statistics) monthMatched(cfg *configTypes.CvmApplyOrderStatisticsConfig, monthSet map[string]bool) bool {
+	if cfg == nil {
+		return false
+	}
+	if len(monthSet) == 0 {
+		return true
+	}
+	return monthSet[cfg.YearMonth]
+}
+
+func (s *statistics) buildTimeRange(cfg *configTypes.CvmApplyOrderStatisticsConfig,
+	queryStart, queryEnd time.Time) (timeRangeConfig, bool) {
+
+	if cfg == nil {
+		return timeRangeConfig{}, false
+	}
+	if strings.TrimSpace(cfg.StartAt) == "" || strings.TrimSpace(cfg.EndAt) == "" {
+		return timeRangeConfig{}, false
+	}
+
+	start, startDateOnly, err := parseConfigTime(cfg.StartAt)
+	if err != nil {
+		logs.Warnf("parse start_at failed, cfg_id: %s, start_at: %s, err: %v", cfg.ID, cfg.StartAt, err)
+		return timeRangeConfig{}, false
+	}
+	end, endDateOnly, err := parseConfigTime(cfg.EndAt)
+	if err != nil {
+		logs.Warnf("parse end_at failed, cfg_id: %s, end_at: %s, err: %v", cfg.ID, cfg.EndAt, err)
+		return timeRangeConfig{}, false
+	}
+
+	if endDateOnly {
+		end = end.AddDate(0, 0, 1).Add(-time.Nanosecond)
+	}
+	if startDateOnly {
+		start = time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, start.Location())
+	}
+
+	if end.Before(start) {
+		logs.Warnf("invalid config time range, cfg_id: %s, start_at: %s, end_at: %s", cfg.ID, cfg.StartAt, cfg.EndAt)
+		return timeRangeConfig{}, false
+	}
+
+	if end.Before(queryStart) || start.After(queryEnd) {
+		return timeRangeConfig{}, false
+	}
+
+	return timeRangeConfig{
+		start: maxTime(start, queryStart),
+		end:   minTime(end, queryEnd),
+	}, true
 }
