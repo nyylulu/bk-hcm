@@ -124,39 +124,47 @@ func (svc *lbSvc) listTargetByCond(kt *kit.Kit, lblReq protocloud.ListListenerQu
 			Filter: tools.ExpressionAnd(targetFilter...),
 			Page:   core.NewDefaultBasePage(),
 		}
-		loopTargetList, err := svc.dao.LoadBalancerTarget().List(kt, opt)
-		if err != nil {
-			logs.Errorf("list load balancer target failed, err: %v, req: %+v, rid: %s",
-				err, lblReq, kt.Rid)
-			return nil, fmt.Errorf("list load balancer target failed, err: %v", err)
-		}
 
-		for _, item := range loopTargetList.Details {
-			targetList = append(targetList, corelb.BaseTarget{
-				ID:                 item.ID,
-				AccountID:          item.AccountID,
-				IP:                 item.IP,
-				Port:               item.Port,
-				Weight:             item.Weight,
-				InstType:           item.InstType,
-				InstID:             item.InstID,
-				CloudInstID:        item.CloudInstID,
-				InstName:           item.InstName,
-				TargetGroupRegion:  item.TargetGroupRegion,
-				TargetGroupID:      item.TargetGroupID,
-				CloudTargetGroupID: item.CloudTargetGroupID,
-				PrivateIPAddress:   item.PrivateIPAddress,
-				PublicIPAddress:    item.PublicIPAddress,
-				CloudVpcIDs:        item.CloudVpcIDs,
-				Zone:               item.Zone,
-				Memo:               item.Memo,
-				Revision: &core.Revision{
-					Creator:   item.Creator,
-					Reviser:   item.Reviser,
-					CreatedAt: item.CreatedAt.String(),
-					UpdatedAt: item.UpdatedAt.String(),
-				},
-			})
+		for {
+			loopTargetList, err := svc.dao.LoadBalancerTarget().List(kt, opt)
+			if err != nil {
+				logs.Errorf("list load balancer target failed, err: %v, req: %+v, rid: %s",
+					err, lblReq, kt.Rid)
+				return nil, fmt.Errorf("list load balancer target failed, err: %v", err)
+			}
+
+			for _, item := range loopTargetList.Details {
+				targetList = append(targetList, corelb.BaseTarget{
+					ID:                 item.ID,
+					AccountID:          item.AccountID,
+					IP:                 item.IP,
+					Port:               item.Port,
+					Weight:             item.Weight,
+					InstType:           item.InstType,
+					InstID:             item.InstID,
+					CloudInstID:        item.CloudInstID,
+					InstName:           item.InstName,
+					TargetGroupRegion:  item.TargetGroupRegion,
+					TargetGroupID:      item.TargetGroupID,
+					CloudTargetGroupID: item.CloudTargetGroupID,
+					PrivateIPAddress:   item.PrivateIPAddress,
+					PublicIPAddress:    item.PublicIPAddress,
+					CloudVpcIDs:        item.CloudVpcIDs,
+					Zone:               item.Zone,
+					Memo:               item.Memo,
+					Revision: &core.Revision{
+						Creator:   item.Creator,
+						Reviser:   item.Reviser,
+						CreatedAt: item.CreatedAt.String(),
+						UpdatedAt: item.UpdatedAt.String(),
+					},
+				})
+			}
+			if uint(len(loopTargetList.Details)) < core.DefaultMaxPageLimit {
+				break
+			}
+
+			opt.Page.Start += uint32(core.DefaultMaxPageLimit)
 		}
 	}
 	return targetList, nil
