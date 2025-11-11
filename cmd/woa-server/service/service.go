@@ -95,23 +95,24 @@ type Service struct {
 	cmdbCli        cmdb.Client
 	itsmCli        itsm.Client
 	// authorizer 鉴权所需接口集合
-	authorizer    auth.Authorizer
-	thirdCli      *thirdparty.Client
-	clientConf    cc.WoaServerSetting
-	schedulerIf   scheduler.Interface
-	informerIf    informer.Interface
-	recyclerIf    recycler.Interface
-	operationIf   operation.Interface
-	esCli         *es.EsCli
-	rsLogic       rslogics.Logics
-	srLogic       srlogics.Logics
-	gcLogic       gclogics.Logics
-	bizLogic      biz.Logics
-	dissolveLogic disLogics.Logics
-	resSyncLogic  ressynclogics.Logics
-	configLogics  configlogic.Logics
-	taskLogic     taskLogics.Logics
-	cvmLogic      cvmlogic.Logics
+	authorizer     auth.Authorizer
+	thirdCli       *thirdparty.Client
+	clientConf     cc.WoaServerSetting
+	schedulerIf    scheduler.Interface
+	informerIf     informer.Interface
+	recyclerIf     recycler.Interface
+	operationIf    operation.Interface
+	esCli          *es.EsCli
+	rsLogic        rslogics.Logics
+	srLogic        srlogics.Logics
+	gcLogic        gclogics.Logics
+	bizLogic       biz.Logics
+	dissolveLogic  disLogics.Logics
+	resSyncLogic   ressynclogics.Logics
+	configLogics   configlogic.Logics
+	taskLogic      taskLogics.Logics
+	taskStatistics taskStatistics.Interface
+	cvmLogic       cvmlogic.Logics
 }
 
 // NewService create a service instance.
@@ -449,7 +450,8 @@ func newOtherClient(kt *kit.Kit, service *Service, itsmCli itsm.Client, sd servi
 		return nil, err
 	}
 
-	statisticsIf := taskStatistics.New()
+	statisticsIf := taskStatistics.New(service.dao)
+	service.taskStatistics = statisticsIf
 
 	taskLogic := taskLogics.New(service.schedulerIf, recyclerIf, service.informerIf, operationIf, statisticsIf)
 	service.taskLogic = taskLogic
@@ -560,6 +562,7 @@ func (s *Service) apiSet() *restful.Container {
 		ResSyncLogic:   s.resSyncLogic,
 		ConfigLogics:   s.configLogics,
 		TaskLogic:      s.taskLogic,
+		TaskStatistics: s.taskStatistics,
 		CvmLogic:       s.cvmLogic,
 	}
 
