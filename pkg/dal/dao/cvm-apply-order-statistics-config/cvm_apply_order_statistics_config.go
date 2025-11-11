@@ -41,9 +41,12 @@ import (
 
 // Interface only used for cvm apply order statistics config.
 type Interface interface {
-	List(kt *kit.Kit, opt *types.ListOption) (*types.ListResult[tablecvmapplyorderstatisticsconfig.CvmApplyOrderStatisticsConfigTable], error)
-	CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []tablecvmapplyorderstatisticsconfig.CvmApplyOrderStatisticsConfigTable) ([]string, error)
-	UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, filterExpr *filter.Expression, model *tablecvmapplyorderstatisticsconfig.CvmApplyOrderStatisticsConfigTable) error
+	List(kt *kit.Kit, opt *types.ListOption) (
+		*types.ListResult[tablecvmapplyorderstatisticsconfig.CvmApplyOrderStatisticsConfigTable], error)
+	CreateWithTx(kt *kit.Kit, tx *sqlx.Tx,
+		models []tablecvmapplyorderstatisticsconfig.CvmApplyOrderStatisticsConfigTable) ([]string, error)
+	UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, filterExpr *filter.Expression,
+		model *tablecvmapplyorderstatisticsconfig.CvmApplyOrderStatisticsConfigTable) error
 	DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, f *filter.Expression) error
 }
 
@@ -78,13 +81,15 @@ func (d Dao) CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []tablecvmapplyorders
 		models[index].ID = ids[index]
 	}
 
-	sql := fmt.Sprintf(`INSERT INTO %s (%s)	VALUES(%s)`, models[0].TableName(),
+	sql := fmt.Sprintf(`INSERT INTO %s (%s) VALUES(%s)`,
+		models[0].TableName(),
 		tablecvmapplyorderstatisticsconfig.CvmApplyOrderStatisticsConfigTableColumns.ColumnExpr(),
 		tablecvmapplyorderstatisticsconfig.CvmApplyOrderStatisticsConfigTableColumns.ColonNameExpr())
 
 	if err = d.Orm.Txn(tx).BulkInsert(kt.Ctx, sql, models); err != nil {
-		logs.Errorf("insert %s failed, err: %v, rid: %s", models[0].TableName(), err, kt.Rid)
-		return nil, fmt.Errorf("insert %s failed, err: %v", models[0].TableName(), err)
+		tableName := models[0].TableName()
+		logs.Errorf("insert %s failed, err: %v, rid: %s", tableName, err, kt.Rid)
+		return nil, fmt.Errorf("insert %s failed, err: %v", tableName, err)
 	}
 
 	return ids, nil
@@ -107,7 +112,9 @@ func (d Dao) UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, filterExpr *filter.Expressio
 		return err
 	}
 
-	opts := utils.NewFieldOptions().AddIgnoredFields(types.DefaultIgnoredFields...).AddBlankedFields("memo", "sub_order_id", "start_at", "end_at", "extension")
+	opts := utils.NewFieldOptions().
+		AddIgnoredFields(types.DefaultIgnoredFields...).
+		AddBlankedFields("memo", "sub_order_id", "start_at", "end_at", "extension")
 	opts = opts.AddIgnoredFields("year_month")
 
 	setExpr, toUpdate, err := utils.RearrangeSQLDataWithOption(model, opts)
@@ -119,13 +126,15 @@ func (d Dao) UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, filterExpr *filter.Expressio
 
 	effected, err := d.Orm.Txn(tx).Update(kt.Ctx, sql, tools.MapMerge(toUpdate, whereValue))
 	if err != nil {
-		logs.ErrorJson("update cvm apply order statistics config failed, filter: %v, err: %v, rid: %v",
+		logs.ErrorJson(
+			"update cvm apply order statistics config failed, filter: %v, err: %v, rid: %v",
 			filterExpr, err, kt.Rid)
 		return err
 	}
 
 	if effected == 0 {
-		logs.ErrorJson("update cvm apply order statistics config, but record not found, filter: %v, rid: %v",
+		logs.ErrorJson(
+			"update cvm apply order statistics config, but record not found, filter: %v, rid: %v",
 			filterExpr, kt.Rid)
 	}
 
@@ -152,11 +161,13 @@ func (d Dao) List(kt *kit.Kit, opt *types.ListOption) (*types.ListResult[tablecv
 
 	if opt.Page.Count {
 		// this is a count request, then do count operation only.
-		sql := fmt.Sprintf(`SELECT COUNT(*) FROM %s %s`, table.CvmApplyOrderStatisticsConfigTable, whereExpr)
+		sql := fmt.Sprintf("SELECT COUNT(*) FROM %s %s", table.CvmApplyOrderStatisticsConfigTable, whereExpr)
 
 		count, err := d.Orm.Do().Count(kt.Ctx, sql, whereValue)
 		if err != nil {
-			logs.ErrorJson("count cvm apply order statistics config failed, err: %v, filter: %v, rid: %s", err, opt.Filter, kt.Rid)
+			logs.ErrorJson(
+				"count cvm apply order statistics config failed, err: %v, filter: %v, rid: %s",
+				err, opt.Filter, kt.Rid)
 			return nil, err
 		}
 
@@ -194,7 +205,9 @@ func (d Dao) DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression) err
 	sql := fmt.Sprintf(`DELETE FROM %s %s`, table.CvmApplyOrderStatisticsConfigTable, whereExpr)
 
 	if _, err = d.Orm.Txn(tx).Delete(kt.Ctx, sql, whereValue); err != nil {
-		logs.ErrorJson("delete cvm apply order statistics config failed, err: %v, filter: %v, rid: %s", err, expr, kt.Rid)
+		logs.ErrorJson(
+			"delete cvm apply order statistics config failed, err: %v, filter: %v, rid: %s",
+			err, expr, kt.Rid)
 		return err
 	}
 

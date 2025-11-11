@@ -341,12 +341,16 @@ func (s *statistics) buildTimeRange(kt *kit.Kit, cfg *configTypes.CvmApplyOrderS
 
 	start, startDateOnly, err := parseConfigTime(cfg.StartAt)
 	if err != nil {
-		logs.Warnf("parse start_at failed, cfg_id: %s, start_at: %s, err: %v, rid: %s", cfg.ID, cfg.StartAt, err, kt.Rid)
+		logs.Warnf(
+			"parse start_at failed, cfg_id: %s, start_at: %s, err: %v, rid: %s",
+			cfg.ID, cfg.StartAt, err, kt.Rid)
 		return timeRangeConfig{}, false
 	}
 	end, endDateOnly, err := parseConfigTime(cfg.EndAt)
 	if err != nil {
-		logs.Warnf("parse end_at failed, cfg_id: %s, end_at: %s, err: %v, rid: %s", cfg.ID, cfg.EndAt, err, kt.Rid)
+		logs.Warnf(
+			"parse end_at failed, cfg_id: %s, end_at: %s, err: %v, rid: %s",
+			cfg.ID, cfg.EndAt, err, kt.Rid)
 		return timeRangeConfig{}, false
 	}
 
@@ -358,7 +362,8 @@ func (s *statistics) buildTimeRange(kt *kit.Kit, cfg *configTypes.CvmApplyOrderS
 	}
 
 	if end.Before(start) {
-		logs.Warnf("invalid config time range, cfg_id: %s, start_at: %s, end_at: %s, rid: %s", cfg.ID, cfg.StartAt, cfg.EndAt, kt.Rid)
+		logs.Warnf("invalid config time range, cfg_id: %s, start_at: %s, end_at: %s, rid: %s",
+			cfg.ID, cfg.StartAt, cfg.EndAt, kt.Rid)
 		return timeRangeConfig{}, false
 	}
 
