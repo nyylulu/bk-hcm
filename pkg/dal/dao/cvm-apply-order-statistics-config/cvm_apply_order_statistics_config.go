@@ -30,7 +30,7 @@ import (
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
 	"hcm/pkg/dal/table"
-	tablecvmapplyorderstatisticsconfig "hcm/pkg/dal/table/cvm-apply-order-statistics-config"
+	tableapplystat "hcm/pkg/dal/table/cvm-apply-order-statistics-config"
 	"hcm/pkg/dal/table/utils"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -42,11 +42,11 @@ import (
 // Interface only used for cvm apply order statistics config.
 type Interface interface {
 	List(kt *kit.Kit, opt *types.ListOption) (
-		*types.ListResult[tablecvmapplyorderstatisticsconfig.CvmApplyOrderStatisticsConfigTable], error)
+		*types.ListResult[tableapplystat.CvmApplyOrderStatisticsConfigTable], error)
 	CreateWithTx(kt *kit.Kit, tx *sqlx.Tx,
-		models []tablecvmapplyorderstatisticsconfig.CvmApplyOrderStatisticsConfigTable) ([]string, error)
+		models []tableapplystat.CvmApplyOrderStatisticsConfigTable) ([]string, error)
 	UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, filterExpr *filter.Expression,
-		model *tablecvmapplyorderstatisticsconfig.CvmApplyOrderStatisticsConfigTable) error
+		model *tableapplystat.CvmApplyOrderStatisticsConfigTable) error
 	DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, f *filter.Expression) error
 }
 
@@ -59,7 +59,7 @@ type Dao struct {
 }
 
 // CreateWithTx ...
-func (d Dao) CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []tablecvmapplyorderstatisticsconfig.CvmApplyOrderStatisticsConfigTable) (
+func (d Dao) CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []tableapplystat.CvmApplyOrderStatisticsConfigTable) (
 	[]string, error) {
 
 	if len(models) == 0 {
@@ -83,8 +83,8 @@ func (d Dao) CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []tablecvmapplyorders
 
 	sql := fmt.Sprintf(`INSERT INTO %s (%s) VALUES(%s)`,
 		models[0].TableName(),
-		tablecvmapplyorderstatisticsconfig.CvmApplyOrderStatisticsConfigTableColumns.ColumnExpr(),
-		tablecvmapplyorderstatisticsconfig.CvmApplyOrderStatisticsConfigTableColumns.ColonNameExpr())
+		tableapplystat.CvmApplyOrderStatisticsConfigTableColumns.ColumnExpr(),
+		tableapplystat.CvmApplyOrderStatisticsConfigTableColumns.ColonNameExpr())
 
 	if err = d.Orm.Txn(tx).BulkInsert(kt.Ctx, sql, models); err != nil {
 		tableName := models[0].TableName()
@@ -97,7 +97,7 @@ func (d Dao) CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []tablecvmapplyorders
 
 // UpdateWithTx ...
 func (d Dao) UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, filterExpr *filter.Expression,
-	model *tablecvmapplyorderstatisticsconfig.CvmApplyOrderStatisticsConfigTable) error {
+	model *tableapplystat.CvmApplyOrderStatisticsConfigTable) error {
 
 	if filterExpr == nil {
 		return errf.New(errf.InvalidParameter, "filter expr is nil")
@@ -127,14 +127,14 @@ func (d Dao) UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, filterExpr *filter.Expressio
 	effected, err := d.Orm.Txn(tx).Update(kt.Ctx, sql, tools.MapMerge(toUpdate, whereValue))
 	if err != nil {
 		logs.ErrorJson(
-			"update cvm apply order statistics config failed, filter: %v, err: %v, rid: %v",
+			"update cvm apply order statistics config failed, filter: %v, err: %v, rid: %s",
 			filterExpr, err, kt.Rid)
 		return err
 	}
 
 	if effected == 0 {
 		logs.ErrorJson(
-			"update cvm apply order statistics config, but record not found, filter: %v, rid: %v",
+			"update cvm apply order statistics config, but record not found, filter: %v, rid: %s",
 			filterExpr, kt.Rid)
 	}
 
@@ -142,12 +142,12 @@ func (d Dao) UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, filterExpr *filter.Expressio
 }
 
 // List ...
-func (d Dao) List(kt *kit.Kit, opt *types.ListOption) (*types.ListResult[tablecvmapplyorderstatisticsconfig.CvmApplyOrderStatisticsConfigTable], error) {
+func (d Dao) List(kt *kit.Kit, opt *types.ListOption) (*types.ListResult[tableapplystat.CvmApplyOrderStatisticsConfigTable], error) {
 	if opt == nil {
 		return nil, errf.New(errf.InvalidParameter, "list cvm apply order statistics config options is nil")
 	}
 
-	columnTypes := tablecvmapplyorderstatisticsconfig.CvmApplyOrderStatisticsConfigTableColumns.ColumnTypes()
+	columnTypes := tableapplystat.CvmApplyOrderStatisticsConfigTableColumns.ColumnTypes()
 	if err := opt.ValidateExcludeFilter(
 		filter.NewExprOption(filter.RuleFields(columnTypes)),
 		core.NewDefaultPageOption()); err != nil {
@@ -171,7 +171,7 @@ func (d Dao) List(kt *kit.Kit, opt *types.ListOption) (*types.ListResult[tablecv
 			return nil, err
 		}
 
-		return &types.ListResult[tablecvmapplyorderstatisticsconfig.CvmApplyOrderStatisticsConfigTable]{Count: count}, nil
+		return &types.ListResult[tableapplystat.CvmApplyOrderStatisticsConfigTable]{Count: count}, nil
 	}
 
 	pageExpr, err := types.PageSQLExpr(opt.Page, types.DefaultPageSQLOption)
@@ -180,15 +180,15 @@ func (d Dao) List(kt *kit.Kit, opt *types.ListOption) (*types.ListResult[tablecv
 	}
 
 	sql := fmt.Sprintf(`SELECT %s FROM %s %s %s`,
-		tablecvmapplyorderstatisticsconfig.CvmApplyOrderStatisticsConfigTableColumns.FieldsNamedExpr(opt.Fields),
+		tableapplystat.CvmApplyOrderStatisticsConfigTableColumns.FieldsNamedExpr(opt.Fields),
 		table.CvmApplyOrderStatisticsConfigTable, whereExpr, pageExpr)
 
-	details := make([]tablecvmapplyorderstatisticsconfig.CvmApplyOrderStatisticsConfigTable, 0)
+	details := make([]tableapplystat.CvmApplyOrderStatisticsConfigTable, 0)
 	if err = d.Orm.Do().Select(kt.Ctx, &details, sql, whereValue); err != nil {
 		return nil, err
 	}
 
-	return &types.ListResult[tablecvmapplyorderstatisticsconfig.CvmApplyOrderStatisticsConfigTable]{
+	return &types.ListResult[tableapplystat.CvmApplyOrderStatisticsConfigTable]{
 		Count: 0, Details: details}, nil
 }
 

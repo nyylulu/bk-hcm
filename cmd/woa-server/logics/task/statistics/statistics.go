@@ -113,7 +113,7 @@ func (s *statistics) fetchSubOrderIDsFromOrders(kt *kit.Kit, ranges []timeRangeC
 	}
 
 	if len(orConditions) == 0 {
-		return nil, nil
+		return nil, fmt.Errorf("all time ranges are invalid")
 	}
 
 	filters := map[string]interface{}{
@@ -223,25 +223,21 @@ func (s *statistics) loadConfigs(kt *kit.Kit, monthSlice []string) ([]*configTyp
 		Limit: pkg.BKNoLimit,
 	}
 
-	var filterExpr *filter.Expression
-	if len(monthSlice) > 0 {
-		rules := make([]filter.RuleFactory, 0, len(monthSlice))
-		for _, month := range monthSlice {
-			rules = append(rules, &filter.AtomRule{
-				Field: "year_month",
-				Op:    filter.Equal.Factory(),
-				Value: month,
-			})
-		}
-		filterExpr = &filter.Expression{
-			Op:    filter.Or,
-			Rules: rules,
-		}
-	} else {
-		filterExpr = &filter.Expression{
-			Op:    filter.And,
-			Rules: []filter.RuleFactory{},
-		}
+	if len(monthSlice) == 0 {
+		return nil, fmt.Errorf("query month slice can not be empty")
+	}
+
+	rules := make([]filter.RuleFactory, 0, len(monthSlice))
+	for _, month := range monthSlice {
+		rules = append(rules, &filter.AtomRule{
+			Field: "year_month",
+			Op:    filter.Equal.Factory(),
+			Value: month,
+		})
+	}
+	filterExpr := &filter.Expression{
+		Op:    filter.Or,
+		Rules: rules,
 	}
 
 	listOpt := &daotypes.ListOption{
@@ -258,26 +254,34 @@ func (s *statistics) loadConfigs(kt *kit.Kit, monthSlice []string) ([]*configTyp
 	// 转换为 configTypes.CvmApplyOrderStatisticsConfig
 	configs := make([]*configTypes.CvmApplyOrderStatisticsConfig, 0, len(result.Details))
 	for _, detail := range result.Details {
-		configs = append(configs, convertTableToType(&detail))
+		cfg, err := convertTableToType(&detail)
+		if err != nil {
+			return nil, err
+		}
+		configs = append(configs, cfg)
 	}
 
 	return configs, nil
 }
 
 // convertTableToType
-func convertTableToType(table *tableapplystat.CvmApplyOrderStatisticsConfigTable) *configTypes.CvmApplyOrderStatisticsConfig {
+func convertTableToType(table *tableapplystat.CvmApplyOrderStatisticsConfigTable) (*configTypes.CvmApplyOrderStatisticsConfig, error) {
 	// types.Time 是字符串类型，需要解析为 time.Time
 	createdAt := time.Time{}
 	updatedAt := time.Time{}
 	if len(table.CreatedAt) > 0 {
-		if t, err := time.Parse(constant.TimeStdFormat, string(table.CreatedAt)); err == nil {
-			createdAt = t
+		t, err := time.Parse(constant.TimeStdFormat, string(table.CreatedAt))
+		if err != nil {
+			return nil, fmt.Errorf("parse created_at failed, id: %s, err: %w", table.ID, err)
 		}
+		createdAt = t
 	}
 	if len(table.UpdatedAt) > 0 {
-		if t, err := time.Parse(constant.TimeStdFormat, string(table.UpdatedAt)); err == nil {
-			updatedAt = t
+		t, err := time.Parse(constant.TimeStdFormat, string(table.UpdatedAt))
+		if err != nil {
+			return nil, fmt.Errorf("parse updated_at failed, id: %s, err: %w", table.ID, err)
 		}
+		updatedAt = t
 	}
 
 	return &configTypes.CvmApplyOrderStatisticsConfig{
@@ -293,7 +297,7 @@ func convertTableToType(table *tableapplystat.CvmApplyOrderStatisticsConfigTable
 		Reviser:    table.Reviser,
 		CreatedAt:  createdAt,
 		UpdatedAt:  updatedAt,
-	}
+	}, nil
 }
 
 // extractConfigInfo 从配置中提取显式子单号和时间范围配置
