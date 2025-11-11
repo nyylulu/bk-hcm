@@ -140,6 +140,9 @@ type GcpRawBillItem struct {
 	UsageStartTime            *string          `json:"usage_start_time,omitempty"`
 	UsageUnit                 *string          `json:"usage_unit"`
 	Zone                      *string          `json:"zone"`
+	CoreCountLabel            *string          `json:"core_count_label,omitempty"`
+	MemCountLabel             *string          `json:"mem_count_label,omitempty"`
+	MachineSpecLabel          *string          `json:"machine_spec_label,omitempty"`
 	CreditInfos               []GcpCredit      `json:"credit_infos,omitempty"`
 }
 
