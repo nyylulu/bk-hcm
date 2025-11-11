@@ -22,17 +22,22 @@ package statistics
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 	"time"
 
-	configModel "hcm/cmd/woa-server/model/config"
 	taskModel "hcm/cmd/woa-server/model/task"
 	configTypes "hcm/cmd/woa-server/types/config"
 	"hcm/pkg"
+	"hcm/pkg/api/core"
+	"hcm/pkg/criteria/constant"
+	"hcm/pkg/dal/dao"
+	daotypes "hcm/pkg/dal/dao/types"
+	tablecvmapplyorderstatisticsconfig "hcm/pkg/dal/table/cvm-apply-order-statistics-config"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/runtime/filter"
 	"hcm/pkg/tools/metadata"
+	"hcm/pkg/tools/slice"
 )
 
 // Interface statistics interface
@@ -42,11 +47,15 @@ type Interface interface {
 }
 
 // New 创建统计能力实例
-func New() Interface {
-	return &statistics{}
+func New(daoSet dao.Set) Interface {
+	return &statistics{
+		daoSet: daoSet,
+	}
 }
 
-type statistics struct{}
+type statistics struct {
+	daoSet dao.Set
+}
 
 // ListExcludedSubOrderIDs 根据查询时间范围，将配置表内容统一转换为需要排除的主机申请子订单号列表
 func (s *statistics) ListExcludedSubOrderIDs(kt *kit.Kit, queryStart, queryEnd time.Time) ([]string, error) {
@@ -61,34 +70,21 @@ func (s *statistics) ListExcludedSubOrderIDs(kt *kit.Kit, queryStart, queryEnd t
 		return nil, fmt.Errorf("list statistics config failed: %w", err)
 	}
 
-	explicitIDs, timeRanges := s.extractConfigInfo(configs, monthSet, queryStart, queryEnd)
-	// 从配置中提取出所有显式指定的子订单号
-	resultSet := make(map[string]struct{})
-	for _, id := range explicitIDs {
-		if id == "" {
-			continue
-		}
-		resultSet[id] = struct{}{}
-	}
+	explicitIDs, timeRanges := s.extractConfigInfo(kt, configs, monthSet, queryStart, queryEnd)
+
+	result := make([]string, 0, len(explicitIDs))
+	result = append(result, explicitIDs...)
+
 	if len(timeRanges) > 0 {
 		// 从申请单中反查所有符合时间范围的子订单号
 		queryIDs, err := s.fetchSubOrderIDsFromOrders(kt, timeRanges)
 		if err != nil {
 			return nil, err
 		}
-		for _, id := range queryIDs {
-			if id == "" {
-				continue
-			}
-			resultSet[id] = struct{}{}
-		}
+		result = append(result, queryIDs...)
 	}
-	result := make([]string, 0, len(resultSet))
-	for id := range resultSet {
-		result = append(result, id)
-	}
-	sort.Strings(result)
-	return result, nil
+
+	return slice.Unique(result), nil
 }
 
 type timeRangeConfig struct {
@@ -120,16 +116,15 @@ func (s *statistics) fetchSubOrderIDsFromOrders(kt *kit.Kit, ranges []timeRangeC
 		return nil, nil
 	}
 
-	filter := map[string]interface{}{
+	filters := map[string]interface{}{
 		pkg.BKDBOR: orConditions,
 	}
 
 	page := metadata.BasePage{
 		Limit: pkg.BKNoLimit,
-		Sort:  "suborder_id",
 	}
 
-	orders, err := taskModel.Operation().ApplyOrder().FindManyApplyOrder(kt.Ctx, page, filter)
+	orders, err := taskModel.Operation().ApplyOrder().FindManyApplyOrder(kt.Ctx, page, filters)
 	if err != nil {
 		return nil, fmt.Errorf("find apply order failed: %w", err)
 	}
@@ -159,7 +154,7 @@ func splitSubOrderIDs(ids string) []string {
 		}
 		results = append(results, part)
 	}
-	return results
+	return slice.Unique(results)
 }
 
 // parseConfigTime 解析配置中的时间字符串，支持不同格式
@@ -168,9 +163,8 @@ func parseConfigTime(value string) (time.Time, bool, error) {
 		layout   string
 		dateOnly bool
 	}{
-		{"2006-01-02 15:04:05", false},
-		{"2006-01-02 15:04", false},
-		{"2006-01-02", true},
+		{constant.DateTimeLayout, false},
+		{constant.DateLayout, true},
 	}
 
 	for _, layout := range layouts {
@@ -191,7 +185,7 @@ func buildQueryMonths(start, end time.Time) (map[string]bool, []string) {
 	last := time.Date(end.Year(), end.Month(), 1, 0, 0, 0, 0, end.Location())
 
 	for !current.After(last) {
-		key := current.Format("2006-01")
+		key := current.Format(constant.YearMonthLayout)
 		set[key] = true
 		months = append(months, key)
 		current = current.AddDate(0, 1, 0)
@@ -223,20 +217,87 @@ func validateQueryRange(queryStart, queryEnd time.Time) error {
 	return nil
 }
 
+// loadConfigs 从数据库加载所有符合月份条件的配置
 func (s *statistics) loadConfigs(kt *kit.Kit, monthSlice []string) ([]*configTypes.CvmApplyOrderStatisticsConfig, error) {
-	page := metadata.BasePage{
+	page := core.BasePage{
 		Limit: pkg.BKNoLimit,
 	}
 
-	filter := map[string]interface{}{}
+	var filterExpr *filter.Expression
 	if len(monthSlice) > 0 {
-		filter["year_month"] = map[string]interface{}{pkg.BKDBIN: monthSlice}
+		rules := make([]filter.RuleFactory, 0, len(monthSlice))
+		for _, month := range monthSlice {
+			rules = append(rules, &filter.AtomRule{
+				Field: "year_month",
+				Op:    filter.Equal.Factory(),
+				Value: month,
+			})
+		}
+		filterExpr = &filter.Expression{
+			Op:    filter.Or,
+			Rules: rules,
+		}
+	} else {
+		filterExpr = &filter.Expression{
+			Op:    filter.And,
+			Rules: []filter.RuleFactory{},
+		}
 	}
 
-	return configModel.Operation().CvmApplyOrderStatisticsConfig().FindMany(kt.Ctx, page, filter)
+	listOpt := &daotypes.ListOption{
+		Filter: filterExpr,
+		Page:   &page,
+		Fields: []string{},
+	}
+
+	result, err := s.daoSet.CvmApplyOrderStatisticsConfig().List(kt, listOpt)
+	if err != nil {
+		return nil, err
+	}
+
+	// 转换为 configTypes.CvmApplyOrderStatisticsConfig
+	configs := make([]*configTypes.CvmApplyOrderStatisticsConfig, 0, len(result.Details))
+	for _, detail := range result.Details {
+		configs = append(configs, convertTableToType(&detail))
+	}
+
+	return configs, nil
 }
 
-func (s *statistics) extractConfigInfo(configs []*configTypes.CvmApplyOrderStatisticsConfig,
+// convertTableToType
+func convertTableToType(table *tablecvmapplyorderstatisticsconfig.CvmApplyOrderStatisticsConfigTable) *configTypes.CvmApplyOrderStatisticsConfig {
+	// types.Time 是字符串类型，需要解析为 time.Time
+	createdAt := time.Time{}
+	updatedAt := time.Time{}
+	if len(table.CreatedAt) > 0 {
+		if t, err := time.Parse(constant.TimeStdFormat, string(table.CreatedAt)); err == nil {
+			createdAt = t
+		}
+	}
+	if len(table.UpdatedAt) > 0 {
+		if t, err := time.Parse(constant.TimeStdFormat, string(table.UpdatedAt)); err == nil {
+			updatedAt = t
+		}
+	}
+
+	return &configTypes.CvmApplyOrderStatisticsConfig{
+		ID:         table.ID,
+		YearMonth:  table.YearMonth,
+		BkBizID:    table.BkBizID,
+		SubOrderID: table.SubOrderID,
+		StartAt:    table.StartAt,
+		EndAt:      table.EndAt,
+		Memo:       table.Memo,
+		Extension:  table.Extension,
+		Creator:    table.Creator,
+		Reviser:    table.Reviser,
+		CreatedAt:  createdAt,
+		UpdatedAt:  updatedAt,
+	}
+}
+
+// extractConfigInfo 从配置中提取显式子单号和时间范围配置
+func (s *statistics) extractConfigInfo(kt *kit.Kit, configs []*configTypes.CvmApplyOrderStatisticsConfig,
 	monthSet map[string]bool, queryStart, queryEnd time.Time) ([]string, []timeRangeConfig) {
 
 	explicitIDs := make([]string, 0)
@@ -248,7 +309,7 @@ func (s *statistics) extractConfigInfo(configs []*configTypes.CvmApplyOrderStati
 		}
 		explicitIDs = append(explicitIDs, splitSubOrderIDs(cfg.SubOrderID)...)
 
-		rangeCfg, ok := s.buildTimeRange(cfg, queryStart, queryEnd)
+		rangeCfg, ok := s.buildTimeRange(kt, cfg, queryStart, queryEnd)
 		if ok {
 			timeRanges = append(timeRanges, rangeCfg)
 		}
@@ -267,7 +328,8 @@ func (s *statistics) monthMatched(cfg *configTypes.CvmApplyOrderStatisticsConfig
 	return monthSet[cfg.YearMonth]
 }
 
-func (s *statistics) buildTimeRange(cfg *configTypes.CvmApplyOrderStatisticsConfig,
+// buildTimeRange 构建配置的时间范围，确保不超出查询范围
+func (s *statistics) buildTimeRange(kt *kit.Kit, cfg *configTypes.CvmApplyOrderStatisticsConfig,
 	queryStart, queryEnd time.Time) (timeRangeConfig, bool) {
 
 	if cfg == nil {
@@ -279,12 +341,12 @@ func (s *statistics) buildTimeRange(cfg *configTypes.CvmApplyOrderStatisticsConf
 
 	start, startDateOnly, err := parseConfigTime(cfg.StartAt)
 	if err != nil {
-		logs.Warnf("parse start_at failed, cfg_id: %s, start_at: %s, err: %v", cfg.ID, cfg.StartAt, err)
+		logs.Warnf("parse start_at failed, cfg_id: %s, start_at: %s, err: %v, rid: %s", cfg.ID, cfg.StartAt, err, kt.Rid)
 		return timeRangeConfig{}, false
 	}
 	end, endDateOnly, err := parseConfigTime(cfg.EndAt)
 	if err != nil {
-		logs.Warnf("parse end_at failed, cfg_id: %s, end_at: %s, err: %v", cfg.ID, cfg.EndAt, err)
+		logs.Warnf("parse end_at failed, cfg_id: %s, end_at: %s, err: %v, rid: %s", cfg.ID, cfg.EndAt, err, kt.Rid)
 		return timeRangeConfig{}, false
 	}
 
@@ -296,7 +358,7 @@ func (s *statistics) buildTimeRange(cfg *configTypes.CvmApplyOrderStatisticsConf
 	}
 
 	if end.Before(start) {
-		logs.Warnf("invalid config time range, cfg_id: %s, start_at: %s, end_at: %s", cfg.ID, cfg.StartAt, cfg.EndAt)
+		logs.Warnf("invalid config time range, cfg_id: %s, start_at: %s, end_at: %s, rid: %s", cfg.ID, cfg.StartAt, cfg.EndAt, kt.Rid)
 		return timeRangeConfig{}, false
 	}
 

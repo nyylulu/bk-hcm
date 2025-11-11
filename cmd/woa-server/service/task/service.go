@@ -20,7 +20,6 @@ import (
 	gclogics "hcm/cmd/woa-server/logics/green-channel"
 	planLogics "hcm/cmd/woa-server/logics/plan"
 	taskLogics "hcm/cmd/woa-server/logics/task"
-	taskStatistics "hcm/cmd/woa-server/logics/task/statistics"
 	"hcm/cmd/woa-server/service/capability"
 	"hcm/pkg/client"
 	"hcm/pkg/iam/auth"
@@ -30,7 +29,7 @@ import (
 
 // InitService initial the service
 func InitService(c *capability.Capability) {
-	logics := taskLogics.New(c.SchedulerIf, c.RecyclerIf, c.InformerIf, c.OperationIf, taskStatistics.New())
+	logics := taskLogics.New(c.SchedulerIf, c.RecyclerIf, c.InformerIf, c.OperationIf, c.TaskStatistics)
 	s := &service{
 		client:         c.Client,
 		logics:         logics,
