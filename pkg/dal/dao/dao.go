@@ -57,7 +57,7 @@ import (
 	daosubaccount "hcm/pkg/dal/dao/cloud/sub-account"
 	daosync "hcm/pkg/dal/dao/cloud/sync"
 	"hcm/pkg/dal/dao/cloud/zone"
-	cvmapplyorderstatisticsconfig "
+	cvmapplyorderstatisticsconfig "hcm/pkg/dal/dao/cvm-apply-order-statistics-config"
 	"hcm/pkg/dal/dao/dissolve/host"
 	"hcm/pkg/dal/dao/dissolve/module"
 	globalconfig "hcm/pkg/dal/dao/global-config"
