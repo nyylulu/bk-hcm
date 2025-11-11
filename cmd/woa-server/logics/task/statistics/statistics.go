@@ -29,13 +29,12 @@ import (
 	configTypes "hcm/cmd/woa-server/types/config"
 	"hcm/pkg"
 	"hcm/pkg/api/core"
+	"hcm/pkg/client"
 	"hcm/pkg/criteria/constant"
-	"hcm/pkg/dal/dao"
-	daotypes "hcm/pkg/dal/dao/types"
+	"hcm/pkg/dal/dao/tools"
 	tableapplystat "hcm/pkg/dal/table/cvm-apply-order-statistics-config"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
-	"hcm/pkg/runtime/filter"
 	"hcm/pkg/tools/metadata"
 	"hcm/pkg/tools/slice"
 )
@@ -47,14 +46,14 @@ type Interface interface {
 }
 
 // New 创建统计能力实例
-func New(daoSet dao.Set) Interface {
+func New(clientSet *client.ClientSet) Interface {
 	return &statistics{
-		daoSet: daoSet,
+		client: clientSet,
 	}
 }
 
 type statistics struct {
-	daoSet dao.Set
+	client *client.ClientSet
 }
 
 // ListExcludedSubOrderIDs 根据查询时间范围，将配置表内容统一转换为需要排除的主机申请子订单号列表
@@ -219,42 +218,33 @@ func validateQueryRange(queryStart, queryEnd time.Time) error {
 
 // loadConfigs 从数据库加载所有符合月份条件的配置
 func (s *statistics) loadConfigs(kt *kit.Kit, monthSlice []string) ([]*configTypes.CvmApplyOrderStatisticsConfig, error) {
-	page := core.BasePage{
-		Limit: pkg.BKNoLimit,
+	if s.client == nil || s.client.DataService() == nil {
+		return nil, fmt.Errorf("data service client is not initialized")
 	}
 
 	if len(monthSlice) == 0 {
 		return nil, fmt.Errorf("query month slice can not be empty")
 	}
 
-	rules := make([]filter.RuleFactory, 0, len(monthSlice))
-	for _, month := range monthSlice {
-		rules = append(rules, &filter.AtomRule{
-			Field: "year_month",
-			Op:    filter.Equal.Factory(),
-			Value: month,
-		})
-	}
-	filterExpr := &filter.Expression{
-		Op:    filter.Or,
-		Rules: rules,
-	}
-
-	listOpt := &daotypes.ListOption{
+	filterExpr := tools.ContainersExpression("year_month", monthSlice)
+	listReq := &core.ListReq{
 		Filter: filterExpr,
-		Page:   &page,
-		Fields: []string{},
+		Page:   core.NewDefaultBasePage(),
 	}
 
-	result, err := s.daoSet.CvmApplyOrderStatisticsConfig().List(kt, listOpt)
+	result, err := s.client.DataService().Global.ApplyOrderStatisticsConfig.List(kt, listReq)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list apply order statistics config from data service failed: %w", err)
+	}
+
+	if result == nil {
+		return nil, nil
 	}
 
 	// 转换为 configTypes.CvmApplyOrderStatisticsConfig
 	configs := make([]*configTypes.CvmApplyOrderStatisticsConfig, 0, len(result.Details))
-	for _, detail := range result.Details {
-		cfg, err := convertTableToType(&detail)
+	for i := range result.Details {
+		cfg, err := convertTableToType(&result.Details[i])
 		if err != nil {
 			return nil, err
 		}
@@ -266,37 +256,19 @@ func (s *statistics) loadConfigs(kt *kit.Kit, monthSlice []string) ([]*configTyp
 
 // convertTableToType
 func convertTableToType(table *tableapplystat.CvmApplyOrderStatisticsConfigTable) (*configTypes.CvmApplyOrderStatisticsConfig, error) {
-	// types.Time 是字符串类型，需要解析为 time.Time
-	createdAt := time.Time{}
-	updatedAt := time.Time{}
-	if len(table.CreatedAt) > 0 {
-		t, err := time.Parse(constant.TimeStdFormat, string(table.CreatedAt))
-		if err != nil {
-			return nil, fmt.Errorf("parse created_at failed, id: %s, err: %w", table.ID, err)
-		}
-		createdAt = t
-	}
-	if len(table.UpdatedAt) > 0 {
-		t, err := time.Parse(constant.TimeStdFormat, string(table.UpdatedAt))
-		if err != nil {
-			return nil, fmt.Errorf("parse updated_at failed, id: %s, err: %w", table.ID, err)
-		}
-		updatedAt = t
-	}
-
 	return &configTypes.CvmApplyOrderStatisticsConfig{
-		ID:         table.ID,
-		YearMonth:  table.YearMonth,
-		BkBizID:    table.BkBizID,
-		SubOrderID: table.SubOrderID,
-		StartAt:    table.StartAt,
-		EndAt:      table.EndAt,
-		Memo:       table.Memo,
-		Extension:  table.Extension,
-		Creator:    table.Creator,
-		Reviser:    table.Reviser,
-		CreatedAt:  createdAt,
-		UpdatedAt:  updatedAt,
+		ID:          table.ID,
+		YearMonth:   table.YearMonth,
+		BkBizID:     table.BkBizID,
+		SubOrderIDs: table.SubOrderIDs,
+		StartAt:     table.StartAt,
+		EndAt:       table.EndAt,
+		Memo:        table.Memo,
+		Extension:   table.Extension,
+		Creator:     table.Creator,
+		Reviser:     table.Reviser,
+		CreatedAt:   table.CreatedAt.String(),
+		UpdatedAt:   table.UpdatedAt.String(),
 	}, nil
 }
 
@@ -305,13 +277,20 @@ func (s *statistics) extractConfigInfo(kt *kit.Kit, configs []*configTypes.CvmAp
 	monthSet map[string]bool, queryStart, queryEnd time.Time) ([]string, []timeRangeConfig) {
 
 	explicitIDs := make([]string, 0)
+	explicitSet := make(map[string]struct{})
 	timeRanges := make([]timeRangeConfig, 0)
 
 	for _, cfg := range configs {
 		if !s.monthMatched(cfg, monthSet) {
 			continue
 		}
-		explicitIDs = append(explicitIDs, splitSubOrderIDs(cfg.SubOrderID)...)
+		for _, id := range splitSubOrderIDs(cfg.SubOrderIDs) {
+			if _, ok := explicitSet[id]; ok {
+				continue
+			}
+			explicitSet[id] = struct{}{}
+			explicitIDs = append(explicitIDs, id)
+		}
 
 		rangeCfg, ok := s.buildTimeRange(kt, cfg, queryStart, queryEnd)
 		if ok {
@@ -326,7 +305,7 @@ func (s *statistics) monthMatched(cfg *configTypes.CvmApplyOrderStatisticsConfig
 	if cfg == nil {
 		return false
 	}
-	if len(monthSet) == 0 {
+	if monthSet == nil {
 		return true
 	}
 	return monthSet[cfg.YearMonth]

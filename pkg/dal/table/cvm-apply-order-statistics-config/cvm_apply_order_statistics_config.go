@@ -17,11 +17,13 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package daoapplystat package dao apply statistics config.
-package daoapplystat
+// Package tableapplystat package table apply statistics config.
+package tableapplystat
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/validator"
@@ -39,11 +41,11 @@ var CvmApplyOrderStatisticsConfigTableColumnDescriptors = utils.ColumnDescriptor
 	{Column: "id", NamedC: "id", Type: enumor.String},
 	{Column: "year_month", NamedC: "year_month", Type: enumor.String},
 	{Column: "bk_biz_id", NamedC: "bk_biz_id", Type: enumor.Numeric},
-	{Column: "sub_order_id", NamedC: "sub_order_id", Type: enumor.String},
+	{Column: "sub_order_ids", NamedC: "sub_order_ids", Type: enumor.String},
 	{Column: "start_at", NamedC: "start_at", Type: enumor.String},
 	{Column: "end_at", NamedC: "end_at", Type: enumor.String},
 	{Column: "memo", NamedC: "memo", Type: enumor.String},
-	{Column: "extension", NamedC: "extension", Type: enumor.String},
+	{Column: "extension", NamedC: "extension", Type: enumor.Json},
 	{Column: "creator", NamedC: "creator", Type: enumor.String},
 	{Column: "reviser", NamedC: "reviser", Type: enumor.String},
 	{Column: "created_at", NamedC: "created_at", Type: enumor.Time},
@@ -59,7 +61,7 @@ type CvmApplyOrderStatisticsConfigTable struct {
 	// BkBizID 业务ID
 	BkBizID int64 `db:"bk_biz_id" json:"bk_biz_id"`
 	// SubOrderID 子单号列表，逗号分隔
-	SubOrderID string `db:"sub_order_id" json:"sub_order_id"`
+	SubOrderIDs string `db:"sub_order_ids" json:"sub_order_ids"`
 	// StartAt 开始时间，格式：YYYY-MM-DD
 	StartAt string `db:"start_at" json:"start_at"`
 	// EndAt 结束时间，格式：YYYY-MM-DD
@@ -67,7 +69,7 @@ type CvmApplyOrderStatisticsConfigTable struct {
 	// Memo 备注
 	Memo string `db:"memo" json:"memo"`
 	// Extension 扩展字段，JSON格式
-	Extension string `db:"extension" json:"extension"`
+	Extension types.JsonField `db:"extension" json:"extension"`
 	// Creator 创建者
 	Creator string `db:"creator" json:"creator"`
 	// Reviser 更新者
@@ -107,9 +109,24 @@ func (t CvmApplyOrderStatisticsConfigTable) InsertValidate() error {
 	if len(t.YearMonth) == 0 {
 		return errors.New("year_month is required")
 	}
+	if len(t.YearMonth) > 16 {
+		return fmt.Errorf("year_month length can not exceed 16")
+	}
 
 	if t.BkBizID <= 0 {
 		return errors.New("bk_biz_id is required and must be greater than 0")
+	}
+
+	if len(t.SubOrderIDs) > 64 {
+		return fmt.Errorf("sub_order_ids length can not exceed 64")
+	}
+
+	if len(t.StartAt) > 64 {
+		return fmt.Errorf("start_at length can not exceed 64")
+	}
+
+	if len(t.EndAt) > 64 {
+		return fmt.Errorf("end_at length can not exceed 64")
 	}
 
 	if len(t.Memo) == 0 {
@@ -122,6 +139,23 @@ func (t CvmApplyOrderStatisticsConfigTable) InsertValidate() error {
 
 	if len(t.Reviser) == 0 {
 		return errors.New("reviser is required")
+	}
+
+	hasSubIDs := strings.TrimSpace(t.SubOrderIDs) != ""
+	hasStart := strings.TrimSpace(t.StartAt) != ""
+	hasEnd := strings.TrimSpace(t.EndAt) != ""
+
+	if hasSubIDs && (hasStart || hasEnd) {
+		return errors.New("sub_order_ids and time range can not be set together")
+	}
+
+	if !hasSubIDs {
+		if hasStart != hasEnd {
+			return errors.New("start_at and end_at must both be set when using time range")
+		}
+		if !hasStart {
+			return errors.New("either sub_order_ids or time range (start_at & end_at) must be set")
+		}
 	}
 
 	return nil
@@ -143,6 +177,22 @@ func (t CvmApplyOrderStatisticsConfigTable) UpdateValidate() error {
 
 	if len(t.Creator) != 0 {
 		return errors.New("creator can not be updated")
+	}
+
+	if t.BkBizID != 0 && t.BkBizID <= 0 {
+		return errors.New("bk_biz_id must be greater than 0")
+	}
+
+	if len(t.SubOrderIDs) > 64 {
+		return fmt.Errorf("sub_order_ids length can not exceed 64")
+	}
+
+	if len(t.StartAt) > 64 {
+		return fmt.Errorf("start_at length can not exceed 64")
+	}
+
+	if len(t.EndAt) > 64 {
+		return fmt.Errorf("end_at length can not exceed 64")
 	}
 
 	if len(t.Reviser) == 0 {

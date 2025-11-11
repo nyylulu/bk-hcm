@@ -30,9 +30,9 @@ START TRANSACTION;
 CREATE TABLE IF NOT EXISTS `cvm_apply_order_statistics_config`
 (
     `id`           VARCHAR(64)  NOT NULL COMMENT '主键',
-    `year_month`   CHAR(7)      NOT NULL COMMENT '配置所属月份，格式：YYYY-MM',
+    `year_month`   VARCHAR(16)      NOT NULL COMMENT '配置所属月份，格式：YYYY-MM',
     `bk_biz_id`    BIGINT       NOT NULL COMMENT '业务ID',
-    `sub_order_id` VARCHAR(4096) NOT NULL DEFAULT '' COMMENT '子单号列表，最多100个，逗号分隔',
+    `sub_order_ids` TEXT NOT NULL DEFAULT '' COMMENT '子单号列表，最多100个，逗号分隔',
     `start_at`     VARCHAR(64)  NOT NULL DEFAULT '' COMMENT '开始时间，格式：YYYY-MM-DD',
     `end_at`       VARCHAR(64)  NOT NULL DEFAULT '' COMMENT '结束时间，格式：YYYY-MM-DD',
     `memo`         VARCHAR(255) NOT NULL DEFAULT '' COMMENT '备注',
