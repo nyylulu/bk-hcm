@@ -21,6 +21,8 @@
 package argstpl
 
 import (
+	"fmt"
+
 	"hcm/pkg/api/core"
 	dataproto "hcm/pkg/api/data-service/cloud"
 	protoargstpl "hcm/pkg/api/hc-service/argument-template"
@@ -83,13 +85,23 @@ func (svc *argsTplSvc) deleteArgsTplSvc(cts *rest.Contexts, validHandler handler
 			return nil, errf.Newf(errf.InvalidParameter, "id %s record is not found", id)
 		}
 
-		err = svc.client.HCService().TCloud.ArgsTpl.DeleteArgsTpl(cts.Kit, &protoargstpl.TCloudDeleteReq{
-			AccountID: basicInfo.AccountID,
-			ID:        id,
-		})
+		switch basicInfo.Vendor {
+		case enumor.TCloud:
+			err = svc.client.HCService().TCloud.ArgsTpl.DeleteArgsTpl(cts.Kit, &protoargstpl.TCloudDeleteReq{
+				AccountID: basicInfo.AccountID,
+				ID:        id,
+			})
+		case enumor.TCloudZiyan:
+			err = svc.client.HCService().TCloudZiyan.ArgsTpl.DeleteArgsTpl(cts.Kit, &protoargstpl.TCloudDeleteReq{
+				AccountID: basicInfo.AccountID,
+				ID:        id,
+			})
+		default:
+			return nil, fmt.Errorf("unsupported vendor: %s", basicInfo.Vendor)
+		}
 		if err != nil {
-			logs.Errorf("[%s] request hcservice to delete argument template failed, id: %s, err: %v, rid: %s",
-				enumor.TCloud, id, err, cts.Kit.Rid)
+			logs.Errorf("delete argument template failed, err: %v, id: %s, vendor: %s, rid: %s", err, id,
+				basicInfo.Vendor, cts.Kit.Rid)
 			return nil, err
 		}
 	}
