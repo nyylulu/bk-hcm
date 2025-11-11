@@ -21,6 +21,7 @@ package ziyan
 
 import (
 	apicore "hcm/pkg/api/core"
+	datacli "hcm/pkg/client/data-service"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -29,11 +30,13 @@ import (
 )
 
 // GenTagsForBizs 为自研云资源生成业务标签，负责人标签从kit中获取
-func GenTagsForBizs(kt *kit.Kit, ccCli cmdb.Client, bkBizId int64) (tags []apicore.TagPair, err error) {
-	meta, err := ziyan.GetResourceMetaByBiz(kt, ccCli, bkBizId)
+func GenTagsForBizs(kt *kit.Kit, dataCli *datacli.Client, ccCli cmdb.Client, bkBizID int64) (
+	tags []apicore.TagPair, err error) {
+
+	meta, err := ziyan.GetResourceMetaByBiz(kt, dataCli, ccCli, bkBizID)
 	if err != nil {
 		logs.Errorf("fail to get resource meta for bk biz id: %d, err: %v, rid: %s",
-			bkBizId, err, kt.Rid)
+			bkBizID, err, kt.Rid)
 		return nil, err
 	}
 	return meta.GetTagPairs(), nil
@@ -41,10 +44,10 @@ func GenTagsForBizs(kt *kit.Kit, ccCli cmdb.Client, bkBizId int64) (tags []apico
 
 // GenTagsForBizsWithManager 为自研云资源生成业务标签，负责人通过参数提供
 // 允许业务、主备负责人不全部提供，此时仅更新部分标签到云上
-func GenTagsForBizsWithManager(kt *kit.Kit, ccCli cmdb.Client, bkBizId int64, manager, bakManager string) (
-	tags []apicore.TagPair, err error) {
+func GenTagsForBizsWithManager(kt *kit.Kit, dataCli *datacli.Client, ccCli cmdb.Client, bkBizID int64,
+	manager, bakManager string) (tags []apicore.TagPair, err error) {
 
-	if bkBizId == constant.UnassignedBiz {
+	if bkBizID == constant.UnassignedBiz {
 		meta := &ziyan.ResourceMeta{
 			Manager:    manager,
 			BakManager: bakManager,
@@ -53,10 +56,10 @@ func GenTagsForBizsWithManager(kt *kit.Kit, ccCli cmdb.Client, bkBizId int64, ma
 		return meta.GetTagPairs(), nil
 	}
 
-	meta, err := ziyan.GetResourceMetaByBizWithManager(kt, ccCli, bkBizId, manager, bakManager)
+	meta, err := ziyan.GetResourceMetaByBizWithManager(kt, dataCli, ccCli, bkBizID, manager, bakManager)
 	if err != nil {
 		logs.Errorf("fail to get resource meta for bk biz id: %d, err: %v, rid: %s",
-			bkBizId, err, kt.Rid)
+			bkBizID, err, kt.Rid)
 		return nil, err
 	}
 	return meta.GetTagPairs(), nil

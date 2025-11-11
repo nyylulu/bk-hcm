@@ -932,7 +932,7 @@ func (cli *client) fillBkBizId(kt *kit.Kit, lbFromCloud []typeslb.TCloudClb) err
 		}
 		bs2NameIds = append(bs2NameIds, clb.Bs2NameID)
 	}
-	bizIds, err := ziyan.GetBkBizIdByBs2(kt, cmdb.CmdbClient(), bs2NameIds)
+	bizIds, err := ziyan.GetBkBizIdByBs2(kt, cli.dbCli, cmdb.CmdbClient(), bs2NameIds)
 	if err != nil {
 		logs.Errorf("fail to get bkBizId by bs2NameIds for clb, err: %v, rid: %s", err, kt.Rid)
 		return err

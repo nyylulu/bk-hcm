@@ -27,11 +27,15 @@ import (
 	"sync"
 
 	apicore "hcm/pkg/api/core"
+	datacli "hcm/pkg/client/data-service"
 	"hcm/pkg/criteria/constant"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/validator"
+	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/api-gateway/cmdb"
+	"hcm/pkg/tools/json"
 	"hcm/pkg/tools/slice"
 	"hcm/pkg/tools/util"
 )
@@ -50,6 +54,21 @@ const (
 	// TagKeyBakManager 自研云 `备份负责人` 标签名
 	TagKeyBakManager = "备份负责人"
 )
+
+// Bs2BizConfig 二级业务配置信息，对应 global_config 表中的配置数据
+type Bs2BizConfig struct {
+	OpProductID     int64  `json:"op_product_id"`
+	OpProductName   string `json:"op_product_name"`
+	Bs1NameID       int64  `json:"bs1_name_id"`
+	Bs1Name         string `json:"bs1_name"`
+	Bs2NameID       int64  `json:"bs2_name_id"`
+	Bs2Name         string `json:"bs2_name"`
+	VirtualDeptID   int64  `json:"virtual_dept_id"`
+	VirtualDeptName string `json:"virtual_dept_name"`
+	Manager         string `json:"manager"`
+	BakManager      string `json:"bak_manager"`
+	BkBizID         int64  `json:"bk_biz_id"`
+}
 
 // NotFoundID 未分配二级业务ID
 const NotFoundID = -1
@@ -132,10 +151,48 @@ func (i *ResourceMeta) GetTagPairs() []apicore.TagPair {
 }
 
 // GetResourceMetaByBizForUser 为自研云资源生成业务标签
-func GetResourceMetaByBizForUser(kt *kit.Kit, ccCli cmdb.Client, bkBizId int64, manager, bakManager string) (
-	tags *ResourceMeta, err error) {
+// 优先从 global_config 表中获取配置，如果没有则从 CMDB 查询
+func GetResourceMetaByBizForUser(kt *kit.Kit, dataCli *datacli.Client, ccCli cmdb.Client, bkBizId int64,
+	manager, bakManager string) (tags *ResourceMeta, err error) {
 
-	// 去cc 查询业务信息
+	if err = ensureInitialized(kt, dataCli); err != nil {
+		// 读取初始化配置失败，继续使用 CMDB 查询
+		logs.Warnf("failed to ensure bs2 to biz map initialized, will query from cc, bkBizId: %d, err: %v, "+
+			"manager: %s, rid: %s", bkBizId, err, manager, kt.Rid)
+	}
+
+	// 1. 优先从内存缓存中查找配置
+	if configVal, ok := bkBizIDToConfigMap.Load(bkBizId); ok {
+		if config, ok := configVal.(*Bs2BizConfig); ok {
+			// 使用配置中的 manager 和 bakManager，如果传入的参数为空
+			finalManager := manager
+			finalBakManager := bakManager
+			if finalManager == "" && config.Manager != "" {
+				finalManager = config.Manager
+			}
+			if finalBakManager == "" && config.BakManager != "" {
+				finalBakManager = config.BakManager
+			}
+
+			meta := &ResourceMeta{
+				OpProductID:     config.OpProductID,
+				OpProductName:   config.OpProductName,
+				Bs1Name:         config.Bs1Name,
+				Bs1NameID:       config.Bs1NameID,
+				Bs2Name:         config.Bs2Name,
+				Bs2NameID:       config.Bs2NameID,
+				VirtualDeptName: config.VirtualDeptName,
+				VirtualDeptID:   config.VirtualDeptID,
+				Manager:         finalManager,
+				BakManager:      finalBakManager,
+			}
+			logs.Infof("found biz config from global_config cache for bk_biz_id: %d, meta: %+v, rid: %s",
+				bkBizId, meta, kt.Rid)
+			return meta, nil
+		}
+	}
+
+	// 2. 如果缓存中没有，则从 CMDB 查询
 	req := &cmdb.SearchBizCompanyCmdbInfoParams{BizIDs: []int64{bkBizId}}
 	companyInfoList, err := ccCli.SearchBizCompanyCmdbInfo(kt, req)
 	if err != nil {
@@ -166,32 +223,43 @@ func GetResourceMetaByBizForUser(kt *kit.Kit, ccCli cmdb.Client, bkBizId int64, 
 		// 备份负责人默认和当前用户一致
 		BakManager: bakManager,
 	}
+	logs.Infof("biz config not found in cache, query from cmdb for bk_biz_id: %d, meta: %+v, rid: %s",
+		bkBizId, meta, kt.Rid)
 
 	return meta, nil
 }
 
 // GetResourceMetaByBiz 为自研云资源生成业务标签，默认当前用户为负责人和备份负责人
-func GetResourceMetaByBiz(kt *kit.Kit, ccCli cmdb.Client, bkBizId int64) (tags *ResourceMeta, err error) {
+func GetResourceMetaByBiz(kt *kit.Kit, dataCli *datacli.Client, ccCli cmdb.Client, bkBizId int64) (
+	tags *ResourceMeta, err error) {
 
-	return GetResourceMetaByBizForUser(kt, ccCli, bkBizId, kt.User, kt.User)
+	return GetResourceMetaByBizForUser(kt, dataCli, ccCli, bkBizId, kt.User, kt.User)
 }
 
 // GetResourceMetaByBizWithManager 为自研云资源生成业务标签，支持传入负责人和备份负责人
-func GetResourceMetaByBizWithManager(kt *kit.Kit, ccCli cmdb.Client, bkBizId int64, manager, bakManager string) (
-	tags *ResourceMeta, err error) {
+func GetResourceMetaByBizWithManager(kt *kit.Kit, dataCli *datacli.Client, ccCli cmdb.Client, bkBizId int64,
+	manager, bakManager string) (tags *ResourceMeta, err error) {
 
-	return GetResourceMetaByBizForUser(kt, ccCli, bkBizId, manager, bakManager)
+	return GetResourceMetaByBizForUser(kt, dataCli, ccCli, bkBizId, manager, bakManager)
 }
 
-// 业务id 不会变化，只会增加
+// 业务id 不会变化，只会增加，使用内存缓存提升性能
 var bs2bkBizIDMap sync.Map
 
-// GetBkBizIdByBs2 根据二级业务id，到cc查询对应的业务id，如果没有找到会返回-1
-func GetBkBizIdByBs2(kt *kit.Kit, ccCli cmdb.Client, bs2NameIDs []int64) (bizIds []int64, err error) {
+// bkBizID 到 Bs2BizConfig 的反向映射，用于快速查找业务配置信息
+var bkBizIDToConfigMap sync.Map
+
+// GetBkBizIdByBs2 根据二级业务id，查询对应的业务id
+// 优先从 global_config 表读取映射关系，如果没有则到 cc 查询
+// 如果没有找到会返回 constant.UnassignedBiz
+func GetBkBizIdByBs2(kt *kit.Kit, dataCli *datacli.Client, ccCli cmdb.Client, bs2NameIDs []int64) (
+	bizIds []int64, err error) {
 
 	// 赋值业务id
 	bizIds = make([]int64, len(bs2NameIDs))
 	notFoundIds := make([]int64, 0, 100)
+
+	// 1. 先从内存缓存查找
 	for _, bs2id := range slice.Unique(bs2NameIDs) {
 		if bs2id < 0 {
 			// 跳过无效的id
@@ -201,6 +269,26 @@ func GetBkBizIdByBs2(kt *kit.Kit, ccCli cmdb.Client, bs2NameIDs []int64) (bizIds
 			notFoundIds = append(notFoundIds, bs2id)
 		}
 	}
+
+	// 2. 如果内存中没有，尝试从 global_config 表加载
+	if len(notFoundIds) > 0 {
+		if err = ensureInitialized(kt, dataCli); err != nil {
+			// 读取初始化配置失败，继续使用 CMDB 查询
+			logs.Warnf("failed to ensure bs2 to biz map initialized, will query from cc, err: %v, notFoundIds: %v, "+
+				"rid: %s", err, notFoundIds, kt.Rid)
+		}
+
+		// 重新检查哪些还没找到
+		stillNotFound := make([]int64, 0, len(notFoundIds))
+		for _, bs2id := range notFoundIds {
+			if _, ok := bs2bkBizIDMap.Load(bs2id); !ok {
+				stillNotFound = append(stillNotFound, bs2id)
+			}
+		}
+		notFoundIds = stillNotFound
+	}
+
+	// 3. 如果 global_config 中也没有，则从 cc 查询
 	if len(notFoundIds) > 0 {
 		param := &cmdb.SearchBizParams{
 			Page: cmdb.BasePage{},
@@ -218,6 +306,7 @@ func GetBkBizIdByBs2(kt *kit.Kit, ccCli cmdb.Client, bs2NameIDs []int64) (bizIds
 		}
 	}
 
+	// 4. 填充结果
 	for i := range bs2NameIDs {
 		bs2NameID := bs2NameIDs[i]
 		// 对没有解析到标签的业务，fallback到未分配
@@ -231,7 +320,108 @@ func GetBkBizIdByBs2(kt *kit.Kit, ccCli cmdb.Client, bs2NameIDs []int64) (bizIds
 			}
 		}
 	}
+	logs.Infof("get bk_biz_id by bs2 success, bs2NameIDs: %v, bizIds: %v, rid: %s", bs2NameIDs, bizIds, kt.Rid)
 	return bizIds, nil
+}
+
+// 加载控制，确保配置只从数据库加载一次
+var (
+	loadOnce      sync.Once
+	loadErr       error
+	isInitialized bool
+)
+
+// ensureInitialized 确保配置已初始化，如果未初始化则尝试懒加载
+// 这是一个内部辅助函数，用于在需要时自动加载配置
+func ensureInitialized(kt *kit.Kit, dataCli *datacli.Client) error {
+	if isInitialized {
+		return nil
+	}
+
+	// 如果还没有初始化，尝试加载
+	if dataCli != nil {
+		return initBs2BizMap(kt, dataCli)
+	}
+
+	// 如果没有 dataCli，返回错误
+	return fmt.Errorf("bs2 biz map not initialized and no data client available")
+}
+
+// initBs2BizMap 初始化 bs2 到 bk_biz_id 的映射，在服务启动时调用
+// 从 global_config 表加载所有配置到内存缓存
+// 此函数可以被多次调用，但只会执行一次加载
+func initBs2BizMap(kt *kit.Kit, dataCli *datacli.Client) error {
+	loadOnce.Do(func() {
+		loadErr = loadBs2BizMapFromDB(kt, dataCli)
+		if loadErr == nil {
+			isInitialized = true
+			logs.Infof("init bs2 to biz mapping success, rid: %s", kt.Rid)
+		} else {
+			logs.Errorf("init bs2 to biz mapping failed, err: %v, rid: %s", loadErr, kt.Rid)
+		}
+	})
+	return loadErr
+}
+
+// loadBs2BizMapFromDB 从 global_config 表加载 bs2 到 bk_biz_id 的映射
+// config_value 格式为 JSON 数组，包含完整的业务信息
+// 同时加载正向映射（bs2_name_id -> bk_biz_id）和反向映射（bk_biz_id -> Bs2BizConfig）
+func loadBs2BizMapFromDB(kt *kit.Kit, dataCli *datacli.Client) error {
+	if dataCli == nil {
+		return fmt.Errorf("failed to load bs2bizmap from db, data client is nil")
+	}
+
+	// 查询固定的配置记录
+	listReq := &apicore.ListReq{
+		Filter: tools.ExpressionAnd(
+			tools.RuleEqual("config_type", enumor.GlobalConfigTypeBs2ToBkBizIDMap),
+			tools.RuleEqual("config_key", enumor.GlobalConfigKeyBs2BizMapping),
+		),
+		Page: apicore.NewDefaultBasePage(),
+	}
+
+	list, err := dataCli.Global.GlobalConfig.List(kt, listReq)
+	if err != nil {
+		logs.Errorf("failed to list bs2 biz config from global_config, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+
+	if len(list.Details) == 0 {
+		logs.Warnf("no bs2 biz config found in global_config, rid: %s", kt.Rid)
+		return nil
+	}
+
+	// 解析 JSON 数组格式的配置
+	detail := list.Details[0]
+	var configs []Bs2BizConfig
+	if err = json.UnmarshalFromString(string(detail.ConfigValue), &configs); err != nil {
+		logs.Errorf("failed to unmarshal bs2 biz config, value: %s, err: %v, rid: %s",
+			detail.ConfigValue, err, kt.Rid)
+		return err
+	}
+
+	// 将查询结果加载到内存缓存
+	loadedCount := 0
+	for _, config := range configs {
+		bkBizID := config.BkBizID
+		if bkBizID == 0 {
+			logs.Warnf("bs2_name_id %d has no bk_biz_id in config, skip, rid: %s", config.Bs2NameID, kt.Rid)
+			continue
+		}
+
+		// 正向映射：bs2_name_id -> bk_biz_id
+		bs2bkBizIDMap.Store(config.Bs2NameID, bkBizID)
+
+		// 反向映射：bk_biz_id -> Bs2BizConfig 复制一份避免循环变量问题
+		configCopy := config
+		bkBizIDToConfigMap.Store(bkBizID, &configCopy)
+
+		loadedCount++
+	}
+
+	logs.Infof("loaded bs2 to biz mappings from global_config, loadNum: %d, totalNum: %d, configs: %+v, rid: %s",
+		loadedCount, len(configs), configs, kt.Rid)
+	return nil
 }
 
 // parseNameID 解析 xxx_yyy_123 格式的字符串，返回 xxx_yyy 和 123

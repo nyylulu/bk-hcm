@@ -28,6 +28,7 @@ import (
 	datagconf "hcm/pkg/api/data-service/global_config"
 	"hcm/pkg/client"
 	"hcm/pkg/criteria/constant"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -183,7 +184,7 @@ var regionToSecGroup = map[string]*types.DftSecurityGroup{
 func (s *sg) GetRegionDftSg(kt *kit.Kit, region string) (*types.DftSecurityGroup, error) {
 	listReq := &core.ListReq{
 		Filter: tools.ExpressionAnd(
-			tools.RuleEqual("config_type", constant.GlobalConfigTypeRegionDefaultSecGroup),
+			tools.RuleEqual("config_type", enumor.GlobalConfigTypeRegionDefaultSecGroup),
 			tools.RuleEqual("config_key", region),
 		),
 		Page: core.NewDefaultBasePage(),
@@ -235,7 +236,7 @@ func (s *sg) UpsertRegionDftSg(kt *kit.Kit, input []types.RegionDftSg) error {
 
 	listReq := &core.ListReq{
 		Filter: tools.ExpressionAnd(
-			tools.RuleEqual("config_type", constant.GlobalConfigTypeRegionDefaultSecGroup),
+			tools.RuleEqual("config_type", enumor.GlobalConfigTypeRegionDefaultSecGroup),
 			tools.RuleJsonIn("config_key", regions),
 		),
 		Page: core.NewDefaultBasePage(),
@@ -268,7 +269,7 @@ func (s *sg) UpsertRegionDftSg(kt *kit.Kit, input []types.RegionDftSg) error {
 		create = append(create, cgconf.GlobalConfigT[any]{
 			ConfigKey:   regionKey,
 			ConfigValue: sgVal,
-			ConfigType:  constant.GlobalConfigTypeRegionDefaultSecGroup,
+			ConfigType:  string(enumor.GlobalConfigTypeRegionDefaultSecGroup),
 		})
 	}
 

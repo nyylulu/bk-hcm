@@ -23,7 +23,7 @@ import (
 	csbwpkg "hcm/pkg/api/cloud-server/bandwidth-package"
 	cgconf "hcm/pkg/api/core/global-config"
 	datagconf "hcm/pkg/api/data-service/global_config"
-	"hcm/pkg/criteria/constant"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
@@ -54,9 +54,9 @@ func (svc *bandSvc) UpdateRecommendBandPackage(cts *rest.Contexts) (interface{},
 	if len(config) == 0 {
 		createReq := &datagconf.BatchCreateReqT[any]{Configs: []cgconf.GlobalConfigT[any]{
 			{
-				ConfigKey:   constant.GlobalConfigTypeCLBBandwidthPackageRecommend,
+				ConfigKey:   string(enumor.GlobalConfigKeyCLBBandwidthPackageRecommend),
 				ConfigValue: req.PackageIDs,
-				ConfigType:  constant.GlobalConfigTypeCLBBandwidthPackageRecommend,
+				ConfigType:  string(enumor.GlobalConfigTypeCLBBandwidthPackageRecommend),
 			},
 		}}
 		if _, err = svc.client.DataService().Global.GlobalConfig.BatchCreate(cts.Kit, createReq); err != nil {
@@ -69,9 +69,9 @@ func (svc *bandSvc) UpdateRecommendBandPackage(cts *rest.Contexts) (interface{},
 	updateReq := &datagconf.BatchUpdateReq{Configs: []cgconf.GlobalConfigT[any]{
 		{
 			ID:          configID,
-			ConfigKey:   constant.GlobalConfigTypeCLBBandwidthPackageRecommend,
+			ConfigKey:   string(enumor.GlobalConfigKeyCLBBandwidthPackageRecommend),
 			ConfigValue: req.PackageIDs,
-			ConfigType:  constant.GlobalConfigTypeCLBBandwidthPackageRecommend,
+			ConfigType:  string(enumor.GlobalConfigTypeCLBBandwidthPackageRecommend),
 		},
 	}}
 	if err = svc.client.DataService().Global.GlobalConfig.BatchUpdate(cts.Kit, updateReq); err != nil {

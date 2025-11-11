@@ -22,6 +22,7 @@ import (
 	datagconf "hcm/pkg/api/data-service/global_config"
 	"hcm/pkg/client"
 	"hcm/pkg/criteria/constant"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/dal"
 	"hcm/pkg/dal/dao/tools"
@@ -266,7 +267,7 @@ var regionToVpc = map[string]string{
 func (v *vpc) GetRegionDftVpc(kt *kit.Kit, region string) (string, error) {
 	listReq := &core.ListReq{
 		Filter: tools.ExpressionAnd(
-			tools.RuleEqual("config_type", constant.GlobalConfigTypeRegionDefaultVpc),
+			tools.RuleEqual("config_type", enumor.GlobalConfigTypeRegionDefaultVpc),
 			tools.RuleEqual("config_key", region),
 		),
 		Page: core.NewDefaultBasePage(),
@@ -298,7 +299,7 @@ func (v *vpc) GetRegionDftVpc(kt *kit.Kit, region string) (string, error) {
 func (v *vpc) IsRegionDftVpc(kt *kit.Kit, vpc string) (bool, error) {
 	listReq := &core.ListReq{
 		Filter: tools.ExpressionAnd(
-			tools.RuleEqual("config_type", constant.GlobalConfigTypeRegionDefaultVpc),
+			tools.RuleEqual("config_type", enumor.GlobalConfigTypeRegionDefaultVpc),
 			tools.RuleJSONEqual("config_value.vpc_id", vpc),
 		),
 		Page: &core.BasePage{Count: true},
@@ -346,7 +347,7 @@ func (v *vpc) UpsertRegionDftVpc(kt *kit.Kit, input []types.RegionDftVpc) error 
 
 	listReq := &core.ListReq{
 		Filter: tools.ExpressionAnd(
-			tools.RuleEqual("config_type", constant.GlobalConfigTypeRegionDefaultVpc),
+			tools.RuleEqual("config_type", enumor.GlobalConfigTypeRegionDefaultVpc),
 			tools.RuleJsonIn("config_key", regions),
 		),
 		Page: core.NewDefaultBasePage(),
@@ -379,7 +380,7 @@ func (v *vpc) UpsertRegionDftVpc(kt *kit.Kit, input []types.RegionDftVpc) error 
 		create = append(create, cgconf.GlobalConfigT[any]{
 			ConfigKey:   regionKey,
 			ConfigValue: vpcVal,
-			ConfigType:  constant.GlobalConfigTypeRegionDefaultVpc,
+			ConfigType:  string(enumor.GlobalConfigTypeRegionDefaultVpc),
 		})
 	}
 
