@@ -31,13 +31,13 @@ import (
 func InitService(c *capability.Capability) {
 	logics := taskLogics.New(c.SchedulerIf, c.RecyclerIf, c.InformerIf, c.OperationIf)
 	s := &service{
-		client:       c.Client,
-		logics:       logics,
-		configLogics: c.ConfigLogics,
-		planLogics:   c.PlanController,
-		authorizer:   c.Authorizer,
-		itsmClient:   c.ThirdCli.ITSM,
-		gcLogics:     c.GcLogic,
+		client:         c.Client,
+		logics:         logics,
+		configLogics:   c.ConfigLogics,
+		planLogics:     c.PlanController,
+		authorizer:     c.Authorizer,
+		itsmClient:     c.ThirdCli.ITSM,
+		gcLogics:       c.GcLogic,
 		dissolveLogics: c.DissolveLogic,
 	}
 	h := rest.NewHandler()
@@ -58,13 +58,13 @@ func InitService(c *capability.Capability) {
 }
 
 type service struct {
-	client       *client.ClientSet
-	logics       taskLogics.Logics
-	configLogics config.Logics
-	planLogics   planLogics.Logics
-	authorizer   auth.Authorizer
-	itsmClient   itsm.Client
-	gcLogics     gclogics.Logics
+	client         *client.ClientSet
+	logics         taskLogics.Logics
+	configLogics   config.Logics
+	planLogics     planLogics.Logics
+	authorizer     auth.Authorizer
+	itsmClient     itsm.Client
+	gcLogics       gclogics.Logics
 	dissolveLogics dissolve.Logics
 }
 
@@ -143,6 +143,9 @@ func (s *service) initSchedulerService(h *rest.Handler) {
 	h.Add("ListApplyAuditInfo", http.MethodPost, "/apply/ticket/audit/info/list", s.ListApplyAuditInfo)
 	h.Add("ApproveApplyTicketNode", http.MethodPost, "/approve/apply/ticket/node", s.ApproveApplyTicketNode)
 	h.Add("FindApproveNodeResult", http.MethodPost, "/find/approve_node/result", s.FindApproveNodeResult)
+
+	h.Add("ListHostApplyItsmTicket", http.MethodPost, "/apply/itsm/ticket/list", s.ListHostApplyItsmTicket)
+	h.Add("ListHostApplyCrpTicket", http.MethodPost, "/apply/crp/ticket/list", s.ListHostApplyCrpTicket)
 }
 
 // bizService 业务下的接口

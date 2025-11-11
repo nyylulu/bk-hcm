@@ -356,6 +356,22 @@ var CrpOrderStatusCanRevoke = []CrpOrderStatus{
 	CrpOrderStatusDelivering,
 }
 
+var crpOrderStatusApprovalStateMap = map[CrpOrderStatus]ApprovalState{
+	CrpOrderStatusDeptApprove: HcmAdminApproval,
+	CrpOrderStatusPlanApprove: CrpAdminApproval,
+}
+
+// IsAdminApproval is admin approval.
+func (cs CrpOrderStatus) IsAdminApproval() bool {
+	_, ok := crpOrderStatusApprovalStateMap[cs]
+	return ok
+}
+
+// GetApprovalState get approval state.
+func (cs CrpOrderStatus) GetApprovalState() ApprovalState {
+	return crpOrderStatusApprovalStateMap[cs]
+}
+
 // CrpUpgradeOrderStatus is crp upgrade order status.
 type CrpUpgradeOrderStatus int
 
@@ -539,3 +555,62 @@ const (
 	// QueryOrderInfoStatusSuccess 根据销毁单据查询预测返还信息接口 - 成功状态
 	QueryOrderInfoStatusSuccess = 0
 )
+
+// ApprovalState defines the approval state
+type ApprovalState string
+
+const (
+	// LeaderApproval defines the leader approval state
+	LeaderApproval ApprovalState = "leader_approval"
+	// HcmAdminApproval defines the hcm admin approval state
+	HcmAdminApproval ApprovalState = "hcm_admin_approval"
+	// CrpAdminApproval defines the crp admin approval state
+	CrpAdminApproval ApprovalState = "crp_admin_approval"
+)
+
+// Validate validates the approve state
+func (a ApprovalState) Validate() error {
+	if _, ok := approveStateMap[a]; !ok {
+		return fmt.Errorf("invalid approval state: %s", a)
+	}
+
+	return nil
+}
+
+var approveStateMap = map[ApprovalState]string{
+	LeaderApproval:   "直属leader审批",
+	HcmAdminApproval: "HCM系统管理员审批",
+	CrpAdminApproval: "CRP系统管理员审批",
+}
+
+// HostApplyItsmStepName defines the host apply itsm step name
+type HostApplyItsmStepName string
+
+const (
+	// HostApplyItsmStepNameSpecifiedUserApproval defines the host apply specified user approval step name
+	HostApplyItsmStepNameSpecifiedUserApproval HostApplyItsmStepName = "指定审批人审批"
+	// HostApplyItsmStepNameLeaderApproval defines the host apply itsm leader approval step name
+	HostApplyItsmStepNameLeaderApproval HostApplyItsmStepName = "直属Leader审批"
+	// HostApplyItsmStepNameAdminApproval defines the host apply itsm admin approval step name
+	HostApplyItsmStepNameAdminApproval HostApplyItsmStepName = "管理员审批"
+)
+
+// Validate validates the host apply itsm step name
+func (h HostApplyItsmStepName) Validate() error {
+	if _, ok := hostApplyItsmStepNameApproveStateMap[h]; !ok {
+		return fmt.Errorf("invalid host apply itsm step name: %s", h)
+	}
+
+	return nil
+}
+
+var hostApplyItsmStepNameApproveStateMap = map[HostApplyItsmStepName]ApprovalState{
+	HostApplyItsmStepNameSpecifiedUserApproval: LeaderApproval,
+	HostApplyItsmStepNameLeaderApproval:        LeaderApproval,
+	HostApplyItsmStepNameAdminApproval:         HcmAdminApproval,
+}
+
+// GetApprovalState get the approval state
+func (h HostApplyItsmStepName) GetApprovalState() ApprovalState {
+	return hostApplyItsmStepNameApproveStateMap[h]
+}
