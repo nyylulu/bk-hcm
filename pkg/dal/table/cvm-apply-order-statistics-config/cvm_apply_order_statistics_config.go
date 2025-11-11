@@ -17,8 +17,8 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package tablecvmapplyorderstatisticsconfig cvm apply order statistics config table
-package tablecvmapplyorderstatisticsconfig
+// Package daoapplystat package dao apply statistics config.
+package daoapplystat
 
 import (
 	"errors"

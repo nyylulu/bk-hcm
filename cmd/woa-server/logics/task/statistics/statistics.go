@@ -32,7 +32,7 @@ import (
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/dal/dao"
 	daotypes "hcm/pkg/dal/dao/types"
-	tablecvmapplyorderstatisticsconfig "hcm/pkg/dal/table/cvm-apply-order-statistics-config"
+	tableapplystat "hcm/pkg/dal/table/cvm-apply-order-statistics-config"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/runtime/filter"
@@ -265,7 +265,7 @@ func (s *statistics) loadConfigs(kt *kit.Kit, monthSlice []string) ([]*configTyp
 }
 
 // convertTableToType
-func convertTableToType(table *tablecvmapplyorderstatisticsconfig.CvmApplyOrderStatisticsConfigTable) *configTypes.CvmApplyOrderStatisticsConfig {
+func convertTableToType(table *tableapplystat.CvmApplyOrderStatisticsConfigTable) *configTypes.CvmApplyOrderStatisticsConfig {
 	// types.Time 是字符串类型，需要解析为 time.Time
 	createdAt := time.Time{}
 	updatedAt := time.Time{}
