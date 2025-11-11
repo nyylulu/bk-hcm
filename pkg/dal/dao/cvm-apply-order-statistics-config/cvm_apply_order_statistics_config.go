@@ -188,7 +188,8 @@ func (d Dao) List(kt *kit.Kit, opt *types.ListOption) (*types.ListResult[tablecv
 		return nil, err
 	}
 
-	return &types.ListResult[tablecvmapplyorderstatisticsconfig.CvmApplyOrderStatisticsConfigTable]{Count: 0, Details: details}, nil
+	return &types.ListResult[tablecvmapplyorderstatisticsconfig.CvmApplyOrderStatisticsConfigTable]{
+		Count: 0, Details: details}, nil
 }
 
 // DeleteWithTx delete cvm apply order statistics config with tx.
