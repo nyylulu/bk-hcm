@@ -17,8 +17,8 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package daocvmapplyorderstatisticsconfig cvm apply order statistics config dao.
-package daocvmapplyorderstatisticsconfig
+// Package daoapplystat package dao apply statistics config.
+package daoapplystat
 
 import (
 	"fmt"
