@@ -324,7 +324,7 @@ func newOtherClient(kt *kit.Kit, service *Service, itsmCli itsm.Client, sd servi
 		return nil, err
 	}
 
-	statisticsIf := taskStatistics.New(service.dao)
+	statisticsIf := taskStatistics.New(service.client)
 	service.taskStatistics = statisticsIf
 
 	taskLogic := taskLogics.New(service.schedulerIf, recyclerIf, service.informerIf, operationIf, statisticsIf)

@@ -19,22 +19,20 @@
 
 package config
 
-import (
-	"time"
-)
+import "hcm/pkg/dal/table/types"
 
 // CvmApplyOrderStatisticsConfig 申请单统计配置实体
 type CvmApplyOrderStatisticsConfig struct {
-	ID         string    `json:"id" bson:"id"`
-	YearMonth  string    `json:"year_month" bson:"year_month"`
-	BkBizID    int64     `json:"bk_biz_id" bson:"bk_biz_id"`
-	SubOrderID string    `json:"sub_order_id" bson:"sub_order_id"`
-	StartAt    string    `json:"start_at" bson:"start_at"`
-	EndAt      string    `json:"end_at" bson:"end_at"`
-	Memo       string    `json:"memo" bson:"memo"`
-	Extension  string    `json:"extension" bson:"extension"`
-	Creator    string    `json:"creator" bson:"creator"`
-	Reviser    string    `json:"reviser" bson:"reviser"`
-	CreatedAt  time.Time `json:"created_at" bson:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at" bson:"updated_at"`
+	ID          string          `json:"id"`
+	YearMonth   string          `json:"year_month"`
+	BkBizID     int64           `json:"bk_biz_id"`
+	SubOrderIDs string          `json:"sub_order_ids"`
+	StartAt     string          `json:"start_at"`
+	EndAt       string          `json:"end_at"`
+	Memo        string          `json:"memo"`
+	Extension   types.JsonField `json:"extension"`
+	Creator     string          `json:"creator"`
+	Reviser     string          `json:"reviser"`
+	CreatedAt   string          `json:"created_at"`
+	UpdatedAt   string          `json:"updated_at"`
 }

@@ -114,8 +114,7 @@ func (d Dao) UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, filterExpr *filter.Expressio
 
 	opts := utils.NewFieldOptions().
 		AddIgnoredFields(types.DefaultIgnoredFields...).
-		AddBlankedFields("memo", "sub_order_id", "start_at", "end_at", "extension")
-	opts = opts.AddIgnoredFields("year_month")
+		AddIgnoredFields("year_month")
 
 	setExpr, toUpdate, err := utils.RearrangeSQLDataWithOption(model, opts)
 	if err != nil {
@@ -133,9 +132,9 @@ func (d Dao) UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, filterExpr *filter.Expressio
 	}
 
 	if effected == 0 {
-		logs.ErrorJson(
-			"update cvm apply order statistics config, but record not found, filter: %v, rid: %s",
+		logs.Infof("update cvm apply order statistics config, but record not found, filter: %v, rid: %s",
 			filterExpr, kt.Rid)
+		return orm.ErrRecordNotFound
 	}
 
 	return nil
@@ -148,7 +147,7 @@ func (d Dao) List(kt *kit.Kit, opt *types.ListOption) (*types.ListResult[tableap
 	}
 
 	columnTypes := tableapplystat.CvmApplyOrderStatisticsConfigTableColumns.ColumnTypes()
-	if err := opt.ValidateExcludeFilter(
+	if err := opt.Validate(
 		filter.NewExprOption(filter.RuleFields(columnTypes)),
 		core.NewDefaultPageOption()); err != nil {
 		return nil, err

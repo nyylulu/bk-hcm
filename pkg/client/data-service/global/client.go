@@ -68,8 +68,9 @@ type Client struct {
 	Tenant         *TenantClient
 	ResourcePlan   *ResourcePlanClient
 
-	GlobalConfig *GlobalConfigsClient
-	OrgTopo      *OrgTopoClient
+	GlobalConfig               *GlobalConfigsClient
+	ApplyOrderStatisticsConfig *ApplyOrderStatisticsConfigClient
+	OrgTopo                    *OrgTopoClient
 
 	ResUsageBizRel *ResUsageBizRelClient
 }
@@ -117,12 +118,13 @@ func NewClient(client rest.ClientInterface) *Client {
 		Cos:            NewCosClient(client),
 		RollingServer:  NewRollingServerClient(client),
 
-		TaskDetail:     NewTaskDetailClient(client),
-		TaskManagement: NewTaskManagementClient(client),
-		Tenant:         NewTenantClient(client),
-		GlobalConfig:   NewGlobalConfigClient(client),
-		ResUsageBizRel: NewResUsageBizRelRelClient(client),
-		ResourcePlan:   NewResourcePlanClient(client),
-		OrgTopo:      NewOrgTopoClient(client),
+		TaskDetail:                 NewTaskDetailClient(client),
+		TaskManagement:             NewTaskManagementClient(client),
+		Tenant:                     NewTenantClient(client),
+		GlobalConfig:               NewGlobalConfigClient(client),
+		ApplyOrderStatisticsConfig: NewApplyOrderStatisticsConfigClient(client),
+		ResUsageBizRel:             NewResUsageBizRelRelClient(client),
+		ResourcePlan:               NewResourcePlanClient(client),
+		OrgTopo:                    NewOrgTopoClient(client),
 	}
 }
