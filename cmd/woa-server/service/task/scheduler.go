@@ -20,6 +20,7 @@ import (
 	"reflect"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"hcm/cmd/woa-server/model/task"
@@ -666,7 +667,15 @@ func (s *service) createApplyOrder(kt *kit.Kit, input *types.ApplyReq) (any, err
 
 func (s *service) verifyAccordingToRequireType(kt *kit.Kit, input *types.ApplyReq) error {
 	switch input.RequireType {
-	case enumor.RequireTypeRollServer, enumor.RequireTypeGreenChannel:
+	case enumor.RequireTypeRollServer:
+		if err := s.validateDeviceTypeForGreenAndRoll(kt, input); err != nil {
+			return err
+		}
+		if err := s.verifyProhibitDAPrefixDeviceType(kt, input); err != nil {
+			return err
+		}
+		return nil
+	case enumor.RequireTypeGreenChannel:
 		return s.validateDeviceTypeForGreenAndRoll(kt, input)
 	case enumor.RequireTypeDissolve:
 		return s.verifyBizDissolveQuota(kt, input)
@@ -708,6 +717,21 @@ func (s *service) verifyBizDissolveQuota(kt *kit.Kit, input *types.ApplyReq) err
 			dissolveQuota)
 	}
 
+	return nil
+}
+
+func (s *service) verifyProhibitDAPrefixDeviceType(kt *kit.Kit, input *types.ApplyReq) error {
+	for _, subOrder := range input.Suborders {
+		if subOrder.Spec == nil {
+			logs.Errorf("suborder spec is nil, rid: %s", kt.Rid)
+			return errors.New("suborder spec is nil")
+		}
+
+		if strings.HasPrefix(strings.TrimSpace(strings.ToUpper(subOrder.Spec.DeviceType)), "DA") {
+			logs.Errorf("prohibit to apply for DA prefix device type, rid: %s", kt.Rid)
+			return errors.New("prohibit to apply for DA prefix device type")
+		}
+	}
 	return nil
 }
 
