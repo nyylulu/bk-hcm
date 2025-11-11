@@ -22,7 +22,10 @@ package cvm
 import (
 	"fmt"
 
+	"hcm/cmd/woa-server/dal/task/table"
+	cscvm "hcm/pkg/api/cloud-server/cvm"
 	corecvm "hcm/pkg/api/core/cloud/cvm"
+	coretask "hcm/pkg/api/core/task"
 	"hcm/pkg/api/data-service/task"
 	ts "hcm/pkg/api/task-server"
 	taskcvm "hcm/pkg/api/task-server/cvm"
@@ -34,30 +37,28 @@ import (
 )
 
 // CvmIdleCheck 空闲检查CVM
-func (c *cvm) CvmIdleCheck(kt *kit.Kit, bkBizID int64, bkHostIDs []int64, source enumor.TaskManagementSource,
+func (c *cvm) CvmIdleCheck(kt *kit.Kit, req *cscvm.BatchIdleCheckReq,
 	cvmList []corecvm.Cvm[corecvm.TCloudZiyanHostExtension]) (string, string, error) {
 
 	baseCvms := slice.Map[corecvm.Cvm[corecvm.TCloudZiyanHostExtension], corecvm.BaseCvm](
-		cvmList, func(c corecvm.Cvm[corecvm.TCloudZiyanHostExtension]) corecvm.BaseCvm {
-			return c.BaseCvm
-		})
+		cvmList, func(c corecvm.Cvm[corecvm.TCloudZiyanHostExtension]) corecvm.BaseCvm { return c.BaseCvm })
 	vendorList, accountList, _, detailList := groupCvmByVendorAndAccountAndRegion(baseCvms)
-	taskManagementID, err := c.createTaskManagement(kt, bkBizID, vendorList, accountList,
-		source, enumor.TaskIdleCheckCvm, enumor.TaskManagementResCVM)
+	// 记录空闲检查跳过的步骤
+	taskManageExtension := &coretask.ManagementExt{ExcludeSteps: req.ExcludeSteps}
+	taskManagementID, err := c.createTaskManagement(kt, req.BkBizID, vendorList, accountList,
+		req.Source, enumor.TaskIdleCheckCvm, enumor.TaskManagementResCVM, taskManageExtension)
 	if err != nil {
-		logs.Errorf("create task management failed, bizID: %d, accountList: %v, err: %v, rid: %s", bkBizID,
+		logs.Errorf("create task management failed, bizID: %d, accountList: %v, err: %v, rid: %s", req.BkBizID,
 			accountList, err, kt.Rid)
 		return "", "", err
 	}
 
-	hostIDToTaskDetailID, err := c.createTaskDetailsForIdleCheck(kt, bkBizID, taskManagementID, enumor.TaskIdleCheckCvm,
-		detailList)
+	hostIDToTaskDetailID, err := c.createTaskDetailsForIdleCheck(kt, req.BkBizID, taskManagementID,
+		enumor.TaskIdleCheckCvm, detailList, req.ExcludeSteps)
 	if err != nil {
-		logs.Errorf("create task details failed, taskManagementID: %s, err: %v, rid: %s", taskManagementID, err,
-			kt.Rid)
+		logs.Errorf("create task details failed, taskManagementID: %s, err: %v, rid: %s", taskManagementID, err, kt.Rid)
 		return "", "", err
 	}
-
 	defer func() {
 		// 只有在发生错误时才更新任务状态为失败
 		if err != nil {
@@ -92,18 +93,18 @@ func (c *cvm) CvmIdleCheck(kt *kit.Kit, bkBizID int64, bkHostIDs []int64, source
 		ips = append(ips, one.BaseCvm.PrivateIPv4Addresses[0])
 	}
 
-	req := &woaserver.StartIdleCheckReq{
-		HostIDs:  bkHostIDs,
-		AssetIDs: assetIDs,
-		IPs:      ips,
-		BkBizID:  bkBizID,
+	startReq := &woaserver.StartIdleCheckReq{
+		HostIDs:      req.BkHostIDs,
+		AssetIDs:     assetIDs,
+		IPs:          ips,
+		BkBizID:      req.BkBizID,
+		ExcludeSteps: req.ExcludeSteps,
 	}
-	result, err := c.client.WoaServer().Task.StartIdleCheck(kt, req)
+	result, err := c.client.WoaServer().Task.StartIdleCheck(kt, startReq)
 	if err != nil {
 		logs.Errorf("start idle check failed, err: %v, rid: %s", err, kt.Rid)
 		return "", "", err
 	}
-
 	flowID, err := c.buildFlowForIdleCheck(kt, result, hostIDToTaskDetailID)
 	if err != nil {
 		logs.Errorf("build flow failed, err: %v, rid: %s", err, kt.Rid)
@@ -113,7 +114,6 @@ func (c *cvm) CvmIdleCheck(kt *kit.Kit, bkBizID int64, bkHostIDs []int64, source
 	for _, detail := range detailList {
 		detail.param.SubOrderID = result.SuborderID
 	}
-
 	if err = c.updateTaskManagementAndDetailsForCvm(kt, taskManagementID, flowID, detailList); err != nil {
 		logs.Errorf("update task management and details failed, err: %v, rid: %s", err, kt.Rid)
 		return "", "", err
@@ -123,7 +123,8 @@ func (c *cvm) CvmIdleCheck(kt *kit.Kit, bkBizID int64, bkHostIDs []int64, source
 
 // createTaskDetailsForIdleCheck 创建任务详情
 func (c *cvm) createTaskDetailsForIdleCheck(kt *kit.Kit, bkBizID int64, taskManagementID string,
-	taskOperation enumor.TaskOperation, details []*cvmTaskDetail) (map[int64]string, error) {
+	taskOperation enumor.TaskOperation, details []*cvmTaskDetail, excludeSteps []table.DetectStepName) (
+	map[int64]string, error) {
 
 	if len(details) == 0 {
 		return nil, nil
@@ -137,6 +138,9 @@ func (c *cvm) createTaskDetailsForIdleCheck(kt *kit.Kit, bkBizID int64, taskMana
 			Operation:        taskOperation,
 			State:            enumor.TaskDetailInit,
 			Param:            detail.param,
+			Extension: &coretask.ManagementExt{
+				ExcludeSteps: excludeSteps, // 记录下需要排除的预检步骤
+			},
 		})
 	}
 

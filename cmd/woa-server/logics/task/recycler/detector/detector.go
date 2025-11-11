@@ -26,6 +26,7 @@ import (
 	"hcm/pkg/cc"
 	"hcm/pkg/client"
 	"hcm/pkg/criteria/constant"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -203,6 +204,17 @@ func (d *Detector) getDetectStepConfigs() ([]*table.DetectStepCfg, error) {
 }
 
 func prepareStepForTask(task *table.DetectTask, cfg *table.DetectStepCfg) *table.DetectStep {
+	// 是否跳过该预检步骤
+	skip := enumor.DetectStepSkipNo
+	if task != nil && len(task.ExcludeSteps) > 0 {
+		for _, excludeStep := range task.ExcludeSteps {
+			if excludeStep == cfg.Name {
+				skip = enumor.DetectStepSkipYes
+				break
+			}
+		}
+	}
+
 	now := time.Now()
 	step := &table.DetectStep{
 		OrderID:    task.OrderID,
@@ -221,6 +233,7 @@ func prepareStepForTask(task *table.DetectTask, cfg *table.DetectStepCfg) *table
 		Message:    "",
 		StartAt:    now,
 		EndAt:      now,
+		Skip:       skip,
 		CreateAt:   now,
 		UpdateAt:   now,
 	}

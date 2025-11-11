@@ -25,6 +25,7 @@ import (
 
 	"hcm/pkg/api/core"
 	corecvm "hcm/pkg/api/core/cloud/cvm"
+	coretask "hcm/pkg/api/core/task"
 	dataproto "hcm/pkg/api/data-service/cloud"
 	"hcm/pkg/api/data-service/task"
 	ts "hcm/pkg/api/task-server"
@@ -55,7 +56,7 @@ func (c *cvm) CvmPowerOperation(kt *kit.Kit, bkBizID int64, uniqueID string, sou
 
 	vendorList, accountList, groupResult, detailList := groupCvmByVendorAndAccountAndRegion(cvmList)
 	taskManagementID, err := c.createTaskManagement(kt, bkBizID, vendorList, accountList,
-		source, taskOperation, enumor.TaskManagementResCVM)
+		source, taskOperation, enumor.TaskManagementResCVM, &coretask.ManagementExt{})
 	if err != nil {
 		logs.Errorf("create task management failed,bizID: %d, accountList: %v, err: %v, rid: %s",
 			bkBizID, accountList, err, kt.Rid)

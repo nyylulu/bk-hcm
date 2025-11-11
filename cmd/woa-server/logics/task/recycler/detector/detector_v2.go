@@ -355,7 +355,7 @@ func (d *Detector) prepareDetectStep(kt *kit.Kit, suborderID string, cfg *table.
 	}
 
 	if len(needToCreate) > 0 {
-		if err := dao.Set().DetectStep().BatchCreateDetectSteps(kt.Ctx, needToCreate); err != nil {
+		if err = dao.Set().DetectStep().BatchCreateDetectSteps(kt.Ctx, needToCreate); err != nil {
 			logs.Errorf("failed to create detect step %s of order: %s, err: %v, rid: %s",
 				cfg.Name, suborderID, err, kt.Rid)
 			return nil, nil, err

@@ -19,6 +19,7 @@ import (
 	"sync/atomic"
 
 	"hcm/cmd/woa-server/dal/task/table"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/api-gateway/cmdb"
@@ -97,9 +98,23 @@ func (p *PreCheckWorkGroup) Run(kt *kit.Kit, steps []*StepMeta) {
 
 	hostMap := make(map[int64][]*HostExecInfo, len(steps))
 	for _, step := range steps {
+		// 该主机对应的步骤已被设置为跳过
+		if step.Step != nil && step.Step.Skip == enumor.DetectStepSkipYes {
+			logs.Infof("IdleCheck:%s:SKIP ONE, subOrderID: %s, IP: %s, stepMeta: %+v, rid: %s",
+				table.StepPreCheck, step.Step.SuborderID, step.Step.IP, cvt.PtrToVal(step), kt.Rid)
+			p.HandleResult(kt, []*StepMeta{step}, nil, "跳过", false)
+			continue
+		}
+
 		hostMap[step.Step.HostID] = append(hostMap[step.Step.HostID], &HostExecInfo{StepMeta: step})
 	}
 	hostIDs := maps.Keys(hostMap)
+
+	// 所有步骤都跳过了该步骤，则直接返回
+	if len(hostIDs) == 0 {
+		logs.Warnf("IdleCheck:%s:SKIP ALL, steps: %+v, rid: %s", table.StepPreCheck, cvt.PtrToSlice(steps), kt.Rid)
+		return
+	}
 
 	worker := preCheckWorker{
 		hostMap:       hostMap,

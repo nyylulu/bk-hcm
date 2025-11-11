@@ -17,13 +17,14 @@ import (
 	"fmt"
 	"sync/atomic"
 
+	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/pkg"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/querybuilder"
-	"hcm/pkg/tools/slice"
 )
 
 // CheckOwnerMaxBatchSize 检查是否包含虚拟子机
@@ -97,7 +98,31 @@ func (t *CheckOwnerWorkGroup) queryWorker(kt *kit.Kit, idx int) {
 }
 
 func (t *CheckOwnerWorkGroup) check(kt *kit.Kit, steps []*StepMeta) {
-	assetIDs := slice.Map(steps, func(step *StepMeta) string { return step.Step.AssetID })
+	var assetIDs []string
+	var newSteps []*StepMeta
+	for _, step := range steps {
+		if step.Step == nil {
+			logs.Errorf("IdleCheck:%s:failed to check owner, step.Step is nil, rid: %s", table.StepCheckOwner, kt.Rid)
+			err := fmt.Errorf("IdleCheck:%s, step.Step is nil", table.StepCheckOwner)
+			t.HandleResult(kt, []*StepMeta{step}, err, err.Error(), false)
+			continue
+		}
+		// 该主机对应的步骤已被设置为跳过
+		if step.Step.Skip == enumor.DetectStepSkipYes {
+			logs.Infof("IdleCheck:%s:SKIP ONE, subOrderID: %s, IP: %s, stepMeta: %+v, rid: %s",
+				table.StepCheckOwner, step.Step.SuborderID, step.Step.IP, cvt.PtrToVal(step), kt.Rid)
+			t.HandleResult(kt, []*StepMeta{step}, nil, "跳过", false)
+			continue
+		}
+		assetIDs = append(assetIDs, step.Step.AssetID)
+		newSteps = append(newSteps, step)
+	}
+
+	// 所有步骤都跳过了该步骤，则直接返回
+	if len(assetIDs) == 0 {
+		logs.Warnf("IdleCheck:%s:SKIP ALL, steps: %+v, rid: %s", table.StepCheckOwner, cvt.PtrToSlice(steps), kt.Rid)
+		return
+	}
 
 	req := &cmdb.ListHostReq{
 		HostPropertyFilter: &cmdb.QueryFilter{
@@ -131,7 +156,7 @@ func (t *CheckOwnerWorkGroup) check(kt *kit.Kit, steps []*StepMeta) {
 		if err != nil {
 			logs.Errorf("failed to get cc host info by bk_svr_owner_asset_id, err: %v", err)
 			e := fmt.Errorf("failed to get cc host info by bk_svr_owner_asset_id, err: %v", err)
-			t.HandleResult(kt, steps, e, err.Error(), true)
+			t.HandleResult(kt, newSteps, e, err.Error(), true)
 			return
 		}
 		for _, host := range resp.Info {
@@ -142,7 +167,7 @@ func (t *CheckOwnerWorkGroup) check(kt *kit.Kit, steps []*StepMeta) {
 		}
 		req.Page.Start += req.Page.Limit
 	}
-	for _, step := range steps {
+	for _, step := range newSteps {
 		if _, ok := hostVmMap[step.Step.AssetID]; ok {
 			hostVmStr := structToStr(hostVmMap[step.Step.AssetID])
 			err := fmt.Errorf("host has %d vm: %s", len(hostVmMap[step.Step.AssetID]), hostVmStr)

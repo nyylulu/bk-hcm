@@ -25,10 +25,12 @@ import (
 	"strings"
 	"time"
 
+	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/tmpapi"
+	cvt "hcm/pkg/tools/converter"
 
 	"github.com/mitchellh/mapstructure"
 )
@@ -58,6 +60,14 @@ func checkBasic(kt *kit.Kit, steps []*StepMeta, resultHandler StepResultHandler,
 	}
 
 	for _, step := range steps {
+		// 该主机对应的步骤已被设置为跳过
+		if step.Step != nil && step.Step.Skip == enumor.DetectStepSkipYes {
+			logs.Infof("IdleCheck:%s:SKIP ONE, subOrderID: %s, IP: %s, stepMeta: %+v, rid: %s",
+				table.StepBasicCheck, step.Step.SuborderID, step.Step.IP, cvt.PtrToVal(step), kt.Rid)
+			resultHandler.HandleResult(kt, []*StepMeta{step}, nil, "跳过", false)
+			continue
+		}
+
 		exeInfo, retry, err := checkStrategies(kt, step.Step.IP, cliSet)
 		if err != nil {
 			logs.Errorf("recycle detector check basic failed, err: %v, ip: %s, rid: %s", err, step.Step.IP, kt.Rid)

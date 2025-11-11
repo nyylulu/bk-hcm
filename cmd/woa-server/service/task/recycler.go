@@ -1292,23 +1292,24 @@ func (s *service) StartIdleCheck(cts *rest.Contexts) (any, error) {
 	now := time.Now()
 	for i, hostID := range req.HostIDs {
 		task := &table.DetectTask{
-			OrderID:    orderID,
-			SuborderID: suborderID,
-			TaskID:     fmt.Sprintf("%s-%d", suborderID, i+1),
-			HostID:     hostID,
-			AssetID:    req.AssetIDs[i],
-			IP:         req.IPs[i],
-			User:       cts.Kit.User,
-			Status:     table.DetectStatusInit,
-			Message:    "",
-			TotalNum:   0,
-			SuccessNum: 0,
-			PendingNum: 0,
-			FailedNum:  0,
-			CreateAt:   now,
-			UpdateAt:   now,
+			OrderID:      orderID,
+			SuborderID:   suborderID,
+			TaskID:       fmt.Sprintf("%s-%d", suborderID, i+1),
+			HostID:       hostID,
+			AssetID:      req.AssetIDs[i],
+			IP:           req.IPs[i],
+			User:         cts.Kit.User,
+			Status:       table.DetectStatusInit,
+			Message:      "",
+			TotalNum:     0,
+			SuccessNum:   0,
+			PendingNum:   0,
+			FailedNum:    0,
+			ExcludeSteps: req.ExcludeSteps,
+			CreateAt:     now,
+			UpdateAt:     now,
 		}
-		if err := dao.Set().DetectTask().CreateDetectTask(cts.Kit.Ctx, task); err != nil {
+		if err = dao.Set().DetectTask().CreateDetectTask(cts.Kit.Ctx, task); err != nil {
 			logs.Errorf("failed to create detection task for ip: %s, err: %v, rid: %s", req.IPs[i], err, cts.Kit.Rid)
 			return nil, err
 		}

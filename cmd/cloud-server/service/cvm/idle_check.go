@@ -48,10 +48,10 @@ func (svc *cvmSvc) BatchIdleCheckBizCvm(cts *rest.Contexts) (interface{}, error)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 	req := new(cscvm.BatchIdleCheckReq)
-	if err := cts.DecodeInto(req); err != nil {
+	if err = cts.DecodeInto(req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
-	if err := req.Validate(); err != nil {
+	if err = req.Validate(); err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
@@ -73,8 +73,10 @@ func (svc *cvmSvc) BatchIdleCheckBizCvm(cts *rest.Contexts) (interface{}, error)
 		logs.Errorf("failed to check idle check permission, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
-	taskManagementID, suborderID, err := svc.cvmLgc.CvmIdleCheck(cts.Kit, bizID, req.BkHostIDs,
-		enumor.TaskManagementSourceAPI, cvmList)
+
+	req.BkBizID = bizID
+	req.Source = enumor.TaskManagementSourceAPI
+	taskManagementID, suborderID, err := svc.cvmLgc.CvmIdleCheck(cts.Kit, req, cvmList)
 	if err != nil {
 		logs.Errorf("build flow and task management failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err

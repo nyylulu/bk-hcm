@@ -85,3 +85,12 @@ const (
 	// PreCheckDetectStep pre check detect step
 	PreCheckDetectStep DetectStepName = "pre_check"
 )
+
+// DetectStepSkip 预检步骤跳过状态
+type DetectStepSkip int
+
+// definition of various skip status
+const (
+	DetectStepSkipNo  DetectStepSkip = 0
+	DetectStepSkipYes DetectStepSkip = 1
+)

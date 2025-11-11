@@ -19,19 +19,20 @@ import (
 
 // DetectTask defines a detection task's detail information
 type DetectTask struct {
-	TaskID     string       `json:"task_id" bson:"task_id"`
-	OrderID    uint64       `json:"order_id" bson:"order_id"`
-	SuborderID string       `json:"suborder_id" bson:"suborder_id"`
-	AssetID    string       `json:"bk_asset_id" bson:"bk_asset_id"`
-	HostID     int64        `json:"bk_host_id" bson:"bk_host_id"`
-	IP         string       `json:"ip" bson:"ip"`
-	User       string       `json:"bk_username" bson:"bk_username"`
-	Status     DetectStatus `json:"status" bson:"status"`
-	Message    string       `json:"message" bson:"message"`
-	TotalNum   uint         `json:"total_num" bson:"total_num"`
-	SuccessNum uint         `json:"success_num" bson:"success_num"`
-	PendingNum uint         `json:"pending_num" bson:"pending_num"`
-	FailedNum  uint         `json:"failed_num" bson:"failed_num"`
-	CreateAt   time.Time    `json:"create_at" bson:"create_at"`
-	UpdateAt   time.Time    `json:"update_at" bson:"update_at"`
+	TaskID       string           `json:"task_id" bson:"task_id"`
+	OrderID      uint64           `json:"order_id" bson:"order_id"`
+	SuborderID   string           `json:"suborder_id" bson:"suborder_id"`
+	AssetID      string           `json:"bk_asset_id" bson:"bk_asset_id"`
+	HostID       int64            `json:"bk_host_id" bson:"bk_host_id"`
+	IP           string           `json:"ip" bson:"ip"`
+	User         string           `json:"bk_username" bson:"bk_username"`
+	Status       DetectStatus     `json:"status" bson:"status"`
+	Message      string           `json:"message" bson:"message"`
+	TotalNum     uint             `json:"total_num" bson:"total_num"`
+	SuccessNum   uint             `json:"success_num" bson:"success_num"`
+	PendingNum   uint             `json:"pending_num" bson:"pending_num"`
+	FailedNum    uint             `json:"failed_num" bson:"failed_num"`
+	ExcludeSteps []DetectStepName `json:"exclude_steps" bson:"exclude_steps"` // steps to be excluded
+	CreateAt     time.Time        `json:"create_at" bson:"create_at"`
+	UpdateAt     time.Time        `json:"update_at" bson:"update_at"`
 }

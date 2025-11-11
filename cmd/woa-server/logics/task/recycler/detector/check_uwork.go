@@ -19,12 +19,14 @@ import (
 	"strings"
 	"sync/atomic"
 
+	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/xrayapi"
 	"hcm/pkg/thirdparty/xshipapi"
 	"hcm/pkg/tools/classifier"
+	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/maps"
 	"hcm/pkg/tools/slice"
 
@@ -173,9 +175,23 @@ func (p *CheckUworkWorkGroup) Run(kt *kit.Kit, steps []*StepMeta) {
 
 	hostMap := make(map[string][]*HostExecInfo, len(steps))
 	for _, step := range steps {
+		// 该主机对应的步骤已被设置为跳过
+		if step.Step != nil && step.Step.Skip == enumor.DetectStepSkipYes {
+			logs.Infof("IdleCheck:%s:SKIP ONE, subOrderID: %s, IP: %s, stepMeta: %+v, rid: %s",
+				table.StepCheckUwork, step.Step.SuborderID, step.Step.IP, cvt.PtrToVal(step), kt.Rid)
+			p.HandleResult(kt, []*StepMeta{step}, nil, "跳过", false)
+			continue
+		}
+
 		hostMap[step.Step.AssetID] = append(hostMap[step.Step.AssetID], &HostExecInfo{StepMeta: step})
 	}
 	assetIDs := maps.Keys(hostMap)
+
+	// 所有步骤都跳过了该步骤，则直接返回
+	if len(assetIDs) == 0 {
+		logs.Warnf("IdleCheck:%s:SKIP ALL, steps: %+v, rid: %s", table.StepCheckUwork, cvt.PtrToSlice(steps), kt.Rid)
+		return
+	}
 
 	worker := checkUworkWorker{
 		xray:             p.xray,

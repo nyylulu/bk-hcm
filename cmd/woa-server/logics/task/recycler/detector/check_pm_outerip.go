@@ -28,6 +28,7 @@ import (
 
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/logics/task/sops"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/api-gateway/cmdb"
@@ -104,14 +105,38 @@ func (c *checkPmOuterIPWorkGroup) consume(kt *kit.Kit, idx int) {
 
 func (c *checkPmOuterIPWorkGroup) batchCheckPmOuterIP(kt *kit.Kit, steps []*StepMeta) {
 	hostIDs := make([]int64, 0)
+	var newSteps []*StepMeta
 	for _, step := range steps {
+		if step.Step == nil {
+			logs.Errorf("IdleCheck:%s:failed to check pm outerip, step.Step is nil, rid: %s",
+				table.StepCheckPmOuterIP, kt.Rid)
+			err := fmt.Errorf("IdleCheck:%s, step.Step is nil", table.StepCheckPmOuterIP)
+			c.resultHandler.HandleResult(kt, []*StepMeta{step}, err, err.Error(), false)
+			continue
+		}
+		// 该主机对应的步骤已被设置为跳过
+		if step.Step.Skip == enumor.DetectStepSkipYes {
+			logs.Infof("IdleCheck:%s:SKIP ONE, subOrderID: %s, assetID: %s, stepMeta: %+v, rid: %s",
+				table.StepCheckPmOuterIP, step.Step.SuborderID, step.Step.AssetID, cvt.PtrToVal(step), kt.Rid)
+			c.resultHandler.HandleResult(kt, []*StepMeta{step}, nil, "跳过", false)
+			continue
+		}
+
 		hostIDs = append(hostIDs, step.Step.HostID)
+		newSteps = append(newSteps, step)
 	}
+	// 所有步骤都跳过了该步骤，则直接返回
+	if len(hostIDs) == 0 {
+		logs.Warnf("IdleCheck:%s:SKIP ALL, steps: %+v, rid: %s", table.StepCheckPmOuterIP,
+			cvt.PtrToSlice(steps), kt.Rid)
+		return
+	}
+
 	hosts, err := c.ccOp.GetHostBaseInfoByID(kt, hostIDs)
 	if err != nil {
 		logs.Errorf("failed to check pm outer ip, for get host from cc err: %v, host id: %v, rid: %s", err, hostIDs,
 			kt.Rid)
-		c.resultHandler.HandleResult(kt, steps, err, err.Error(), true)
+		c.resultHandler.HandleResult(kt, newSteps, err, err.Error(), true)
 		return
 	}
 	idHostMap := make(map[int64]cmdb.Host)
@@ -119,7 +144,7 @@ func (c *checkPmOuterIPWorkGroup) batchCheckPmOuterIP(kt *kit.Kit, steps []*Step
 		idHostMap[host.BkHostID] = host
 	}
 
-	for _, step := range steps {
+	for _, step := range newSteps {
 		host, ok := idHostMap[step.Step.HostID]
 		if !ok {
 			logs.Errorf("failed to check pm outer ip, can not find host, host id: %d, ip: %s, rid: %s",

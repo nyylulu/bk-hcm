@@ -18,11 +18,14 @@ import (
 	"sync/atomic"
 	"time"
 
+	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/logics/task/sops"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/api-gateway/sopsapi"
+	cvt "hcm/pkg/tools/converter"
 
 	"k8s.io/client-go/util/workqueue"
 )
@@ -183,6 +186,14 @@ func (g *CheckProcessWorkGroup) queryResultWorker(kt *kit.Kit, idx int) {
 func (g *CheckProcessWorkGroup) createAndStart(kt *kit.Kit, step *StepMeta) {
 	logs.Infof("check process create start, step: %s, rid: %s", step.String(), kt.Rid)
 
+	// 0. 该主机对应的步骤已被设置为跳过
+	if step.Step != nil && step.Step.Skip == enumor.DetectStepSkipYes {
+		logs.Infof("IdleCheck:%s:SKIP ONE:createAndStart, subOrderID: %s, IP: %s, stepMeta: %+v, rid: %s",
+			table.StepCheckProcess, step.Step.SuborderID, step.Step.IP, cvt.PtrToVal(step), kt.Rid)
+		g.handlePass(kt, step, "跳过")
+		return
+	}
+
 	// 1. 查询机型
 	hostInfo, err := g.cc.GetHostInfoByHostID(kt, step.Step.HostID)
 	if err != nil {
@@ -202,7 +213,7 @@ func (g *CheckProcessWorkGroup) createAndStart(kt *kit.Kit, step *StepMeta) {
 		return
 	}
 	// 3. 创建标准运维任务
-	if err := sops.WaitSopsCreateTaskLimiter(kt.Ctx, SopsRateLimiterWaitTimeout); err != nil {
+	if err = sops.WaitSopsCreateTaskLimiter(kt.Ctx, SopsRateLimiterWaitTimeout); err != nil {
 		logs.Errorf("fail to wait create limiter, err: %v, rid: %s", err, kt.Rid)
 		g.handleCreateFailed(kt, step, err, fmt.Sprintf("fail to wait create limiter, err: %v", err))
 		return
@@ -215,7 +226,7 @@ func (g *CheckProcessWorkGroup) createAndStart(kt *kit.Kit, step *StepMeta) {
 		return
 	}
 	// 4. 启动标准运维任务
-	if err := sops.WaitSopsStartTaskLimiter(kt.Ctx, SopsRateLimiterWaitTimeout); err != nil {
+	if err = sops.WaitSopsStartTaskLimiter(kt.Ctx, SopsRateLimiterWaitTimeout); err != nil {
 		logs.Errorf("fail to wait start limiter, err: %v, rid: %s", err, kt.Rid)
 		g.handleStartFailed(kt, step, err, fmt.Sprintf("fail to wait start limiter, err: %v", err))
 		return
@@ -275,7 +286,7 @@ func (g *CheckProcessWorkGroup) queryResult(kt *kit.Kit, stepCtx *checkProcessCo
 	if state == sopsapi.TaskStateRunning || state == sopsapi.TaskStateCreated {
 		if queryCost > SopsCheckProcessTimeout {
 			// 超时失败
-			err := fmt.Errorf("task state query timeout, sops url: %s, cost: %s, current: %s",
+			err = fmt.Errorf("task state query timeout, sops url: %s, cost: %s, current: %s",
 				stepCtx.taskURL, queryCost, state)
 			g.handleQueryFailed(kt, stepCtx.step, err, err.Error())
 			return

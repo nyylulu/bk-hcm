@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"strings"
 
+	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/pkg/api/core"
 	"hcm/pkg/cc"
 	"hcm/pkg/criteria/constant"
@@ -26,7 +27,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/api-gateway/cmdb"
-	"hcm/pkg/tools/converter"
+	cvt "hcm/pkg/tools/converter"
 
 	clb "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/clb/v20180317"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
@@ -254,14 +255,39 @@ func newCheckCvmWorkGroup(resultHandler StepResultHandler, workerNum int, cliSet
 
 func checkCvm(kt *kit.Kit, steps []*StepMeta, resultHandler StepResultHandler, cliSet *cliSet) {
 	hostIDs := make([]int64, 0)
+	var newSteps []*StepMeta
 	for _, step := range steps {
+		if step.Step == nil {
+			logs.Errorf("IdleCheck:%s:failed to check cvm, step.Step is nil, rid: %s",
+				table.StepCvmCheck, kt.Rid)
+			err := fmt.Errorf("IdleCheck:%s, step.Step is nil", table.StepCvmCheck)
+			resultHandler.HandleResult(kt, []*StepMeta{step}, err, err.Error(), false)
+			continue
+		}
+
+		// 该主机对应的步骤已被设置为跳过
+		if step.Step.Skip == enumor.DetectStepSkipYes {
+			logs.Infof("IdleCheck:%s:SKIP ONE, subOrderID: %s, IP: %s, stepMeta: %+v, rid: %s",
+				table.StepCvmCheck, step.Step.SuborderID, step.Step.IP, cvt.PtrToVal(step), kt.Rid)
+			resultHandler.HandleResult(kt, []*StepMeta{step}, nil, "跳过", false)
+			continue
+		}
+
 		hostIDs = append(hostIDs, step.Step.HostID)
+		newSteps = append(newSteps, step)
 	}
+
+	// 所有步骤都跳过了该步骤，则直接返回
+	if len(hostIDs) == 0 {
+		logs.Warnf("IdleCheck:%s:SKIP ALL, steps: %+v, rid: %s", table.StepCvmCheck, cvt.PtrToSlice(steps), kt.Rid)
+		return
+	}
+
 	ccOp := NewCmdbOperator(cliSet.cc)
 	hosts, err := ccOp.GetHostBaseInfoByID(kt, hostIDs)
 	if err != nil {
 		logs.Errorf("failed to check cvm, for get host from cc err: %v, host id: %v, rid: %s", err, hostIDs, kt.Rid)
-		resultHandler.HandleResult(kt, steps, err, err.Error(), true)
+		resultHandler.HandleResult(kt, newSteps, err, err.Error(), true)
 		return
 	}
 	idHostMap := make(map[int64]cmdb.Host)
@@ -269,7 +295,7 @@ func checkCvm(kt *kit.Kit, steps []*StepMeta, resultHandler StepResultHandler, c
 		idHostMap[host.BkHostID] = host
 	}
 
-	for _, step := range steps {
+	for _, step := range newSteps {
 		host, ok := idHostMap[step.Step.HostID]
 		if !ok {
 			logs.Errorf("failed to check cvm, can not find host, host id: %d, ip: %s, rid: %s", step.Step.HostID,
@@ -386,7 +412,7 @@ func checkDockerSecurityGroup(kt *kit.Kit, cliSet *cliSet, clients *tencentCloud
 
 	for _, inst := range resp.Response.InstanceSet {
 		for _, sgId := range inst.SecurityGroupIds {
-			if retry, err := checkIsDefaultSG(kt, cliSet, clients, converter.PtrToVal(sgId)); err != nil {
+			if retry, err := checkIsDefaultSG(kt, cliSet, clients, cvt.PtrToVal(sgId)); err != nil {
 				return exeInfo, retry, err
 			}
 		}

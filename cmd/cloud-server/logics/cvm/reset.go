@@ -25,6 +25,7 @@ import (
 
 	actionflow "hcm/cmd/task-server/logics/flow"
 	cscvm "hcm/pkg/api/cloud-server/cvm"
+	coretask "hcm/pkg/api/core/task"
 	"hcm/pkg/api/data-service/task"
 	protocvm "hcm/pkg/api/hc-service/cvm"
 	ts "hcm/pkg/api/task-server"
@@ -101,7 +102,7 @@ func (c *cvm) CvmResetSystem(kt *kit.Kit, params *TaskManageBaseReq) (string, er
 
 func (c *cvm) buildTaskManagementAndDetails(kt *kit.Kit, params *TaskManageBaseReq) (string, error) {
 	taskID, err := c.createTaskManagement(kt, params.BkBizID, params.Vendors, params.AccountIDs, params.Source,
-		params.TaskOperation, params.Resource)
+		params.TaskOperation, params.Resource, &coretask.ManagementExt{})
 	if err != nil {
 		logs.Errorf("create task management failed, err: %v, params: %+v, rid: %s", err, cvt.PtrToVal(params), kt.Rid)
 		return "", err
@@ -118,8 +119,8 @@ func (c *cvm) buildTaskManagementAndDetails(kt *kit.Kit, params *TaskManageBaseR
 
 // createTaskManagement 创建任务管理记录
 func (c *cvm) createTaskManagement(kt *kit.Kit, bkBizID int64, vendors []enumor.Vendor, accountIDs []string,
-	source enumor.TaskManagementSource, operation enumor.TaskOperation, resource enumor.TaskManagementResource) (
-	string, error) {
+	source enumor.TaskManagementSource, operation enumor.TaskOperation, resource enumor.TaskManagementResource,
+	extension *coretask.ManagementExt) (string, error) {
 
 	taskManagementCreateReq := &task.CreateManagementReq{
 		Items: []task.CreateManagementField{
@@ -131,6 +132,7 @@ func (c *cvm) createTaskManagement(kt *kit.Kit, bkBizID int64, vendors []enumor.
 				Resource:   resource,
 				State:      enumor.TaskManagementRunning, // 默认:执行中
 				Operations: []enumor.TaskOperation{operation},
+				Extension:  extension,
 			},
 		},
 	}

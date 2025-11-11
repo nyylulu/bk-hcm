@@ -20,6 +20,7 @@
 package task
 
 import (
+	tasktable "hcm/cmd/woa-server/dal/task/table"
 	"hcm/pkg/api/core"
 	dataproto "hcm/pkg/api/data-service/cloud"
 	"hcm/pkg/criteria/enumor"
@@ -45,4 +46,5 @@ type ManagementExt struct {
 	RegionIDs     []string                              `json:"region_ids"`
 	LblTargetsReq *dataproto.ListListenerWithTargetsReq `json:"lbl_targets_req"`
 	LblDeleteReq  *dataproto.BatchDeleteListenerReq     `json:"lbl_delete_req"`
+	ExcludeSteps  []tasktable.DetectStepName            `json:"exclude_steps"`
 }
