@@ -18,36 +18,28 @@
  */
 
 /*
-    SQLVER=9999,HCMVER=v9.9.9.9
+    SQLVER=0055,HCMVER=v1.8.7.5
 
     Notes:
-    1. res_plan_demand 表新增数据列 return_plan_time
-    2. 改变唯一索引
+    1. 新增short_rental_returned_record表
 */
 
 START TRANSACTION;
 
-ALTER TABLE `res_plan_demand` ADD COLUMN `return_plan_time` int unsigned NOT NULL COMMENT '期望退回时间，YYYYMMDD' AFTER `expect_time`;
+CREATE TABLE IF NOT EXISTS `woa_device_type_physical_rel` (
+    `id` VARCHAR(64) NOT NULL COMMENT '唯一标识',
+    `device_type`   VARCHAR(64) NOT NULL COMMENT '机型',
+    `physical_device_family` VARCHAR(64) NOT NULL COMMENT '物理机机型族',
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `idx_device_type` (`device_type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='CVM机型和物理机机型族关系表';
 
-ALTER TABLE res_plan_demand
-DROP INDEX idx_uk_bk_biz_id_dimensions;
-
-ALTER TABLE res_plan_demand ADD UNIQUE KEY idx_uk_bk_biz_id_dimensions (
-    bk_biz_id,
-    plan_type,
-    obs_project(16),
-    expect_time,
-    region_id(16),
-    zone_id,
-    device_type(16),
-    demand_class,
-    return_plan_time,
-    disk_type(16),
-    disk_io
-    );
-
+insert into id_generator(`resource`, `max_id`)
+values ('woa_device_type_physical_rel', '0');
 
 CREATE OR REPLACE VIEW `hcm_version`(`hcm_ver`, `sql_ver`) AS
-SELECT 'v9.9.9.9' as `hcm_ver`, '9999' as `sql_ver`;
+SELECT 'v1.8.7.5' as `hcm_ver`, '0055' as `sql_ver`;
 
 COMMIT;

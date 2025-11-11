@@ -18,7 +18,7 @@
  */
 
 /*
-    SQLVER=9999,HCMVER=v9.9.9
+    SQLVER=0054,HCMVER=v1.8.7.5
 
     Notes:
     1. 新增short_rental_returned_record表
@@ -61,6 +61,6 @@ insert into id_generator(`resource`, `max_id`)
 values ('short_rental_returned_record', '0');
 
 CREATE OR REPLACE VIEW `hcm_version`(`hcm_ver`, `sql_ver`) AS
-SELECT 'v9.9.9' as `hcm_ver`, '9999' as `sql_ver`;
+SELECT 'v1.8.7.5' as `hcm_ver`, '0054' as `sql_ver`;
 
 COMMIT;
