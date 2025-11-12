@@ -192,6 +192,10 @@ func (l *logics) UpdateReturnedStatusBySubOrderID(kt *kit.Kit, subOrderID string
 		return err
 	}
 
+	if len(rst.Details) == 0 {
+		return nil
+	}
+
 	// 准备更新语句
 	updateRecords := make([]rpproto.ShortRentalReturnedRecordUpdateReq, 0)
 	for _, record := range rst.Details {
