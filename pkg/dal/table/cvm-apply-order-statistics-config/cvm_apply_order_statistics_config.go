@@ -60,7 +60,7 @@ type CvmApplyOrderStatisticsConfigTable struct {
 	YearMonth string `db:"year_month" json:"year_month"`
 	// BkBizID 业务ID
 	BkBizID int64 `db:"bk_biz_id" json:"bk_biz_id"`
-	// SubOrderID 子单号列表，逗号分隔
+	// SubOrderIDs 子单号列表，逗号分隔
 	SubOrderIDs string `db:"sub_order_ids" json:"sub_order_ids"`
 	// StartAt 开始时间，格式：YYYY-MM-DD
 	StartAt string `db:"start_at" json:"start_at"`
@@ -109,24 +109,9 @@ func (t CvmApplyOrderStatisticsConfigTable) InsertValidate() error {
 	if len(t.YearMonth) == 0 {
 		return errors.New("year_month is required")
 	}
-	if len(t.YearMonth) > 16 {
-		return fmt.Errorf("year_month length can not exceed 16")
-	}
 
 	if t.BkBizID <= 0 {
 		return errors.New("bk_biz_id is required and must be greater than 0")
-	}
-
-	if len(t.SubOrderIDs) > 64 {
-		return fmt.Errorf("sub_order_ids length can not exceed 64")
-	}
-
-	if len(t.StartAt) > 64 {
-		return fmt.Errorf("start_at length can not exceed 64")
-	}
-
-	if len(t.EndAt) > 64 {
-		return fmt.Errorf("end_at length can not exceed 64")
 	}
 
 	if len(t.Memo) == 0 {
