@@ -149,6 +149,7 @@ func (l *logics) fillHostDataByES(kt *kit.Kit, ccHosts []cmdb.Host, esHostMap ma
 			esHost.BizID = bizID
 			esHost.ServerOperator = ccHost.Operator
 			esHost.ServerBakOperator = ccHost.BkBakOperator
+			esHost.SvrTypeName = ccHost.SvrTypeName
 			result[idx] = esHost
 			continue
 		}
