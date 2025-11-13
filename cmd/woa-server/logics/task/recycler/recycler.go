@@ -1004,11 +1004,20 @@ func (r *recycler) fillHostRecycleType(kt *kit.Kit, bkBizID int64, hosts []*tabl
 	}
 
 	// 2. 识别固定的回收类型：机房裁撤，春节保障；其中机房裁撤 > 春节保障
+	// 过滤出物理机和其他类型机器
+	pmHosts := make([]*table.RecycleHost, 0)
+	otherHosts := make([]*table.RecycleHost, 0)
 	for _, host := range hosts {
 		recycleType := classifier.GetFixedRecycleType(host, dissolveHostMap[host.AssetID])
 		if host.RecycleType.CanUpdateRecycleType(recycleTypeSeq, recycleType) {
 			host.RecycleType = recycleType
 		}
+
+		if cmdb.IsPhysicalMachine(host.SvrSourceTypeID) {
+			pmHosts = append(pmHosts, host)
+			continue
+		}
+		otherHosts = append(otherHosts, host)
 	}
 
 	// 3. 识别根据退回计划匹配的回收类型
@@ -1016,21 +1025,22 @@ func (r *recycler) fillHostRecycleType(kt *kit.Kit, bkBizID int64, hosts []*tabl
 	for _, rType := range recycleTypeSeq {
 		switch rType {
 		case table.RecycleTypeRollServer:
-			hosts, err = r.matchRollingServer(kt, bkBizID, hosts, recycleTypeSeq)
+			otherHosts, err = r.matchRollingServer(kt, bkBizID, otherHosts, recycleTypeSeq)
 			if err != nil {
-				logs.Errorf("failed to match rolling server, err: %v, rid: %s", err, kt.Rid)
+				logs.Errorf("failed to match rolling server, err: %v, hosts: %v, rid: %s", err, otherHosts, kt.Rid)
 				return nil, err
 			}
 		case table.RecycleTypeShortRental:
-			hosts, err = r.matchShortRental(kt, bkBizID, hosts, recycleTypeSeq)
+			otherHosts, err = r.matchShortRental(kt, bkBizID, otherHosts, recycleTypeSeq)
 			if err != nil {
-				logs.Errorf("failed to match short rental, err: %v, rid: %s", err, kt.Rid)
+				logs.Errorf("failed to match short rental, err: %v, hosts: %v, rid: %s", err, otherHosts, kt.Rid)
 				return nil, err
 			}
 		default:
 			continue
 		}
 	}
+	hosts = append(pmHosts, otherHosts...)
 
 	return hosts, nil
 }
