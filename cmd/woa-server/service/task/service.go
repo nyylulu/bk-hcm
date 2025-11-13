@@ -70,6 +70,16 @@ type service struct {
 
 func (s *service) initOperationService(h *rest.Handler) {
 	h.Add("GetApplyStatistics", http.MethodPost, "/find/operation/apply/statistics", s.GetApplyStatistics)
+	h.Add("CreateApplyOrderStatisticsConfig", http.MethodPost, "/config/create/apply/order/statistics",
+		s.CreateApplyOrderStatisticsConfig)
+	h.Add("UpdateApplyOrderStatisticsConfig", http.MethodPut, "/config/update/apply/order/statistics",
+		s.UpdateApplyOrderStatisticsConfig)
+	h.Add("ListApplyOrderStatisticsConfig", http.MethodPost, "/config/findmany/apply/order/statistics",
+		s.ListApplyOrderStatisticsConfig)
+	h.Add("ListApplyOrderStatisticsYearMonths", http.MethodPost, "/config/findmany/apply/order/statistics/year_months",
+		s.ListApplyOrderStatisticsYearMonths)
+	h.Add("GetCompletionRateStatistics", http.MethodPost, "/apply/completion-rate/statistics", s.GetCompletionRateStatistics)
+	h.Add("GetCompletionRateDetail", http.MethodPost, "/apply/completion-rate/detail", s.GetCompletionRateDetail)
 }
 
 func (s *service) initRecyclerService(h *rest.Handler) {

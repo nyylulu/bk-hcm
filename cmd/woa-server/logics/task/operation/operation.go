@@ -15,7 +15,11 @@ package operation
 
 import (
 	"context"
+	"hcm/cmd/woa-server/logics/task/statistics"
+	"hcm/pkg/client"
+	"hcm/pkg/criteria/constant"
 	"sort"
+	"time"
 
 	"hcm/cmd/woa-server/model/task"
 	types "hcm/cmd/woa-server/types/task"
@@ -32,21 +36,31 @@ import (
 type Interface interface {
 	// GetApplyStatistics get resource apply operation statistics
 	GetApplyStatistics(kit *kit.Kit, param *types.GetApplyStatReq) (*types.GetApplyStatRst, error)
+	// GetCompletionRateStatistics get completion rate statistics
+	GetCompletionRateStatistics(kit *kit.Kit,
+		param *types.GetCompletionRateStatReq) (*types.GetCompletionRateStatRst, error)
+	// GetCompletionRateDetail 获取结单率详情统计
+	GetCompletionRateDetail(kit *kit.Kit,
+		param *types.GetCompletionRateDetailReq) (*types.GetCompletionRateDetailRst, error)
 }
 
 // operation provides operation statistics service
 type operation struct {
-	lang language.CCLanguageIf
+	lang       language.CCLanguageIf
+	statistics statistics.Interface
 }
 
 // New create a operation instance
-func New(_ context.Context) (*operation, error) {
-
-	operation := &operation{
+func New(_ context.Context, clientSet *client.ClientSet) (*operation, error) {
+	op := &operation{
 		lang: language.NewFromCtx(language.EmptyLanguageSetting),
 	}
 
-	return operation, nil
+	if clientSet != nil {
+		op.statistics = statistics.New(clientSet)
+	}
+
+	return op, nil
 }
 
 // GetApplyStatistics get resource apply operation statistics
@@ -258,4 +272,255 @@ func (op *operation) getDateFormat(dimension types.TimeDimension) string {
 	}
 
 	return format
+}
+
+// GetCompletionRateStatistics get completion rate statistics
+func (op *operation) GetCompletionRateStatistics(kit *kit.Kit,
+	param *types.GetCompletionRateStatReq) (*types.GetCompletionRateStatRst, error) {
+	filter, err := param.GetFilter()
+	if err != nil {
+		logs.Errorf("failed to get completion rate statistics, for get filter err: %v, rid: %s", err, kit.Rid)
+		return nil, err
+	}
+
+	startTime, err := time.Parse(constant.DateLayout, param.StartTime)
+	if err != nil {
+		logs.Errorf("failed to parse start_time, err: %v, rid: %s", err, kit.Rid)
+		return nil, err
+	}
+
+	endTime, err := time.Parse(constant.DateLayout, param.EndTime)
+	if err != nil {
+		logs.Errorf("failed to parse end_time, err: %v, rid: %s", err, kit.Rid)
+		return nil, err
+	}
+
+	var excludeSuborderIDs []string
+	if op.statistics != nil {
+		excludeSuborderIDs, err = op.statistics.ListExcludedSubOrderIDs(kit, startTime, endTime)
+		if err != nil {
+			logs.Errorf("failed to get exclude suborder ids for completion rate statistics, err: %v, rid: %s",
+				err, kit.Rid)
+			return nil, err
+		}
+	}
+
+	if len(excludeSuborderIDs) > 0 {
+		suborderFilter, ok := filter["suborder_id"].(map[string]interface{})
+		if !ok || suborderFilter == nil {
+			suborderFilter = make(map[string]interface{})
+		}
+		suborderFilter[pkg.BKDBNIN] = excludeSuborderIDs
+		filter["suborder_id"] = suborderFilter
+	}
+
+	pipeline := []map[string]interface{}{
+		{pkg.BKDBMatch: filter},
+		{"$addFields": map[string]interface{}{
+			"year_month": map[string]interface{}{
+				"$dateToString": map[string]interface{}{
+					"format": "%Y-%m",
+					"date":   "$create_at"}},
+			"is_done": map[string]interface{}{
+				"$cond": []interface{}{
+					map[string]interface{}{"$eq": []interface{}{"$stage", "DONE"}},
+					1,
+					0,
+				},
+			},
+		}},
+		{pkg.BKDBGroup: map[string]interface{}{
+			"_id":         "$year_month",
+			"total_count": map[string]interface{}{pkg.BKDBSum: 1},
+			"done_count":  map[string]interface{}{pkg.BKDBSum: "$is_done"},
+		}},
+		{pkg.BKDBProject: map[string]interface{}{
+			"year_month": "$_id",
+			"completion_rate": map[string]interface{}{
+				"$round": []interface{}{
+					map[string]interface{}{
+						"$multiply": []interface{}{
+							map[string]interface{}{
+								"$divide": []interface{}{
+									"$done_count",
+									map[string]interface{}{
+										"$cond": []interface{}{
+											map[string]interface{}{"$eq": []interface{}{"$total_count", 0}},
+											1,
+											"$total_count",
+										},
+									},
+								},
+							},
+							100,
+						},
+					},
+					2,
+				},
+			},
+		}},
+		{pkg.BKDBSort: map[string]interface{}{"year_month": 1}},
+	}
+
+	aggRst := make([]struct {
+		YearMonth      string  `bson:"year_month"`
+		CompletionRate float64 `bson:"completion_rate"`
+	}, 0)
+
+	if err := model.Operation().ApplyOrder().AggregateAll(kit.Ctx, pipeline, &aggRst); err != nil {
+		logs.Errorf("failed to get completion rate statistics, err: %v, rid: %s", err, kit.Rid)
+		return nil, err
+	}
+
+	rst := &types.GetCompletionRateStatRst{
+		Details: make([]*types.CompletionRateStat, 0, len(aggRst)),
+	}
+
+	for _, stat := range aggRst {
+		rst.Details = append(rst.Details, &types.CompletionRateStat{
+			YearMonth:      stat.YearMonth,
+			CompletionRate: stat.CompletionRate,
+		})
+	}
+
+	return rst, nil
+}
+
+// GetCompletionRateDetail 获取结单率详情统计
+func (op *operation) GetCompletionRateDetail(kit *kit.Kit,
+	param *types.GetCompletionRateDetailReq) (*types.GetCompletionRateDetailRst, error) {
+	// 解析时间范围
+	startTime, err := time.Parse(constant.DateLayout, param.StartTime)
+	if err != nil {
+		logs.Errorf("failed to parse start_time, err: %v, rid: %s", err, kit.Rid)
+		return nil, err
+	}
+
+	endTime, err := time.Parse(constant.DateLayout, param.EndTime)
+	if err != nil {
+		logs.Errorf("failed to parse end_time, err: %v, rid: %s", err, kit.Rid)
+		return nil, err
+	}
+
+	// 结束时间需要加1天，因为查询条件是 $lt（小于）不包含当天
+	endTime = endTime.AddDate(0, 0, 1)
+
+	var excludeSuborderIDs []string
+	if op.statistics != nil {
+		excludeSuborderIDs, err = op.statistics.ListExcludedSubOrderIDs(kit, startTime, endTime)
+		if err != nil {
+			logs.Errorf("failed to get exclude suborder ids for completion rate detail, err: %v, rid: %s",
+				err, kit.Rid)
+			return nil, err
+		}
+	}
+	// 构建基础过滤条件
+	baseFilter := map[string]interface{}{
+		"create_at": map[string]interface{}{
+			pkg.BKDBGTE: startTime,
+			pkg.BKDBLT:  endTime,
+		},
+	}
+
+	if len(excludeSuborderIDs) > 0 {
+		baseFilter["suborder_id"] = map[string]interface{}{
+			pkg.BKDBNIN: excludeSuborderIDs,
+		}
+	}
+
+	// 构建聚合管道
+	pipeline := []map[string]interface{}{
+		// 过滤时间范围 + 排除特定订单
+		{pkg.BKDBMatch: baseFilter},
+		// 提取年月信息
+		{
+			"$addFields": map[string]interface{}{
+				"year_month": map[string]interface{}{
+					"$dateToString": map[string]interface{}{
+						"format": "%Y-%m",
+						"date":   "$create_at",
+					},
+				},
+			},
+		},
+		// 添加字段，标记已完成单据
+		{
+			"$addFields": map[string]interface{}{
+				"is_done": map[string]interface{}{
+					"$cond": []interface{}{
+						map[string]interface{}{
+							"$and": []interface{}{
+								map[string]interface{}{"$eq": []interface{}{"$stage", types.TicketStageDone}},
+								map[string]interface{}{"$eq": []interface{}{"$status", types.ApplyStatusDone}},
+							},
+						},
+						1,
+						0,
+					},
+				},
+			},
+		},
+		// 按业务ID和月份分组统计
+		{
+			pkg.BKDBGroup: map[string]interface{}{
+				"_id": map[string]interface{}{
+					"bk_biz_id":  "$bk_biz_id",
+					"year_month": "$year_month",
+				},
+				"total_orders": map[string]interface{}{pkg.BKDBSum: 1},          // 总单据数
+				"done_orders":  map[string]interface{}{pkg.BKDBSum: "$is_done"}, // 已完成单据数
+			},
+		},
+		//计算结单率
+		{
+			"$addFields": map[string]interface{}{
+				"completion_rate": map[string]interface{}{
+					"$cond": []interface{}{
+						map[string]interface{}{"$eq": []interface{}{"$total_orders", 0}},
+						0.0,
+						map[string]interface{}{
+							"$multiply": []interface{}{
+								map[string]interface{}{
+									"$divide": []interface{}{"$done_orders", "$total_orders"},
+								},
+								100,
+							},
+						},
+					},
+				},
+			},
+		},
+		// 格式化输出
+		{
+			pkg.BKDBProject: map[string]interface{}{
+				"_id":          0,
+				"bk_biz_id":    "$_id.bk_biz_id",
+				"year_month":   "$_id.year_month",
+				"total_orders": "$total_orders",
+				"done_orders":  "$done_orders",
+				"completion_rate": map[string]interface{}{
+					"$round": []interface{}{"$completion_rate", 2},
+				},
+			},
+		},
+		// 按结单率降序排序，相同则按业务ID和月份升序
+		{
+			pkg.BKDBSort: map[string]interface{}{
+				"completion_rate": -1,
+				"bk_biz_id":       1,
+				"year_month":      1,
+			},
+		},
+	}
+
+	// 执行聚合查询
+	aggRst := make([]*types.CompletionRateDetailItem, 0)
+	if err := model.Operation().ApplyOrder().AggregateAll(kit.Ctx, pipeline, &aggRst); err != nil {
+		logs.Errorf("failed to get completion rate detail statistics, err: %v, rid: %s", err, kit.Rid)
+		return nil, err
+	}
+
+	return &types.GetCompletionRateDetailRst{
+		Details: aggRst,
+	}, nil
 }
