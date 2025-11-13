@@ -159,3 +159,124 @@ type ApplyStat struct {
 	OsSucc          uint    `json:"os_succ" bson:"os_succ"`
 	OsSuccRate      float64 `json:"os_succ_rate" bson:"os_succ_rate"`
 }
+
+// GetCompletionRateStatReq get completion rate statistics request
+type GetCompletionRateStatReq struct {
+	StartTime string `json:"start_time" bson:"start_time"`
+	EndTime   string `json:"end_time" bson:"end_time"`
+}
+
+// Validate whether GetCompletionRateStatReq is valid
+func (req *GetCompletionRateStatReq) Validate() (errKey string, err error) {
+	if len(req.StartTime) == 0 {
+		return "start_time", fmt.Errorf("start_time is not set")
+	}
+
+	_, err = time.Parse(dateLayout, req.StartTime)
+	if err != nil {
+		return "start_time", fmt.Errorf("date format should be like %s", dateLayout)
+	}
+
+	if len(req.EndTime) == 0 {
+		return "end_time", fmt.Errorf("end_time is not set")
+	}
+
+	endTime, err := time.Parse(dateLayout, req.EndTime)
+	if err != nil {
+		return "end_time", fmt.Errorf("date format should be like %s", dateLayout)
+	}
+
+	startTime, err := time.Parse(dateLayout, req.StartTime)
+	if err != nil {
+		return "start_time", fmt.Errorf("date format should be like %s", dateLayout)
+	}
+
+	if endTime.Before(startTime) {
+		return "start_time,end_time", fmt.Errorf("end_time must be after start_time")
+	}
+
+	return "", nil
+}
+
+// GetFilter get mgo filter
+func (req *GetCompletionRateStatReq) GetFilter() (map[string]interface{}, error) {
+	filter := make(map[string]interface{})
+
+	timeCond := make(map[string]interface{})
+	if len(req.StartTime) != 0 {
+		startTime, err := time.Parse(dateLayout, req.StartTime)
+		if err == nil {
+			timeCond[pkg.BKDBGTE] = startTime
+		}
+	}
+	if len(req.EndTime) != 0 {
+		endTime, err := time.Parse(dateLayout, req.EndTime)
+		if err == nil {
+			// '%lte: 2006-01-02' means '%lt: 2006-01-03 00:00:00'
+			timeCond[pkg.BKDBLT] = endTime.AddDate(0, 0, 1)
+		}
+	}
+	if len(timeCond) != 0 {
+		filter["create_at"] = timeCond
+	}
+
+	return filter, nil
+}
+
+// GetCompletionRateStatRst get completion rate statistics result
+type GetCompletionRateStatRst struct {
+	Details []*CompletionRateStat `json:"details" bson:"details"`
+}
+
+// CompletionRateStat completion rate statistics
+type CompletionRateStat struct {
+	YearMonth      string  `json:"year_month" bson:"year_month"`
+	CompletionRate float64 `json:"completion_rate" bson:"completion_rate"`
+}
+
+// GetCompletionRateDetailReq 获取结单率详情统计请求
+type GetCompletionRateDetailReq struct {
+	StartTime string `json:"start_time" bson:"start_time"` // 开始时间，格式：YYYY-MM-DD
+	EndTime   string `json:"end_time" bson:"end_time"`     // 结束时间，格式：YYYY-MM-DD
+}
+
+// Validate 验证请求参数
+func (req *GetCompletionRateDetailReq) Validate() (errKey string, err error) {
+	if len(req.StartTime) == 0 {
+		return "start_time", fmt.Errorf("start_time is not set")
+	}
+
+	startTime, err := time.Parse(dateLayout, req.StartTime)
+	if err != nil {
+		return "start_time", fmt.Errorf("date format should be like %s", dateLayout)
+	}
+
+	if len(req.EndTime) == 0 {
+		return "end_time", fmt.Errorf("end_time is not set")
+	}
+
+	endTime, err := time.Parse(dateLayout, req.EndTime)
+	if err != nil {
+		return "end_time", fmt.Errorf("date format should be like %s", dateLayout)
+	}
+
+	if endTime.Before(startTime) {
+		return "start_time,end_time", fmt.Errorf("end_time must be after start_time")
+	}
+
+	return "", nil
+}
+
+// GetCompletionRateDetailRst 获取结单率详情统计响应
+type GetCompletionRateDetailRst struct {
+	Details []*CompletionRateDetailItem `json:"details" bson:"details"`
+}
+
+// CompletionRateDetailItem 结单率详情统计项
+type CompletionRateDetailItem struct {
+	BkBizID        int64   `json:"bk_biz_id" bson:"bk_biz_id"`             // 业务ID
+	YearMonth      string  `json:"year_month" bson:"year_month"`           // 年月，格式：YYYY-MM
+	TotalOrders    int     `json:"total_orders" bson:"total_orders"`       // 总单据数
+	DoneOrders     int     `json:"done_orders" bson:"done_orders"`         // 已完成单据数（stage=DONE）
+	CompletionRate float64 `json:"completion_rate" bson:"completion_rate"` // 结单率（百分比），保留2位小数
+}

@@ -429,9 +429,8 @@ var TableMap = map[Name]TableConfig{
 	TaskDetailTable:     {},
 	TenantTable:         {},
 
-	GlobalConfigTable:                  {},
-	CvmApplyOrderStatisticsConfigTable: {},
-	OrgTopoTable:                       {},
+	GlobalConfigTable: {},
+	OrgTopoTable:      {},
 
 	ResUsageBizRelTable: {},
 }

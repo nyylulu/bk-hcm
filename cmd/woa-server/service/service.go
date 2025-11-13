@@ -177,7 +177,7 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		return nil, err
 	}
 
-	configLogics := conflogics.New(apiClientSet, thirdCli, cmdbCli)
+	configLogics := conflogics.New(apiClientSet, thirdCli, cmdbCli, daoSet)
 	gcLogics, err := gclogics.New(apiClientSet, configLogics)
 	if err != nil {
 		logs.Errorf("new green channel logics failed, err: %v", err)
@@ -318,7 +318,7 @@ func newOtherClient(kt *kit.Kit, service *Service, itsmCli itsm.Client, sd servi
 		recyclerIf.StartStuckCheckLoop(kt.NewSubKit())
 	}()
 
-	operationIf, err := operation.New(kt.Ctx)
+	operationIf, err := operation.New(kt.Ctx, service.client)
 	if err != nil {
 		logs.Errorf("new operation failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
