@@ -26,7 +26,6 @@ import (
 	"time"
 
 	taskModel "hcm/cmd/woa-server/model/task"
-	configTypes "hcm/cmd/woa-server/types/config"
 	"hcm/pkg"
 	"hcm/pkg/api/core"
 	"hcm/pkg/client"
@@ -119,27 +118,41 @@ func (s *statistics) fetchSubOrderIDsFromOrders(kt *kit.Kit, ranges []timeRangeC
 		pkg.BKDBOR: orConditions,
 	}
 
-	page := metadata.BasePage{
-		Limit: pkg.BKNoLimit,
-	}
-
-	orders, err := taskModel.Operation().ApplyOrder().FindManyApplyOrder(kt.Ctx, page, filters)
+	// 先查询总数
+	count, err := taskModel.Operation().ApplyOrder().CountApplyOrder(kt.Ctx, filters)
 	if err != nil {
-		return nil, fmt.Errorf("find apply order failed: %w", err)
+		return nil, fmt.Errorf("count apply order failed: %w", err)
 	}
 
-	ids := make([]string, 0, len(orders))
-	for _, order := range orders {
-		if order == nil {
-			continue
-		}
-		if order.SubOrderId == "" {
-			continue
-		}
-		ids = append(ids, order.SubOrderId)
+	if count == 0 {
+		return nil, nil
 	}
 
-	return ids, nil
+	// 使用分页循环查询，参考 MySQL 标准分页模式
+	allIDs := make([]string, 0)
+	for offset := uint64(0); offset < count; offset = offset + uint64(core.DefaultMaxPageLimit) {
+		page := metadata.BasePage{
+			Start: int(offset),
+			Limit: int(core.DefaultMaxPageLimit),
+		}
+
+		orders, err := taskModel.Operation().ApplyOrder().FindManyApplyOrder(kt.Ctx, page, filters)
+		if err != nil {
+			return nil, fmt.Errorf("find apply order failed: %w", err)
+		}
+
+		for _, order := range orders {
+			if order == nil {
+				continue
+			}
+			if order.SubOrderId == "" {
+				continue
+			}
+			allIDs = append(allIDs, order.SubOrderId)
+		}
+	}
+
+	return allIDs, nil
 }
 
 // splitSubOrderIDs 从逗号分隔的子单号字符串中提取有效子单号
@@ -156,7 +169,7 @@ func splitSubOrderIDs(ids string) []string {
 	return slice.Unique(results)
 }
 
-// parseConfigTime 解析配置中的时间字符串，支持不同格式
+// parseConfigTime 解析配置中的时间字符串
 func parseConfigTime(value string) (time.Time, bool, error) {
 	layouts := []struct {
 		layout   string
@@ -206,6 +219,7 @@ func minTime(a, b time.Time) time.Time {
 	return b
 }
 
+// validateQueryRange 验证查询时间范围是否有效
 func validateQueryRange(queryStart, queryEnd time.Time) error {
 	if queryStart.IsZero() || queryEnd.IsZero() {
 		return fmt.Errorf("query start/end time can not be empty")
@@ -217,7 +231,7 @@ func validateQueryRange(queryStart, queryEnd time.Time) error {
 }
 
 // loadConfigs 从数据库加载所有符合月份条件的配置
-func (s *statistics) loadConfigs(kt *kit.Kit, monthSlice []string) ([]*configTypes.CvmApplyOrderStatisticsConfig, error) {
+func (s *statistics) loadConfigs(kt *kit.Kit, monthSlice []string) ([]*tableapplystat.CvmApplyOrderStatisticsConfigTable, error) {
 	if s.client == nil || s.client.DataService() == nil {
 		return nil, fmt.Errorf("data service client is not initialized")
 	}
@@ -231,6 +245,7 @@ func (s *statistics) loadConfigs(kt *kit.Kit, monthSlice []string) ([]*configTyp
 		Filter: filterExpr,
 		Page:   core.NewDefaultBasePage(),
 	}
+	listReq.Page.Limit = core.DefaultMaxPageLimit
 
 	result, err := s.client.DataService().Global.ApplyOrderStatisticsConfig.List(kt, listReq)
 	if err != nil {
@@ -241,39 +256,16 @@ func (s *statistics) loadConfigs(kt *kit.Kit, monthSlice []string) ([]*configTyp
 		return nil, nil
 	}
 
-	// 转换为 configTypes.CvmApplyOrderStatisticsConfig
-	configs := make([]*configTypes.CvmApplyOrderStatisticsConfig, 0, len(result.Details))
+	configs := make([]*tableapplystat.CvmApplyOrderStatisticsConfigTable, 0, len(result.Details))
 	for i := range result.Details {
-		cfg, err := convertTableToType(&result.Details[i])
-		if err != nil {
-			return nil, err
-		}
-		configs = append(configs, cfg)
+		configs = append(configs, &result.Details[i])
 	}
 
 	return configs, nil
 }
 
-// convertTableToType
-func convertTableToType(table *tableapplystat.CvmApplyOrderStatisticsConfigTable) (*configTypes.CvmApplyOrderStatisticsConfig, error) {
-	return &configTypes.CvmApplyOrderStatisticsConfig{
-		ID:          table.ID,
-		YearMonth:   table.YearMonth,
-		BkBizID:     table.BkBizID,
-		SubOrderIDs: table.SubOrderIDs,
-		StartAt:     table.StartAt,
-		EndAt:       table.EndAt,
-		Memo:        table.Memo,
-		Extension:   table.Extension,
-		Creator:     table.Creator,
-		Reviser:     table.Reviser,
-		CreatedAt:   table.CreatedAt.String(),
-		UpdatedAt:   table.UpdatedAt.String(),
-	}, nil
-}
-
 // extractConfigInfo 从配置中提取显式子单号和时间范围配置
-func (s *statistics) extractConfigInfo(kt *kit.Kit, configs []*configTypes.CvmApplyOrderStatisticsConfig,
+func (s *statistics) extractConfigInfo(kt *kit.Kit, configs []*tableapplystat.CvmApplyOrderStatisticsConfigTable,
 	monthSet map[string]bool, queryStart, queryEnd time.Time) ([]string, []timeRangeConfig) {
 
 	explicitIDs := make([]string, 0)
@@ -301,18 +293,19 @@ func (s *statistics) extractConfigInfo(kt *kit.Kit, configs []*configTypes.CvmAp
 	return explicitIDs, timeRanges
 }
 
-func (s *statistics) monthMatched(cfg *configTypes.CvmApplyOrderStatisticsConfig, monthSet map[string]bool) bool {
+// monthMatched 检查配置的月份是否在查询范围内
+func (s *statistics) monthMatched(cfg *tableapplystat.CvmApplyOrderStatisticsConfigTable, monthSet map[string]bool) bool {
 	if cfg == nil {
 		return false
 	}
 	if monthSet == nil {
 		return true
 	}
-	return monthSet[cfg.YearMonth]
+	return monthSet[cfg.StatMonth]
 }
 
 // buildTimeRange 构建配置的时间范围，确保不超出查询范围
-func (s *statistics) buildTimeRange(kt *kit.Kit, cfg *configTypes.CvmApplyOrderStatisticsConfig,
+func (s *statistics) buildTimeRange(kt *kit.Kit, cfg *tableapplystat.CvmApplyOrderStatisticsConfigTable,
 	queryStart, queryEnd time.Time) (timeRangeConfig, bool) {
 
 	if cfg == nil {

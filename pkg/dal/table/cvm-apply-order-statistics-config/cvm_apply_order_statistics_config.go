@@ -17,12 +17,11 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package tableapplystat package table apply statistics config.
+// Package tableapplystat cvm apply order statistics config table
 package tableapplystat
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 
 	"hcm/pkg/criteria/enumor"
@@ -33,13 +32,12 @@ import (
 )
 
 // CvmApplyOrderStatisticsConfigTableColumns defines all the cvm apply order statistics config table's columns.
-var CvmApplyOrderStatisticsConfigTableColumns = utils.MergeColumns(
-	nil, CvmApplyOrderStatisticsConfigTableColumnDescriptors)
+var CvmApplyOrderStatisticsConfigTableColumns = utils.MergeColumns(nil, CvmApplyOrderStatisticsConfigTableColumnDescriptors)
 
 // CvmApplyOrderStatisticsConfigTableColumnDescriptors is cvm apply order statistics config table column descriptors.
 var CvmApplyOrderStatisticsConfigTableColumnDescriptors = utils.ColumnDescriptors{
 	{Column: "id", NamedC: "id", Type: enumor.String},
-	{Column: "year_month", NamedC: "year_month", Type: enumor.String},
+	{Column: "stat_month", NamedC: "stat_month", Type: enumor.String},
 	{Column: "bk_biz_id", NamedC: "bk_biz_id", Type: enumor.Numeric},
 	{Column: "sub_order_ids", NamedC: "sub_order_ids", Type: enumor.String},
 	{Column: "start_at", NamedC: "start_at", Type: enumor.String},
@@ -54,35 +52,30 @@ var CvmApplyOrderStatisticsConfigTableColumnDescriptors = utils.ColumnDescriptor
 
 // CvmApplyOrderStatisticsConfigTable define cvm apply order statistics config table.
 type CvmApplyOrderStatisticsConfigTable struct {
-	// ID 配置ID
+	// ID 主键
 	ID string `db:"id" json:"id"`
-	// YearMonth 年月，格式：YYYY-MM
-	YearMonth string `db:"year_month" json:"year_month"`
+	// StatMonth 年月，格式：YYYY-MM
+	StatMonth string `db:"stat_month" json:"stat_month" validate:"max=16"`
 	// BkBizID 业务ID
 	BkBizID int64 `db:"bk_biz_id" json:"bk_biz_id"`
-	// SubOrderIDs 子单号列表，逗号分隔
+	// SubOrderID 子订单号，多个用逗号分隔
 	SubOrderIDs string `db:"sub_order_ids" json:"sub_order_ids"`
-	// StartAt 开始时间，格式：YYYY-MM-DD
-	StartAt string `db:"start_at" json:"start_at"`
-	// EndAt 结束时间，格式：YYYY-MM-DD
-	EndAt string `db:"end_at" json:"end_at"`
+	// StartAt 开始时间
+	StartAt string `db:"start_at" json:"start_at" validate:"max=64"`
+	// EndAt 结束时间
+	EndAt string `db:"end_at" json:"end_at" validate:"max=64"`
 	// Memo 备注
-	Memo string `db:"memo" json:"memo"`
-	// Extension 扩展字段，JSON格式
+	Memo string `db:"memo" json:"memo" validate:"max=255"`
+	// Extension 扩展字段
 	Extension types.JsonField `db:"extension" json:"extension"`
 	// Creator 创建者
-	Creator string `db:"creator" json:"creator"`
+	Creator string `db:"creator" json:"creator" validate:"max=64"`
 	// Reviser 更新者
-	Reviser string `db:"reviser" json:"reviser"`
+	Reviser string `db:"reviser" json:"reviser" validate:"max=64"`
 	// CreatedAt 创建时间
 	CreatedAt types.Time `db:"created_at" json:"created_at"`
 	// UpdatedAt 更新时间
 	UpdatedAt types.Time `db:"updated_at" json:"updated_at"`
-}
-
-// TableName return cvm apply order statistics config table name.
-func (t CvmApplyOrderStatisticsConfigTable) TableName() table.Name {
-	return table.CvmApplyOrderStatisticsConfigTable
 }
 
 // Columns return cvm apply order statistics config table columns.
@@ -93,6 +86,11 @@ func (t CvmApplyOrderStatisticsConfigTable) Columns() *utils.Columns {
 // ColumnDescriptors define cvm apply order statistics config table column descriptor.
 func (t CvmApplyOrderStatisticsConfigTable) ColumnDescriptors() utils.ColumnDescriptors {
 	return CvmApplyOrderStatisticsConfigTableColumnDescriptors
+}
+
+// TableName return cvm apply order statistics config table name.
+func (t CvmApplyOrderStatisticsConfigTable) TableName() table.Name {
+	return table.CvmApplyOrderStatisticsConfigTable
 }
 
 // InsertValidate cvm apply order statistics config table when insert.
@@ -106,16 +104,34 @@ func (t CvmApplyOrderStatisticsConfigTable) InsertValidate() error {
 		return errors.New("id can not set")
 	}
 
-	if len(t.YearMonth) == 0 {
-		return errors.New("year_month is required")
+	if len(t.StatMonth) == 0 {
+		return errors.New("stat_month is required")
 	}
 
 	if t.BkBizID <= 0 {
-		return errors.New("bk_biz_id is required and must be greater than 0")
+		return errors.New("bk_biz_id must be greater than 0")
 	}
 
-	if len(t.Memo) == 0 {
-		return errors.New("memo is required")
+	// 子单号和开始结束时间不能同时为空
+	hasSubOrderID := strings.TrimSpace(t.SubOrderIDs) != ""
+	hasStartAt := strings.TrimSpace(t.StartAt) != ""
+	hasEndAt := strings.TrimSpace(t.EndAt) != ""
+	hasTimeRange := hasStartAt && hasEndAt
+
+	if hasStartAt && !hasEndAt {
+		return errors.New("end_at is required when start_at is set")
+	}
+
+	if !hasStartAt && hasEndAt {
+		return errors.New("start_at is required when end_at is set")
+	}
+
+	if !hasSubOrderID && !hasTimeRange {
+		return errors.New("sub_order_ids and time range cannot be empty , at least one must be provided")
+	}
+
+	if err := validator.ValidateMemo(&t.Memo, false); err != nil {
+		return err
 	}
 
 	if len(t.Creator) == 0 {
@@ -124,23 +140,6 @@ func (t CvmApplyOrderStatisticsConfigTable) InsertValidate() error {
 
 	if len(t.Reviser) == 0 {
 		return errors.New("reviser is required")
-	}
-
-	hasSubIDs := strings.TrimSpace(t.SubOrderIDs) != ""
-	hasStart := strings.TrimSpace(t.StartAt) != ""
-	hasEnd := strings.TrimSpace(t.EndAt) != ""
-
-	if hasSubIDs && (hasStart || hasEnd) {
-		return errors.New("sub_order_ids and time range can not be set together")
-	}
-
-	if !hasSubIDs {
-		if hasStart != hasEnd {
-			return errors.New("start_at and end_at must both be set when using time range")
-		}
-		if !hasStart {
-			return errors.New("either sub_order_ids or time range (start_at & end_at) must be set")
-		}
 	}
 
 	return nil
@@ -156,28 +155,32 @@ func (t CvmApplyOrderStatisticsConfigTable) UpdateValidate() error {
 		return errors.New("id can not be updated")
 	}
 
-	if len(t.YearMonth) != 0 {
-		return errors.New("year_month can not be updated")
-	}
-
 	if len(t.Creator) != 0 {
 		return errors.New("creator can not be updated")
 	}
 
-	if t.BkBizID != 0 && t.BkBizID <= 0 {
-		return errors.New("bk_biz_id must be greater than 0")
+	if t.BkBizID < 0 {
+		return errors.New("bk_biz_id must be greater than or equal to 0")
 	}
 
-	if len(t.SubOrderIDs) > 64 {
-		return fmt.Errorf("sub_order_ids length can not exceed 64")
+	// 如果更新时提供了子单号或时间范围，验证它们不能同时为空
+	hasSubOrderID := strings.TrimSpace(t.SubOrderIDs) != ""
+	hasStartAt := strings.TrimSpace(t.StartAt) != ""
+	hasEndAt := strings.TrimSpace(t.EndAt) != ""
+	hasTimeRange := hasStartAt && hasEndAt
+
+	// 如果设置了时间范围，start_at 和 end_at 必须同时提供
+	if hasStartAt && !hasEndAt {
+		return errors.New("end_at is required when start_at is set")
 	}
 
-	if len(t.StartAt) > 64 {
-		return fmt.Errorf("start_at length can not exceed 64")
+	if !hasStartAt && hasEndAt {
+		return errors.New("start_at is required when end_at is set")
 	}
 
-	if len(t.EndAt) > 64 {
-		return fmt.Errorf("end_at length can not exceed 64")
+	// 更新时允许只修改子单号、只修改时间范围，或同时修改两者
+	if !hasSubOrderID && !hasTimeRange {
+		return errors.New("sub_order_ids and time range cannot be empty, at least one must be provided")
 	}
 
 	if len(t.Reviser) == 0 {

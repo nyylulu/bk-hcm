@@ -44,7 +44,7 @@ type Interface interface {
 	List(kt *kit.Kit, opt *types.ListOption) (
 		*types.ListResult[tableapplystat.CvmApplyOrderStatisticsConfigTable], error)
 	CreateWithTx(kt *kit.Kit, tx *sqlx.Tx,
-		models []tableapplystat.CvmApplyOrderStatisticsConfigTable) ([]string, error)
+		models []*tableapplystat.CvmApplyOrderStatisticsConfigTable) ([]string, error)
 	UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, filterExpr *filter.Expression,
 		model *tableapplystat.CvmApplyOrderStatisticsConfigTable) error
 	DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, f *filter.Expression) error
@@ -58,38 +58,34 @@ type Dao struct {
 	IDGen idgenerator.IDGenInterface
 }
 
-// CreateWithTx ...
-func (d Dao) CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []tableapplystat.CvmApplyOrderStatisticsConfigTable) (
+// CreateWithTx create cvm apply order statistics config with tx.
+func (d Dao) CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []*tableapplystat.CvmApplyOrderStatisticsConfigTable) (
 	[]string, error) {
 
 	if len(models) == 0 {
 		return nil, errf.New(errf.InvalidParameter, "models to create cannot be empty")
 	}
 
-	for index := range models {
-		if err := models[index].InsertValidate(); err != nil {
-			return nil, err
-		}
-	}
-
-	ids, err := d.IDGen.Batch(kt, models[0].TableName(), len(models))
+	ids, err := d.IDGen.Batch(kt, table.CvmApplyOrderStatisticsConfigTable, len(models))
 	if err != nil {
 		return nil, err
 	}
 
-	for index := range models {
-		models[index].ID = ids[index]
+	for index, model := range models {
+		if err = model.InsertValidate(); err != nil {
+			return nil, err
+		}
+
+		model.ID = ids[index]
 	}
 
-	sql := fmt.Sprintf(`INSERT INTO %s (%s) VALUES(%s)`,
-		models[0].TableName(),
+	sql := fmt.Sprintf(`INSERT INTO %s (%s) VALUES(%s)`, table.CvmApplyOrderStatisticsConfigTable,
 		tableapplystat.CvmApplyOrderStatisticsConfigTableColumns.ColumnExpr(),
 		tableapplystat.CvmApplyOrderStatisticsConfigTableColumns.ColonNameExpr())
 
 	if err = d.Orm.Txn(tx).BulkInsert(kt.Ctx, sql, models); err != nil {
-		tableName := models[0].TableName()
-		logs.Errorf("insert %s failed, err: %v, rid: %s", tableName, err, kt.Rid)
-		return nil, fmt.Errorf("insert %s failed, err: %v", tableName, err)
+		logs.Errorf("insert %s failed, sql: %s, err: %v, rid: %s", table.CvmApplyOrderStatisticsConfigTable, sql, err, kt.Rid)
+		return nil, fmt.Errorf("insert %s failed, err: %v", table.CvmApplyOrderStatisticsConfigTable, err)
 	}
 
 	return ids, nil
@@ -114,7 +110,7 @@ func (d Dao) UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, filterExpr *filter.Expressio
 
 	opts := utils.NewFieldOptions().
 		AddIgnoredFields(types.DefaultIgnoredFields...).
-		AddIgnoredFields("year_month").
+		AddIgnoredFields("stat_month").
 		AddBlankedFields("sub_order_ids", "start_at", "end_at", "extension")
 
 	setExpr, toUpdate, err := utils.RearrangeSQLDataWithOption(model, opts)
@@ -149,7 +145,7 @@ func (d Dao) List(kt *kit.Kit, opt *types.ListOption) (*types.ListResult[tableap
 	}
 
 	columnTypes := tableapplystat.CvmApplyOrderStatisticsConfigTableColumns.ColumnTypes()
-	if err := opt.ValidateExcludeFilter(
+	if err := opt.Validate(
 		filter.NewExprOption(filter.RuleFields(columnTypes)),
 		core.NewDefaultPageOption()); err != nil {
 		return nil, err
@@ -162,7 +158,7 @@ func (d Dao) List(kt *kit.Kit, opt *types.ListOption) (*types.ListResult[tableap
 
 	if opt.Page.Count {
 		// this is a count request, then do count operation only.
-		sql := fmt.Sprintf("SELECT COUNT(*) FROM %s %s", table.CvmApplyOrderStatisticsConfigTable, whereExpr)
+		sql := fmt.Sprintf(`SELECT COUNT(*) FROM %s %s`, table.CvmApplyOrderStatisticsConfigTable, whereExpr)
 
 		count, err := d.Orm.Do().Count(kt.Ctx, sql, whereValue)
 		if err != nil {
@@ -180,8 +176,24 @@ func (d Dao) List(kt *kit.Kit, opt *types.ListOption) (*types.ListResult[tableap
 		return nil, err
 	}
 
+	fieldsExpr := tableapplystat.CvmApplyOrderStatisticsConfigTableColumns.FieldsNamedExpr(opt.Fields)
+	if len(fieldsExpr) == 0 {
+		logs.Errorf("list cvm apply order statistics config, fieldsExpr is empty, opt.Fields: %v, rid: %s",
+			opt.Fields, kt.Rid)
+		return nil, errf.New(errf.InvalidParameter, "fields expression is empty")
+	}
+
+	// 验证 namedExpr 是否包含所有字段（当 opt.Fields 为空时）
+	if opt.Fields == nil || len(opt.Fields) == 0 {
+		namedExpr := tableapplystat.CvmApplyOrderStatisticsConfigTableColumns.NamedExpr()
+		if namedExpr != fieldsExpr {
+			logs.Errorf("list cvm apply order statistics config, namedExpr mismatch, namedExpr: %s, fieldsExpr: %s, rid: %s",
+				namedExpr, fieldsExpr, kt.Rid)
+		}
+	}
+
 	sql := fmt.Sprintf(`SELECT %s FROM %s %s %s`,
-		tableapplystat.CvmApplyOrderStatisticsConfigTableColumns.FieldsNamedExpr(opt.Fields),
+		fieldsExpr,
 		table.CvmApplyOrderStatisticsConfigTable, whereExpr, pageExpr)
 
 	details := make([]tableapplystat.CvmApplyOrderStatisticsConfigTable, 0)
