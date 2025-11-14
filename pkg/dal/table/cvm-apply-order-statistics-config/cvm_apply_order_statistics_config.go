@@ -32,7 +32,8 @@ import (
 )
 
 // CvmApplyOrderStatisticsConfigTableColumns defines all the cvm apply order statistics config table's columns.
-var CvmApplyOrderStatisticsConfigTableColumns = utils.MergeColumns(nil, CvmApplyOrderStatisticsConfigTableColumnDescriptors)
+var CvmApplyOrderStatisticsConfigTableColumns = utils.MergeColumns(nil,
+	CvmApplyOrderStatisticsConfigTableColumnDescriptors)
 
 // CvmApplyOrderStatisticsConfigTableColumnDescriptors is cvm apply order statistics config table column descriptors.
 var CvmApplyOrderStatisticsConfigTableColumnDescriptors = utils.ColumnDescriptors{
