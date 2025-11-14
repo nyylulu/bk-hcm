@@ -153,7 +153,7 @@ func (u *ApplyOrderStatisticsConfigItem) validateTimeRangeFormat() (time.Time, t
 		// 如果失败，尝试解析为日期格式
 		startTime, err = time.Parse(constant.DateLayout, u.StartAt)
 		if err != nil {
-			return time.Time{}, time.Time{}, fmt.Errorf("start_at format must be YYYY-MM-DD or YYYY-MM-DD HH:mm:ss, invalid: %w", err)
+			return time.Time{}, time.Time{}, fmt.Errorf("start_at format invalid: %w", err)
 		}
 	}
 
@@ -163,7 +163,7 @@ func (u *ApplyOrderStatisticsConfigItem) validateTimeRangeFormat() (time.Time, t
 		// 如果失败，尝试解析为日期格式
 		endTime, err = time.Parse(constant.DateLayout, u.EndAt)
 		if err != nil {
-			return time.Time{}, time.Time{}, fmt.Errorf("end_at format must be YYYY-MM-DD or YYYY-MM-DD HH:mm:ss, invalid: %w", err)
+			return time.Time{}, time.Time{}, fmt.Errorf("end_at format invalid: %w", err)
 		}
 	}
 
