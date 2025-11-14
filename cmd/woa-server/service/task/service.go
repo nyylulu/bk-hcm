@@ -78,7 +78,8 @@ func (s *service) initOperationService(h *rest.Handler) {
 		s.ListApplyOrderStatisticsConfig)
 	h.Add("ListApplyOrderStatisticsYearMonths", http.MethodPost, "/config/findmany/apply/order/statistics/year_months",
 		s.ListApplyOrderStatisticsYearMonths)
-	h.Add("GetCompletionRateStatistics", http.MethodPost, "/apply/completion-rate/statistics", s.GetCompletionRateStatistics)
+	h.Add("GetCompletionRateStatistics", http.MethodPost,
+		"/apply/completion-rate/statistics", s.GetCompletionRateStatistics)
 	h.Add("GetCompletionRateDetail", http.MethodPost, "/apply/completion-rate/detail", s.GetCompletionRateDetail)
 }
 

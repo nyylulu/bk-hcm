@@ -112,12 +112,16 @@ func (u *UpdateApplyOrderStatisticsConfigParam) Validate() error {
 	return nil
 }
 
-// Validate 验证配置项
-func (u *ApplyOrderStatisticsConfigItem) Validate() error {
+// validateBkBizID 验证业务ID
+func (u *ApplyOrderStatisticsConfigItem) validateBkBizID() error {
 	if u.BkBizID <= 0 {
 		return errors.New("bk_biz_id is required and must be greater than 0")
 	}
+	return nil
+}
 
+// validateMemo 验证备注
+func (u *ApplyOrderStatisticsConfigItem) validateMemo() error {
 	if len(u.Memo) == 0 {
 		return errors.New("memo is required")
 	}
@@ -126,11 +130,50 @@ func (u *ApplyOrderStatisticsConfigItem) Validate() error {
 		return errors.New("memo length must not exceed 255 characters")
 	}
 
-	// 子单号和时间范围可以同时设置，但不能都为空
+	return nil
+}
+
+// validateSubOrderIDs 验证子单号
+func (u *ApplyOrderStatisticsConfigItem) validateSubOrderIDs() error {
 	hasSubOrderIDs := len(u.SubOrderIDs) > 0
+	if hasSubOrderIDs && len(u.SubOrderIDs) > 100 {
+		return errors.New("sub_order_ids length must not exceed 100")
+	}
+	return nil
+}
+
+// validateTimeRangeFormat 验证时间范围格式
+func (u *ApplyOrderStatisticsConfigItem) validateTimeRangeFormat() (time.Time, time.Time, error) {
+	var startTime, endTime time.Time
+	var err error
+
+	// 尝试解析为完整日期时间格式
+	startTime, err = time.Parse(constant.DateTimeLayout, u.StartAt)
+	if err != nil {
+		// 如果失败，尝试解析为日期格式
+		startTime, err = time.Parse(constant.DateLayout, u.StartAt)
+		if err != nil {
+			return time.Time{}, time.Time{}, fmt.Errorf("start_at format must be YYYY-MM-DD or YYYY-MM-DD HH:mm:ss, invalid: %w", err)
+		}
+	}
+
+	// 尝试解析为完整日期时间格式
+	endTime, err = time.Parse(constant.DateTimeLayout, u.EndAt)
+	if err != nil {
+		// 如果失败，尝试解析为日期格式
+		endTime, err = time.Parse(constant.DateLayout, u.EndAt)
+		if err != nil {
+			return time.Time{}, time.Time{}, fmt.Errorf("end_at format must be YYYY-MM-DD or YYYY-MM-DD HH:mm:ss, invalid: %w", err)
+		}
+	}
+
+	return startTime, endTime, nil
+}
+
+// validateTimeRangeLogic 验证时间范围逻辑
+func (u *ApplyOrderStatisticsConfigItem) validateTimeRangeLogic() error {
 	hasStartAt := len(u.StartAt) > 0
 	hasEndAt := len(u.EndAt) > 0
-	hasTimeRange := hasStartAt && hasEndAt
 
 	// 如果设置了时间范围的一部分，start_at 和 end_at 必须同时提供
 	if hasStartAt && !hasEndAt {
@@ -141,51 +184,60 @@ func (u *ApplyOrderStatisticsConfigItem) Validate() error {
 		return errors.New("start_at is required when end_at is set")
 	}
 
+	// 如果两个都为空，直接返回
+	if !hasStartAt && !hasEndAt {
+		return nil
+	}
+
+	// 如果提供了完整的时间范围，验证格式和时间逻辑
+	startTime, endTime, err := u.validateTimeRangeFormat()
+	if err != nil {
+		return err
+	}
+
+	// 验证结束时间不能早于开始时间
+	if endTime.Before(startTime) {
+		return errors.New("end_at must not be earlier than start_at")
+	}
+
+	return nil
+}
+
+// validateSubOrderIDsAndTimeRange 验证子单号和时间范围的关系
+func (u *ApplyOrderStatisticsConfigItem) validateSubOrderIDsAndTimeRange() error {
+	hasSubOrderIDs := len(u.SubOrderIDs) > 0
+	hasStartAt := len(u.StartAt) > 0
+	hasEndAt := len(u.EndAt) > 0
+	hasTimeRange := hasStartAt && hasEndAt
+
 	// 子单号和时间范围不能都为空
 	if !hasSubOrderIDs && !hasTimeRange {
 		return errors.New("sub_order_ids and time range cannot be empty, at least one must be provided")
 	}
 
-	// 验证子单号数量
-	if hasSubOrderIDs && len(u.SubOrderIDs) > 100 {
-		return errors.New("sub_order_ids length must not exceed 100")
+	return nil
+}
+
+// Validate 验证配置项
+func (u *ApplyOrderStatisticsConfigItem) Validate() error {
+	if err := u.validateBkBizID(); err != nil {
+		return err
 	}
 
-	// 验证时间段
-	if hasTimeRange {
-		if len(u.StartAt) == 0 {
-			return errors.New("start_at is required when using time range")
-		}
-		if len(u.EndAt) == 0 {
-			return errors.New("end_at is required when using time range")
-		}
-		// 验证日期时间格式 YYYY-MM-DD HH:mm:ss
-		var startTime, endTime time.Time
-		var err error
+	if err := u.validateMemo(); err != nil {
+		return err
+	}
 
-		// 尝试解析为完整日期时间格式
-		startTime, err = time.Parse(constant.DateTimeLayout, u.StartAt)
-		if err != nil {
-			startTime, err = time.Parse(constant.DateLayout, u.StartAt)
-			if err != nil {
-				return fmt.Errorf("start_at format must be YYYY-MM-DD or YYYY-MM-DD HH:mm:ss, invalid: %w", err)
-			}
-		}
+	if err := u.validateSubOrderIDs(); err != nil {
+		return err
+	}
 
-		// 尝试解析为完整日期时间格式
-		endTime, err = time.Parse(constant.DateTimeLayout, u.EndAt)
-		if err != nil {
-			// 如果失败，尝试解析为日期格式
-			endTime, err = time.Parse(constant.DateLayout, u.EndAt)
-			if err != nil {
-				return fmt.Errorf("end_at format must be YYYY-MM-DD or YYYY-MM-DD HH:mm:ss, invalid: %w", err)
-			}
-		}
+	if err := u.validateTimeRangeLogic(); err != nil {
+		return err
+	}
 
-		// 验证结束时间不能早于开始时间
-		if endTime.Before(startTime) {
-			return errors.New("end_at must not be earlier than start_at")
-		}
+	if err := u.validateSubOrderIDsAndTimeRange(); err != nil {
+		return err
 	}
 
 	return nil
