@@ -21,38 +21,34 @@
     SQLVER=9999,HCMVER=v9.9.9.9
 
     Notes:
-    1. 新增 CVM 申请单统计配置表 cvm_apply_order_statistics_config
+    1. 添加CVM申请单统计配置表 cvm_apply_order_statistics_config
 */
 
 START TRANSACTION;
 
--- 1. CVM 申请单统计配置表
-CREATE TABLE IF NOT EXISTS `cvm_apply_order_statistics_config`
+--  1. CVM申请单统计配置表
+create table if not exists `cvm_apply_order_statistics_config`
 (
-    `id`           VARCHAR(64)  NOT NULL COMMENT '主键',
-    `year_month`   VARCHAR(16)      NOT NULL COMMENT '配置所属月份，格式：YYYY-MM',
-    `bk_biz_id`    BIGINT       NOT NULL COMMENT '业务ID',
-    `sub_order_ids` TEXT NOT NULL DEFAULT '' COMMENT '子单号列表，最多100个，逗号分隔',
-    `start_at`     VARCHAR(64)  NOT NULL DEFAULT '' COMMENT '开始时间，格式：YYYY-MM-DD',
-    `end_at`       VARCHAR(64)  NOT NULL DEFAULT '' COMMENT '结束时间，格式：YYYY-MM-DD',
-    `memo`         VARCHAR(255) NOT NULL DEFAULT '' COMMENT '备注',
-    `extension`    JSON                  DEFAULT NULL COMMENT '扩展信息 JSON',
-    `creator`      VARCHAR(64)  NOT NULL COMMENT '创建者',
-    `reviser`      VARCHAR(64)  NOT NULL COMMENT '更新者',
-    `created_at`   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    `updated_at`   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    PRIMARY KEY (`id`),
-    KEY `idx_year_month` (`year_month`),
-    KEY `idx_bk_biz_id` (`bk_biz_id`)
-    ) ENGINE = InnoDB
-    DEFAULT CHARSET = utf8mb4
-    COLLATE = utf8mb4_bin COMMENT ='CVM申请单统计配置表';
+    `id`                      varchar(64)  not null comment '主键',
+    `stat_month`              varchar(16)  not null comment '年月，格式：YYYY-MM',
+    `bk_biz_id`               bigint       not null comment '业务ID',
+    `sub_order_ids`            text         not null default '' comment '子订单号，多个用逗号分隔',
+    `start_at`                varchar(64)           default '' comment '开始时间',
+    `end_at`                  varchar(64)           default '' comment '结束时间',
+    `memo`                    varchar(255)          default '' comment '备注',
+    `extension`               json         not null comment '扩展字段',
+    `creator`                 varchar(64)  not null comment '创建者',
+    `reviser`                 varchar(64)  not null comment '更新者',
+    `created_at`              timestamp    not null default current_timestamp comment '创建时间',
+    `updated_at`              timestamp    not null default current_timestamp on update current_timestamp comment '更新时间',
+    primary key (`id`),
+    key `idx_stat_month` (`stat_month`)
+    ) engine = innodb default charset = utf8mb4 comment='CVM申请单统计配置表';
 
-INSERT INTO `id_generator`(`resource`, `max_id`)
-VALUES ('cvm_apply_order_statistics_config', '0');
+insert into id_generator(`resource`, `max_id`)
+values ('cvm_apply_order_statistics_config', '0');
 
 CREATE OR REPLACE VIEW `hcm_version`(`hcm_ver`, `sql_ver`) AS
-SELECT 'v9.9.9.9' AS `hcm_ver`, '9999' AS `sql_ver`;
+SELECT 'v9.9.9.9' as `hcm_ver`, '9999' as `sql_ver`;
 
 COMMIT;
-
