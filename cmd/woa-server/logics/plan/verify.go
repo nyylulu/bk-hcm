@@ -127,7 +127,7 @@ func (c *Controller) getVerifySliceWithDeviceInfo(deviceTypeMap map[string]wdt.W
 				cpuCore = deviceInfo.CpuCore
 			}
 			verifySlice = append(verifySlice, VerifyResPlanElemV2{
-				DeviceType: device.DeviceType,
+				DeviceType: device.TargetInstanceType,
 				RegionID:   device.RegionID,
 				ZoneID:     device.ZoneID,
 				CpuCore:    cpuCore,
