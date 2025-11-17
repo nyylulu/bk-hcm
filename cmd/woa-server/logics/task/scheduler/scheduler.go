@@ -2299,8 +2299,10 @@ func getModifyApplyCompare(order *types.ApplyOrder, param *types.ModifyApplyReq)
 	modifyCompare.CurDeviceType += "\n"
 
 	// 园区是否有变化
-	modifyCompare.PreZone = fmt.Sprintf("修改前园区：%s\n", order.Spec.Zone)
-	modifyCompare.CurZone = fmt.Sprintf("修改后园区：%s", param.Spec.Zone)
+	oldZones := getApplyOrderZones(order.Spec)
+	newZones := getApplyOrderZones(param.Spec)
+	modifyCompare.PreZone = fmt.Sprintf("修改前园区：%s\n", strings.Join(oldZones, "、"))
+	modifyCompare.CurZone = fmt.Sprintf("修改后园区：%s", strings.Join(newZones, "、"))
 	if order.Spec.DeviceType != param.Spec.DeviceType {
 		modifyCompare.CurZone += "<font color=red>（有调整）</font>"
 	}
@@ -2322,6 +2324,20 @@ func getModifyApplyCompare(order *types.ApplyOrder, param *types.ModifyApplyReq)
 		modifyCompare.CurSubnet = fmt.Sprintf("修改后子网：%s\n", param.Spec.Subnet)
 	}
 	return modifyCompare
+}
+
+// getApplyOrderZones 获取申请单的可用区
+func getApplyOrderZones(spec *types.ResourceSpec) []string {
+	if spec == nil {
+		return []string{}
+	}
+	if len(spec.Zones) > 0 {
+		return spec.Zones
+	}
+	if len(spec.Zone) > 0 {
+		return []string{spec.Zone}
+	}
+	return []string{}
 }
 
 func (s *scheduler) validateModification(kt *kit.Kit, order *types.ApplyOrder, param *types.ModifyApplyReq) error {

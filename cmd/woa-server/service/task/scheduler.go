@@ -1794,7 +1794,8 @@ func (s *service) GetApplyModify(cts *rest.Contexts) (any, error) {
 			continue
 		}
 
-		if modifyItem.Details.PreData != nil {
+		// 只有旧版可用区，才需要转换
+		if modifyItem.Details.PreData != nil && len(modifyItem.Details.PreData.Zones) == 0 {
 			modifyItem.Details.PreData.Zones = []string{modifyItem.Details.PreData.Zone}
 			// 分Campus
 			if modifyItem.Details.PreData.Zone == cvmapi.CvmSeparateCampus {
@@ -1803,7 +1804,7 @@ func (s *service) GetApplyModify(cts *rest.Contexts) (any, error) {
 			}
 		}
 
-		if modifyItem.Details.CurData != nil {
+		if modifyItem.Details.CurData != nil && len(modifyItem.Details.CurData.Zones) == 0 {
 			modifyItem.Details.CurData.Zones = []string{modifyItem.Details.CurData.Zone}
 			// 分Campus
 			if modifyItem.Details.CurData.Zone == cvmapi.CvmSeparateCampus {
