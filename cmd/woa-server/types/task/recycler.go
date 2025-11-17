@@ -216,12 +216,13 @@ func (req *AuditRecycleReq) Validate() (errKey string, err error) {
 
 // CreateRecycleReq create recycle order request
 type CreateRecycleReq struct {
-	IPs         []string    `json:"ips"`
-	AssetIDs    []string    `json:"asset_ids"`
-	HostIDs     []int64     `json:"bk_host_ids"`
-	ReturnPlan  *ReturnPlan `json:"return_plan"`
-	SkipConfirm bool        `json:"skip_confirm"`
-	Remark      string      `json:"remark" bson:"remark"`
+	IPs                 []string            `json:"ips"`
+	AssetIDs            []string            `json:"asset_ids"`
+	HostIDs             []int64             `json:"bk_host_ids"`
+	ReturnPlan          *ReturnPlan         `json:"return_plan"`
+	SkipConfirm         bool                `json:"skip_confirm"`
+	RecycleTypeSequence []table.RecycleType `json:"recycle_type_sequence"`
+	Remark              string              `json:"remark" bson:"remark"`
 }
 
 // Validate whether CreateRecycleReq is valid
@@ -262,14 +263,23 @@ func (req *CreateRecycleReq) Validate() error {
 
 // ToPreviewParam convert to preview param
 func (req *CreateRecycleReq) ToPreviewParam() *PreviewRecycleReq {
-	return &PreviewRecycleReq{
-		IPs:         req.IPs,
-		AssetIDs:    req.AssetIDs,
-		HostIDs:     req.HostIDs,
-		ReturnPlan:  req.ReturnPlan,
-		SkipConfirm: req.SkipConfirm,
-		Remark:      req.Remark,
+	reviewReq := &PreviewRecycleReq{
+		IPs:                 req.IPs,
+		AssetIDs:            req.AssetIDs,
+		HostIDs:             req.HostIDs,
+		ReturnPlan:          req.ReturnPlan,
+		SkipConfirm:         req.SkipConfirm,
+		RecycleTypeSequence: req.RecycleTypeSequence,
+		Remark:              req.Remark,
 	}
+	// 默认顺序：滚服 -> 短租
+	if len(reviewReq.RecycleTypeSequence) == 0 {
+		reviewReq.RecycleTypeSequence = []table.RecycleType{
+			table.RecycleTypeRollServer,
+			table.RecycleTypeShortRental,
+		}
+	}
+	return reviewReq
 }
 
 // CreateRecycleOrderRst create recycle order result
