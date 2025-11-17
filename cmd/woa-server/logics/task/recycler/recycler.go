@@ -240,7 +240,7 @@ func (r *recycler) RecycleCheck(kt *kit.Kit, param *types.RecycleCheckReq, bkBiz
 	}
 
 	if len(hostBase) == 0 {
-		return &types.RecycleCheckRst{Count: 0}, nil
+		return nil, errf.New(errf.RecordNotFound, "host not found")
 	}
 
 	hostIds := make([]int64, 0)
