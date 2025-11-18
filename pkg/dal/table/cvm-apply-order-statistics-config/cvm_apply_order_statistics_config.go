@@ -131,7 +131,7 @@ func (t CvmApplyOrderStatisticsConfigTable) InsertValidate() error {
 		return errors.New("sub_order_ids and time range cannot be empty , at least one must be provided")
 	}
 
-	if err := validator.ValidateMemo(&t.Memo, false); err != nil {
+	if err := validator.ValidateMemo(&t.Memo, true); err != nil {
 		return err
 	}
 
@@ -156,10 +156,6 @@ func (t CvmApplyOrderStatisticsConfigTable) UpdateValidate() error {
 		return errors.New("id can not be updated")
 	}
 
-	if len(t.Creator) != 0 {
-		return errors.New("creator can not be updated")
-	}
-
 	if t.BkBizID < 0 {
 		return errors.New("bk_biz_id must be greater than or equal to 0")
 	}
@@ -182,6 +178,10 @@ func (t CvmApplyOrderStatisticsConfigTable) UpdateValidate() error {
 	// 更新时允许只修改子单号、只修改时间范围，或同时修改两者
 	if !hasSubOrderID && !hasTimeRange {
 		return errors.New("sub_order_ids and time range cannot be empty, at least one must be provided")
+	}
+
+	if len(t.Creator) != 0 {
+		return errors.New("creator can not be updated")
 	}
 
 	if len(t.Reviser) == 0 {
