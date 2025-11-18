@@ -33,17 +33,9 @@ type GetApplyStatReq struct {
 // errKey: invalid key
 // err: detail reason why errKey is invalid
 func (req *GetApplyStatReq) Validate() (errKey string, err error) {
-	if len(req.Start) == 0 {
-		return "start", fmt.Errorf("start is not set")
-	}
-
 	start, err := time.Parse(dateLayout, req.Start)
 	if err != nil {
 		return "start", fmt.Errorf("date format should be like %s", dateLayout)
-	}
-
-	if len(req.End) == 0 {
-		return "end", fmt.Errorf("end is not set")
 	}
 
 	end, err := time.Parse(dateLayout, req.End)
@@ -168,27 +160,14 @@ type GetCompletionRateStatReq struct {
 
 // Validate whether GetCompletionRateStatReq is valid
 func (req *GetCompletionRateStatReq) Validate() (errKey string, err error) {
-	if len(req.StartTime) == 0 {
-		return "start_time", fmt.Errorf("start_time is not set")
-	}
-
-	_, err = time.Parse(dateLayout, req.StartTime)
+	startTime, err := time.Parse(dateLayout, req.StartTime)
 	if err != nil {
 		return "start_time", fmt.Errorf("date format should be like %s", dateLayout)
-	}
-
-	if len(req.EndTime) == 0 {
-		return "end_time", fmt.Errorf("end_time is not set")
 	}
 
 	endTime, err := time.Parse(dateLayout, req.EndTime)
 	if err != nil {
 		return "end_time", fmt.Errorf("date format should be like %s", dateLayout)
-	}
-
-	startTime, err := time.Parse(dateLayout, req.StartTime)
-	if err != nil {
-		return "start_time", fmt.Errorf("date format should be like %s", dateLayout)
 	}
 
 	if endTime.Before(startTime) {
@@ -242,17 +221,9 @@ type GetCompletionRateDetailReq struct {
 
 // Validate 验证请求参数
 func (req *GetCompletionRateDetailReq) Validate() (errKey string, err error) {
-	if len(req.StartTime) == 0 {
-		return "start_time", fmt.Errorf("start_time is not set")
-	}
-
 	startTime, err := time.Parse(dateLayout, req.StartTime)
 	if err != nil {
 		return "start_time", fmt.Errorf("date format should be like %s", dateLayout)
-	}
-
-	if len(req.EndTime) == 0 {
-		return "end_time", fmt.Errorf("end_time is not set")
 	}
 
 	endTime, err := time.Parse(dateLayout, req.EndTime)

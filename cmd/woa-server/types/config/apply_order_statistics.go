@@ -22,7 +22,6 @@ package config
 import (
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"hcm/pkg/criteria/constant"
@@ -45,16 +44,7 @@ type ApplyOrderStatisticsConfigItem struct {
 
 // Validate 验证创建申请单统计配置请求参数
 func (c *CreateApplyOrderStatisticsConfigParam) Validate() error {
-	if len(c.StatMonth) == 0 {
-		return errors.New("stat_month is required")
-	}
-
 	// 验证年月格式 YYYY-MM
-	parts := strings.Split(c.StatMonth, "-")
-	if len(parts) != 2 {
-		return errors.New("stat_month format must be YYYY-MM")
-	}
-	// 验证年月是否有效
 	_, err := time.Parse(constant.YearMonthLayout, c.StatMonth)
 	if err != nil {
 		return fmt.Errorf("stat_month format must be YYYY-MM, invalid: %w", err)
@@ -86,16 +76,7 @@ type UpdateApplyOrderStatisticsConfigParam struct {
 
 // Validate 验证更新申请单统计配置请求参数
 func (u *UpdateApplyOrderStatisticsConfigParam) Validate() error {
-	if len(u.StatMonth) == 0 {
-		return errors.New("stat_month is required")
-	}
-
 	// 验证年月格式 YYYY-MM
-	parts := strings.Split(u.StatMonth, "-")
-	if len(parts) != 2 {
-		return errors.New("stat_month format must be YYYY-MM")
-	}
-	// 验证年月是否有效
 	_, err := time.Parse(constant.YearMonthLayout, u.StatMonth)
 	if err != nil {
 		return fmt.Errorf("stat_month format must be YYYY-MM, invalid: %w", err)
@@ -120,19 +101,6 @@ func (u *ApplyOrderStatisticsConfigItem) validateBkBizID() error {
 	return nil
 }
 
-// validateMemo 验证备注
-func (u *ApplyOrderStatisticsConfigItem) validateMemo() error {
-	if len(u.Memo) == 0 {
-		return errors.New("memo is required")
-	}
-
-	if len(u.Memo) > 255 {
-		return errors.New("memo length must not exceed 255 characters")
-	}
-
-	return nil
-}
-
 // validateSubOrderIDs 验证子单号
 func (u *ApplyOrderStatisticsConfigItem) validateSubOrderIDs() error {
 	hasSubOrderIDs := len(u.SubOrderIDs) > 0
@@ -144,27 +112,14 @@ func (u *ApplyOrderStatisticsConfigItem) validateSubOrderIDs() error {
 
 // validateTimeRangeFormat 验证时间范围格式
 func (u *ApplyOrderStatisticsConfigItem) validateTimeRangeFormat() (time.Time, time.Time, error) {
-	var startTime, endTime time.Time
-	var err error
-
-	// 尝试解析为完整日期时间格式
-	startTime, err = time.Parse(constant.DateTimeLayout, u.StartAt)
+	startTime, err := time.Parse(constant.DateTimeLayout, u.StartAt)
 	if err != nil {
-		// 如果失败，尝试解析为日期格式
-		startTime, err = time.Parse(constant.DateLayout, u.StartAt)
-		if err != nil {
-			return time.Time{}, time.Time{}, fmt.Errorf("start_at format invalid: %w", err)
-		}
+		return time.Time{}, time.Time{}, fmt.Errorf("start_at format invalid: %w", err)
 	}
 
-	// 尝试解析为完整日期时间格式
-	endTime, err = time.Parse(constant.DateTimeLayout, u.EndAt)
+	endTime, err := time.Parse(constant.DateTimeLayout, u.EndAt)
 	if err != nil {
-		// 如果失败，尝试解析为日期格式
-		endTime, err = time.Parse(constant.DateLayout, u.EndAt)
-		if err != nil {
-			return time.Time{}, time.Time{}, fmt.Errorf("end_at format invalid: %w", err)
-		}
+		return time.Time{}, time.Time{}, fmt.Errorf("end_at format invalid: %w", err)
 	}
 
 	return startTime, endTime, nil
@@ -224,10 +179,6 @@ func (u *ApplyOrderStatisticsConfigItem) Validate() error {
 		return err
 	}
 
-	if err := u.validateMemo(); err != nil {
-		return err
-	}
-
 	if err := u.validateSubOrderIDs(); err != nil {
 		return err
 	}
@@ -250,16 +201,7 @@ type ListApplyOrderStatisticsConfigParam struct {
 
 // Validate 验证查询申请单统计配置请求参数
 func (l *ListApplyOrderStatisticsConfigParam) Validate() error {
-	if len(l.StatMonth) == 0 {
-		return errors.New("stat_month is required")
-	}
-
 	// 验证年月格式 YYYY-MM
-	parts := strings.Split(l.StatMonth, "-")
-	if len(parts) != 2 {
-		return errors.New("stat_month format must be YYYY-MM")
-	}
-	// 验证年月是否有效
 	_, err := time.Parse(constant.YearMonthLayout, l.StatMonth)
 	if err != nil {
 		return fmt.Errorf("stat_month format must be YYYY-MM, invalid: %w", err)

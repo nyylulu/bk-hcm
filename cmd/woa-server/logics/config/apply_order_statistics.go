@@ -21,7 +21,6 @@ package config
 
 import (
 	"fmt"
-	"hcm/pkg/dal/dao/tools"
 	"sort"
 	"strings"
 	"time"
@@ -32,7 +31,9 @@ import (
 	"hcm/pkg/api/core"
 	"hcm/pkg/dal/dao"
 	daoorm "hcm/pkg/dal/dao/orm"
+	"hcm/pkg/dal/dao/tools"
 	daotypes "hcm/pkg/dal/dao/types"
+	tableapplystat "hcm/pkg/dal/table/
 	tableapplystat "hcm/pkg/dal/table/cvm-apply-order-statistics-config"
 	tabletypes "hcm/pkg/dal/table/types"
 	"hcm/pkg/kit"
@@ -196,11 +197,9 @@ func (a *applyOrderStatistics) ListConfig(kt *kit.Kit,
 	filterExpr := tools.EqualExpression("stat_month", input.StatMonth)
 
 	page := core.NewDefaultBasePage()
-	page.Limit = core.DefaultMaxPageLimit
 	opt := &daotypes.ListOption{
 		Filter: filterExpr,
 		Page:   page,
-		Fields: []string{},
 	}
 
 	result, err := a.dao.CvmApplyOrderStatisticsConfig().List(kt, opt)
@@ -219,7 +218,6 @@ func (a *applyOrderStatistics) ListConfig(kt *kit.Kit,
 func (a *applyOrderStatistics) ListYearMonths(kt *kit.Kit) (*types.ListApplyOrderStatisticsYearMonthsResult, error) {
 
 	page := core.NewDefaultBasePage()
-	page.Limit = core.DefaultMaxPageLimit
 	opt := &daotypes.ListOption{
 		Filter: tools.AllExpression(),
 		Page:   page,
