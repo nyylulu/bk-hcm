@@ -81,7 +81,17 @@ func (c *Controller) AdjustBizResPlanDemand(kt *kit.Kit, req *ptypes.AdjustRPDem
 		return "", err
 	}
 
+	// create cancel resource plan ticket.
+	ticketID, err = c.CreateResPlanTicket(kt, adjustReq)
+	if err != nil {
+		logs.Errorf("failed to create resource plan ticket, err: %v, rid: %s", err, kt.Rid)
+		return "", err
+	}
+
 	// lock all resource plan demand.
+	for i := range lockedItems {
+		lockedItems[i].TicketID = ticketID
+	}
 	lockReq := &rpproto.ResPlanDemandLockOpReq{
 		LockedItems: lockedItems,
 	}
@@ -99,13 +109,6 @@ func (c *Controller) AdjustBizResPlanDemand(kt *kit.Kit, req *ptypes.AdjustRPDem
 			}
 		}
 	}()
-
-	// create cancel resource plan ticket.
-	ticketID, err = c.CreateResPlanTicket(kt, adjustReq)
-	if err != nil {
-		logs.Errorf("failed to create resource plan ticket, err: %v, rid: %s", err, kt.Rid)
-		return "", err
-	}
 
 	// create adjust resource plan ticket itsm audit flow.
 	if err = c.CreateAuditFlow(kt, ticketID); err != nil {
@@ -164,7 +167,24 @@ func (c *Controller) CancelBizResPlanDemand(kt *kit.Kit, req *ptypes.CancelRPDem
 		return "", err
 	}
 
+	// construct cancel biz resource plan demand request.
+	cancelReq, err := c.constructCancelReq(kt, bizOrgRel, demandClass, req.CancelDemands)
+	if err != nil {
+		logs.Errorf("failed to construct adjust resource plan ticket request, err: %v, rid: %s", err, kt.Rid)
+		return "", err
+	}
+
+	// create cancel resource plan ticket.
+	ticketID, err := c.CreateResPlanTicket(kt, cancelReq)
+	if err != nil {
+		logs.Errorf("failed to create resource plan ticket, err: %v, rid: %s", err, kt.Rid)
+		return "", err
+	}
+
 	// lock all resource plan demand.
+	for i := range lockedItems {
+		lockedItems[i].TicketID = ticketID
+	}
 	lockReq := &rpproto.ResPlanDemandLockOpReq{
 		LockedItems: lockedItems,
 	}
@@ -182,20 +202,6 @@ func (c *Controller) CancelBizResPlanDemand(kt *kit.Kit, req *ptypes.CancelRPDem
 			}
 		}
 	}()
-
-	// construct cancel biz resource plan demand request.
-	cancelReq, err := c.constructCancelReq(kt, bizOrgRel, demandClass, req.CancelDemands)
-	if err != nil {
-		logs.Errorf("failed to construct adjust resource plan ticket request, err: %v, rid: %s", err, kt.Rid)
-		return "", err
-	}
-
-	// create cancel resource plan ticket.
-	ticketID, err := c.CreateResPlanTicket(kt, cancelReq)
-	if err != nil {
-		logs.Errorf("failed to create resource plan ticket, err: %v, rid: %s", err, kt.Rid)
-		return "", err
-	}
 
 	// create adjust resource plan ticket itsm audit flow.
 	if err = c.CreateAuditFlow(kt, ticketID); err != nil {

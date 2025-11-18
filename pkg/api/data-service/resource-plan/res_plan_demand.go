@@ -161,9 +161,9 @@ type ResPlanDemandLockOpReq struct {
 }
 
 // Validate validate
-func (r ResPlanDemandLockOpReq) Validate() error {
+func (r ResPlanDemandLockOpReq) Validate(isLock bool) error {
 	for _, item := range r.LockedItems {
-		if err := item.Validate(); err != nil {
+		if err := item.Validate(isLock); err != nil {
 			return err
 		}
 	}
@@ -189,11 +189,17 @@ func NewResPlanDemandLockOpReqBatch(demandIDs []string, lockedCPUCore int64) *Re
 // ResPlanDemandLockOpItem lock operation item
 type ResPlanDemandLockOpItem struct {
 	ID            string `json:"id" validate:"required"`
+	TicketID      string `json:"ticket_id"`
 	LockedCPUCore int64  `json:"locked_cpu_core"`
 }
 
 // Validate validate
-func (r ResPlanDemandLockOpItem) Validate() error {
+func (r ResPlanDemandLockOpItem) Validate(isLock bool) error {
+	if isLock {
+		if r.TicketID == "" {
+			return errf.New(errf.InvalidParameter, "ticket_id can not be empty")
+		}
+	}
 	return validator.Validate.Struct(r)
 }
 

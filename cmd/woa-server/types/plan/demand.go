@@ -249,6 +249,7 @@ type ListResPlanDemandItem struct {
 	PlanType         enumor.PlanType      `json:"plan_type"`
 	ObsProject       enumor.ObsProject    `json:"obs_project"`
 	TechnicalClass   string               `json:"technical_class"`
+	TicketID         string               `json:"ticket_id"`
 	DeviceFamily     string               `json:"device_family"`
 	CoreType         enumor.CoreType      `json:"core_type"`
 	DiskType         enumor.DiskType      `json:"disk_type"`

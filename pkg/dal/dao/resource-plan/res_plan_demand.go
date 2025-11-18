@@ -231,8 +231,8 @@ func (d ResPlanDemandDao) ExamineAndLockAllRPDemand(kt *kit.Kit, lockedItems []r
 		}
 
 		for _, item := range lockedItems {
-			updateSql := fmt.Sprintf(`UPDATE %s SET locked=%d, locked_cpu_core=%d where id = :id`,
-				table.ResPlanDemandTable, enumor.CrpDemandLocked, item.LockedCPUCore)
+			updateSql := fmt.Sprintf(`UPDATE %s SET locked=%d, locked_cpu_core=%d, ticket_id='%s' where id = :id`,
+				table.ResPlanDemandTable, enumor.CrpDemandLocked, item.LockedCPUCore, item.TicketID)
 
 			whereValue["id"] = item.ID
 			_, err = d.Orm.Txn(txn).Update(kt.Ctx, updateSql, whereValue)
@@ -265,7 +265,7 @@ func (d ResPlanDemandDao) UnlockAllResPlanDemand(kt *kit.Kit, demandIDs []string
 		return err
 	}
 
-	updateSql := fmt.Sprintf(`UPDATE %s SET locked=%d, locked_cpu_core=%d %s`, table.ResPlanDemandTable,
+	updateSql := fmt.Sprintf(`UPDATE %s SET locked=%d, locked_cpu_core=%d, ticket_id="" %s`, table.ResPlanDemandTable,
 		enumor.CrpDemandUnLocked, 0, whereExpr)
 
 	if _, err = d.Orm.Do().Update(kt.Ctx, updateSql, whereValue); err != nil {
