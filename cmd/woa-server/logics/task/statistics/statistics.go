@@ -241,24 +241,34 @@ func (s *statistics) loadConfigs(kt *kit.Kit, monthSlice []string) ([]*tableappl
 	}
 
 	filterExpr := tools.ContainersExpression("year_month", monthSlice)
-	listReq := &core.ListReq{
-		Filter: filterExpr,
-		Page:   core.NewDefaultBasePage(),
-	}
-	listReq.Page.Limit = core.DefaultMaxPageLimit
+	page := core.NewDefaultBasePage()
 
-	result, err := s.client.DataService().Global.ApplyOrderStatisticsConfig.List(kt, listReq)
-	if err != nil {
-		return nil, fmt.Errorf("list apply order statistics config from data service failed: %w", err)
-	}
+	configs := make([]*tableapplystat.CvmApplyOrderStatisticsConfigTable, 0)
 
-	if result == nil {
-		return nil, nil
-	}
+	for {
+		listReq := &core.ListReq{
+			Filter: filterExpr,
+			Page:   page,
+		}
 
-	configs := make([]*tableapplystat.CvmApplyOrderStatisticsConfigTable, 0, len(result.Details))
-	for i := range result.Details {
-		configs = append(configs, &result.Details[i])
+		result, err := s.client.DataService().Global.ApplyOrderStatisticsConfig.List(kt, listReq)
+		if err != nil {
+			return nil, fmt.Errorf("list apply order statistics config from data service failed: %w", err)
+		}
+
+		if result == nil || len(result.Details) == 0 {
+			break
+		}
+
+		for i := range result.Details {
+			configs = append(configs, &result.Details[i])
+		}
+
+		if len(result.Details) < int(page.Limit) {
+			break
+		}
+
+		page.Start += uint32(len(result.Details))
 	}
 
 	return configs, nil

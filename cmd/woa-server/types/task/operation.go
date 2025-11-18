@@ -159,22 +159,22 @@ type GetCompletionRateStatReq struct {
 }
 
 // Validate whether GetCompletionRateStatReq is valid
-func (req *GetCompletionRateStatReq) Validate() (errKey string, err error) {
+func (req *GetCompletionRateStatReq) Validate() error {
 	startTime, err := time.Parse(dateLayout, req.StartTime)
 	if err != nil {
-		return "start_time", fmt.Errorf("date format should be like %s", dateLayout)
+		return fmt.Errorf("invalid start_time, expected format %s", dateLayout)
 	}
 
 	endTime, err := time.Parse(dateLayout, req.EndTime)
 	if err != nil {
-		return "end_time", fmt.Errorf("date format should be like %s", dateLayout)
+		return fmt.Errorf("invalid end_time, expected format %s", dateLayout)
 	}
 
 	if endTime.Before(startTime) {
-		return "start_time,end_time", fmt.Errorf("end_time must be after start_time")
+		return fmt.Errorf("end_time must be after start_time")
 	}
 
-	return "", nil
+	return nil
 }
 
 // GetFilter get mgo filter
@@ -184,16 +184,18 @@ func (req *GetCompletionRateStatReq) GetFilter() (map[string]interface{}, error)
 	timeCond := make(map[string]interface{})
 	if len(req.StartTime) != 0 {
 		startTime, err := time.Parse(dateLayout, req.StartTime)
-		if err == nil {
-			timeCond[pkg.BKDBGTE] = startTime
+		if err != nil {
+			return nil, fmt.Errorf("invalid start_time, expected format %s", dateLayout)
 		}
+		timeCond[pkg.BKDBGTE] = startTime
 	}
 	if len(req.EndTime) != 0 {
 		endTime, err := time.Parse(dateLayout, req.EndTime)
-		if err == nil {
-			// '%lte: 2006-01-02' means '%lt: 2006-01-03 00:00:00'
-			timeCond[pkg.BKDBLT] = endTime.AddDate(0, 0, 1)
+		if err != nil {
+			return nil, fmt.Errorf("invalid end_time, expected format %s", dateLayout)
 		}
+		// '%lte: 2006-01-02' means '%lt: 2006-01-03 00:00:00'
+		timeCond[pkg.BKDBLT] = endTime.AddDate(0, 0, 1)
 	}
 	if len(timeCond) != 0 {
 		filter["create_at"] = timeCond
@@ -220,22 +222,22 @@ type GetCompletionRateDetailReq struct {
 }
 
 // Validate 验证请求参数
-func (req *GetCompletionRateDetailReq) Validate() (errKey string, err error) {
+func (req *GetCompletionRateDetailReq) Validate() error {
 	startTime, err := time.Parse(dateLayout, req.StartTime)
 	if err != nil {
-		return "start_time", fmt.Errorf("date format should be like %s", dateLayout)
+		return fmt.Errorf("invalid start_time, expected format %s", dateLayout)
 	}
 
 	endTime, err := time.Parse(dateLayout, req.EndTime)
 	if err != nil {
-		return "end_time", fmt.Errorf("date format should be like %s", dateLayout)
+		return fmt.Errorf("invalid end_time, expected format %s", dateLayout)
 	}
 
 	if endTime.Before(startTime) {
-		return "start_time,end_time", fmt.Errorf("end_time must be after start_time")
+		return fmt.Errorf("end_time must be after start_time")
 	}
 
-	return "", nil
+	return nil
 }
 
 // GetCompletionRateDetailRst 获取结单率详情统计响应

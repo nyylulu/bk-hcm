@@ -389,24 +389,24 @@ func convertCompletionRateStatisticsResult(aggRst []struct {
 }
 
 // GetCompletionRateStatistics get completion rate statistics
-func (op *operation) GetCompletionRateStatistics(kit *kit.Kit,
+func (op *operation) GetCompletionRateStatistics(kt *kit.Kit,
 	param *types.GetCompletionRateStatReq) (*types.GetCompletionRateStatRst, error) {
 	filter, err := param.GetFilter()
 	if err != nil {
-		logs.Errorf("failed to get completion rate statistics, for get filter err: %v, rid: %s", err, kit.Rid)
+		logs.Errorf("failed to get completion rate statistics, for get filter err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
 	startTime, endTime, err := parseTimeRange(param.StartTime, param.EndTime)
 	if err != nil {
-		logs.Errorf("failed to parse time range, err: %v, rid: %s", err, kit.Rid)
+		logs.Errorf("failed to parse time range, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
-	excludeSuborderIDs, err := op.getExcludeSuborderIDs(kit, startTime, endTime)
+	excludeSuborderIDs, err := op.getExcludeSuborderIDs(kt, startTime, endTime)
 	if err != nil {
 		logs.Errorf("failed to get exclude suborder ids for completion rate statistics, err: %v, rid: %s",
-			err, kit.Rid)
+			err, kt.Rid)
 		return nil, err
 	}
 
@@ -419,8 +419,8 @@ func (op *operation) GetCompletionRateStatistics(kit *kit.Kit,
 		CompletionRate float64 `bson:"completion_rate"`
 	}, 0)
 
-	if err := model.Operation().ApplyOrder().AggregateAll(kit.Ctx, pipeline, &aggRst); err != nil {
-		logs.Errorf("failed to get completion rate statistics, err: %v, rid: %s", err, kit.Rid)
+	if err := model.Operation().ApplyOrder().AggregateAll(kt.Ctx, pipeline, &aggRst); err != nil {
+		logs.Errorf("failed to get completion rate statistics, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -526,21 +526,21 @@ func buildCompletionRateDetailPipeline(baseFilter map[string]interface{}) []map[
 }
 
 // GetCompletionRateDetail 获取结单率详情统计
-func (op *operation) GetCompletionRateDetail(kit *kit.Kit,
+func (op *operation) GetCompletionRateDetail(kt *kit.Kit,
 	param *types.GetCompletionRateDetailReq) (*types.GetCompletionRateDetailRst, error) {
 	startTime, endTime, err := parseTimeRange(param.StartTime, param.EndTime)
 	if err != nil {
-		logs.Errorf("failed to parse time range, err: %v, rid: %s", err, kit.Rid)
+		logs.Errorf("failed to parse time range, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
 	// 结束时间需要加1天，因为查询条件是 $lt（小于）不包含当天
 	endTime = endTime.AddDate(0, 0, 1)
 
-	excludeSuborderIDs, err := op.getExcludeSuborderIDs(kit, startTime, endTime)
+	excludeSuborderIDs, err := op.getExcludeSuborderIDs(kt, startTime, endTime)
 	if err != nil {
 		logs.Errorf("failed to get exclude suborder ids for completion rate detail, err: %v, rid: %s",
-			err, kit.Rid)
+			err, kt.Rid)
 		return nil, err
 	}
 
@@ -548,8 +548,8 @@ func (op *operation) GetCompletionRateDetail(kit *kit.Kit,
 	pipeline := buildCompletionRateDetailPipeline(baseFilter)
 
 	aggRst := make([]*types.CompletionRateDetailItem, 0)
-	if err := model.Operation().ApplyOrder().AggregateAll(kit.Ctx, pipeline, &aggRst); err != nil {
-		logs.Errorf("failed to get completion rate detail statistics, err: %v, rid: %s", err, kit.Rid)
+	if err := model.Operation().ApplyOrder().AggregateAll(kt.Ctx, pipeline, &aggRst); err != nil {
+		logs.Errorf("failed to get completion rate detail statistics, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
