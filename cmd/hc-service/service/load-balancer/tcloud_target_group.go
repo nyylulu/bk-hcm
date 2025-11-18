@@ -427,12 +427,12 @@ func (svc *clbSvc) batchModifyTargetPortCloud(kt *kit.Kit, req *protolb.TCloudBa
 		return err
 	}
 
-	rsOpt := &typelb.TCloudTargetPortUpdateOption{
-		Region: clbInfo.Region,
-	}
 	for _, ruleItem := range urlRuleList.Details {
-		rsOpt.LoadBalancerId = ruleItem.CloudLbID
-		rsOpt.ListenerId = ruleItem.CloudLBLID
+		rsOpt := &typelb.TCloudTargetPortUpdateOption{
+			Region:         clbInfo.Region,
+			LoadBalancerId: ruleItem.CloudLbID,
+			ListenerId:     ruleItem.CloudLBLID,
+		}
 		if ruleItem.RuleType == enumor.Layer7RuleType {
 			rsOpt.LocationId = cvt.ValToPtr(ruleItem.CloudID)
 		}
@@ -565,11 +565,11 @@ func (svc *clbSvc) batchModifyTargetWeightCloud(kt *kit.Kit, req *protolb.TCloud
 		return err
 	}
 
-	rsOpt := &typelb.TCloudTargetWeightUpdateOption{
-		Region: clbInfo.Region,
-	}
 	for _, ruleItem := range urlRuleList.Details {
-		rsOpt.LoadBalancerId = ruleItem.CloudLbID
+		rsOpt := &typelb.TCloudTargetWeightUpdateOption{
+			Region:         clbInfo.Region,
+			LoadBalancerId: ruleItem.CloudLbID,
+		}
 		tmpWeightRule := &typelb.TargetWeightRule{
 			ListenerId: cvt.ValToPtr(ruleItem.CloudLBLID),
 		}

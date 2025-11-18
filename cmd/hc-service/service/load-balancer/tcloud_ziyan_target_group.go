@@ -344,12 +344,12 @@ func (svc *clbSvc) batchModifyZiyanTargetPortCloud(kt *kit.Kit, req *protolb.TCl
 		return err
 	}
 
-	rsOpt := &typelb.TCloudTargetPortUpdateOption{
-		Region: clbInfo.Region,
-	}
 	for _, ruleItem := range urlRuleList.Details {
-		rsOpt.LoadBalancerId = ruleItem.CloudLbID
-		rsOpt.ListenerId = ruleItem.CloudLBLID
+		rsOpt := &typelb.TCloudTargetPortUpdateOption{
+			Region:         clbInfo.Region,
+			LoadBalancerId: ruleItem.CloudLbID,
+			ListenerId:     ruleItem.CloudLBLID,
+		}
 		if ruleItem.RuleType == enumor.Layer7RuleType {
 			rsOpt.LocationId = cvt.ValToPtr(ruleItem.CloudID)
 		}
@@ -456,11 +456,11 @@ func (svc *clbSvc) batchModifyZiyanTargetWeightCloud(kt *kit.Kit, req *protolb.T
 		return err
 	}
 
-	rsOpt := &typelb.TCloudTargetWeightUpdateOption{
-		Region: clbInfo.Region,
-	}
 	for _, ruleItem := range urlRuleList.Details {
-		rsOpt.LoadBalancerId = ruleItem.CloudLbID
+		rsOpt := &typelb.TCloudTargetWeightUpdateOption{
+			Region:         clbInfo.Region,
+			LoadBalancerId: ruleItem.CloudLbID,
+		}
 		tmpWeightRule := &typelb.TargetWeightRule{
 			ListenerId: cvt.ValToPtr(ruleItem.CloudLBLID),
 		}
@@ -476,11 +476,11 @@ func (svc *clbSvc) batchModifyZiyanTargetWeightCloud(kt *kit.Kit, req *protolb.T
 			// 对于cvm，使用InstanceId参数，其他所有类型，使用EniIp参数 --story=124323667
 			tmpRs = setTargetInstanceIDAndEniIP(rsItem.InstType, rsItem.CloudInstID, rsItem.IP, tmpRs)
 			tmpWeightRule.Targets = append(tmpWeightRule.Targets, tmpRs)
-			rsOpt.ModifyList = append(rsOpt.ModifyList, tmpWeightRule)
 		}
+		rsOpt.ModifyList = append(rsOpt.ModifyList, tmpWeightRule)
 		err = tcloudAdpt.ModifyTargetWeight(kt, rsOpt)
 		if err != nil {
-			logs.Errorf("batch modify tcloud-ziyan target port api failed, err: %v, rsOpt: %+v, rid: %s", err, rsOpt,
+			logs.Errorf("batch modify tcloud-ziyan target weight api failed, err: %v, rsOpt: %+v, rid: %s", err, rsOpt,
 				kt.Rid)
 			return errf.Newf(errf.PartialFailed, "batch modify tcloud-ziyan target port api failed, err: %v", err)
 		}
