@@ -173,8 +173,8 @@ const formValidate = async () => {
 
 const handleVerify = async () => {
   await formValidate();
-  const { zones, device_type, vpc, subnet, replicas } = formModel;
-  const spec = Object.assign({}, details.value.spec, { zones, device_type, vpc, subnet });
+  const { zones, device_type, vpc, subnet, replicas, res_assign } = formModel;
+  const spec = Object.assign({}, details.value.spec, { zones, device_type, vpc, subnet, res_assign });
   isVerifyLoading.value = true;
   try {
     const res = await planStore.verify_resource_demand({
