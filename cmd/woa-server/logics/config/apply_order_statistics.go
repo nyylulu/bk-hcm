@@ -33,7 +33,6 @@ import (
 	daoorm "hcm/pkg/dal/dao/orm"
 	"hcm/pkg/dal/dao/tools"
 	daotypes "hcm/pkg/dal/dao/types"
-	tableapplystat "hcm/pkg/dal/table/
 	tableapplystat "hcm/pkg/dal/table/cvm-apply-order-statistics-config"
 	tabletypes "hcm/pkg/dal/table/types"
 	"hcm/pkg/kit"
@@ -295,7 +294,7 @@ func convertDetails(result *daotypes.ListResult[tableapplystat.CvmApplyOrderStat
 
 	details := make([]types.ApplyOrderStatisticsConfigDetail, 0, len(result.Details))
 	for _, cfg := range result.Details {
-		subOrderIDs := splitSubOrderIDs(cfg.SubOrderIDs)
+		subOrderIDs := normalizeSubOrderIDs(strings.Split(cfg.SubOrderIDs, ","))
 		detail := types.ApplyOrderStatisticsConfigDetail{
 			ID:          cfg.ID,
 			StatMonth:   cfg.StatMonth,
@@ -354,24 +353,6 @@ func normalizeSubOrderIDs(ids []string) []string {
 			continue
 		}
 		result = append(result, id)
-	}
-	return result
-}
-
-// splitSubOrderIDs 将数据库中的逗号分隔子单号字符串拆分成数组
-func splitSubOrderIDs(raw string) []string {
-	if strings.TrimSpace(raw) == "" {
-		return []string{}
-	}
-
-	parts := strings.Split(raw, ",")
-	result := make([]string, 0, len(parts))
-	for _, part := range parts {
-		part = strings.TrimSpace(part)
-		if part == "" {
-			continue
-		}
-		result = append(result, part)
 	}
 	return result
 }
