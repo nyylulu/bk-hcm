@@ -35,10 +35,10 @@ func (s *service) GetCompletionRateStatistics(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to get completion rate statistics, err: %v, errKey: %s, rid: %s",
-			err, errKey, cts.Kit.Rid)
+		logs.Errorf("failed to get completion rate statistics, err: %v, rid: %s",
+			err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(pkg.CCErrCommParamsIsInvalid, err)
 	}
 
@@ -59,10 +59,10 @@ func (s *service) GetCompletionRateDetail(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to get completion rate detail, err: %v, errKey: %s, rid: %s",
-			err, errKey, cts.Kit.Rid)
+		logs.Errorf("failed to get completion rate detail, err: %v, rid: %s",
+			err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(pkg.CCErrCommParamsIsInvalid, err)
 	}
 
