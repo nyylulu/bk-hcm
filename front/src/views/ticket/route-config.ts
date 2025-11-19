@@ -102,7 +102,7 @@ export const ticketRoutesBiz: RouteRecordRaw[] = [
     component: () => import('@/views/ticket/children/apply-detail'),
     meta: {
       ...new Meta({
-        activeKey: MENU_BUSINESS_TICKET_DETAILS,
+        activeKey: MENU_BUSINESS_TICKET_MANAGEMENT,
         notMenu: true,
       }),
     },
@@ -114,7 +114,7 @@ export const ticketRoutesBiz: RouteRecordRaw[] = [
     component: () => import('@/views/ticket/children/resource-plan/detail/index.vue'),
     meta: {
       ...new Meta({
-        activeKey: MENU_BUSINESS_TICKET_RESOURCE_PLAN_DETAILS,
+        activeKey: MENU_BUSINESS_TICKET_MANAGEMENT,
         notMenu: true,
         title: t('申请单详情'),
         layout: {

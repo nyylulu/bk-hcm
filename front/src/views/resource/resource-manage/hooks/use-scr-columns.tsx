@@ -1,7 +1,7 @@
 /* eslint-disable no-nested-ternary */
 // table 字段相关信息
 import { useAccountStore } from '@/store';
-import { Info, Spinner, Share } from 'bkui-vue/lib/icon';
+import { Info, Spinner, Share, InfoLine } from 'bkui-vue/lib/icon';
 import { Button, Tag, OverflowTitle } from 'bkui-vue';
 import i18n from '@/language/i18n';
 import { type Settings } from 'bkui-vue/lib/table/props';
@@ -9,6 +9,7 @@ import { ref } from 'vue';
 import type { Ref } from 'vue';
 import { RouteLocationRaw, useRoute, useRouter } from 'vue-router';
 import routerAction from '@/router/utils/action';
+
 import {
   CLOUD_HOST_STATUS,
   VendorEnum,
@@ -57,6 +58,7 @@ import CvmSystemDiskDisplay from '@/views/ziyanScr/components/cvm-system-disk/di
 import CvmDataDiskDisplay from '@/views/ziyanScr/components/cvm-data-disk/display.vue';
 import isEqual from 'lodash/isEqual';
 import { RES_ASSIGN_TYPE } from '@/components/device-type-selector/constants';
+import { MENU_BUSINESS_TICKET_RESOURCE_PLAN_DETAILS } from '@/constants/menu-symbol';
 
 interface LinkFieldOptions {
   type: string; // 资源类型
@@ -2025,9 +2027,42 @@ export default (type: string, isSimpleShow = false) => {
       fixed: 'right',
       minWidth: 110,
       isDefaultShow: true,
-      render: ({ cell: status }: { cell: ResourcesDemandsStatus }) => (
-        <span class={cssModule[RESOURCE_DEMANDS_STATUS_CLASSES[status]]}>{RESOURCE_DEMANDS_STATUS_NAME[status]}</span>
-      ),
+      render: ({ cell: status, row }: { cell: ResourcesDemandsStatus; row: any }) => {
+        const statusClass = cssModule[RESOURCE_DEMANDS_STATUS_CLASSES[status]];
+        const { href } = router.resolve({
+          name: MENU_BUSINESS_TICKET_RESOURCE_PLAN_DETAILS,
+          query: {
+            id: row?.ticket_id,
+            bizs: row?.bk_biz_id,
+          },
+        });
+
+        const tips = row?.ticket_id ? (
+          <span>
+            预测处于变更中，
+            <bk-link href={href} theme='primary' target='_blank' style='font-size: 12px;'>
+              点击链接
+            </bk-link>
+            查看单据
+          </span>
+        ) : (
+          '预测处于变更过程中，请等待状态刷新'
+        );
+
+        return (
+          <div class={cssModule['flex-container']}>
+            <span class={statusClass}>{RESOURCE_DEMANDS_STATUS_NAME[status]}</span>
+            {ResourcesDemandsStatus.LOCKED === status && (
+              <InfoLine
+                class={[statusClass, 'ml5']}
+                v-bk-tooltips={{
+                  content: tips,
+                }}
+              />
+            )}
+          </div>
+        );
+      },
     },
   ];
 
