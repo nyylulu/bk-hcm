@@ -240,8 +240,11 @@ func (s *statistics) loadConfigs(kt *kit.Kit, monthSlice []string) ([]*tableappl
 		return nil, fmt.Errorf("query month slice can not be empty")
 	}
 
-	filterExpr := tools.ContainersExpression("year_month", monthSlice)
-	page := core.NewDefaultBasePage()
+	filterExpr := tools.ContainersExpression("stat_month", monthSlice)
+	page := &core.BasePage{
+		Start: 0,
+		Limit: core.DefaultMaxPageLimit,
+	}
 
 	configs := make([]*tableapplystat.CvmApplyOrderStatisticsConfigTable, 0)
 
@@ -264,11 +267,11 @@ func (s *statistics) loadConfigs(kt *kit.Kit, monthSlice []string) ([]*tableappl
 			configs = append(configs, &result.Details[i])
 		}
 
-		if len(result.Details) < int(page.Limit) {
+		if uint(len(result.Details)) < core.DefaultMaxPageLimit {
 			break
 		}
 
-		page.Start += uint32(len(result.Details))
+		page.Start += uint32(core.DefaultMaxPageLimit)
 	}
 
 	return configs, nil
@@ -286,12 +289,14 @@ func (s *statistics) extractConfigInfo(kt *kit.Kit, configs []*tableapplystat.Cv
 		if !s.monthMatched(cfg, monthSet) {
 			continue
 		}
-		for _, id := range splitSubOrderIDs(cfg.SubOrderIDs) {
-			if _, ok := explicitSet[id]; ok {
-				continue
+		if cfg.SubOrderIDs != nil {
+			for _, id := range splitSubOrderIDs(*cfg.SubOrderIDs) {
+				if _, ok := explicitSet[id]; ok {
+					continue
+				}
+				explicitSet[id] = struct{}{}
+				explicitIDs = append(explicitIDs, id)
 			}
-			explicitSet[id] = struct{}{}
-			explicitIDs = append(explicitIDs, id)
 		}
 
 		rangeCfg, ok := s.buildTimeRange(kt, cfg, queryStart, queryEnd)
@@ -321,22 +326,25 @@ func (s *statistics) buildTimeRange(kt *kit.Kit, cfg *tableapplystat.CvmApplyOrd
 	if cfg == nil {
 		return timeRangeConfig{}, false
 	}
-	if strings.TrimSpace(cfg.StartAt) == "" || strings.TrimSpace(cfg.EndAt) == "" {
+	if cfg.StartAt == nil || cfg.EndAt == nil {
+		return timeRangeConfig{}, false
+	}
+	if strings.TrimSpace(*cfg.StartAt) == "" || strings.TrimSpace(*cfg.EndAt) == "" {
 		return timeRangeConfig{}, false
 	}
 
-	start, startDateOnly, err := parseConfigTime(cfg.StartAt)
+	start, startDateOnly, err := parseConfigTime(*cfg.StartAt)
 	if err != nil {
 		logs.Warnf(
 			"parse start_at failed, cfg_id: %s, start_at: %s, err: %v, rid: %s",
-			cfg.ID, cfg.StartAt, err, kt.Rid)
+			cfg.ID, *cfg.StartAt, err, kt.Rid)
 		return timeRangeConfig{}, false
 	}
-	end, endDateOnly, err := parseConfigTime(cfg.EndAt)
+	end, endDateOnly, err := parseConfigTime(*cfg.EndAt)
 	if err != nil {
 		logs.Warnf(
 			"parse end_at failed, cfg_id: %s, end_at: %s, err: %v, rid: %s",
-			cfg.ID, cfg.EndAt, err, kt.Rid)
+			cfg.ID, *cfg.EndAt, err, kt.Rid)
 		return timeRangeConfig{}, false
 	}
 
@@ -349,7 +357,7 @@ func (s *statistics) buildTimeRange(kt *kit.Kit, cfg *tableapplystat.CvmApplyOrd
 
 	if end.Before(start) {
 		logs.Warnf("invalid config time range, cfg_id: %s, start_at: %s, end_at: %s, rid: %s",
-			cfg.ID, cfg.StartAt, cfg.EndAt, kt.Rid)
+			cfg.ID, *cfg.StartAt, *cfg.EndAt, kt.Rid)
 		return timeRangeConfig{}, false
 	}
 

@@ -60,15 +60,15 @@ type CvmApplyOrderStatisticsConfigTable struct {
 	// BkBizID 业务ID
 	BkBizID int64 `db:"bk_biz_id" json:"bk_biz_id"`
 	// SubOrderID 子订单号，多个用逗号分隔
-	SubOrderIDs string `db:"sub_order_ids" json:"sub_order_ids"`
+	SubOrderIDs *string `db:"sub_order_ids" json:"sub_order_ids"`
 	// StartAt 开始时间
-	StartAt string `db:"start_at" json:"start_at" validate:"max=64"`
+	StartAt *string `db:"start_at" json:"start_at" validate:"omitempty,max=64"`
 	// EndAt 结束时间
-	EndAt string `db:"end_at" json:"end_at" validate:"max=64"`
+	EndAt *string `db:"end_at" json:"end_at" validate:"omitempty,max=64"`
 	// Memo 备注
 	Memo string `db:"memo" json:"memo" validate:"max=255"`
 	// Extension 扩展字段
-	Extension types.JsonField `db:"extension" json:"extension"`
+	Extension *types.JsonField `db:"extension" json:"extension"`
 	// Creator 创建者
 	Creator string `db:"creator" json:"creator" validate:"max=64"`
 	// Reviser 更新者
@@ -114,9 +114,9 @@ func (t CvmApplyOrderStatisticsConfigTable) InsertValidate() error {
 	}
 
 	// 子单号和开始结束时间不能同时为空
-	hasSubOrderID := strings.TrimSpace(t.SubOrderIDs) != ""
-	hasStartAt := strings.TrimSpace(t.StartAt) != ""
-	hasEndAt := strings.TrimSpace(t.EndAt) != ""
+	hasSubOrderID := t.SubOrderIDs != nil && strings.TrimSpace(*t.SubOrderIDs) != ""
+	hasStartAt := t.StartAt != nil && strings.TrimSpace(*t.StartAt) != ""
+	hasEndAt := t.EndAt != nil && strings.TrimSpace(*t.EndAt) != ""
 	hasTimeRange := hasStartAt && hasEndAt
 
 	if hasStartAt && !hasEndAt {
@@ -161,9 +161,9 @@ func (t CvmApplyOrderStatisticsConfigTable) UpdateValidate() error {
 	}
 
 	// 如果更新时提供了子单号或时间范围，验证它们不能同时为空
-	hasSubOrderID := strings.TrimSpace(t.SubOrderIDs) != ""
-	hasStartAt := strings.TrimSpace(t.StartAt) != ""
-	hasEndAt := strings.TrimSpace(t.EndAt) != ""
+	hasSubOrderID := t.SubOrderIDs != nil && strings.TrimSpace(*t.SubOrderIDs) != ""
+	hasStartAt := t.StartAt != nil && strings.TrimSpace(*t.StartAt) != ""
+	hasEndAt := t.EndAt != nil && strings.TrimSpace(*t.EndAt) != ""
 	hasTimeRange := hasStartAt && hasEndAt
 
 	// 如果设置了时间范围，start_at 和 end_at 必须同时提供

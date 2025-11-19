@@ -260,6 +260,7 @@ type composeModelOption struct {
 // composeModel composes apply order statistics config model
 func (a *applyOrderStatistics) composeModel(opt composeModelOption) (tableapplystat.CvmApplyOrderStatisticsConfigTable, error) {
 	subOrderIDs := normalizeSubOrderIDs(opt.SubOrderIDs)
+	subOrderIDsStr := strings.Join(subOrderIDs, ",")
 
 	startAt := strings.TrimSpace(opt.StartAt)
 	endAt := strings.TrimSpace(opt.EndAt)
@@ -273,11 +274,11 @@ func (a *applyOrderStatistics) composeModel(opt composeModelOption) (tableapplys
 	return tableapplystat.CvmApplyOrderStatisticsConfigTable{
 		StatMonth:   opt.StatMonth,
 		BkBizID:     opt.BkBizID,
-		SubOrderIDs: strings.Join(subOrderIDs, ","),
-		StartAt:     startAt,
-		EndAt:       endAt,
+		SubOrderIDs: &subOrderIDsStr,
+		StartAt:     &startAt,
+		EndAt:       &endAt,
 		Memo:        opt.Memo,
-		Extension:   ext,
+		Extension:   &ext,
 		Creator:     opt.User,
 		Reviser:     opt.User,
 		CreatedAt:   tabletypes.Time(times.ConvStdTimeFormat(opt.CreatedAt)),
@@ -294,7 +295,10 @@ func convertDetails(result *daotypes.ListResult[tableapplystat.CvmApplyOrderStat
 
 	details := make([]types.ApplyOrderStatisticsConfigDetail, 0, len(result.Details))
 	for _, cfg := range result.Details {
-		subOrderIDs := normalizeSubOrderIDs(strings.Split(cfg.SubOrderIDs, ","))
+		var subOrderIDs []string
+		if cfg.SubOrderIDs != nil {
+			subOrderIDs = normalizeSubOrderIDs(strings.Split(*cfg.SubOrderIDs, ","))
+		}
 		detail := types.ApplyOrderStatisticsConfigDetail{
 			ID:          cfg.ID,
 			StatMonth:   cfg.StatMonth,
@@ -303,13 +307,11 @@ func convertDetails(result *daotypes.ListResult[tableapplystat.CvmApplyOrderStat
 			Memo:        cfg.Memo,
 		}
 
-		if cfg.StartAt != "" {
-			start := cfg.StartAt
-			detail.StartAt = start
+		if cfg.StartAt != nil && *cfg.StartAt != "" {
+			detail.StartAt = *cfg.StartAt
 		}
-		if cfg.EndAt != "" {
-			end := cfg.EndAt
-			detail.EndAt = end
+		if cfg.EndAt != nil && *cfg.EndAt != "" {
+			detail.EndAt = *cfg.EndAt
 		}
 
 		details = append(details, detail)
