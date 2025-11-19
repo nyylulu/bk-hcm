@@ -40,6 +40,7 @@ import (
 	"hcm/pkg/runtime/filter"
 	"hcm/pkg/tools/converter"
 	"hcm/pkg/tools/maps"
+	"hcm/pkg/tools/slice"
 )
 
 // ListTargetByTopo list target by topo
@@ -117,19 +118,27 @@ func (svc *lbSvc) CountTargetByTopo(cts *rest.Contexts) (any, error) {
 		return core.ListResult{Count: 0}, nil
 	}
 
-	targetCond := []filter.RuleFactory{tools.RuleIn("target_group_id", maps.Keys(info.TgMap))}
-	targetCond = append(targetCond, req.GetTargetCond()...)
-	targetReq := core.ListReq{
-		Filter: &filter.Expression{Op: filter.And, Rules: targetCond},
-		Page:   core.NewCountPage(),
-	}
-	resp, err := svc.client.DataService().Global.LoadBalancer.ListTarget(cts.Kit, &targetReq)
-	if err != nil {
-		logs.Errorf("count target failed, err: %v, req: %+v, rid: %s", err, targetReq, cts.Kit.Rid)
-		return nil, err
+	var count uint64
+	for _, batch := range slice.Split(maps.Keys(info.TgMap), int(core.DefaultMaxPageLimit)) {
+		targetCond := []filter.RuleFactory{tools.RuleIn("target_group_id", batch)}
+		targetCond = append(targetCond, req.GetTargetCond()...)
+		targetReq := core.ListReq{
+			Filter: &filter.Expression{Op: filter.And, Rules: targetCond},
+			Page:   core.NewCountPage(),
+		}
+		resp, err := svc.client.DataService().Global.LoadBalancer.ListTarget(cts.Kit, &targetReq)
+		if err != nil {
+			logs.Errorf("count target failed, err: %v, req: %+v, rid: %s", err, targetReq, cts.Kit.Rid)
+			return nil, err
+		}
+		count += resp.Count
+		if count > constant.CLBDataByTopoCondReturnLimit {
+			return nil, errf.Newf(errf.ClbTopoResExceedErr, "target count exceed limit, limit: %d",
+				constant.CLBDataByTopoCondReturnLimit)
+		}
 	}
 
-	return core.ListResult{Count: resp.Count}, nil
+	return core.ListResult{Count: count}, nil
 }
 
 func (svc *lbSvc) listTargetByTopo(kt *kit.Kit, bizID int64, vendor enumor.Vendor, req *cslb.LbTopoReq) (any, error) {
@@ -144,52 +153,51 @@ func (svc *lbSvc) listTargetByTopo(kt *kit.Kit, bizID int64, vendor enumor.Vendo
 		return core.ListResultT[cslb.InstWithTargets]{Details: make([]cslb.InstWithTargets, 0)}, nil
 	}
 
-	// 根据条件查询对应的instance信息
-	targetInstCond := make([]filter.RuleFactory, 0)
+	// 根据条件查询对应的instance、RS信息
 	tgIDs := maps.Keys(info.TgMap)
-	targetInstCond = append(targetInstCond, tools.RuleIn("target_group_id", tgIDs))
-	targetInstCond = append(targetInstCond, req.GetTargetCond()...)
-	instInfoReq := core.ListReq{
-		Filter: &filter.Expression{Op: filter.And, Rules: targetInstCond},
-		Page:   req.Page,
+	instInfoMap := make(map[string]daotypeslb.ListInstInfo)
+	targets := make([]corelb.BaseTarget, 0)
+	for _, batch := range slice.Split(tgIDs, int(core.DefaultMaxPageLimit)) {
+		cond := make([]filter.RuleFactory, 0)
+		cond = append(cond, tools.RuleIn("target_group_id", batch))
+		cond = append(cond, req.GetTargetCond()...)
+		instResult, err := svc.getTargetInstInfoByCond(kt, cond)
+		if err != nil {
+			logs.Errorf("get target inst failed, err: %v, cond: %v, rid: %s", err, cond, kt.Rid)
+			return nil, err
+		}
+		for _, inst := range instResult {
+			instInfoMap[inst.Key()] = inst
+		}
+		if len(instInfoMap) > constant.CLBDataByTopoCondReturnLimit {
+			return nil, errf.Newf(errf.ClbTopoResExceedErr, "instance count exceed limit, limit: %d",
+				constant.CLBDataByTopoCondReturnLimit)
+		}
+
+		targetResult, err := svc.getTargetByCond(kt, cond, make([]string, 0))
+		if err != nil {
+			logs.Errorf("get target failed, err: %v, targetCond: %v, rid: %s", err, cond, kt.Rid)
+			return nil, err
+		}
+		targets = append(targets, targetResult...)
+		if len(targets) > constant.CLBDataByTopoCondReturnLimit {
+			return nil, errf.Newf(errf.ClbTopoResExceedErr, "target count exceed limit, limit: %d",
+				constant.CLBDataByTopoCondReturnLimit)
+		}
 	}
-	instInfoResp, err := svc.client.DataService().Global.LoadBalancer.ListTargetInstInfo(kt, &instInfoReq)
-	if err != nil {
-		logs.Errorf("get instance info failed, err: %v, instInfoReq: %+v, rid: %s", err, instInfoReq, kt.Rid)
-		return nil, err
-	}
-	if req.Page.Count {
-		return core.ListResultT[cslb.InstWithTargets]{Count: instInfoResp.Count}, nil
-	}
-	if len(instInfoResp.Details) == 0 {
+	instInfos := maps.Values(instInfoMap)
+	if len(instInfos) == 0 || len(targets) == 0 {
 		return core.ListResultT[cslb.InstWithTargets]{Details: make([]cslb.InstWithTargets, 0)}, nil
 	}
 
-	// 根据条件查询RS信息
-	targetCond := make([]filter.RuleFactory, 0)
-	targetCond = append(targetCond, tools.RuleIn("target_group_id", tgIDs))
-	ips := make([]string, 0)
-	for _, cvmInfo := range instInfoResp.Details {
-		ips = append(ips, cvmInfo.IP)
-	}
-	targetCond = append(targetCond, tools.RuleIn("ip", ips))
-	if len(req.TargetPorts) != 0 {
-		targetCond = append(targetCond, tools.RuleIn("port", req.TargetPorts))
-	}
-	targets, err := svc.getTargetByCond(kt, targetCond)
-	if err != nil {
-		logs.Errorf("get target failed, err: %v, targetCond: %v, rid: %s", err, targetCond, kt.Rid)
-		return nil, err
-	}
-
 	// 组装数据进行返回
-	details, err := buildInstWithTargetsInfo(kt, info, targets, instInfoResp.Details)
+	details, err := buildInstWithTargetsInfo(kt, info, targets, instInfos)
 	if err != nil {
 		logs.Errorf("build cvm with targets info failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
-	return core.ListResultT[cslb.InstWithTargets]{Details: details}, nil
+	return core.ListResultT[cslb.InstWithTargets]{Details: details, Count: uint64(len(details))}, nil
 }
 
 func (svc *lbSvc) getTargetTopoInfoByReq(kt *kit.Kit, bizID int64, vendor enumor.Vendor, req *cslb.LbTopoCond) (
@@ -214,13 +222,17 @@ func (svc *lbSvc) getTargetTopoInfoByReq(kt *kit.Kit, bizID int64, vendor enumor
 
 	// 根据条件查询监听器信息
 	lbIDs := maps.Keys(lbMap)
-	lblCond := make([]filter.RuleFactory, 0)
-	lblCond = append(lblCond, tools.RuleIn("lb_id", lbIDs))
-	lblCond = append(lblCond, req.GetLblCond()...)
-	lblMap, err := svc.getLblByCond(kt, vendor, lblCond)
-	if err != nil {
-		logs.Errorf("get lbl by cond failed, err: %v, lblCond: %v, rid: %s", err, lblCond, kt.Rid)
-		return nil, err
+	lblMap := make(map[string]corelb.TCloudListener)
+	for _, batch := range slice.Split(lbIDs, int(core.DefaultMaxPageLimit)) {
+		lblCond := make([]filter.RuleFactory, 0)
+		lblCond = append(lblCond, tools.RuleIn("lb_id", batch))
+		lblCond = append(lblCond, req.GetLblCond()...)
+		batchResult, err := svc.getLblByCond(kt, vendor, lblCond)
+		if err != nil {
+			logs.Errorf("get lbl by cond failed, err: %v, lblCond: %v, rid: %s", err, lblCond, kt.Rid)
+			return nil, err
+		}
+		lblMap = maps.MapMerge(lblMap, batchResult)
 	}
 	if len(lblMap) == 0 {
 		return &cslb.TargetTopoInfo{Match: false}, nil
@@ -228,27 +240,37 @@ func (svc *lbSvc) getTargetTopoInfoByReq(kt *kit.Kit, bizID int64, vendor enumor
 
 	// 根据条件查询规则
 	lblIDs := maps.Keys(lblMap)
-	ruleCond := make([]filter.RuleFactory, 0)
-	ruleCond = append(ruleCond, tools.RuleIn("lbl_id", lblIDs))
-	ruleCond = append(ruleCond, req.GetRuleCond()...)
-	ruleMap, err := svc.getRuleByCond(kt, vendor, ruleCond, []string{"id", "url", "domain"})
-	if err != nil {
-		logs.Errorf("get rule by cond failed, err: %v, ruleCond: %v, rid: %s", err, ruleCond, kt.Rid)
-		return nil, err
+	ruleMap := make(map[string]corelb.TCloudLbUrlRule)
+	for _, batch := range slice.Split(lblIDs, int(core.DefaultMaxPageLimit)) {
+		ruleCond := make([]filter.RuleFactory, 0)
+		ruleCond = append(ruleCond, tools.RuleIn("lbl_id", batch))
+		ruleCond = append(ruleCond, req.GetRuleCond()...)
+		batchResult, err := svc.getRuleByCond(kt, vendor, ruleCond, []string{"id", "url", "domain"})
+		if err != nil {
+			logs.Errorf("get rule by cond failed, err: %v, ruleCond: %v, rid: %s", err, ruleCond, kt.Rid)
+			return nil, err
+		}
+		ruleMap = maps.MapMerge(ruleMap, batchResult)
 	}
+
 	if len(ruleMap) == 0 {
 		return &cslb.TargetTopoInfo{Match: false}, nil
 	}
 
 	// 根据条件查询clb和目标组关系, 注：tgLbRelCond中的vendor条件不能去掉，不同vendor的规则在不同表里，自增id不共用，不加的话可能串数据
 	ruleIDs := maps.Keys(ruleMap)
-	tgLbRelCond := []filter.RuleFactory{tools.RuleIn("listener_rule_id", ruleIDs), tools.RuleEqual("vendor", vendor),
-		tools.RuleEqual("binding_status", enumor.SuccessBindingStatus)}
-	tgLbRels, err := svc.getTgLbRelByCond(kt, tgLbRelCond)
-	if err != nil {
-		logs.Errorf("get tg lb rel failed, err: %v, tgLbRelCond: %v, rid: %s", err, tgLbRelCond, kt.Rid)
-		return nil, err
+	tgLbRels := make([]corelb.BaseTargetListenerRuleRel, 0)
+	for _, batch := range slice.Split(ruleIDs, int(core.DefaultMaxPageLimit)) {
+		tgLbRelCond := []filter.RuleFactory{tools.RuleIn("listener_rule_id", batch), tools.RuleEqual("vendor", vendor),
+			tools.RuleEqual("binding_status", enumor.SuccessBindingStatus)}
+		batchResult, err := svc.getTgLbRelByCond(kt, tgLbRelCond, make([]string, 0))
+		if err != nil {
+			logs.Errorf("get tg lb rel failed, err: %v, tgLbRelCond: %v, rid: %s", err, tgLbRelCond, kt.Rid)
+			return nil, err
+		}
+		tgLbRels = append(tgLbRels, batchResult...)
 	}
+
 	if len(tgLbRels) == 0 {
 		return &cslb.TargetTopoInfo{Match: false}, nil
 	}
@@ -259,12 +281,17 @@ func (svc *lbSvc) getTargetTopoInfoByReq(kt *kit.Kit, bizID int64, vendor enumor
 
 	// 根据条件查询目标组
 	tgIDs := maps.Keys(tgIDMap)
-	tgCond := []filter.RuleFactory{tools.RuleIn("id", tgIDs)}
-	tgMap, err := svc.getTgByCond(kt, tgCond, []string{"id", "name"})
-	if err != nil {
-		logs.Errorf("get tg by cond failed, err: %v, tgCond: %v, rid: %s", err, tgCond, kt.Rid)
-		return nil, err
+	tgMap := make(map[string]corelb.BaseTargetGroup)
+	for _, batch := range slice.Split(tgIDs, int(core.DefaultMaxPageLimit)) {
+		tgCond := []filter.RuleFactory{tools.RuleIn("id", batch)}
+		batchResult, err := svc.getTgByCond(kt, tgCond, []string{"id", "name"})
+		if err != nil {
+			logs.Errorf("get tg by cond failed, err: %v, tgCond: %v, rid: %s", err, tgCond, kt.Rid)
+			return nil, err
+		}
+		tgMap = maps.MapMerge(tgMap, batchResult)
 	}
+
 	if len(tgMap) == 0 {
 		return &cslb.TargetTopoInfo{Match: false}, nil
 	}
@@ -498,8 +525,8 @@ func (svc *lbSvc) getRuleByCond(kt *kit.Kit, vendor enumor.Vendor, ruleCond []fi
 }
 
 // getTgLbRelByCond get target group and clb relation by condition
-func (svc *lbSvc) getTgLbRelByCond(kt *kit.Kit, tgLbRelCond []filter.RuleFactory) ([]corelb.BaseTargetListenerRuleRel,
-	error) {
+func (svc *lbSvc) getTgLbRelByCond(kt *kit.Kit, tgLbRelCond []filter.RuleFactory,
+	fields []string) ([]corelb.BaseTargetListenerRuleRel, error) {
 
 	if len(tgLbRelCond) == 0 {
 		return nil, errors.New("no tg lb rel condition")
@@ -513,6 +540,10 @@ func (svc *lbSvc) getTgLbRelByCond(kt *kit.Kit, tgLbRelCond []filter.RuleFactory
 			Limit: constant.CLBTopoFindPageLimit,
 		},
 	}
+	if len(fields) != 0 {
+		tgLbRelReq.Fields = fields
+	}
+
 	tgLbRels := make([]corelb.BaseTargetListenerRuleRel, 0)
 	for {
 		resp, err := svc.client.DataService().Global.LoadBalancer.ListTargetGroupListenerRel(kt, &tgLbRelReq)
@@ -571,7 +602,9 @@ func (svc *lbSvc) getTgByCond(kt *kit.Kit, tgCond []filter.RuleFactory, fields [
 }
 
 // getTgLbRelByCond get target by condition
-func (svc *lbSvc) getTargetByCond(kt *kit.Kit, targetCond []filter.RuleFactory) ([]corelb.BaseTarget, error) {
+func (svc *lbSvc) getTargetByCond(kt *kit.Kit, targetCond []filter.RuleFactory, fields []string) (
+	[]corelb.BaseTarget, error) {
+
 	if len(targetCond) == 0 {
 		return nil, errors.New("no target condition")
 	}
@@ -584,6 +617,11 @@ func (svc *lbSvc) getTargetByCond(kt *kit.Kit, targetCond []filter.RuleFactory) 
 			Limit: constant.CLBTopoFindPageLimit,
 		},
 	}
+
+	if len(fields) != 0 {
+		targetReq.Fields = fields
+	}
+
 	targets := make([]corelb.BaseTarget, 0)
 	for {
 		resp, err := svc.client.DataService().Global.LoadBalancer.ListTarget(kt, &targetReq)
@@ -600,6 +638,40 @@ func (svc *lbSvc) getTargetByCond(kt *kit.Kit, targetCond []filter.RuleFactory) 
 	}
 
 	return targets, nil
+}
+
+// getTargetInstInfoByCond get target instance info by condition
+func (svc *lbSvc) getTargetInstInfoByCond(kt *kit.Kit, targetInstCond []filter.RuleFactory) (
+	[]daotypeslb.ListInstInfo, error) {
+
+	if len(targetInstCond) == 0 {
+		return nil, errors.New("no target condition")
+	}
+
+	instInfoReq := core.ListReq{
+		Filter: &filter.Expression{Op: filter.And, Rules: targetInstCond},
+		Page: &core.BasePage{
+			Count: false,
+			Start: 0,
+			Limit: constant.CLBTopoFindPageLimit,
+		},
+	}
+	instInfos := make([]daotypeslb.ListInstInfo, 0)
+	for {
+		resp, err := svc.client.DataService().Global.LoadBalancer.ListTargetInstInfo(kt, &instInfoReq)
+		if err != nil {
+			logs.Errorf("get instance info failed, err: %v, instInfoReq: %+v, rid: %s", err, instInfoReq, kt.Rid)
+			return nil, err
+		}
+
+		instInfos = append(instInfos, resp.Details...)
+		if uint(len(resp.Details)) < instInfoReq.Page.Limit {
+			break
+		}
+		instInfoReq.Page.Start += uint32(instInfoReq.Page.Limit)
+	}
+
+	return instInfos, nil
 }
 
 // ListListenerByTopo list listener by topo
@@ -646,44 +718,34 @@ func (svc *lbSvc) listListenerByTopo(kt *kit.Kit, bizID int64, vendor enumor.Ven
 		return core.ListResultT[cslb.ListenerWithTopo]{Details: make([]cslb.ListenerWithTopo, 0)}, nil
 	}
 
-	lblCond := make([]filter.RuleFactory, 0)
-	lblCond = append(lblCond, info.LblCond...)
-	lblCond = append(lblCond, req.GetLblCond()...)
-	lblReq := core.ListReq{
-		Filter: &filter.Expression{Op: filter.And, Rules: lblCond},
-		Page:   req.Page,
-	}
-	resp := &cloud.TCloudListenerListResult{}
-	switch vendor {
-	case enumor.TCloud:
-		resp, err = svc.client.DataService().TCloud.LoadBalancer.ListListener(kt, &lblReq)
+	listeners := make([]corelb.Listener[corelb.TCloudListenerExtension], 0)
+	for _, subLblCond := range info.LblConds {
+		lblCond := make([]filter.RuleFactory, 0)
+		lblCond = append(lblCond, subLblCond...)
+		lblCond = append(lblCond, req.GetLblCond()...)
+		subResult, err := svc.getLblByCond(kt, vendor, lblCond)
 		if err != nil {
-			logs.Errorf("get lbl failed, err: %v, req: %+v, rid: %s", err, lblReq, kt.Rid)
+			logs.Errorf("list listener by req failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
 			return nil, err
 		}
-	case enumor.TCloudZiyan:
-		resp, err = svc.client.DataService().TCloudZiyan.LoadBalancer.ListListener(kt, &lblReq)
-		if err != nil {
-			logs.Errorf("get lbl failed, err: %v, req: %+v, rid: %s", err, lblReq, kt.Rid)
-			return nil, err
+		listeners = append(listeners, maps.Values(subResult)...)
+		if len(listeners) > constant.CLBDataByTopoCondReturnLimit {
+			return nil, errf.Newf(errf.ClbTopoResExceedErr, "listener count exceed limit, limit: %d",
+				constant.CLBDataByTopoCondReturnLimit)
 		}
-	default:
-		return nil, fmt.Errorf("vendor: %s not support", vendor)
 	}
-	if req.Page.Count {
-		return core.ListResultT[cslb.ListenerWithTopo]{Count: resp.Count}, nil
-	}
-	if len(resp.Details) == 0 {
+
+	if len(listeners) == 0 {
 		return core.ListResultT[cslb.ListenerWithTopo]{Details: make([]cslb.ListenerWithTopo, 0)}, nil
 	}
 
-	details, err := svc.buildListenerWithTopoInfo(kt, vendor, info, resp.Details)
+	details, err := svc.buildListenerWithTopoInfo(kt, vendor, info, listeners)
 	if err != nil {
 		logs.Errorf("build listener with topo info failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
 		return nil, err
 	}
 
-	return core.ListResultT[cslb.ListenerWithTopo]{Details: details}, nil
+	return core.ListResultT[cslb.ListenerWithTopo]{Details: details, Count: uint64(len(details))}, nil
 }
 
 func (svc *lbSvc) buildListenerWithTopoInfo(kt *kit.Kit, vendor enumor.Vendor, info *cslb.LblTopoInfo,
@@ -756,13 +818,18 @@ func (svc *lbSvc) getListenerRelInfo(kt *kit.Kit, vendor enumor.Vendor, listener
 	for _, lbl := range listeners {
 		lblIDs = append(lblIDs, lbl.ID)
 	}
-	lblIDRulesMap := make(map[string][]corelb.TCloudLbUrlRule)
-	ruleCond := []filter.RuleFactory{tools.RuleIn("lbl_id", lblIDs)}
-	ruleMap, err := svc.getRuleByCond(kt, vendor, ruleCond, make([]string, 0))
-	if err != nil {
-		logs.Errorf("get rule by cond failed, err: %v, req: %+v, rid: %s", err, ruleCond, kt.Rid)
-		return nil, nil, nil, nil, err
+	lblIDs = slice.Unique(lblIDs)
+	ruleMap := make(map[string]corelb.TCloudLbUrlRule)
+	for _, batch := range slice.Split(lblIDs, int(core.DefaultMaxPageLimit)) {
+		ruleCond := []filter.RuleFactory{tools.RuleIn("lbl_id", batch)}
+		batchResult, err := svc.getRuleByCond(kt, vendor, ruleCond, make([]string, 0))
+		if err != nil {
+			logs.Errorf("get rule by cond failed, err: %v, req: %+v, rid: %s", err, ruleCond, kt.Rid)
+			return nil, nil, nil, nil, err
+		}
+		ruleMap = maps.MapMerge(ruleMap, batchResult)
 	}
+	lblIDRulesMap := make(map[string][]corelb.TCloudLbUrlRule)
 	for _, rule := range maps.Values(ruleMap) {
 		if _, ok := lblIDRulesMap[rule.LblID]; !ok {
 			lblIDRulesMap[rule.LblID] = make([]corelb.TCloudLbUrlRule, 0)
@@ -771,11 +838,17 @@ func (svc *lbSvc) getListenerRelInfo(kt *kit.Kit, vendor enumor.Vendor, listener
 	}
 
 	// 获取监听器关联的target数量和权重不为0的target数量, 监听器关联的目标组
-	tgLbRels, err := svc.getTgLbRelByCond(kt, []filter.RuleFactory{tools.RuleIn("lbl_id", lblIDs)})
-	if err != nil {
-		logs.Errorf("get tg lb rel by cond failed, err: %v, lblIDs: %+v, rid: %s", err, lblIDs, kt.Rid)
-		return nil, nil, nil, nil, err
+	tgLbRels := make([]corelb.BaseTargetListenerRuleRel, 0)
+	for _, batch := range slice.Split(lblIDs, int(core.DefaultMaxPageLimit)) {
+		batchResult, err := svc.getTgLbRelByCond(kt, []filter.RuleFactory{tools.RuleIn("lbl_id", batch)},
+			make([]string, 0))
+		if err != nil {
+			logs.Errorf("get tg lb rel by cond failed, err: %v, lblIDs: %+v, rid: %s", err, batch, kt.Rid)
+			return nil, nil, nil, nil, err
+		}
+		tgLbRels = append(tgLbRels, batchResult...)
 	}
+
 	tgIDLblIDMap := make(map[string]string)
 	lblIDTgIDMap := make(map[string]string)
 	tgIDs := make([]string, 0)
@@ -786,10 +859,16 @@ func (svc *lbSvc) getListenerRelInfo(kt *kit.Kit, vendor enumor.Vendor, listener
 		tgIDs = append(tgIDs, tgLbRel.TargetGroupID)
 		tgIDBindStatusMap[tgLbRel.TargetGroupID] = tgLbRel.BindingStatus
 	}
-	targets, err := svc.getTargetByCond(kt, []filter.RuleFactory{tools.RuleIn("target_group_id", tgIDs)})
-	if err != nil {
-		logs.Errorf("get target by cond failed, err: %v, tgIDs: %+v, rid: %s", err, tgIDs, kt.Rid)
-		return nil, nil, nil, nil, err
+	tgIDs = slice.Unique(tgIDs)
+	targets := make([]corelb.BaseTarget, 0)
+	for _, batch := range slice.Split(tgIDs, int(core.DefaultMaxPageLimit)) {
+		batchResult, err := svc.getTargetByCond(kt, []filter.RuleFactory{tools.RuleIn("target_group_id", batch)},
+			[]string{"id", "target_group_id", "weight"})
+		if err != nil {
+			logs.Errorf("get target by cond failed, err: %v, tgIDs: %+v, rid: %s", err, batch, kt.Rid)
+			return nil, nil, nil, nil, err
+		}
+		targets = append(targets, batchResult...)
 	}
 	lblTargetCountMap := make(map[string]int)
 	lblNonZeroWeightTargetCountMap := make(map[string]int)
@@ -838,22 +917,34 @@ func (svc *lbSvc) getLblTopoInfoByReq(kt *kit.Kit, bizID int64, vendor enumor.Ve
 	reqTargetCond := req.GetTargetCond()
 	// 如果请求没有规则和RS条件，那么可以直接返回CLB匹配的监听器条件
 	if len(reqRuleCond) == 0 && len(reqTargetCond) == 0 {
-		lblCond := []filter.RuleFactory{tools.RuleIn("lb_id", lbIDs)}
-		return &cslb.LblTopoInfo{Match: true, LbMap: lbMap, LblCond: lblCond}, nil
+		lblConds := make([][]filter.RuleFactory, 0)
+		for _, batch := range slice.Split(lbIDs, int(core.DefaultMaxPageLimit)) {
+			lblCond := []filter.RuleFactory{tools.RuleIn("lb_id", batch)}
+			lblConds = append(lblConds, lblCond)
+		}
+		return &cslb.LblTopoInfo{Match: true, LbMap: lbMap, LblConds: lblConds}, nil
 	}
 
-	tgLbRelCond := []filter.RuleFactory{tools.RuleIn("lb_id", lbIDs),
-		tools.RuleEqual("binding_status", enumor.SuccessBindingStatus)}
+	tgLbRelConds := make([][]filter.RuleFactory, 0)
+	for _, batch := range slice.Split(lbIDs, int(core.DefaultMaxPageLimit)) {
+		tgLbRelCond := []filter.RuleFactory{tools.RuleIn("lb_id", batch),
+			tools.RuleEqual("binding_status", enumor.SuccessBindingStatus)}
+		tgLbRelConds = append(tgLbRelConds, tgLbRelCond)
+	}
 
 	// 如果请求中存在规则条件，那么需要根据条件查询规则，进一步得到匹配的监听器条件
 	if len(reqRuleCond) != 0 {
-		ruleCond := make([]filter.RuleFactory, 0)
-		ruleCond = append(ruleCond, tools.RuleIn("lb_id", lbIDs))
-		ruleCond = append(ruleCond, reqRuleCond...)
-		ruleMap, err := svc.getRuleByCond(kt, vendor, ruleCond, []string{"id", "lbl_id"})
-		if err != nil {
-			logs.Errorf("get rule by cond failed, err: %v, ruleCond: %v, rid: %s", err, ruleCond, kt.Rid)
-			return nil, err
+		ruleMap := make(map[string]corelb.TCloudLbUrlRule)
+		for _, batch := range slice.Split(lbIDs, int(core.DefaultMaxPageLimit)) {
+			ruleCond := make([]filter.RuleFactory, 0)
+			ruleCond = append(ruleCond, tools.RuleIn("lb_id", batch))
+			ruleCond = append(ruleCond, reqRuleCond...)
+			batchResult, err := svc.getRuleByCond(kt, vendor, ruleCond, []string{"id", "lbl_id"})
+			if err != nil {
+				logs.Errorf("get rule by cond failed, err: %v, ruleCond: %v, rid: %s", err, ruleCond, kt.Rid)
+				return nil, err
+			}
+			ruleMap = maps.MapMerge(ruleMap, batchResult)
 		}
 		if len(ruleMap) == 0 {
 			return &cslb.LblTopoInfo{Match: false}, nil
@@ -866,39 +957,51 @@ func (svc *lbSvc) getLblTopoInfoByReq(kt *kit.Kit, bizID int64, vendor enumor.Ve
 				lblIDMap[rule.LblID] = struct{}{}
 			}
 			lblIDs := maps.Keys(lblIDMap)
-			lblCond := []filter.RuleFactory{tools.RuleIn("id", lblIDs)}
-			return &cslb.LblTopoInfo{Match: true, LbMap: lbMap, LblCond: lblCond}, nil
+			lblConds := make([][]filter.RuleFactory, 0)
+			for _, batch := range slice.Split(lblIDs, int(core.DefaultMaxPageLimit)) {
+				lblCond := []filter.RuleFactory{tools.RuleIn("id", batch)}
+				lblConds = append(lblConds, lblCond)
+			}
+			return &cslb.LblTopoInfo{Match: true, LbMap: lbMap, LblConds: lblConds}, nil
 		}
 		// 注：tgLbRelCond中的vendor条件不能去掉，不同vendor的规则在不同表里，自增id不共用，不加的话可能串数据
-		tgLbRelCond = []filter.RuleFactory{tools.RuleIn("listener_rule_id", maps.Keys(ruleMap)),
-			tools.RuleEqual("vendor", vendor), tools.RuleEqual("binding_status", enumor.SuccessBindingStatus)}
+		tgLbRelConds = make([][]filter.RuleFactory, 0)
+		for _, batch := range slice.Split(maps.Keys(ruleMap), int(core.DefaultMaxPageLimit)) {
+			tgLbRelCond := []filter.RuleFactory{tools.RuleIn("listener_rule_id", batch),
+				tools.RuleEqual("vendor", vendor), tools.RuleEqual("binding_status", enumor.SuccessBindingStatus)}
+			tgLbRelConds = append(tgLbRelConds, tgLbRelCond)
+		}
 	}
 
 	// 根据RS条件查询，得到监听器条件
-	lblCond, err := svc.getLblCondByTargetCond(kt, tgLbRelCond, reqTargetCond)
+	lblConds, err := svc.getLblCondByTargetCond(kt, tgLbRelConds, reqTargetCond)
 	if err != nil {
 		logs.Errorf("get lbl cond by target cond failed, err: %v, tgLbRelCond: %v, reqTargetCond: %v, rid: %s", err,
-			tgLbRelCond, reqTargetCond, kt.Rid)
+			tgLbRelConds, reqTargetCond, kt.Rid)
 		return nil, err
 	}
-	if len(lblCond) == 0 {
+	if len(lblConds) == 0 {
 		return &cslb.LblTopoInfo{Match: false}, nil
 	}
 
-	return &cslb.LblTopoInfo{Match: true, LbMap: lbMap, LblCond: lblCond}, nil
+	return &cslb.LblTopoInfo{Match: true, LbMap: lbMap, LblConds: lblConds}, nil
 }
 
-func (svc *lbSvc) getLblCondByTargetCond(kt *kit.Kit, tgLbRelCond []filter.RuleFactory,
-	reqTargetCond []filter.RuleFactory) ([]filter.RuleFactory, error) {
+func (svc *lbSvc) getLblCondByTargetCond(kt *kit.Kit, tgLbRelConds [][]filter.RuleFactory,
+	reqTargetCond []filter.RuleFactory) ([][]filter.RuleFactory, error) {
 
 	// 根据条件查询clb和目标组关系
-	tgLbRels, err := svc.getTgLbRelByCond(kt, tgLbRelCond)
-	if err != nil {
-		logs.Errorf("get tg lb rel failed, err: %v, tgLbRelCond: %v, rid: %s", err, tgLbRelCond, kt.Rid)
-		return nil, err
+	tgLbRels := make([]corelb.BaseTargetListenerRuleRel, 0)
+	for _, tgLbRelCond := range tgLbRelConds {
+		subResult, err := svc.getTgLbRelByCond(kt, tgLbRelCond, []string{"target_group_id", "lbl_id"})
+		if err != nil {
+			logs.Errorf("get tg lb rel failed, err: %v, tgLbRelCond: %v, rid: %s", err, tgLbRelCond, kt.Rid)
+			return nil, err
+		}
+		tgLbRels = append(tgLbRels, subResult...)
 	}
 	if len(tgLbRels) == 0 {
-		return make([]filter.RuleFactory, 0), nil
+		return make([][]filter.RuleFactory, 0), nil
 	}
 
 	tgIDLblIDMap := make(map[string]string)
@@ -907,15 +1010,19 @@ func (svc *lbSvc) getLblCondByTargetCond(kt *kit.Kit, tgLbRelCond []filter.RuleF
 	}
 
 	// 根据条件查询RS
-	targetCond := []filter.RuleFactory{tools.RuleIn("target_group_id", maps.Keys(tgIDLblIDMap))}
-	targetCond = append(targetCond, reqTargetCond...)
-	targets, err := svc.getTargetByCond(kt, targetCond)
-	if err != nil {
-		logs.Errorf("get target by cond failed, err: %v, targetCond: %v, rid: %s", err, targetCond, kt.Rid)
-		return nil, err
+	targets := make([]corelb.BaseTarget, 0)
+	for _, batch := range slice.Split(maps.Keys(tgIDLblIDMap), int(core.DefaultMaxPageLimit)) {
+		targetCond := []filter.RuleFactory{tools.RuleIn("target_group_id", batch)}
+		targetCond = append(targetCond, reqTargetCond...)
+		subResult, err := svc.getTargetByCond(kt, targetCond, []string{"target_group_id"})
+		if err != nil {
+			logs.Errorf("get target by cond failed, err: %v, targetCond: %v, rid: %s", err, targetCond, kt.Rid)
+			return nil, err
+		}
+		targets = append(targets, subResult...)
 	}
 	if len(targets) == 0 {
-		return make([]filter.RuleFactory, 0), nil
+		return make([][]filter.RuleFactory, 0), nil
 	}
 
 	// 根据RS反向推出匹配的监听器条件
@@ -930,10 +1037,14 @@ func (svc *lbSvc) getLblCondByTargetCond(kt *kit.Kit, tgLbRelCond []filter.RuleF
 	}
 	lblIDs := maps.Keys(lblIDMap)
 	if len(lblIDs) == 0 {
-		return make([]filter.RuleFactory, 0), nil
+		return make([][]filter.RuleFactory, 0), nil
 	}
 
-	return []filter.RuleFactory{tools.RuleIn("id", lblIDs)}, nil
+	result := make([][]filter.RuleFactory, 0)
+	for _, batch := range slice.Split(lblIDs, int(core.DefaultMaxPageLimit)) {
+		result = append(result, []filter.RuleFactory{tools.RuleIn("id", batch)})
+	}
+	return result, nil
 }
 
 // ListUrlRulesByTopo list url rules by topo
@@ -983,48 +1094,36 @@ func (svc *lbSvc) listUrlRulesByTopo(kt *kit.Kit, bizID int64, vendor enumor.Ven
 		return core.ListResultT[cslb.UrlRuleWithTopo]{Details: make([]cslb.UrlRuleWithTopo, 0)}, nil
 	}
 
-	ruleCond := make([]filter.RuleFactory, 0)
-	ruleCond = append(ruleCond, info.RuleCond...)
-	ruleCond = append(ruleCond, req.GetRuleCond()...)
-	ruleCond = append(ruleCond, tools.RuleEqual("rule_type", enumor.Layer7RuleType))
-
-	ruleReq := core.ListReq{
-		Filter: &filter.Expression{Op: filter.And, Rules: ruleCond},
-		Page:   req.Page,
-	}
-
-	resp := &cloud.TCloudURLRuleListResult{}
-	switch vendor {
-	case enumor.TCloud:
-		resp, err = svc.client.DataService().TCloud.LoadBalancer.ListUrlRule(kt, &ruleReq)
+	urlRules := make([]corelb.TCloudLbUrlRule, 0)
+	for _, subRuleCond := range info.RuleConds {
+		ruleCond := make([]filter.RuleFactory, 0)
+		ruleCond = append(ruleCond, subRuleCond...)
+		ruleCond = append(ruleCond, req.GetRuleCond()...)
+		ruleCond = append(ruleCond, tools.RuleEqual("rule_type", enumor.Layer7RuleType))
+		batchResult, err := svc.getRuleByCond(kt, vendor, ruleCond, make([]string, 0))
 		if err != nil {
-			logs.Errorf("get rule failed, err: %v, req: %+v, rid: %s", err, ruleReq, kt.Rid)
+			logs.Errorf("get rule by cond failed, err: %v, ruleCond: %v, rid: %s", err, ruleCond, kt.Rid)
 			return nil, err
 		}
-	case enumor.TCloudZiyan:
-		resp, err = svc.client.DataService().TCloudZiyan.LoadBalancer.ListUrlRule(kt, &ruleReq)
-		if err != nil {
-			logs.Errorf("get rule failed, err: %v, req: %+v, rid: %s", err, ruleReq, kt.Rid)
-			return nil, err
+		urlRules = append(urlRules, maps.Values(batchResult)...)
+
+		if len(urlRules) > constant.CLBDataByTopoCondReturnLimit {
+			return nil, errf.Newf(errf.ClbTopoResExceedErr, "url rules count exceed limit, limit: %d",
+				constant.CLBDataByTopoCondReturnLimit)
 		}
-	default:
-		return nil, fmt.Errorf("vendor: %s not support", vendor)
 	}
 
-	if req.Page.Count {
-		return core.ListResultT[cslb.UrlRuleWithTopo]{Count: resp.Count}, nil
-	}
-	if len(resp.Details) == 0 {
+	if len(urlRules) == 0 {
 		return core.ListResultT[cslb.UrlRuleWithTopo]{Details: make([]cslb.UrlRuleWithTopo, 0)}, nil
 	}
 
-	details, err := svc.buildUrlRuleWithTopoInfo(kt, vendor, info, resp.Details)
+	details, err := svc.buildUrlRuleWithTopoInfo(kt, vendor, info, urlRules)
 	if err != nil {
 		logs.Errorf("build url rule with topo info failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
 		return nil, err
 	}
 
-	return core.ListResultT[cslb.UrlRuleWithTopo]{Details: details}, nil
+	return core.ListResultT[cslb.UrlRuleWithTopo]{Details: details, Count: uint64(len(details))}, nil
 }
 
 func (svc *lbSvc) getUrlRuleTopoInfoByReq(kt *kit.Kit, bizID int64, vendor enumor.Vendor, req *cslb.LbTopoReq) (
@@ -1053,64 +1152,80 @@ func (svc *lbSvc) getUrlRuleTopoInfoByReq(kt *kit.Kit, bizID int64, vendor enumo
 
 	// 如果请求没有监听器和RS条件，那么可以直接返回CLB匹配的规则条件
 	if len(reqLblCond) == 0 && len(reqTargetCond) == 0 {
-		ruleCond := []filter.RuleFactory{tools.RuleIn("lb_id", lbIDs)}
-		return &cslb.UrlRuleTopoInfo{Match: true, LbMap: lbMap, RuleCond: ruleCond}, nil
+		ruleConds := make([][]filter.RuleFactory, 0)
+		for _, batch := range slice.Split(lbIDs, int(core.DefaultMaxPageLimit)) {
+			ruleConds = append(ruleConds, []filter.RuleFactory{tools.RuleIn("lb_id", batch)})
+		}
+		return &cslb.UrlRuleTopoInfo{Match: true, LbMap: lbMap, RuleConds: ruleConds}, nil
 	}
 
-	tgLbRelCond := []filter.RuleFactory{tools.RuleIn("lb_id", lbIDs),
-		tools.RuleEqual("binding_status", enumor.SuccessBindingStatus)}
-
+	tgLbRelConds := make([][]filter.RuleFactory, 0)
+	for _, batch := range slice.Split(lbIDs, int(core.DefaultMaxPageLimit)) {
+		tgLbRelConds = append(tgLbRelConds, []filter.RuleFactory{tools.RuleIn("lb_id", batch)})
+	}
 	// 如果请求中存在监听器条件，那么需要根据条件查询监听器，进一步得到匹配的规则条件
 	if len(reqLblCond) != 0 {
-		lblCond := make([]filter.RuleFactory, 0)
-		lblCond = append(lblCond, tools.RuleIn("lb_id", lbIDs))
-		lblCond = append(lblCond, reqLblCond...)
-		lblMap, err := svc.getLblByCond(kt, vendor, lblCond)
-
-		if err != nil {
-			logs.Errorf("get lbl by cond failed, err: %v, lblCond: %v, rid: %s", err, lblCond, kt.Rid)
-			return nil, err
+		lblMap := make(map[string]corelb.TCloudListener)
+		for _, batch := range slice.Split(lbIDs, int(core.DefaultMaxPageLimit)) {
+			lblCond := make([]filter.RuleFactory, 0)
+			lblCond = append(lblCond, tools.RuleIn("lb_id", batch))
+			lblCond = append(lblCond, reqLblCond...)
+			batchResult, err := svc.getLblByCond(kt, vendor, lblCond)
+			if err != nil {
+				logs.Errorf("get lbl by cond failed, err: %v, lblCond: %v, rid: %s", err, lblCond, kt.Rid)
+				return nil, err
+			}
+			lblMap = maps.MapMerge(lblMap, batchResult)
 		}
 		if len(lblMap) == 0 {
 			return &cslb.UrlRuleTopoInfo{Match: false}, nil
 		}
 
 		if len(reqTargetCond) == 0 {
-			lblIDs := maps.Keys(lblMap)
-			ruleCond := []filter.RuleFactory{tools.RuleIn("lbl_id", lblIDs)}
-			return &cslb.UrlRuleTopoInfo{Match: true, LbMap: lbMap, RuleCond: ruleCond}, nil
+			ruleConds := make([][]filter.RuleFactory, 0)
+			for _, batch := range slice.Split(maps.Keys(lblMap), int(core.DefaultMaxPageLimit)) {
+				ruleConds = append(ruleConds, []filter.RuleFactory{tools.RuleIn("lbl_id", batch)})
+			}
+			return &cslb.UrlRuleTopoInfo{Match: true, LbMap: lbMap, RuleConds: ruleConds}, nil
 		}
 
 		// 注：tgLbRelCond中的vendor条件不能去掉，不同vendor的规则在不同表里，自增id不共用，不加的话可能串数据
-		tgLbRelCond = []filter.RuleFactory{tools.RuleIn("lbl_id", maps.Keys(lblMap)),
-			tools.RuleEqual("vendor", vendor), tools.RuleEqual("binding_status", enumor.SuccessBindingStatus)}
+		tgLbRelConds = make([][]filter.RuleFactory, 0)
+		for _, batch := range slice.Split(maps.Keys(lblMap), int(core.DefaultMaxPageLimit)) {
+			tgLbRelConds = append(tgLbRelConds, []filter.RuleFactory{tools.RuleIn("lbl_id", batch),
+				tools.RuleEqual("vendor", vendor), tools.RuleEqual("binding_status", enumor.SuccessBindingStatus)})
+		}
 	}
 
 	// 根据RS条件查询，得到规则条件
-	ruleCond, err := svc.getRuleCondByTargetCond(kt, tgLbRelCond, reqTargetCond)
+	ruleConds, err := svc.getRuleCondByTargetCond(kt, tgLbRelConds, reqTargetCond)
 	if err != nil {
-		logs.Errorf("get rule cond by target cond failed, err: %v, tgLbRelCond: %v, reqTargetCond: %v, rid: %s", err,
-			tgLbRelCond, reqTargetCond, kt.Rid)
+		logs.Errorf("get rule cond by target cond failed, err: %v, tgLbRelConds: %v, reqTargetCond: %v, rid: %s", err,
+			tgLbRelConds, reqTargetCond, kt.Rid)
 		return nil, err
 	}
-	if len(ruleCond) == 0 {
+	if len(ruleConds) == 0 {
 		return &cslb.UrlRuleTopoInfo{Match: false}, nil
 	}
 
-	return &cslb.UrlRuleTopoInfo{Match: true, LbMap: lbMap, RuleCond: ruleCond}, nil
+	return &cslb.UrlRuleTopoInfo{Match: true, LbMap: lbMap, RuleConds: ruleConds}, nil
 }
 
-func (svc *lbSvc) getRuleCondByTargetCond(kt *kit.Kit, tgLbRelCond []filter.RuleFactory,
-	reqTargetCond []filter.RuleFactory) ([]filter.RuleFactory, error) {
+func (svc *lbSvc) getRuleCondByTargetCond(kt *kit.Kit, tgLbRelConds [][]filter.RuleFactory,
+	reqTargetCond []filter.RuleFactory) ([][]filter.RuleFactory, error) {
 
 	// 根据条件查询clb和目标组关系
-	tgLbRels, err := svc.getTgLbRelByCond(kt, tgLbRelCond)
-	if err != nil {
-		logs.Errorf("get tg lb rel failed, err: %v, tgLbRelCond: %v, rid: %s", err, tgLbRelCond, kt.Rid)
-		return nil, err
+	tgLbRels := make([]corelb.BaseTargetListenerRuleRel, 0)
+	for _, tgLbRelCond := range tgLbRelConds {
+		batchResult, err := svc.getTgLbRelByCond(kt, tgLbRelCond, []string{"target_group_id", "listener_rule_id"})
+		if err != nil {
+			logs.Errorf("get tg lb rel failed, err: %v, tgLbRelCond: %v, rid: %s", err, tgLbRelCond, kt.Rid)
+			return nil, err
+		}
+		tgLbRels = append(tgLbRels, batchResult...)
 	}
 	if len(tgLbRels) == 0 {
-		return make([]filter.RuleFactory, 0), nil
+		return make([][]filter.RuleFactory, 0), nil
 	}
 
 	tgIDRuleIDMap := make(map[string]string)
@@ -1119,15 +1234,19 @@ func (svc *lbSvc) getRuleCondByTargetCond(kt *kit.Kit, tgLbRelCond []filter.Rule
 	}
 
 	// 根据条件查询RS
-	targetCond := []filter.RuleFactory{tools.RuleIn("target_group_id", maps.Keys(tgIDRuleIDMap))}
-	targetCond = append(targetCond, reqTargetCond...)
-	targets, err := svc.getTargetByCond(kt, targetCond)
-	if err != nil {
-		logs.Errorf("get target by cond failed, err: %v, targetCond: %v, rid: %s", err, targetCond, kt.Rid)
-		return nil, err
+	targets := make([]corelb.BaseTarget, 0)
+	for _, batch := range slice.Split(maps.Keys(tgIDRuleIDMap), int(core.DefaultMaxPageLimit)) {
+		targetCond := []filter.RuleFactory{tools.RuleIn("target_group_id", batch)}
+		targetCond = append(targetCond, reqTargetCond...)
+		batchResult, err := svc.getTargetByCond(kt, targetCond, []string{"target_group_id"})
+		if err != nil {
+			logs.Errorf("get target by cond failed, err: %v, targetCond: %v, rid: %s", err, targetCond, kt.Rid)
+			return nil, err
+		}
+		targets = append(targets, batchResult...)
 	}
 	if len(targets) == 0 {
-		return make([]filter.RuleFactory, 0), nil
+		return make([][]filter.RuleFactory, 0), nil
 	}
 
 	// 根据RS反向推出匹配的规则条件
@@ -1142,10 +1261,14 @@ func (svc *lbSvc) getRuleCondByTargetCond(kt *kit.Kit, tgLbRelCond []filter.Rule
 	}
 	ruleIDs := maps.Keys(ruleIDMap)
 	if len(ruleIDs) == 0 {
-		return make([]filter.RuleFactory, 0), nil
+		return make([][]filter.RuleFactory, 0), nil
 	}
 
-	return []filter.RuleFactory{tools.RuleIn("id", ruleIDs)}, nil
+	result := make([][]filter.RuleFactory, 0)
+	for _, batch := range slice.Split(ruleIDs, int(core.DefaultMaxPageLimit)) {
+		result = append(result, []filter.RuleFactory{tools.RuleIn("id", batch)})
+	}
+	return result, nil
 }
 
 func (svc *lbSvc) buildUrlRuleWithTopoInfo(kt *kit.Kit, vendor enumor.Vendor, info *cslb.UrlRuleTopoInfo,
@@ -1163,10 +1286,14 @@ func (svc *lbSvc) buildUrlRuleWithTopoInfo(kt *kit.Kit, vendor enumor.Vendor, in
 		lblIDMap[rule.LblID] = struct{}{}
 	}
 	lblIDs := maps.Keys(lblIDMap)
-	lblMap, err := svc.getLblByCond(kt, vendor, []filter.RuleFactory{tools.RuleIn("id", lblIDs)})
-	if err != nil {
-		logs.Errorf("get lbl by cond failed, err: %v, lblIDs: %+v, rid: %s", err, lblIDs, kt.Rid)
-		return nil, err
+	lblMap := make(map[string]corelb.TCloudListener)
+	for _, batch := range slice.Split(lblIDs, int(core.DefaultMaxPageLimit)) {
+		batchResult, err := svc.getLblByCond(kt, vendor, []filter.RuleFactory{tools.RuleIn("id", batch)})
+		if err != nil {
+			logs.Errorf("get lbl by cond failed, err: %v, lblIDs: %+v, rid: %s", err, batch, kt.Rid)
+			return nil, err
+		}
+		lblMap = maps.MapMerge(lblMap, batchResult)
 	}
 
 	details := make([]cslb.UrlRuleWithTopo, 0)
@@ -1215,24 +1342,37 @@ func (svc *lbSvc) getUrlRuleTargetCount(kt *kit.Kit, vendor enumor.Vendor, rules
 	for _, rule := range rules {
 		ruleIDs = append(ruleIDs, rule.ID)
 	}
-	tgLbRelCond := []filter.RuleFactory{tools.RuleIn("listener_rule_id", ruleIDs), tools.RuleEqual("vendor", vendor),
-		tools.RuleEqual("binding_status", enumor.SuccessBindingStatus)}
-	tgLbRels, err := svc.getTgLbRelByCond(kt, tgLbRelCond)
-	if err != nil {
-		logs.Errorf("get tg lb rel by cond failed, err: %v, ruleIDs: %+v, rid: %s", err, ruleIDs, kt.Rid)
-		return nil, err
+	ruleIDs = slice.Unique(ruleIDs)
+	tgLbRels := make([]corelb.BaseTargetListenerRuleRel, 0)
+	for _, batch := range slice.Split(ruleIDs, int(core.DefaultMaxPageLimit)) {
+		tgLbRelCond := []filter.RuleFactory{tools.RuleIn("listener_rule_id", batch),
+			tools.RuleEqual("vendor", vendor), tools.RuleEqual("binding_status", enumor.SuccessBindingStatus)}
+		batchResult, err := svc.getTgLbRelByCond(kt, tgLbRelCond, []string{"target_group_id", "listener_rule_id"})
+		if err != nil {
+			logs.Errorf("get tg lb rel by cond failed, err: %v, ruleIDs: %+v, rid: %s", err, batch, kt.Rid)
+			return nil, err
+		}
+		tgLbRels = append(tgLbRels, batchResult...)
 	}
+
 	tgIDRuleIDMap := make(map[string]string)
 	tgIDs := make([]string, 0)
 	for _, tgLbRel := range tgLbRels {
 		tgIDRuleIDMap[tgLbRel.TargetGroupID] = tgLbRel.ListenerRuleID
 		tgIDs = append(tgIDs, tgLbRel.TargetGroupID)
 	}
-	targets, err := svc.getTargetByCond(kt, []filter.RuleFactory{tools.RuleIn("target_group_id", tgIDs)})
-	if err != nil {
-		logs.Errorf("get target by cond failed, err: %v, tgIDs: %+v, rid: %s", err, tgIDs, kt.Rid)
-		return nil, err
+	tgIDs = slice.Unique(tgIDs)
+	targets := make([]corelb.BaseTarget, 0)
+	for _, batch := range slice.Split(tgIDs, int(core.DefaultMaxPageLimit)) {
+		batchResult, err := svc.getTargetByCond(kt, []filter.RuleFactory{tools.RuleIn("target_group_id", batch)},
+			[]string{"id", "target_group_id"})
+		if err != nil {
+			logs.Errorf("get target by cond failed, err: %v, tgIDs: %+v, rid: %s", err, batch, kt.Rid)
+			return nil, err
+		}
+		targets = append(targets, batchResult...)
 	}
+
 	ruleTargetCountMap := make(map[string]int)
 	for _, target := range targets {
 		ruleID, ok := tgIDRuleIDMap[target.TargetGroupID]

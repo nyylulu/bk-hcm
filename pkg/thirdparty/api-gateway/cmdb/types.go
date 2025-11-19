@@ -322,6 +322,8 @@ type Host struct {
 	BkIpOerName string `json:"bk_ip_oper_name,omitempty"`
 	// 机型
 	SvrDeviceClass string `json:"svr_device_class,omitempty"`
+	// 服务器类型名称
+	SvrTypeName string `json:"svr_type_name,omitempty"`
 	// 操作系统类型
 	BkOsType OsType `json:"bk_os_type,omitempty"`
 	// 操作系统版本

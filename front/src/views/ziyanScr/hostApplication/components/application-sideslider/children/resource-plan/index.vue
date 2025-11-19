@@ -51,41 +51,51 @@ const searchValues = ref(defaultSearchValues());
 const isAlertFolded = ref(false);
 const isAlertFoldable = [RequirementType.Regular, RequirementType.Spring].includes(props.requireType);
 
-const columns: ModelPropertyColumn[] = [
-  {
-    id: 'device_family',
-    name: '实例族',
-    type: 'string',
-  },
-  {
-    id: 'device_type',
-    name: '预测通配机型',
-    type: 'string',
-    width: 150,
-  },
-  {
-    id: 'total_cpu_core',
-    name: 'CPU总核数',
-    type: 'number',
-    align: 'right',
-  },
-  {
-    id: 'total_memory',
-    name: '内存总量',
-    type: 'number',
-    align: 'right',
-  },
-  {
-    id: 'region_name',
-    name: '地域',
-    type: 'string',
-  },
-  {
-    id: 'zone_name',
-    name: '可用区',
-    type: 'string',
-  },
-];
+const columns = computed(() => {
+  const baseCol: ModelPropertyColumn[] = [
+    {
+      id: 'device_family',
+      name: '实例族',
+      type: 'string',
+    },
+    {
+      id: 'device_type',
+      name: '预测通配机型',
+      type: 'string',
+      width: 150,
+    },
+    {
+      id: 'total_cpu_core',
+      name: 'CPU总核数',
+      type: 'number',
+      align: 'right',
+    },
+    {
+      id: 'total_memory',
+      name: '内存总量',
+      type: 'number',
+      align: 'right',
+    },
+    {
+      id: 'region_name',
+      name: '地域',
+      type: 'string',
+    },
+    {
+      id: 'zone_name',
+      name: '可用区',
+      type: 'string',
+    },
+  ];
+  if (props.requireType === RequirementType.ShortRental) {
+    baseCol.push({
+      id: 'return_plan_time',
+      name: '短租退回日期',
+      type: 'string',
+    });
+  }
+  return baseCol;
+});
 
 const cvmDevicetypeParams = computed(() => {
   const { region, zone, device_families } = searchValues.value;

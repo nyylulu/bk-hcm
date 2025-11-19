@@ -149,6 +149,7 @@ func (l *logics) fillHostDataByES(kt *kit.Kit, ccHosts []cmdb.Host, esHostMap ma
 			esHost.BizID = bizID
 			esHost.ServerOperator = ccHost.Operator
 			esHost.ServerBakOperator = ccHost.BkBakOperator
+			esHost.SvrTypeName = ccHost.SvrTypeName
 			result[idx] = esHost
 			continue
 		}
@@ -160,6 +161,7 @@ func (l *logics) fillHostDataByES(kt *kit.Kit, ccHosts []cmdb.Host, esHostMap ma
 			AppName:           bizName,
 			BizID:             bizID,
 			DeviceType:        ccHost.SvrDeviceClass,
+			SvrTypeName:       ccHost.SvrTypeName,
 			ModuleName:        ccHost.ModuleName,
 			IdcUnitName:       ccHost.IdcUnitName,
 			SfwNameVersion:    ccHost.BkOsVersion,

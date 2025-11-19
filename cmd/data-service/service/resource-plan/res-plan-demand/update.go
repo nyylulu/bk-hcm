@@ -132,7 +132,7 @@ func (svc *service) LockResPlanDemand(cts *rest.Contexts) (interface{}, error) {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
 
-	if err := req.Validate(); err != nil {
+	if err := req.Validate(true); err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
@@ -152,7 +152,7 @@ func (svc *service) UnlockResPlanDemand(cts *rest.Contexts) (interface{}, error)
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
 
-	if err := req.Validate(); err != nil {
+	if err := req.Validate(false); err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 

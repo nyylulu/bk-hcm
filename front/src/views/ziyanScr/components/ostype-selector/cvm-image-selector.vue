@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, watchEffect } from 'vue';
+import { computed, ref, watch } from 'vue';
+import { isEqual } from 'lodash';
 import type { IQueryResData } from '@/typings';
 import http from '@/http';
 
@@ -68,9 +69,16 @@ const getOptions = async (region: string[]) => {
   }
 };
 
-watchEffect(() => {
-  getOptions(props.region);
-});
+watch(
+  () => props.region,
+  (region, oldRegion) => {
+    // 使用方在模板中直接传入[region]在改变窗口大小时会大量触发查询，这里通过严格判断来避免
+    if (Array.isArray(region) && region?.[0] !== '' && !isEqual(region, oldRegion)) {
+      getOptions(region);
+    }
+  },
+  { immediate: true },
+);
 
 const handleChange = (val: string | string[]) => {
   const vals = Array.isArray(val) ? val : [val];

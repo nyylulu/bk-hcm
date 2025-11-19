@@ -34,7 +34,7 @@ type ZoneHandler struct {
 func (zh *ZoneHandler) Handle(order *types.ApplyOrder) (*Recommendation, bool) {
 	kt := kit.New()
 	// cvm_separate_campus cannot be modified
-	if order.Spec.Zone == "" || order.Spec.Zone == cvmapi.CvmSeparateCampus {
+	if order.Spec.Zone == "" || order.Spec.IsCVMSeparateCampus() {
 		return nil, false
 	}
 

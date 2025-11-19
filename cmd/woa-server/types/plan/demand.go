@@ -224,6 +224,7 @@ type ListResPlanDemandItem struct {
 	DemandClass      enumor.DemandClass   `json:"demand_class"`
 	DemandResType    enumor.DemandResType `json:"demand_res_type"`
 	ExpectTime       string               `json:"expect_time"`
+	ReturnPlanTime   *string              `json:"return_plan_time"`
 	CanApplyTime     string               `json:"can_apply_time"`
 	ExpiredTime      string               `json:"expired_time"`
 	DeviceClass      string               `json:"device_class"`
@@ -248,6 +249,7 @@ type ListResPlanDemandItem struct {
 	PlanType         enumor.PlanType      `json:"plan_type"`
 	ObsProject       enumor.ObsProject    `json:"obs_project"`
 	TechnicalClass   string               `json:"technical_class"`
+	TicketID         string               `json:"ticket_id"`
 	DeviceFamily     string               `json:"device_family"`
 	CoreType         enumor.CoreType      `json:"core_type"`
 	DiskType         enumor.DiskType      `json:"disk_type"`
@@ -309,6 +311,7 @@ type PlanDemandDetail struct {
 type GetPlanDemandDetailResp struct {
 	DemandID        string            `json:"demand_id"`
 	ExpectTime      string            `json:"expect_time"`
+	ReturnPlanTime  *string           `json:"return_plan_time"`
 	BkBizID         int64             `json:"bk_biz_id"`
 	BkBizName       string            `json:"bk_biz_name"`
 	DeptID          int64             `json:"dept_id"`
@@ -701,6 +704,7 @@ type CrpOrderChangeInfo struct {
 	PlanProductName string               `json:"plan_product_name"`
 	OpProductName   string               `json:"op_product_name"`
 	ExpectTime      string               `json:"expect_time"`
+	ReturnPlanTime  string               `json:"return_plan_time"`
 	ObsProject      enumor.ObsProject    `json:"obs_project"`
 	DemandResType   enumor.DemandResType `json:"demand_res_type"`
 	ResMode         enumor.ResModeCode   `json:"res_mode"`

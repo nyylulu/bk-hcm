@@ -58,7 +58,7 @@ const http: HttpApi = {
   },
   cancelCache: (requestId: string) => http.cache.delete(requestId),
   cancel: (requestId: string) => Promise.all([http.cancelRequest(requestId), http.cancelCache(requestId)]),
-  download: async (config: CombinedRequestConfig) => {
+  download: async (config: HttpRequestConfig) => {
     defaults(config, { method: 'post', responseType: 'blob', originalResponse: true, globalError: true });
     // 设置请求配置默认值
     try {
@@ -342,7 +342,8 @@ function initConfig(method: string, url: string, userConfig: object) {
   };
   return Object.assign(defaultConfig, userConfig);
 }
-type CombinedRequestConfig = Partial<AxiosRequestConfig & ReturnType<typeof initConfig>>;
+
+export type HttpRequestConfig = Partial<AxiosRequestConfig & ReturnType<typeof initConfig>>;
 
 /**
  * 生成 http 请求的 cancelToken，用于取消尚未完成的请求

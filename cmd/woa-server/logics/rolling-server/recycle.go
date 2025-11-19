@@ -46,15 +46,14 @@ import (
 
 // CalSplitRecycleHosts 计算并匹配指定时间范围指定业务的主机Host
 func (l *logics) CalSplitRecycleHosts(kt *kit.Kit, bkBizID int64, hosts []*table.RecycleHost,
-	allBizReturnedCpuCore, globalQuota int64) (map[string]*rstypes.RecycleHostMatchInfo, []*table.RecycleHost,
-	int64, error) {
+	recycleTypeSeq []table.RecycleType, allBizReturnedCpuCore, globalQuota int64) ([]*table.RecycleHost, int64, error) {
 
 	// 1.统计该回收Host子订单中的机型、全业务已退还的CPU总核数、全局的CPU总核数
 	hostMatchMap, err := l.buildHostMatchMap(kt, hosts)
 	if err != nil {
 		logs.ErrorJson("statis recycle host cpu system quota failed, err: %v, bkBizID: %d, hosts: %+v, rid: %s",
 			err, bkBizID, hosts, kt.Rid)
-		return nil, nil, 0, err
+		return nil, 0, err
 	}
 
 	matchRange := make([]rstypes.RecycleMatchDateRange, 0)
@@ -79,11 +78,11 @@ func (l *logics) CalSplitRecycleHosts(kt *kit.Kit, bkBizID int64, hosts []*table
 	for _, dateRange := range matchRange {
 		// 匹配滚服申请订单
 		hostMatchMap, isContinue, allBizReturnedCpuCore, err = l.MatchRecycleCvmHostQuota(kt, bkBizID,
-			dateRange.End, dateRange.Start, allBizReturnedCpuCore, globalQuota, hostMatchMap)
+			dateRange.End, dateRange.Start, allBizReturnedCpuCore, globalQuota, hostMatchMap, recycleTypeSeq)
 		if err != nil {
 			logs.Errorf("match recycle rolling cvm host quota by bizID failed, err: %v, bkBizID: %d, dateRange：%+v, "+
 				"hostCpuMap: %+v, rid: %s", err, bkBizID, dateRange, hostMatchMap, kt.Rid)
-			return nil, nil, 0, err
+			return nil, 0, err
 		}
 
 		// 记录日志方便排查问题
@@ -98,9 +97,9 @@ func (l *logics) CalSplitRecycleHosts(kt *kit.Kit, bkBizID int64, hosts []*table
 	// 检查那些主机已匹配，则给主机Host设置退还方式、回收类型
 	for _, host := range hosts {
 		// 查询该主机是否已匹配到滚服申请单
-		if hostMatchInfo, ok := hostMatchMap[host.IP]; ok && hostMatchInfo.IsMatched {
-			if !table.CanUpdateRecycleType(host.RecycleType, table.RecycleTypeRollServer) {
-				return nil, nil, 0, fmt.Errorf("host can not update recycle type: %s, host: %+v",
+		if hostMatchInfo, ok := hostMatchMap[host.IP]; ok && hostMatchInfo.IsMatchRollServer {
+			if !host.RecycleType.CanUpdateRecycleType(recycleTypeSeq, table.RecycleTypeRollServer) {
+				return nil, 0, fmt.Errorf("host can not update recycle type: %s, host: %+v",
 					table.RecycleTypeRollServer, cvt.PtrToVal(host))
 			}
 
@@ -113,17 +112,17 @@ func (l *logics) CalSplitRecycleHosts(kt *kit.Kit, bkBizID int64, hosts []*table
 		}
 	}
 
-	return hostMatchMap, hosts, allBizReturnedCpuCore, nil
+	return hosts, allBizReturnedCpuCore, nil
 }
 
-func (l *logics) buildHostMatchMap(kt *kit.Kit, hosts []*table.RecycleHost) (map[string]*rstypes.RecycleHostMatchInfo,
+func (l *logics) buildHostMatchMap(kt *kit.Kit, hosts []*table.RecycleHost) (map[string]*table.RecycleHost,
 	error) {
 
 	deviceTypes := make([]string, 0)
-	hostMatchMap := make(map[string]*rstypes.RecycleHostMatchInfo, 0)
+	hostMatchMap := make(map[string]*table.RecycleHost)
 	for _, host := range hosts {
 		deviceTypes = append(deviceTypes, host.DeviceType)
-		hostMatchMap[host.IP] = &rstypes.RecycleHostMatchInfo{RecycleHost: host}
+		hostMatchMap[host.IP] = host
 	}
 
 	// 根据设备列表获取设备实例信息（CPU核数、机型族, 核心类型）
@@ -157,8 +156,8 @@ func (l *logics) buildHostMatchMap(kt *kit.Kit, hosts []*table.RecycleHost) (map
 
 // MatchRecycleCvmHostQuota 匹配指定时间范围指定业务的主机回收额度
 func (l *logics) MatchRecycleCvmHostQuota(kt *kit.Kit, bkBizID int64, startDayNum, endDayNum int,
-	allBizReturnedCpuCore, globalQuota int64, hostCpuMap map[string]*rstypes.RecycleHostMatchInfo) (
-	map[string]*rstypes.RecycleHostMatchInfo, bool, int64, error) {
+	allBizReturnedCpuCore, globalQuota int64, hostCpuMap map[string]*table.RecycleHost,
+	recycleTypeSeq []table.RecycleType) (map[string]*table.RecycleHost, bool, int64, error) {
 
 	// 1.查询指定时间、指定业务滚服申请跟回收的列表
 	appliedRecords, returnedRecordMap, err := l.listRollServerAppliedAndRecycle(kt, bkBizID, startDayNum, endDayNum)
@@ -175,7 +174,7 @@ func (l *logics) MatchRecycleCvmHostQuota(kt *kit.Kit, bkBizID int64, startDayNu
 
 	// 匹配主机的滚服配额
 	hostCpuMap, continueMatched, allBizReturnedCpuCore := l.cycleMatchRollingServerCvmHostQuota(
-		kt, appliedRecords, returnedRecordMap, hostCpuMap, allBizReturnedCpuCore, globalQuota)
+		kt, appliedRecords, returnedRecordMap, hostCpuMap, recycleTypeSeq, allBizReturnedCpuCore, globalQuota)
 
 	// 记录日志
 	hostCpuMapJson, err := json.Marshal(hostCpuMap)
@@ -193,8 +192,9 @@ func (l *logics) MatchRecycleCvmHostQuota(kt *kit.Kit, bkBizID int64, startDayNu
 
 // cycleMatchRollingServerCvmHostQuota 匹配主机的滚服配额
 func (l *logics) cycleMatchRollingServerCvmHostQuota(kt *kit.Kit, appliedRecords []*rstable.RollingAppliedRecord,
-	returnedRecordMap map[string][]*rstable.RollingReturnedRecord, hostCpuMap map[string]*rstypes.RecycleHostMatchInfo,
-	allBizReturnedCpuCore int64, globalQuota int64) (map[string]*rstypes.RecycleHostMatchInfo, bool, int64) {
+	returnedRecordMap map[string][]*rstable.RollingReturnedRecord, hostCpuMap map[string]*table.RecycleHost,
+	recycleTypeSeq []table.RecycleType, allBizReturnedCpuCore int64, globalQuota int64) (
+	map[string]*table.RecycleHost, bool, int64) {
 
 	// 汇总主机申请单的CPU核心数
 	applyMap := gatherRollingServerApplyCPUCore(appliedRecords, returnedRecordMap)
@@ -205,7 +205,7 @@ func (l *logics) cycleMatchRollingServerCvmHostQuota(kt *kit.Kit, appliedRecords
 			continue
 		}
 		// 如果主机当前的回收类型优先级高于滚服回收类型，那么该主机不能用于滚服回收
-		if !table.CanUpdateRecycleType(hostItem.RecycleType, table.RecycleTypeRollServer) {
+		if !hostItem.RecycleType.CanUpdateRecycleType(recycleTypeSeq, table.RecycleTypeRollServer) {
 			continue
 		}
 
@@ -215,7 +215,7 @@ func (l *logics) cycleMatchRollingServerCvmHostQuota(kt *kit.Kit, appliedRecords
 
 		// 该滚服申请单所有的CPU核心数
 		sumCpuCore := applyMatchedInfo.SumCpuCore + applyMatchedInfoOld.SumCpuCore
-		if hostItem.IsMatched || sumCpuCore <= 0 {
+		if hostItem.IsMatchRollServer || sumCpuCore <= 0 {
 			logs.Warnf("cycleMatchRecycleCvmHostQuotaLoop, matched skip has matched or cpu core exceed, "+
 				"deviceGroup: %s, hostIP: %s, hostCpuCore: %d, deviceGroup: %s, coreType: %s, sumCpuCore: %d, "+
 				"applyMatchedInfo: %+v, applyMatchedInfoOld: %+v, hostItem: %+v, rid: %s", hostItem.DeviceGroup,
@@ -258,7 +258,7 @@ func (l *logics) cycleMatchRollingServerCvmHostQuota(kt *kit.Kit, appliedRecords
 	continueMatched := false
 	for _, hostItem := range hostCpuMap {
 		// 尚未匹配到，并且不是物理机的话，可以继续匹配
-		if !hostItem.IsMatched && !cmdb.IsPhysicalMachine(hostItem.SvrSourceTypeID) {
+		if !hostItem.IsMatchRollServer && !cmdb.IsPhysicalMachine(hostItem.SvrSourceTypeID) {
 			continueMatched = true
 			break
 		}
@@ -266,8 +266,8 @@ func (l *logics) cycleMatchRollingServerCvmHostQuota(kt *kit.Kit, appliedRecords
 	return hostCpuMap, continueMatched, allBizReturnedCpuCore
 }
 
-func (l *logics) hostMatchSuccess(hostItem *rstypes.RecycleHostMatchInfo, globalQuota int64,
-	allBizReturnedCpuCore int64) (int64, int64) {
+func (l *logics) hostMatchSuccess(hostItem *table.RecycleHost, globalQuota int64, allBizReturnedCpuCore int64) (
+	int64, int64) {
 
 	// 计算当前业务可回收的"退还方式"，所有业务的滚服回收核数 > 全局总额度，走“资源池回收”
 	returnedWay := enumor.CrpReturnedWay
@@ -275,13 +275,13 @@ func (l *logics) hostMatchSuccess(hostItem *rstypes.RecycleHostMatchInfo, global
 	if allBizReturnedCpuCore > globalQuota {
 		returnedWay = enumor.ResourcePoolReturnedWay
 	}
-	hostItem.IsMatched = true
+	hostItem.IsMatchRollServer = true
 	hostItem.ReturnedWay = returnedWay
 	return globalQuota, allBizReturnedCpuCore
 }
 
-func (l *logics) applyMatchHostCPUCore(hostItem *rstypes.RecycleHostMatchInfo,
-	applyMatchedInfo rstypes.AppliedRecordInfo, hostMatchedCpuCore int64) (rstypes.AppliedRecordInfo, int64) {
+func (l *logics) applyMatchHostCPUCore(hostItem *table.RecycleHost, applyMatchedInfo rstypes.AppliedRecordInfo,
+	hostMatchedCpuCore int64) (rstypes.AppliedRecordInfo, int64) {
 
 	// 匹配滚服申请记录
 	for _, applyID := range applyMatchedInfo.AppliedIDs {
@@ -299,10 +299,10 @@ func (l *logics) applyMatchHostCPUCore(hostItem *rstypes.RecycleHostMatchInfo,
 		}
 		// 记录该主机匹配到的申请单ID和核心数
 		currMatchedCore := min(needMatchedCPUCore, applyRemainCore)
-		if hostItem.MatchAppliedIDCoreMap == nil {
-			hostItem.MatchAppliedIDCoreMap = map[string]int64{}
+		if hostItem.RollServerMatchedCore == nil {
+			hostItem.RollServerMatchedCore = map[string]int64{}
 		}
-		hostItem.MatchAppliedIDCoreMap[applyID] = currMatchedCore
+		hostItem.RollServerMatchedCore[applyID] = currMatchedCore
 		hostMatchedCpuCore += currMatchedCore
 		// 扣减剩余可退还的CPU总核心数
 		applyMatchedInfo.SumCpuCore -= currMatchedCore
@@ -313,7 +313,7 @@ func (l *logics) applyMatchHostCPUCore(hostItem *rstypes.RecycleHostMatchInfo,
 }
 
 // getAppliedRecordByKey 获取该主机匹配到的所有申请单（有核心类型+存量无核心类型的数据）
-func (l *logics) getAppliedRecordByKey(kt *kit.Kit, hostItem *rstypes.RecycleHostMatchInfo,
+func (l *logics) getAppliedRecordByKey(kt *kit.Kit, hostItem *table.RecycleHost,
 	applyMap map[rstypes.AppliedRecordKey]rstypes.AppliedRecordInfo, coreType enumor.CoreType) (
 	rstypes.AppliedRecordInfo, rstypes.AppliedRecordKey) {
 
@@ -387,21 +387,13 @@ func sortAppliedRecords(appliedRecords []*rstable.RollingAppliedRecord) []*rstab
 
 // InsertReturnedHostMatched 插入需要退还的主机匹配记录
 func (l *logics) InsertReturnedHostMatched(kt *kit.Kit, bkBizID int64, orderID uint64, subOrderID string,
-	hosts []*table.RecycleHost, hostMatchMap map[string]*rstypes.RecycleHostMatchInfo,
-	status enumor.ReturnedStatus) error {
-
-	if hostMatchMap == nil {
-		logs.Warnf("insert returned host matched skip, hostMatchMap is nil, hosts: %+v, "+
-			"hostMatchMap: %+v, rid: %s", hosts, hostMatchMap, kt.Rid)
-		return nil
-	}
+	hosts []*table.RecycleHost, status enumor.ReturnedStatus) error {
 
 	// 按滚服申请表主键ID、机型族、核心类型、退回类型来分组
 	appliedMatchMap := make(map[rstypes.ReturnedRecordInfo]int64)
 	for _, host := range hosts {
-		hostMatchInfo, exist := hostMatchMap[host.IP]
-		// 未匹配、物理机，不需要参与
-		if !exist || !hostMatchInfo.IsMatched || cmdb.IsPhysicalMachine(host.SvrSourceTypeID) {
+		// 非滚服回收、物理机，不需要参与
+		if host.RecycleType != table.RecycleTypeRollServer || cmdb.IsPhysicalMachine(host.SvrSourceTypeID) {
 			continue
 		}
 
@@ -410,14 +402,14 @@ func (l *logics) InsertReturnedHostMatched(kt *kit.Kit, bkBizID int64, orderID u
 			CoreType:    host.CoreType,
 			ReturnedWay: host.ReturnedWay,
 		}
-		if len(hostMatchInfo.MatchAppliedIDCoreMap) > 0 {
-			for appliedRecordID, appliedRecordCpuCore := range hostMatchInfo.MatchAppliedIDCoreMap {
+		if len(host.RollServerMatchedCore) > 0 {
+			for appliedRecordID, appliedRecordCpuCore := range host.RollServerMatchedCore {
 				key.AppliedRecordID = appliedRecordID
 				appliedMatchMap[key] += appliedRecordCpuCore
 			}
 			continue
 		}
-		appliedMatchMap[key] += hostMatchInfo.CpuCore
+		appliedMatchMap[key] += host.CpuCore
 	}
 
 	now := time.Now()

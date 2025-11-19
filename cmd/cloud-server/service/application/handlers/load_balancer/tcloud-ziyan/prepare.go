@@ -31,7 +31,7 @@ import (
 // PrepareReq 预处理请求参数
 func (a *ApplicationOfCreateZiyanLB) PrepareReq() error {
 	// 补充业务tag
-	tags, err := ziyanlogic.GenTagsForBizs(a.Cts.Kit, cmdb.CmdbClient(), a.req.BkBizID)
+	tags, err := ziyanlogic.GenTagsForBizs(a.Cts.Kit, a.Client.DataService(), cmdb.CmdbClient(), a.req.BkBizID)
 	if err != nil {
 		logs.Errorf("fail to generate tags for load balancer application: err: %v,req: %+v, rid: %s",
 			err, a.req, a.Cts.Kit.Rid)

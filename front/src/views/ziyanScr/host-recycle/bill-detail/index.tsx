@@ -6,7 +6,7 @@ import { getRecycleTaskStatusLabel } from '@/views/ziyanScr/host-recycle/field-d
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import { useTable } from '@/hooks/useTable/useTable';
-import { Loading } from 'bkui-vue/lib/icon';
+import { Loading, ExclamationCircleShape } from 'bkui-vue/lib/icon';
 import ExecuteRecord from '../execute-record';
 import { useRoute } from 'vue-router';
 import './index.scss';
@@ -22,7 +22,7 @@ export default defineComponent({
   setup() {
     const route = useRoute();
     const { getBusinessApiPath } = useWhereAmI();
-    const billBaseInfo = ref({});
+    const billBaseInfo = ref<any>({});
     const page = ref({
       start: 0,
       limit: 10,
@@ -58,8 +58,8 @@ export default defineComponent({
         billBaseInfo.value = {};
       }
     };
-    const textTip = (text, theme) => {
-      const themeDes = {
+    const textTip = (text: string, theme: string) => {
+      const themeDes: any = {
         error: '失败',
         success: '成功',
       };
@@ -101,21 +101,46 @@ export default defineComponent({
     };
 
     const activeStep = computed(() => {
-      const list = ['DETECT', 'AUDIT', 'TRANSIT', 'RETURN', 'DONE'];
+      const list = ['DETECT', 'AUDIT', 'TRANSIT', 'RETURN', 'RETURN_PLAN', 'DONE'];
       return list.indexOf(billBaseInfo.value.stage) + 1;
     });
+
+    const getStepTitle = (stepName: string, description: string) => {
+      const style = {
+        display: 'flex',
+        alignItems: 'center',
+      };
+      return (
+        <div style={style}>
+          <span>{stepName}</span>
+          <ExclamationCircleShape
+            v-show={description}
+            style={{ cursor: 'pointer', marginLeft: '3px' }}
+            width={15}
+            height={15}
+            v-bk-tooltips={{
+              content: description,
+            }}
+          />
+        </div>
+      );
+    };
     const stepArr = computed(() => {
       const list = [
-        { title: '预检', description: activeStep.value === 1 ? billBaseInfo.value.message : '' },
+        { title: getStepTitle('预检', activeStep.value === 1 ? billBaseInfo.value.message : '') },
         {
-          title: 'BG管理员审核',
-          description:
+          title: getStepTitle(
+            'BG管理员审核',
             activeStep.value === 1 && billBaseInfo.value.status === 'REJECTED'
               ? `驳回原因：${billBaseInfo.value.message}`
               : '',
+          ),
         },
-        { title: 'CR系统处理中', description: activeStep.value === 3 ? billBaseInfo.value.message : '' },
-        { title: '公司资源系统处理中', description: activeStep.value === 4 ? billBaseInfo.value.message : '' },
+        { title: getStepTitle('CR系统处理中', activeStep.value === 3 ? billBaseInfo.value.message : '') },
+        { title: getStepTitle('公司资源系统处理中', activeStep.value === 4 ? billBaseInfo.value.message : '') },
+        {
+          title: getStepTitle('预测数据返还', activeStep.value === 5 ? billBaseInfo.value.message : ''),
+        },
         { title: '完成' },
       ];
       return list;
@@ -131,7 +156,7 @@ export default defineComponent({
 
     const remark = ref('');
     const admins = ref(['dommyzhang', 'forestchen']);
-    const fetchAuditOrder = async (approval) => {
+    const fetchAuditOrder = async (approval: boolean) => {
       const res = await http.post(getEntirePath(`${getBusinessApiPath()}task/audit/recycle/order`), {
         suborder_id: requestParams.value.suborder_id,
         approval,
@@ -149,7 +174,7 @@ export default defineComponent({
       {
         label: '查看',
         width: 80,
-        render: ({ row }) => {
+        render: ({ row }: any) => {
           return (
             <div>
               <bk-button size='small' theme='primary' text onClick={() => application(row)}>
@@ -164,7 +189,7 @@ export default defineComponent({
     tableColumns.splice(2, 0, {
       label: '内网IP',
       field: 'ip',
-      render: ({ row }) => {
+      render: ({ row }: { row: { ip: string } }) => {
         return (
           <bk-button text theme='primary' onClick={() => application(row)}>
             {row.ip}
@@ -219,7 +244,7 @@ export default defineComponent({
     };
     const preCheckDetail = ref(false);
     const transferData = ref<{ suborderId?: string; ip?: string; page?: { start: number; limit: number } }>({});
-    const application = (row) => {
+    const application = (row: any) => {
       preCheckDetail.value = true;
       transferData.value = {
         suborderId: row.suborder_id,
@@ -302,7 +327,13 @@ export default defineComponent({
             </div>
             <div class='handle-process'>
               <h2>处理流程</h2>
-              <bk-steps line-type='solid' status={billStatus.value} cur-step={activeStep.value} steps={stepArr.value} />
+              <bk-steps
+                line-type='solid'
+                size='small'
+                status={billStatus.value}
+                cur-step={activeStep.value}
+                steps={stepArr.value}
+              />
               {admins.value.includes(userStore.username) && billBaseInfo.value.status === 'FOR_AUDIT' ? (
                 <div class='check-export'>
                   <div class='check-export-man'>

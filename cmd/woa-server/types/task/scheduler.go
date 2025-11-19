@@ -975,6 +975,14 @@ func (s *ResourceSpec) ValidateDisk() error {
 	return nil
 }
 
+// IsCVMSeparateCampus 是否分Campus申请单
+func (s *ResourceSpec) IsCVMSeparateCampus() bool {
+	if s.ResAssign == enumor.CampusResAssign || s.Zone == cvmapi.CvmSeparateCampus {
+		return true
+	}
+	return false
+}
+
 // CreateApplyOrderResult result of create apply order
 type CreateApplyOrderResult struct {
 	OrderId uint64 `json:"order_id"`
@@ -1777,4 +1785,52 @@ type FindApproveNodeResultReq struct {
 // Validate ...
 func (g *FindApproveNodeResultReq) Validate() error {
 	return validator.Validate.Struct(g)
+}
+
+// ListHostApplyItsmTicketReq defines the hcm list host apply itsm ticket request
+type ListHostApplyItsmTicketReq struct {
+	CreateTime *time.Time `json:"create_time" validate:"required"`
+}
+
+// Validate ...
+func (l *ListHostApplyItsmTicketReq) Validate() error {
+	return validator.Validate.Struct(l)
+}
+
+// ListHostApplyItsmTicketData defines the hcm list host apply itsm ticket data
+type ListHostApplyItsmTicketData struct {
+	Tickets []HostApplyItsmTicket `json:"tickets"`
+}
+
+// HostApplyItsmTicket defines the hcm host apply itsm ticket
+type HostApplyItsmTicket struct {
+	ID            string               `json:"id"`
+	Url           string               `json:"url"`
+	User          string               `json:"user"`
+	ApprovalState enumor.ApprovalState `json:"approval_state"`
+	CreateTime    time.Time            `json:"create_time"`
+}
+
+// ListHostApplyCrpTicketReq defines the hcm list host apply crp ticket request
+type ListHostApplyCrpTicketReq struct {
+	CreateTime *time.Time `json:"create_time" validate:"required"`
+}
+
+// Validate ...
+func (l *ListHostApplyCrpTicketReq) Validate() error {
+	return validator.Validate.Struct(l)
+}
+
+// ListHostApplyCrpTicketData defines the hcm list host apply crp ticket data
+type ListHostApplyCrpTicketData struct {
+	Tickets []HostApplyCrpTicket `json:"tickets"`
+}
+
+// HostApplyCrpTicket defines the hcm host apply crp ticket
+type HostApplyCrpTicket struct {
+	ID            string               `json:"id"`
+	Url           string               `json:"url"`
+	User          string               `json:"user"`
+	ApprovalState enumor.ApprovalState `json:"approval_state"`
+	CreateTime    time.Time            `json:"create_time"`
 }

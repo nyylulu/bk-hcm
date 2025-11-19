@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, reactive, watch, h, computed } from 'vue';
-import { Loading, Table, Button, Sideslider } from 'bkui-vue';
+import { ref, reactive, watch, h, computed, withDirectives } from 'vue';
+import { Loading, Table, Sideslider, bkTooltips } from 'bkui-vue';
 import { BkRadioGroup, BkRadioButton } from 'bkui-vue/lib/radio';
 import { Column } from 'bkui-vue/lib/table/props';
 import { ReturnedWay, useZiyanScrStore } from '@/store';
@@ -13,8 +13,10 @@ import { useWhereAmI } from '@/hooks/useWhereAmI';
 
 import RecycleTypeSelector from './recycle-type-selector.vue';
 import RecycleQuotaTips from '@/views/ziyanScr/rolling-server/recycle-quota-tips/index.vue';
+import ReturnForecastSelector, { IFormModel } from './return-forecast-selector.vue';
 import type { IPreviewRecycleOrderItem } from '../typings';
 import { cloneDeep } from 'lodash';
+import { TextFile } from 'bkui-vue/lib/icon';
 
 const props = defineProps<{
   ips: string[];
@@ -40,7 +42,9 @@ const settings = reactive({
   cvm: 'IMMEDIATE',
   pm: 'IMMEDIATE',
   skipConfirm: true,
+  recycleType: ['滚服项目', '短租项目'],
 });
+const recycleType = ref('滚服项目');
 
 const getResourceTypeName = (type: 'QCLOUDCVM' | 'IDCPM' | 'OTHERS') => {
   const resourceTypeMap = {
@@ -94,49 +98,57 @@ const preRecycleColumns: Column[] = [
     render: ({ data }: any) => h('span', getResourceTypeName(data.resource_type)),
   },
   {
-    label: '回收类型',
+    label: '需求类型',
     field: 'recycle_type',
     render: ({ cell, index }: any) => {
       const origin = originPreRecycleList[index];
       const selectionIdx = selections.value.findIndex(
         (item: IPreviewRecycleOrderItem) => item.suborder_id === origin.suborder_id,
       );
-
+      const handleChange = (v: string) => {
+        // 修改表格table数据
+        preRecycleList.value[index].recycle_type = v;
+        // 如果改变的是勾选的行，需要同步更新勾选列表
+        if (selectionIdx !== -1) {
+          selections.value[selectionIdx].recycle_type = v;
+        }
+      };
       if (returnedWay.value === ReturnedWay.RESOURCE_POOL && origin.recycle_type !== '滚服项目') {
-        const handleChange = (v: string) => {
-          // 修改表格table数据
-          preRecycleList.value[index].recycle_type = v;
-          // 如果改变的是勾选的行，需要同步更新勾选列表
-          if (selectionIdx !== -1) {
-            selections.value[selectionIdx].recycle_type = v;
-          }
-        };
-
         return h(RecycleTypeSelector, {
           originValue: origin.recycle_type,
           onChange: handleChange,
         });
       }
-
       return cell;
     },
   },
   {
-    label: '回收选项',
+    label: '回收类型',
     render: ({ data }: any) => h('span', getReturnPlanName(data.return_plan, data.resource_type)),
   },
   {
     label: '资源总数',
     field: 'total_num',
     render: ({ data }: any) =>
-      h('div', [
-        data.total_num,
-        h(
-          Button,
-          { type: 'text', size: 'small', style: { marginLeft: '6px' }, onClick: () => handleViewOrderHost(data) },
-          '详情',
-        ),
-      ]),
+      h(
+        'div',
+        {
+          style: { display: 'flex', alignItems: 'center' },
+        },
+        [
+          data.total_num,
+          withDirectives(
+            h(TextFile, {
+              width: '14px',
+              height: '14px',
+              fill: '#488dff',
+              style: { marginLeft: '6px', cursor: 'pointer' },
+              onClick: () => handleViewOrderHost(data),
+            }),
+            [[bkTooltips, { content: '查看详情' }]],
+          ),
+        ],
+      ),
   },
   {
     label: '回收成本',
@@ -144,7 +156,36 @@ const preRecycleColumns: Column[] = [
     render: ({ data }: any) => h('span', data.cost_concerned ? '涉及' : '不涉及'),
   },
   {
-    label: '备注',
+    label: '预测配置',
+    field: 'predict_config',
+    minWidth: 350,
+    render: ({ data, row }: any) => {
+      const selectionIdx = selections.value.findIndex(
+        (item: IPreviewRecycleOrderItem) => item.suborder_id === data.suborder_id,
+      );
+      if (row.recycle_type === '常规项目') {
+        return h(ReturnForecastSelector, {
+          initValue: {
+            returnForecast: data?.return_forecast,
+            returnForecastTime: data?.return_forecast_time,
+          },
+          onConfirm: (model: IFormModel) => {
+            // // 修改表格table数据
+            row.return_forecast = model.returnForecast;
+            row.return_forecast_time = model.returnForecastTime;
+            // 如果改变的是勾选的行，需要同步更新勾选列表
+            if (selectionIdx !== -1) {
+              selections.value[selectionIdx].return_forecast = model.returnForecast;
+              selections.value[selectionIdx].return_forecast_time = model.returnForecastTime;
+            }
+          },
+        });
+      }
+      return '--';
+    },
+  },
+  {
+    label: '备注信息',
     field: 'remark',
     render: ({ data }: any) => h('span', data.remark || '--'),
   },
@@ -177,6 +218,14 @@ const orderHostColumns = [
   },
 ];
 
+const handleRecycleTypeChange = (v: string) => {
+  if (v === '滚服项目') {
+    settings.recycleType = ['滚服项目', '短租项目'];
+  } else {
+    settings.recycleType = ['短租项目', '滚服项目'];
+  }
+};
+
 const getPreRecycleList = async () => {
   try {
     preRecycleLoading.value = true;
@@ -187,6 +236,7 @@ const getPreRecycleList = async () => {
         pm: settings.pm,
       },
       skip_confirm: settings.skipConfirm,
+      recycle_type_sequence: settings.recycleType,
     };
     const {
       data: { info = [] },
@@ -280,9 +330,10 @@ const isRollingServerCpuCoreExceedByResPool = computed(() => {
     // 全平台应该退还给公司的额度
     const limit = sum_delivered_core - sum_returned_applied_core;
     // “滚服项目”的核数
-    const sum = selections.value
-      .filter((item) => item.recycle_type === '滚服项目')
-      .reduce((prev, curr) => prev + curr.sum_cpu_core, 0);
+    const sum = selections.value.reduce(
+      (total, item) => (item.recycle_type === '滚服项目' ? total + item.sum_cpu_core : total),
+      0,
+    );
 
     return sum > limit;
   }
@@ -348,6 +399,19 @@ defineExpose({
                   公司回收流程会通过检查CPU负载判断设备是否空闲，若检测为非空负载，会暂停回收，并邮件通知维护人再次确认。
                 </p>
                 <p>若需要检查确认，请留意邮件“非空负载设备退回二次确认”的邮件</p>
+              </div>
+            </dd>
+          </div>
+
+          <div class="setting-item">
+            <dt class="setting-item-label">回收项目优先级选择</dt>
+            <dd class="setting-item-content">
+              <BkRadioGroup class="radio-group" v-model="recycleType" type="card" @change="handleRecycleTypeChange">
+                <BkRadioButton label="滚服项目">滚服项目优先</BkRadioButton>
+                <BkRadioButton label="短租项目">短租项目优先</BkRadioButton>
+              </BkRadioGroup>
+              <div class="content-tips">
+                <p>如滚服项目和短期项目同时有需要退回额度时，可按需选择短租优先，默认为退回滚服额度优先</p>
               </div>
             </dd>
           </div>

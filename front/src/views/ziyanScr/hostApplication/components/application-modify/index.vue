@@ -3,10 +3,10 @@ import { computed, h, onBeforeMount, reactive, ref, useTemplateRef, watch } from
 import { useRoute, useRouter } from 'vue-router';
 import { useZiyanScrStore } from '@/store';
 import usePlanStore from '@/store/usePlanStore';
-import { GLOBAL_BIZS_KEY, INSTANCE_CHARGE_MAP } from '@/common/constant';
+import { GLOBAL_BIZS_KEY, INSTANCE_CHARGE_MAP, VendorEnum } from '@/common/constant';
 import { ModelPropertyDisplay } from '@/model/typings';
-import { isNil } from 'lodash';
-import { CvmDeviceType, IdcpmDeviceType, SelectionType } from '@/views/ziyanScr/components/devicetype-selector/types';
+import isNil from 'lodash/isNil';
+import isEqual from 'lodash/isEqual';
 import type { IApplyOrderItem } from '@/typings/ziyanScr';
 import type { IDemandVerification } from '@/typings/plan';
 import { MENU_SERVICE_HOST_APPLICATION, MENU_BUSINESS_TICKET_MANAGEMENT } from '@/constants/menu-symbol';
@@ -21,10 +21,10 @@ import DetailHeader from '@/views/resource/resource-manage/common/header/detail-
 import GridDisplay from './grid-display.vue';
 import CollapsePanelGrid from './collapse-panel-grid.vue';
 import Panel from '@/components/panel';
-import ZoneSelector from '../ZoneSelector';
-import DevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/index.vue';
 import NetworkInfoCollapsePanel from '../network-info-collapse-panel/index.vue';
-import CvmQuickApplyForm from '../application-sideslider/index.vue';
+
+import DeviceTypeCvmSelector from '@/components/device-type-selector/cvm-apply/cvm-apply.vue';
+import type { ICvmDeviceTypeFormData } from '@/components/device-type-selector/typings';
 
 const route = useRoute();
 const router = useRouter();
@@ -37,7 +37,7 @@ const suborderId = computed(() => route.query.suborder_id as string);
 const formRef = useTemplateRef<typeof Form>('adjust-form');
 const networkInfoPanelRef = useTemplateRef<typeof NetworkInfoCollapsePanel>('network-info-panel');
 
-const formModel = reactive({ zone: '', device_type: '', replicas: 0, vpc: '', subnet: '' });
+const formModel = reactive({ zones: [], res_assign: undefined, device_type: '', replicas: 0, vpc: '', subnet: '' });
 
 const details = ref<IApplyOrderItem>();
 const unProductNum = computed(() => (!details.value ? 0 : details.value.origin_num - details.value.product_num));
@@ -54,9 +54,10 @@ onBeforeMount(async () => {
   await getDetails();
   // 初始化表单
   const { origin_num, product_num } = details.value || {};
-  const { zone, device_type, vpc, subnet } = details.value?.spec || {};
+  const { zones, res_assign, device_type, vpc, subnet } = details.value?.spec || {};
   Object.assign(formModel, {
-    zone,
+    zones,
+    res_assign,
     device_type,
     replicas: origin_num - product_num,
     vpc,
@@ -94,13 +95,19 @@ const originDemandFields: ModelPropertyDisplay[] = [
   { id: 'spec.charge_type', name: '计费模式', type: 'enum', option: INSTANCE_CHARGE_MAP },
   { id: 'spec.region', name: '地域', type: 'region' },
   {
-    id: 'spec.zone',
+    id: 'spec.zones',
     name: '园区',
-    type: 'string',
+    type: 'array',
     meta: {
       display: {
         format: (val) => {
-          return isNil(val) ? '--' : `${getZoneCn(val)}`;
+          if (isNil(val)) {
+            return '--';
+          }
+          if (val === 'all') {
+            return '全部可用区';
+          }
+          return getZoneCn(val);
         },
       },
     },
@@ -140,40 +147,10 @@ const productionFields: ModelPropertyDisplay[] = [
   },
 ];
 
-const handleZoneChange = () => {
-  formModel.subnet = '';
-  formModel.device_type = '';
+const selectedDeviceType = ref<ICvmDeviceTypeFormData['deviceTypeList'][number]>();
+const handleDeviceTypeChange = (data: Partial<ICvmDeviceTypeFormData>) => {
+  selectedDeviceType.value = data?.deviceTypeList?.[0];
 };
-const selectedDevicetypeInfo = reactive({ cpu: 0, mem: 0 });
-const handleDevicetypeChange = (devicetype: SelectionType) => {
-  if (!devicetype) {
-    Object.assign(selectedDevicetypeInfo, { cpu: 0, mem: 0 });
-    return;
-  }
-  if (details.value.resource_type === 'QCLOUDCVM') {
-    const { cpu_amount, ram_amount } = devicetype as CvmDeviceType;
-    Object.assign(selectedDevicetypeInfo, { cpu: cpu_amount, mem: ram_amount });
-  } else {
-    const { cpu, mem } = devicetype as IdcpmDeviceType;
-    Object.assign(selectedDevicetypeInfo, { cpu, mem });
-  }
-};
-
-const cvmDevicetypeParams = computed(() => {
-  if (!details.value) return {};
-
-  const { require_type } = details.value;
-  const { region, device_group, device_size } = details.value.spec;
-  const { zone } = formModel;
-
-  return {
-    require_type,
-    region,
-    zone: zone !== 'cvm_separate_campus' ? zone : undefined,
-    device_group: device_group ? [device_group] : undefined,
-    device_size,
-  };
-});
 
 const isNeedVerify = computed(() => {
   return (
@@ -183,6 +160,7 @@ const isNeedVerify = computed(() => {
 });
 const isVerifyLoading = ref(false);
 const verifyResult = ref<IDemandVerification>();
+const networkInfoDisabled = ref(false);
 
 const formValidate = async () => {
   try {
@@ -195,8 +173,8 @@ const formValidate = async () => {
 
 const handleVerify = async () => {
   await formValidate();
-  const { zone, device_type, vpc, subnet, replicas } = formModel;
-  const spec = Object.assign({}, details.value.spec, { zone, device_type, vpc, subnet });
+  const { zones, device_type, vpc, subnet, replicas, res_assign } = formModel;
+  const spec = Object.assign({}, details.value.spec, { zones, device_type, vpc, subnet, res_assign });
   isVerifyLoading.value = true;
   try {
     const res = await planStore.verify_resource_demand({
@@ -212,15 +190,33 @@ const handleVerify = async () => {
     isVerifyLoading.value = false;
   }
 };
+
 watch(formModel, () => {
   verifyResult.value = null;
+});
+
+watch(
+  () => formModel.zones,
+  (value, oldValue) => {
+    if (!isEqual(oldValue, value)) {
+      formModel.subnet = '';
+      networkInfoDisabled.value = value?.length !== 1 || value?.[0] === 'all';
+    }
+  },
+);
+
+watch(networkInfoDisabled, (disabled) => {
+  if (disabled) {
+    formModel.vpc = '';
+    formModel.subnet = '';
+  }
 });
 
 const handleSubmit = async () => {
   await formValidate();
   const { suborder_id, bk_username } = details.value;
-  const { zone, device_type, vpc, subnet, replicas } = formModel;
-  const spec = Object.assign({}, details.value.spec, { zone, device_type, vpc, subnet });
+  const { zones, device_type, vpc, subnet, replicas, res_assign } = formModel;
+  const spec = Object.assign({}, details.value.spec, { zones, device_type, vpc, subnet, res_assign });
   const res = await ziyanScrStore.modifyApplyOrder({ suborder_id, bk_username, replicas, spec });
   if (res.code === 0) {
     Message({ theme: 'success', message: '提交成功' });
@@ -238,29 +234,6 @@ const handleBack = () => {
     router.replace({ name: MENU_SERVICE_HOST_APPLICATION });
   }
 };
-
-const cvmQuickApplySidesliderState = reactive({
-  isShow: false,
-  isHidden: false,
-  initialCondition: { region: [], device_families: [] },
-});
-const handleSearchAvailable = () => {
-  const { region, device_group } = details.value.spec;
-
-  Object.assign(cvmQuickApplySidesliderState.initialCondition, {
-    region: region ? [region] : undefined,
-    device_families: device_group ? [device_group] : undefined, // application-sideslider\index.vue 组件中机型族的key为device_families
-  });
-
-  cvmQuickApplySidesliderState.isShow = true;
-  cvmQuickApplySidesliderState.isHidden = false;
-};
-const handleCvmQuickApply = (data: any) => {
-  const { device_type, zone } = data;
-  Object.assign(formModel, { device_type, zone });
-  cvmQuickApplySidesliderState.isShow = false;
-  cvmQuickApplySidesliderState.isHidden = true;
-};
 </script>
 
 <template>
@@ -276,37 +249,21 @@ const handleCvmQuickApply = (data: any) => {
     <bk-form ref="adjust-form" :model="formModel" form-type="vertical" :rules="formRules">
       <panel title="未生产需求调整">
         <div class="adjust-form-content">
-          <bk-form-item label="园区" required property="zone">
-            <zone-selector
-              class="form-control"
-              v-model="formModel.zone"
-              :params="{ resourceType: details?.resource_type, region: details?.spec.region }"
-              @change="handleZoneChange"
+          <bk-form-item required property="device_type">
+            <device-type-cvm-selector
+              v-model="formModel.device_type"
+              v-model:zones="formModel.zones"
+              v-model:res-assign-type="formModel.res_assign"
+              :biz-id="businessId"
+              :vendor="VendorEnum.ZIYAN"
+              :require-type="details?.require_type"
+              :region="details?.spec.region"
+              :instance-id="details?.spec.inherit_instance_id"
+              :edit-mode="true"
+              @change="handleDeviceTypeChange"
             />
-            <div class="tips">原始值：{{ getZoneCn(details?.spec.zone) }}</div>
           </bk-form-item>
-          <bk-form-item label="机型" required property="device_type">
-            <div class="flex-row align-items-center">
-              <devicetype-selector
-                class="form-control"
-                v-model="formModel.device_type"
-                :resource-type="details?.resource_type === 'QCLOUDCVM' ? 'cvm' : 'idcpm'"
-                :params="cvmDevicetypeParams"
-                :disabled="formModel.zone === ''"
-                :placeholder="formModel.zone === '' ? '请先选择园区' : '请选择机型'"
-                @change="handleDevicetypeChange"
-              />
-              <bk-button class="ml8" @click="handleSearchAvailable">查询可替代资源库存</bk-button>
-            </div>
-            <div class="tips">
-              原始值：{{ details?.spec.device_type }}
-              <template v-if="selectedDevicetypeInfo">
-                <br />
-                所选机型为{{ formModel.device_type }}，CPU为 {{ selectedDevicetypeInfo.cpu }} 核，内存为
-                {{ selectedDevicetypeInfo.mem }} G
-              </template>
-            </div>
-          </bk-form-item>
+
           <bk-form-item label="剩余生产数量" required property="replicas">
             <bk-input
               class="form-control"
@@ -316,18 +273,21 @@ const handleCvmQuickApply = (data: any) => {
               :max="unProductNum"
             />
             <div class="tips">
-              所需CPU总核心数为 {{ selectedDevicetypeInfo.cpu * formModel.replicas }} 核 ({{
-                `${selectedDevicetypeInfo.cpu}*${formModel.replicas}`
-              }})
-              <br />
-              <span class="text-danger">注意：</span>
-              已生产 {{ details?.product_num }}，剩余生产数量为
-              <span class="text-danger">{{ formModel.replicas }}</span>
-              ，将共计生产
-              <span class="text-danger">{{ details?.product_num + formModel.replicas }}</span>
-              后（原单据需求数为
-              <span class="text-danger">{{ details?.origin_num }}</span>
-              ），该单据会自动结单，不可以再重试修改
+              <div v-if="selectedDeviceType">
+                所需CPU总核心数为 {{ selectedDeviceType?.cpu_amount * formModel.replicas }} 核 ({{
+                  `${selectedDeviceType?.cpu_amount}*${formModel.replicas}`
+                }})
+              </div>
+              <div>
+                <span class="text-danger">注意：</span>
+                已生产 {{ details?.product_num }}，剩余生产数量为
+                <span class="text-danger">{{ formModel.replicas }}</span>
+                ，将共计生产
+                <span class="text-danger">{{ details?.product_num + formModel.replicas }}</span>
+                后（原单据需求数为
+                <span class="text-danger">{{ details?.origin_num }}</span>
+                ），该单据会自动结单，不可以再重试修改
+              </div>
             </div>
           </bk-form-item>
         </div>
@@ -338,9 +298,9 @@ const handleCvmQuickApply = (data: any) => {
           vpc-property="vpc"
           subnet-property="subnet"
           :region="details?.spec.region"
-          :zone="formModel.zone"
-          :disabled-vpc="formModel.zone === 'cvm_separate_campus'"
-          :disabled-subnet="formModel.zone === 'cvm_separate_campus'"
+          :zone="formModel.zones?.[0]"
+          :disabled-vpc="networkInfoDisabled"
+          :disabled-subnet="networkInfoDisabled"
         >
           <template #tips>
             <bk-alert
@@ -370,23 +330,6 @@ const handleCvmQuickApply = (data: any) => {
         取消
       </bk-button>
     </div>
-
-    <template v-if="!cvmQuickApplySidesliderState.isHidden">
-      <bk-sideslider
-        v-model:is-show="cvmQuickApplySidesliderState.isShow"
-        width="60vw"
-        title="查询可替代资源库存"
-        @hidden="cvmQuickApplySidesliderState.isHidden = true"
-      >
-        <cvm-quick-apply-form
-          :is-show="cvmQuickApplySidesliderState.isShow"
-          :require-type="details?.require_type"
-          :biz-id="businessId"
-          :initial-condition="cvmQuickApplySidesliderState.initialCondition"
-          @apply="handleCvmQuickApply"
-        />
-      </bk-sideslider>
-    </template>
   </div>
 </template>
 
@@ -406,6 +349,12 @@ const handleCvmQuickApply = (data: any) => {
     margin-top: 8px;
     line-height: normal;
     font-size: 12px;
+  }
+
+  :deep(.device-type-selector) {
+    .device-type-info {
+      width: 35%;
+    }
   }
 
   .form-control {

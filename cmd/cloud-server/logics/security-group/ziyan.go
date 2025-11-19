@@ -98,7 +98,7 @@ func (s *securityGroup) updateTCloudZiyanMgmtAttr(kt *kit.Kit, mgmtAttrs []proto
 
 	for tagStr, sgIDs := range tagGroupMap {
 		// 生成业务标签
-		tags, err := ziyanlogic.GenTagsForBizsWithManager(kt, cmdb.CmdbClient(), tagStr.BizID,
+		tags, err := ziyanlogic.GenTagsForBizsWithManager(kt, s.client.DataService(), cmdb.CmdbClient(), tagStr.BizID,
 			tagStr.Manager, tagStr.BakManager)
 		if err != nil {
 			logs.Errorf("gen tags for biz sg failed, err: %v, biz: %d, sg_ids: %v, rid: %s", err, tagStr.BizID,

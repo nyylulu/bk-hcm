@@ -81,7 +81,17 @@ func (c *Controller) AdjustBizResPlanDemand(kt *kit.Kit, req *ptypes.AdjustRPDem
 		return "", err
 	}
 
+	// create cancel resource plan ticket.
+	ticketID, err = c.CreateResPlanTicket(kt, adjustReq)
+	if err != nil {
+		logs.Errorf("failed to create resource plan ticket, err: %v, rid: %s", err, kt.Rid)
+		return "", err
+	}
+
 	// lock all resource plan demand.
+	for i := range lockedItems {
+		lockedItems[i].TicketID = ticketID
+	}
 	lockReq := &rpproto.ResPlanDemandLockOpReq{
 		LockedItems: lockedItems,
 	}
@@ -99,13 +109,6 @@ func (c *Controller) AdjustBizResPlanDemand(kt *kit.Kit, req *ptypes.AdjustRPDem
 			}
 		}
 	}()
-
-	// create cancel resource plan ticket.
-	ticketID, err = c.CreateResPlanTicket(kt, adjustReq)
-	if err != nil {
-		logs.Errorf("failed to create resource plan ticket, err: %v, rid: %s", err, kt.Rid)
-		return "", err
-	}
 
 	// create adjust resource plan ticket itsm audit flow.
 	if err = c.CreateAuditFlow(kt, ticketID); err != nil {
@@ -164,7 +167,24 @@ func (c *Controller) CancelBizResPlanDemand(kt *kit.Kit, req *ptypes.CancelRPDem
 		return "", err
 	}
 
+	// construct cancel biz resource plan demand request.
+	cancelReq, err := c.constructCancelReq(kt, bizOrgRel, demandClass, req.CancelDemands)
+	if err != nil {
+		logs.Errorf("failed to construct adjust resource plan ticket request, err: %v, rid: %s", err, kt.Rid)
+		return "", err
+	}
+
+	// create cancel resource plan ticket.
+	ticketID, err := c.CreateResPlanTicket(kt, cancelReq)
+	if err != nil {
+		logs.Errorf("failed to create resource plan ticket, err: %v, rid: %s", err, kt.Rid)
+		return "", err
+	}
+
 	// lock all resource plan demand.
+	for i := range lockedItems {
+		lockedItems[i].TicketID = ticketID
+	}
 	lockReq := &rpproto.ResPlanDemandLockOpReq{
 		LockedItems: lockedItems,
 	}
@@ -182,20 +202,6 @@ func (c *Controller) CancelBizResPlanDemand(kt *kit.Kit, req *ptypes.CancelRPDem
 			}
 		}
 	}()
-
-	// construct cancel biz resource plan demand request.
-	cancelReq, err := c.constructCancelReq(kt, bizOrgRel, demandClass, req.CancelDemands)
-	if err != nil {
-		logs.Errorf("failed to construct adjust resource plan ticket request, err: %v, rid: %s", err, kt.Rid)
-		return "", err
-	}
-
-	// create cancel resource plan ticket.
-	ticketID, err := c.CreateResPlanTicket(kt, cancelReq)
-	if err != nil {
-		logs.Errorf("failed to create resource plan ticket, err: %v, rid: %s", err, kt.Rid)
-		return "", err
-	}
 
 	// create adjust resource plan ticket itsm audit flow.
 	if err = c.CreateAuditFlow(kt, ticketID); err != nil {
@@ -399,15 +405,16 @@ func (c *Controller) constructUpdateDemands(kt *kit.Kit, updates []ptypes.Adjust
 			DemandClass: demandClass,
 			Original:    demandOriginMap[update.DemandID],
 			Updated: &rpt.UpdatedRPDemandItem{
-				ObsProject:   update.UpdatedInfo.ObsProject,
-				ExpectTime:   update.UpdatedInfo.ExpectTime,
-				ZoneID:       update.UpdatedInfo.ZoneID,
-				ZoneName:     zoneMap[update.UpdatedInfo.ZoneID],
-				RegionID:     update.UpdatedInfo.RegionID,
-				RegionName:   regionAreaMap[update.UpdatedInfo.RegionID].RegionName,
-				AreaID:       regionAreaMap[update.UpdatedInfo.RegionID].AreaID,
-				AreaName:     regionAreaMap[update.UpdatedInfo.RegionID].AreaName,
-				DemandSource: update.DemandSource,
+				ObsProject:     update.UpdatedInfo.ObsProject,
+				ExpectTime:     update.UpdatedInfo.ExpectTime,
+				ReturnPlanTime: update.UpdatedInfo.ReturnPlanTime,
+				ZoneID:         update.UpdatedInfo.ZoneID,
+				ZoneName:       zoneMap[update.UpdatedInfo.ZoneID],
+				RegionID:       update.UpdatedInfo.RegionID,
+				RegionName:     regionAreaMap[update.UpdatedInfo.RegionID].RegionName,
+				AreaID:         regionAreaMap[update.UpdatedInfo.RegionID].AreaID,
+				AreaName:       regionAreaMap[update.UpdatedInfo.RegionID].AreaName,
+				DemandSource:   update.DemandSource,
 				Cvm: rpt.Cvm{
 					ResMode:        update.UpdatedInfo.Cvm.ResMode,
 					DeviceType:     update.UpdatedInfo.Cvm.DeviceType,
@@ -509,21 +516,31 @@ func (c *Controller) constructOriginalDemandWithCPUCore(kt *kit.Kit, demand rpdt
 	expectTimeStr, err := times.TransTimeStrWithLayout(strconv.Itoa(demand.ExpectTime),
 		constant.DateLayoutCompact, constant.DateLayout)
 	if err != nil {
-		logs.Errorf("failed to convert expect time to string, err: %v, expect time: %d, rid: %s", err,
-			demand.ExpectTime, kt.Rid)
+		logs.Errorf("failed to convert expect time to string, err: %v, demand_id: %s, expect time: %d, rid: %s",
+			err, demand.ID, demand.ExpectTime, kt.Rid)
 		return nil, err
+	}
+	var returnTimeStr string
+	if demand.ObsProject == enumor.ObsProjectShortLease {
+		returnTimeStr, err = times.TransTimeStrWithLayout(strconv.Itoa(demand.ReturnPlanTime),
+			constant.DateLayoutCompact, constant.DateLayout)
+		if err != nil {
+			logs.Warnf("failed to convert return plan time to string, err: %v, demand_id: %s, return_plan_time: %d, "+
+				"rid: %s", err, demand.ID, demand.ReturnPlanTime, kt.Rid)
+		}
 	}
 
 	return &rpt.OriginalRPDemandItem{
-		DemandID:   demand.ID,
-		ObsProject: demand.ObsProject,
-		ExpectTime: expectTimeStr,
-		ZoneID:     demand.ZoneID,
-		ZoneName:   demand.ZoneName,
-		RegionID:   demand.RegionID,
-		RegionName: demand.RegionName,
-		AreaID:     demand.AreaID,
-		AreaName:   demand.AreaName,
+		DemandID:       demand.ID,
+		ObsProject:     demand.ObsProject,
+		ExpectTime:     expectTimeStr,
+		ReturnPlanTime: returnTimeStr,
+		ZoneID:         demand.ZoneID,
+		ZoneName:       demand.ZoneName,
+		RegionID:       demand.RegionID,
+		RegionName:     demand.RegionName,
+		AreaID:         demand.AreaID,
+		AreaName:       demand.AreaName,
 		Cvm: rpt.Cvm{
 			ResMode:        demand.ResMode.Name(),
 			DeviceType:     demand.DeviceType,
@@ -592,14 +609,15 @@ func (c *Controller) constructDelayDemands(kt *kit.Kit, delays []ptypes.AdjustRP
 
 		// delay updated equals to original, except expect time.
 		result[idx].Updated = &rpt.UpdatedRPDemandItem{
-			ObsProject: result[idx].Original.ObsProject,
-			ExpectTime: delay.ExpectTime,
-			ZoneID:     result[idx].Original.ZoneID,
-			ZoneName:   result[idx].Original.ZoneName,
-			RegionID:   result[idx].Original.RegionID,
-			RegionName: result[idx].Original.RegionName,
-			AreaID:     result[idx].Original.AreaID,
-			AreaName:   result[idx].Original.AreaName,
+			ObsProject:     result[idx].Original.ObsProject,
+			ExpectTime:     delay.ExpectTime,
+			ReturnPlanTime: result[idx].Original.ReturnPlanTime,
+			ZoneID:         result[idx].Original.ZoneID,
+			ZoneName:       result[idx].Original.ZoneName,
+			RegionID:       result[idx].Original.RegionID,
+			RegionName:     result[idx].Original.RegionName,
+			AreaID:         result[idx].Original.AreaID,
+			AreaName:       result[idx].Original.AreaName,
 			Cvm: rpt.Cvm{
 				ResMode:        result[idx].Original.Cvm.ResMode,
 				DeviceType:     result[idx].Original.Cvm.DeviceType,

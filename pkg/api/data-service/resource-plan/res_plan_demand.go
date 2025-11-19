@@ -69,6 +69,7 @@ type ResPlanDemandCreateReq struct {
 	ResMode         enumor.ResModeCode   `json:"res_mode" validate:"required"`
 	ObsProject      enumor.ObsProject    `json:"obs_project" validate:"required"`
 	ExpectTime      string               `json:"expect_time" validate:"required"`
+	ReturnPlanTime  string               `json:"return_plan_time" validate:"omitempty"`
 	PlanType        enumor.PlanTypeCode  `json:"plan_type" validate:"required"`
 	AreaID          string               `json:"area_id" validate:"required"`
 	AreaName        string               `json:"area_name" validate:"required"`
@@ -102,6 +103,12 @@ func (r *ResPlanDemandCreateReq) Validate() error {
 		return err
 	}
 
+	if r.ObsProject == enumor.ObsProjectShortLease {
+		_, err = time.Parse(constant.DateLayout, r.ReturnPlanTime)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -154,9 +161,9 @@ type ResPlanDemandLockOpReq struct {
 }
 
 // Validate validate
-func (r ResPlanDemandLockOpReq) Validate() error {
+func (r ResPlanDemandLockOpReq) Validate(isLock bool) error {
 	for _, item := range r.LockedItems {
-		if err := item.Validate(); err != nil {
+		if err := item.Validate(isLock); err != nil {
 			return err
 		}
 	}
@@ -182,11 +189,17 @@ func NewResPlanDemandLockOpReqBatch(demandIDs []string, lockedCPUCore int64) *Re
 // ResPlanDemandLockOpItem lock operation item
 type ResPlanDemandLockOpItem struct {
 	ID            string `json:"id" validate:"required"`
+	TicketID      string `json:"ticket_id"`
 	LockedCPUCore int64  `json:"locked_cpu_core"`
 }
 
 // Validate validate
-func (r ResPlanDemandLockOpItem) Validate() error {
+func (r ResPlanDemandLockOpItem) Validate(isLock bool) error {
+	if isLock {
+		if r.TicketID == "" {
+			return errf.New(errf.InvalidParameter, "ticket_id can not be empty")
+		}
+	}
 	return validator.Validate.Struct(r)
 }
 

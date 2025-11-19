@@ -80,8 +80,17 @@ func (svc *service) batchCreateResPlanDemandWithTx(kt *kit.Kit, txn *sqlx.Tx,
 		// 把字符串类型的[期望交付时间转]为符合格式的Int类型
 		expectTimeInt, err := times.ConvStrTimeToInt(item.ExpectTime, constant.DateLayout)
 		if err != nil {
-			logs.Errorf("convert expect time to int64 failed, expect time: %s, err: %v", item.ExpectTime, err)
+			logs.Errorf("convert expect time to int64 failed, expect time: %s, err: %v, rid: %s", item.ExpectTime, err, kt.Rid)
 			return nil, errf.NewFromErr(errf.InvalidParameter, err)
+		}
+		returnPlanTimeInt := 0
+		if item.ObsProject == enumor.ObsProjectShortLease {
+			returnPlanTimeInt, err = times.ConvStrTimeToInt(item.ReturnPlanTime, constant.DateLayout)
+			if err != nil {
+				logs.Errorf("convert return plan time to int64 failed, return plan time: %s, err: %v, rid: %s",
+					item.ReturnPlanTime, err, kt.Rid)
+				return nil, errf.NewFromErr(errf.InvalidParameter, err)
+			}
 		}
 
 		coreType := enumor.CoreType(item.CoreType)
@@ -106,6 +115,7 @@ func (svc *service) batchCreateResPlanDemandWithTx(kt *kit.Kit, txn *sqlx.Tx,
 			ResMode:         item.ResMode,
 			ObsProject:      item.ObsProject,
 			ExpectTime:      expectTimeInt,
+			ReturnPlanTime:  returnPlanTimeInt,
 			PlanType:        item.PlanType,
 			AreaID:          item.AreaID,
 			AreaName:        item.AreaName,

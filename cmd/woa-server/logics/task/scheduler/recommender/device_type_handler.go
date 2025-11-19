@@ -72,7 +72,7 @@ func (dh *DeviceTypeHandler) Handle(order *types.ApplyOrder) (*Recommendation, b
 	sort.Sort(sort.Reverse(sortCandidates))
 
 	// cvm_separate_campus pick candidate with the highest score
-	if order.Spec.Zone == cvmapi.CvmSeparateCampus {
+	if order.Spec.IsCVMSeparateCampus() {
 		rst := &Recommendation{
 			Zone:       order.Spec.Zone,
 			DeviceType: sortCandidates[0].DeviceType,

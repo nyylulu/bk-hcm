@@ -346,7 +346,7 @@ func (svc *cvmSvc) BatchUnVerifyAsyncResetBizCvm(cts *rest.Contexts) (interface{
 func (svc *cvmSvc) checkInCvmResetBizList(kt *kit.Kit, bizID int64) (bool, error) {
 	listReq := &core.ListReq{
 		Filter: tools.ExpressionAnd(
-			tools.RuleEqual("config_type", constant.GlobalConfigTypeCvmResetBizIDList),
+			tools.RuleEqual("config_type", enumor.GlobalConfigTypeCvmResetBizIDList),
 			tools.RuleJSONContains("config_value.bk_biz_ids", strconv.FormatInt(bizID, 10)),
 		),
 		Page: core.NewDefaultBasePage(),

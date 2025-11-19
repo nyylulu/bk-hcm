@@ -34,7 +34,6 @@ import (
 	"hcm/pkg/api/data-service/cloud"
 	bwpkg "hcm/pkg/api/hc-service/bandwidth-packages"
 	"hcm/pkg/client"
-	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/tools"
@@ -200,8 +199,8 @@ func (svc *bandSvc) fillRecommend(kt *kit.Kit, packages []adaptortype.TCloudBand
 func (svc *bandSvc) getRecommendConfig(kt *kit.Kit) (string, map[string]struct{}, error) {
 	listReq := &core.ListReq{
 		Filter: tools.ExpressionAnd(
-			tools.RuleEqual("config_type", constant.GlobalConfigTypeCLBBandwidthPackageRecommend),
-			tools.RuleEqual("config_key", constant.GlobalConfigTypeCLBBandwidthPackageRecommend),
+			tools.RuleEqual("config_type", enumor.GlobalConfigTypeCLBBandwidthPackageRecommend),
+			tools.RuleEqual("config_key", enumor.GlobalConfigKeyCLBBandwidthPackageRecommend),
 		),
 		Page: core.NewDefaultBasePage(),
 	}

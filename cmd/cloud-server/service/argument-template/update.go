@@ -89,6 +89,8 @@ func (svc *argsTplSvc) updateArgsTpl(cts *rest.Contexts, authHandler handler.Val
 	switch info.Vendor {
 	case enumor.TCloud:
 		return svc.updateTCloudArgumentTemplate(cts.Kit, req.Data, id, bkBizID)
+	case enumor.TCloudZiyan:
+		return svc.updateTCloudZiyanArgumentTemplate(cts.Kit, req.Data, id, bkBizID)
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", info.Vendor)
 	}
@@ -108,6 +110,28 @@ func (svc *argsTplSvc) updateTCloudArgumentTemplate(kt *kit.Kit, body json.RawMe
 
 	req.BkBizID = bkBizID
 	err := svc.client.HCService().TCloud.ArgsTpl.UpdateArgsTpl(kt, id, req)
+	if err != nil {
+		logs.Errorf("update tcloud argument template failed, req: %+v, err: %v, rid: %s", req, err, kt.Rid)
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (svc *argsTplSvc) updateTCloudZiyanArgumentTemplate(kt *kit.Kit, body json.RawMessage, id string, bkBizID int64) (
+	interface{}, error) {
+
+	req := new(hcargstpl.TCloudUpdateReq)
+	if err := json.Unmarshal(body, req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	req.BkBizID = bkBizID
+	err := svc.client.HCService().TCloudZiyan.ArgsTpl.UpdateArgsTpl(kt, id, req)
 	if err != nil {
 		logs.Errorf("update tcloud argument template failed, req: %+v, err: %v, rid: %s", req, err, kt.Rid)
 		return nil, err

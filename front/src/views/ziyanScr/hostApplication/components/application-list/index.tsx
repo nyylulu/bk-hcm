@@ -1,3 +1,4 @@
+// 服务请求下的主机申领，业务下单据管理的主机申请已迁移至views/ticket下
 import { defineComponent, onMounted, ref, watch, reactive } from 'vue';
 import './index.scss';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
@@ -33,8 +34,9 @@ import { getModel } from '@/model/manager';
 import HocSearch from '@/model/hoc-search.vue';
 import { HostApplySearchNonBusiness } from '@/model/order/host-apply-search';
 import { serviceShareBizSelectedKey } from '@/constants/storage-symbols';
-import { VendorEnum } from '@/common/constant';
 import { SCR_RESOURCE_TYPE_NAME, ScrResourceType } from '@/constants';
+import { RES_ASSIGN_TYPE } from '@/components/device-type-selector/constants';
+import type { ICvmDeviceTypeFormData } from '@/components/device-type-selector/typings';
 
 export default defineComponent({
   setup() {
@@ -275,25 +277,26 @@ export default defineComponent({
             render: ({ data }: any) => {
               const isUpgradeCvm = ScrResourceType.UPGRADECVM === data.resource_type;
               return (
-                <div>
-                  <div style={'height: 30px!important;line-height: 30px;'}>
-                    资源类型：{getResourceTypeName(data?.resource_type)}
-                  </div>
+                <div style={{ lineHeight: '30px' }}>
+                  <div>资源类型：{data?.resource_type ? getResourceTypeName(data?.resource_type) : '--'}</div>
                   {/* 机型配置调整不展示机型、园区 */}
                   {!isUpgradeCvm && (
                     <>
-                      <div style={'height: 20px!important;line-height: 20px;'}>
-                        机型：{data.spec?.device_type || '--'}
+                      <div>机型：{data.spec?.device_type || '--'}</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr' }}>
+                        <div>园区：</div>
+                        <div>
+                          {data.spec?.zones?.[0] === 'all'
+                            ? '全部可用区'
+                            : data.spec?.zones?.map((zone: string) => {
+                                return <div>{getZoneCn(zone)}</div>;
+                              }) || '--'}
+                        </div>
                       </div>
-                      <div style={'height: 30px!important;line-height: 30px;'}>
-                        园区：{getZoneCn(data.spec?.zone)}
-                        {data.spec?.zone === 'cvm_separate_campus' && (
-                          <display-value
-                            value={data.spec.region}
-                            property={{ type: 'region' }}
-                            vendor={VendorEnum.ZIYAN}
-                          />
-                        )}
+                      <div>
+                        分布：
+                        {RES_ASSIGN_TYPE[data.spec?.res_assign as ICvmDeviceTypeFormData['resAssignType']]?.label ??
+                          '--'}
                       </div>
                     </>
                   )}

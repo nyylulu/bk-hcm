@@ -1,7 +1,7 @@
 import { ref } from 'vue';
 import { defineStore } from 'pinia';
-import http from '@/http';
-import { IListResData, QueryBuilderType } from '@/typings';
+import http, { type HttpRequestConfig } from '@/http';
+import { IListResData, IQueryResData, QueryBuilderType } from '@/typings';
 import { enableCount } from '@/utils/search';
 import { RequirementType } from '@/store/config/requirement';
 
@@ -36,10 +36,44 @@ export interface ICvmDevicetypeItem {
   ram_amount: number;
   core_type: number;
   device_class: string;
+  [k: string]: any;
+}
+
+export interface ICvmChargeTypDevicetypeItem {
+  available: boolean;
+  charge_type: string;
+  device_types: Array<{
+    device_type: string;
+    available: boolean;
+    remain_core: number;
+  }>;
+}
+
+export interface IRollingServerCvm {
+  device_type: string;
+  instance_charge_type: string;
+  charge_months: number;
+  billing_start_time: string;
+  old_billing_expire_time: string;
+  bk_cloud_inst_id: string;
+  device_group: string;
+}
+
+export interface IManyCvmCapacityItem {
+  device_type: string;
+  region: string;
+  zone: string;
+  vpc: string;
+  subnet: string;
+  max_num: number;
+  max_info: { key: string; value: number }[];
 }
 
 export const useCvmDeviceStore = defineStore('cvm-device', () => {
   const deviceListLoading = ref(false);
+
+  const rollingServerCvmLoading = ref(false);
+  const cvmCapacityLoading = ref(false);
 
   const getDeviceList = async (params: QueryBuilderType) => {
     deviceListLoading.value = true;
@@ -82,10 +116,111 @@ export const useCvmDeviceStore = defineStore('cvm-device', () => {
     }
   };
 
+  const deviceTypeFullListLoading = ref(false);
+  const getDeviceTypeFullList = async (params: QueryBuilderType) => {
+    deviceTypeFullListLoading.value = true;
+    try {
+      const res: IListResData<ICvmDevicetypeItem[]> = await http.post(
+        '/api/v1/woa/config/findmany/config/cvm/devicetype',
+        params,
+      );
+      const { info: list = [], count = 0 } = res.data ?? {};
+      return { list: list ?? [], count };
+    } catch (error) {
+      console.error(error);
+      return Promise.reject(error);
+    } finally {
+      deviceTypeFullListLoading.value = false;
+    }
+  };
+
+  const chargeTypeDeviceTypeListLoading = ref(false);
+  const getChargeTypeDeviceTypeList = async (params: {
+    bk_biz_id: number;
+    require_type: RequirementType;
+    region: string;
+    zone?: string;
+  }) => {
+    chargeTypeDeviceTypeListLoading.value = true;
+    try {
+      const res: IListResData<ICvmChargeTypDevicetypeItem[]> = await http.post(
+        '/api/v1/woa/config/findmany/config/cvm/charge_type/device_type',
+        params,
+      );
+      const { info: list = [], count = 0 } = res.data ?? {};
+      return { list, count };
+    } catch (error) {
+      console.error(error);
+      return Promise.reject(error);
+    } finally {
+      chargeTypeDeviceTypeListLoading.value = false;
+    }
+  };
+
+  const getRollingServerCvm = async (
+    params: {
+      bk_biz_id: number;
+      bk_asset_id: string;
+      region: string;
+    },
+    config?: { globalError?: boolean },
+  ) => {
+    rollingServerCvmLoading.value = true;
+    try {
+      const res: IQueryResData<IRollingServerCvm> = await http.post(
+        '/api/v1/woa/task/check/rolling_server/host',
+        params,
+        config,
+      );
+      return res;
+    } catch (error) {
+      console.error(error);
+      return Promise.reject(error);
+    } finally {
+      rollingServerCvmLoading.value = false;
+    }
+  };
+
+  const getManyCvmCapacity = async (
+    params: {
+      device_types: string[];
+      require_type: number;
+      region: string;
+      zones: string[];
+      vpc?: string;
+      subnet?: string;
+      charge_type?: string;
+    },
+    config?: HttpRequestConfig,
+  ) => {
+    cvmCapacityLoading.value = true;
+    try {
+      const res: IListResData<IManyCvmCapacityItem[]> = await http.post(
+        '/api/v1/woa/config/findmany/cvm/capacity',
+        params,
+        config,
+      );
+      return res.data.info;
+    } catch (error) {
+      console.error(error);
+      return Promise.reject(error);
+    } finally {
+      cvmCapacityLoading.value = false;
+    }
+  };
+
   return {
     deviceListLoading,
     getDeviceList,
     devicetypeListLoading,
     getDevicetypeListWithoutPage,
+    deviceTypeFullListLoading,
+    getDeviceTypeFullList,
+    chargeTypeDeviceTypeListLoading,
+    getChargeTypeDeviceTypeList,
+    rollingServerCvmLoading,
+    getRollingServerCvm,
+    cvmCapacityLoading,
+    getManyCvmCapacity,
   };
 });

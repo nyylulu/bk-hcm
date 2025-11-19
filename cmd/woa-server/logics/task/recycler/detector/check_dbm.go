@@ -17,11 +17,12 @@ import (
 	"fmt"
 	"sync/atomic"
 
+	"hcm/cmd/woa-server/dal/task/table"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/api-gateway/bkdbm"
 	cvt "hcm/pkg/tools/converter"
-	"hcm/pkg/tools/slice"
 )
 
 // CheckDBMMaxBatchSize DBM 暂未限定长度，暂定200
@@ -92,19 +93,43 @@ func (t *CheckDBMWorkGroup) queryWorker(kt *kit.Kit, idx int) {
 }
 
 func (t *CheckDBMWorkGroup) check(kt *kit.Kit, steps []*StepMeta) {
-	hostIDs := slice.Map(steps, func(step *StepMeta) int64 { return step.Step.HostID })
+	var hostIDs []int64
+	var newSteps []*StepMeta
+	for _, step := range steps {
+		if step.Step == nil {
+			logs.Errorf("IdleCheck:%s:failed to check dbm, step.Step is nil, rid: %s", table.StepCheckDBM, kt.Rid)
+			err := fmt.Errorf("IdleCheck:%s, step.Step is nil", table.StepCheckDBM)
+			t.HandleResult(kt, []*StepMeta{step}, err, err.Error(), false)
+			continue
+		}
+		// 该主机对应的步骤已被设置为跳过
+		if step.Step.Skip == enumor.DetectStepSkipYes {
+			logs.Infof("IdleCheck:%s:SKIP ONE, subOrderID: %s, IP: %s, stepMeta: %+v, rid: %s",
+				table.StepCheckDBM, step.Step.SuborderID, step.Step.IP, cvt.PtrToVal(step), kt.Rid)
+			t.HandleResult(kt, []*StepMeta{step}, nil, "跳过", false)
+			continue
+		}
+		hostIDs = append(hostIDs, step.Step.HostID)
+		newSteps = append(newSteps, step)
+	}
 
-	req := &bkdbm.ListMachinePool{HostIDs: hostIDs, Offset: 0, Limit: int64(len(steps))}
+	// 所有步骤都跳过了该步骤，则直接返回
+	if len(hostIDs) == 0 {
+		logs.Warnf("IdleCheck:%s:SKIP ALL, steps: %+v, rid: %s", table.StepCheckDBM, cvt.PtrToSlice(steps), kt.Rid)
+		return
+	}
+
+	req := &bkdbm.ListMachinePool{HostIDs: hostIDs, Offset: 0, Limit: int64(len(newSteps))}
 	resp, err := t.dbmCLi.QueryMachinePool(kt, req)
 	if err != nil {
-		t.HandleResult(kt, steps, err, fmt.Sprintf("check DBM failed, err: %s", err), true)
+		t.HandleResult(kt, newSteps, err, fmt.Sprintf("check DBM failed, err: %s", err), true)
 		return
 	}
 	existsMap := make(map[string][]*bkdbm.MachinePoolResult, len(resp.Results))
 	for _, item := range resp.Results {
 		existsMap[item.IP] = append(existsMap[item.IP], cvt.ValToPtr(item))
 	}
-	for _, step := range steps {
+	for _, step := range newSteps {
 		if _, ok := existsMap[step.Step.IP]; ok {
 			str := structToStr(existsMap[step.Step.IP])
 			terr := fmt.Errorf("该主机在DBM中使用，不允许回收: %s", step.Step.IP)

@@ -50,7 +50,7 @@ func (a *accountSvc) ziyanCondSyncRes(cts *rest.Contexts, accountID string, bizI
 		return nil, err
 	}
 	if bizID != constant.UnassignedBiz {
-		meta, err := ziyan.GetResourceMetaByBiz(cts.Kit, cmdb.CmdbClient(), bizID)
+		meta, err := ziyan.GetResourceMetaByBiz(cts.Kit, a.client.DataService(), cmdb.CmdbClient(), bizID)
 		if err != nil {
 			logs.Errorf("fail to get resource meta by biz(%d), err: %v, rid: %s", bizID, err, cts.Kit.Rid)
 			return nil, err

@@ -132,8 +132,14 @@ func (r *Returner) createReturnReq(instIds []string, task *table.ReturnTask) *cv
 			ObsProject:      task.RecycleType.ToObsProject(),
 			Force:           false,
 			AcceptCostShare: true,
+			ReturnForecast:  2,
 		},
 	}
+	// TODO 返还预测全部返还至中转产品，业务需要预测的场景使用其他方案解决，不直接返还预测给业务
+	//if task.ReturnForecast {
+	//	req.Params.ReturnForecast = 1
+	//	req.Params.ReturnForecastTime = task.ReturnForecastTime
+	//}
 
 	if task.ReturnPlan == table.RetPlanImmediate {
 		req.Params.IsReturnNow = 1

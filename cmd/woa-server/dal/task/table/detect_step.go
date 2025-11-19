@@ -16,30 +16,32 @@ package table
 import (
 	"fmt"
 	"time"
+
+	"hcm/pkg/criteria/enumor"
 )
 
 // DetectStep defines a recycle detection step's detail information
 type DetectStep struct {
-	ID         string         `json:"id" bson:"id"`
-	OrderID    uint64         `json:"order_id" bson:"order_id"`
-	SuborderID string         `json:"suborder_id" bson:"suborder_id"`
-	TaskID     string         `json:"task_id" bson:"task_id"`
-	StepID     int            `json:"step_id" bson:"step_id"`
-	StepName   DetectStepName `json:"step_name" bson:"step_name"`
-	StepDesc   string         `json:"step_desc" bson:"step_desc"`
-	HostID     int64          `json:"bk_host_id" bson:"bk_host_id"`
-	AssetID    string         `json:"bk_asset_id" bson:"bk_asset_id"`
-	IP         string         `json:"ip" bson:"ip"`
-	User       string         `json:"bk_username" bson:"bk_username"`
-	RetryTime  uint32         `json:"retry_time" bson:"retry_time"`
-	Status     DetectStatus   `json:"status" bson:"status"`
-	Message    string         `json:"message" bson:"message"`
-	Skip       int            `json:"skip" bson:"skip"`
-	Log        string         `json:"log" bson:"log"`
-	StartAt    time.Time      `json:"start_at" bson:"start_at"`
-	EndAt      time.Time      `json:"end_at" bson:"end_at"`
-	CreateAt   time.Time      `json:"create_at" bson:"create_at"`
-	UpdateAt   time.Time      `json:"update_at" bson:"update_at"`
+	ID         string                `json:"id" bson:"id"`
+	OrderID    uint64                `json:"order_id" bson:"order_id"`
+	SuborderID string                `json:"suborder_id" bson:"suborder_id"`
+	TaskID     string                `json:"task_id" bson:"task_id"`
+	StepID     int                   `json:"step_id" bson:"step_id"`
+	StepName   DetectStepName        `json:"step_name" bson:"step_name"`
+	StepDesc   string                `json:"step_desc" bson:"step_desc"`
+	HostID     int64                 `json:"bk_host_id" bson:"bk_host_id"`
+	AssetID    string                `json:"bk_asset_id" bson:"bk_asset_id"`
+	IP         string                `json:"ip" bson:"ip"`
+	User       string                `json:"bk_username" bson:"bk_username"`
+	RetryTime  uint32                `json:"retry_time" bson:"retry_time"`
+	Status     DetectStatus          `json:"status" bson:"status"`
+	Message    string                `json:"message" bson:"message"`
+	Skip       enumor.DetectStepSkip `json:"skip" bson:"skip"`
+	Log        string                `json:"log" bson:"log"`
+	StartAt    time.Time             `json:"start_at" bson:"start_at"`
+	EndAt      time.Time             `json:"end_at" bson:"end_at"`
+	CreateAt   time.Time             `json:"create_at" bson:"create_at"`
+	UpdateAt   time.Time             `json:"update_at" bson:"update_at"`
 }
 
 // Describe describe DetectStep

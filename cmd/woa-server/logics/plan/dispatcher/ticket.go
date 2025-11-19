@@ -227,7 +227,7 @@ func (d *Dispatcher) checkItsmTicket(kt *kit.Kit, ticket *ptypes.TicketInfo) (bo
 		return checkSubTicket, nil
 	}
 	// 单据被拒需要释放资源
-	return checkSubTicket, d.unlockTicketOriginalDemands(kt, ticket)
+	return checkSubTicket, d.unlockTicketOriginalDemands(kt, ticket.Demands)
 }
 
 // checkTicketTimeout check ticket timeout
@@ -246,8 +246,8 @@ func (d *Dispatcher) checkTicketTimeout(kt *kit.Kit, ticket *ptypes.TicketInfo) 
 	return d.updateTicketStatusFailed(kt, ticket, "audit flow timeout")
 }
 
-// finishAuditFlow 单据的所有子单均已结单，汇总成功的子单并应用到本地
-func (d *Dispatcher) finishAuditFlow(kt *kit.Kit, ticket *ptypes.TicketInfo) error {
+// FinishAuditFlow 单据的所有子单均已结单，汇总成功的子单并应用到本地
+func (d *Dispatcher) FinishAuditFlow(kt *kit.Kit, ticket *ptypes.TicketInfo) error {
 	itsmStatus, err := d.itsmCli.GetTicketStatus(kt, ticket.ItsmSN)
 	if err != nil {
 		logs.Errorf("failed to get itsm ticket status, err: %v, id: %s, rid: %s", err, ticket.ID, kt.Rid)
@@ -270,7 +270,7 @@ func (d *Dispatcher) finishAuditFlow(kt *kit.Kit, ticket *ptypes.TicketInfo) err
 	}
 
 	// crp单据通过后更新本地数据表
-	if err := d.applyResPlanDemandChange(kt, ticket); err != nil {
+	if err := d.queryAndApplyResPlanDemandChange(kt, ticket); err != nil {
 		logs.Errorf("%s: failed to upsert crp demand, err: %v, rid: %s", constant.DemandChangeAppliedFailed,
 			err, kt.Rid)
 		return err

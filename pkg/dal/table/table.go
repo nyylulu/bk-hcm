@@ -187,6 +187,8 @@ const (
 	WoaZoneTable = "woa_zone"
 	// WoaDeviceTypeTable is woa_device_type table's name.
 	WoaDeviceTypeTable = "woa_device_type"
+	// WoaDeviceTypePhysicalRelTable is woa_device_type_physical_rel table's name.
+	WoaDeviceTypePhysicalRelTable = "woa_device_type_physical_rel"
 	// ResPlanCrpDemandTable is res_plan_crp_demand table's name.
 	ResPlanCrpDemandTable = "res_plan_crp_demand"
 	// ResPlanPenaltyTable is res_plan_penalty table's name.
@@ -201,6 +203,8 @@ const (
 	ResPlanTransferAppliedRecordTable = "res_plan_transfer_applied_record"
 	// ResPlanSubTicketTable is res_plan_sub_ticket table's name.
 	ResPlanSubTicketTable = "res_plan_sub_ticket"
+	// ShortRentalReturnedRecordTable is short_rental_returned_record table's name.
+	ShortRentalReturnedRecordTable = "short_rental_returned_record"
 
 	// MainAccountTable is main_account table's name
 	MainAccountTable Name = "main_account"
@@ -394,6 +398,7 @@ var TableMap = map[Name]TableConfig{
 	ResPlanTicketStatusTable:          {},
 	WoaZoneTable:                      {},
 	WoaDeviceTypeTable:                {},
+	WoaDeviceTypePhysicalRelTable:     {},
 	ResPlanCrpDemandTable:             {},
 	ResPlanPenaltyTable:               {},
 	ResPlanDemandPenaltyBaseTable:     {},
@@ -401,6 +406,7 @@ var TableMap = map[Name]TableConfig{
 	ResPlanWeekTable:                  {},
 	ResPlanTransferAppliedRecordTable: {},
 	ResPlanSubTicketTable:             {},
+	ShortRentalReturnedRecordTable:    {},
 
 	MainAccountTable: {EnableTenant: true},
 	RootAccountTable: {EnableTenant: true},

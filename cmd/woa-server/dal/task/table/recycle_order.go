@@ -42,5 +42,7 @@ type RecycleOrder struct {
 	CreateAt      time.Time     `json:"create_at" bson:"create_at"`
 	UpdateAt      time.Time     `json:"update_at" bson:"update_at"`
 	// 提交时间，用于计算耗时
-	CommittedAt time.Time `json:"committed_at" bson:"committed_at"`
+	CommittedAt        time.Time `json:"committed_at" bson:"committed_at"`
+	ReturnForecast     bool      `json:"return_forecast" bson:"return_forecast"`
+	ReturnForecastTime string    `json:"return_forecast_time" bson:"return_forecast_time"`
 }

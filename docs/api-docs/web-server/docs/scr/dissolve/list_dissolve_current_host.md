@@ -79,6 +79,7 @@ POST /api/v1/woa/dissolve/host/current/list
         "app_name": "test",
         "module": "test",
         "device_type": "device_type",
+        "svr_type_name": "svr_type_name",
         "module_name": "module_name",
         "idc_unit_name": "idc_unit_name",
         "sfw_name_version": "idc_unit_name",
@@ -146,6 +147,7 @@ POST /api/v1/woa/dissolve/host/current/list
 |app_name| string | 业务名称    |
 |module| string | 业务模块    |
 |device_type| string | SCM设备类型 |
+|svr_type_name   | string | 服务器类型 |
 |module_name| string | 裁撤模块名称  |
 |idc_unit_name| string | 存放机房管理单元        |
 |sfw_name_version| string | 操作系统        |

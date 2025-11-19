@@ -23,7 +23,7 @@ export default defineComponent({
       subnet_name: '',
       enable: '',
     });
-    const cvmWebForm = ref(defaultCvmWebForm());
+    const cvmWebForm = ref<Record<string, any>>(defaultCvmWebForm());
     const vpcFilterType = ref('vpc_name');
     const vpcLabel = ref('VPC 名');
     const subnetFilterType = ref('subnet_name');
@@ -136,7 +136,7 @@ export default defineComponent({
     const paramRules = computed(() => {
       const { enable } = cvmWebForm.value;
       const rules = [];
-      ['vpc_name', 'vpc_id', ' subnet_id', 'subnet_name'].map((item) => {
+      ['vpc_name', 'vpc_id', 'subnet_id', 'subnet_name'].map((item) => {
         if (cvmWebForm.value[item]) {
           rules.push({
             field: item,
@@ -218,13 +218,15 @@ export default defineComponent({
     const updateSubnetProperty = (params) => {
       return updateSubnetProperties(params, {});
     };
-    const getPrefix = (flag, item) => {
+    const getPrefix = (flag: string, item) => {
       switch (flag) {
         case 'vpc':
+          cvmWebForm.value[vpcFilterType.value] = '';
           vpcFilterType.value = item.value;
           vpcLabel.value = item.label;
           break;
         case 'subnet':
+          cvmWebForm.value[subnetFilterType.value] = '';
           subnetFilterType.value = item.value;
           subnetLabel.value = item.label;
           break;

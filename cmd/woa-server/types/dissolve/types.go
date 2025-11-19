@@ -313,6 +313,7 @@ type Host struct {
 	BizID                int64   `json:"bk_biz_id"`
 	Module               string  `json:"module"`
 	DeviceType           string  `json:"device_type"`
+	SvrTypeName          string  `json:"svr_type_name"`
 	ModuleName           string  `json:"module_name"`
 	IdcUnitName          string  `json:"idc_unit_name"`
 	SfwNameVersion       string  `json:"sfw_name_version"`

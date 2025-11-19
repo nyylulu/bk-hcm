@@ -25,6 +25,17 @@ type GlobalConfigType string
 const (
 	// GlobalConfigResDissolve resource dissolve global config
 	GlobalConfigResDissolve GlobalConfigType = "res_dissolve"
+	// GlobalConfigTypeRegionDefaultVpc 地域默认vpc
+	GlobalConfigTypeRegionDefaultVpc GlobalConfigType = "region_default_vpc"
+	// GlobalConfigTypeRegionDefaultSecGroup 地域默认安全组
+	GlobalConfigTypeRegionDefaultSecGroup GlobalConfigType = "region_default_security_group"
+	// GlobalConfigTypeCvmResetBizIDList 主机重装的业务白名单
+	GlobalConfigTypeCvmResetBizIDList GlobalConfigType = "cvm_reset_biz_id_list"
+	// GlobalConfigTypeCLBBandwidthPackageRecommend CLB带宽推荐
+	GlobalConfigTypeCLBBandwidthPackageRecommend GlobalConfigType = "clb_bandwidth_package_recommend"
+	// GlobalConfigTypeBs2ToBkBizIDMap 二级业务配置映射
+	// config_value 格式为 JSON 数组，包含完整的业务信息
+	GlobalConfigTypeBs2ToBkBizIDMap GlobalConfigType = "bs2_to_bk_biz_id_map"
 )
 
 // GlobalConfigResDissolveKey resource dissolve global config key
@@ -33,4 +44,20 @@ type GlobalConfigResDissolveKey string
 const (
 	// GlobalConfigDissolveHostApplyTime resource dissolve host apply time
 	GlobalConfigDissolveHostApplyTime GlobalConfigResDissolveKey = "dissolve_host_apply_time"
+)
+
+// GlobalConfigKeyClbBandPkgRecommend resource global config key for clb bandwidth package recommend
+type GlobalConfigKeyClbBandPkgRecommend string
+
+const (
+	// GlobalConfigKeyCLBBandwidthPackageRecommend CLB带宽推荐
+	GlobalConfigKeyCLBBandwidthPackageRecommend GlobalConfigKeyClbBandPkgRecommend = "clb_bandwidth_package_recommend"
+)
+
+// GlobalConfigKeyBs2Biz resource global config key for bs2 to bk biz
+type GlobalConfigKeyBs2Biz string
+
+const (
+	// GlobalConfigKeyBs2BizMapping 二级业务配置的固定 config_key
+	GlobalConfigKeyBs2BizMapping GlobalConfigKeyBs2Biz = "bs2_biz_mapping"
 )

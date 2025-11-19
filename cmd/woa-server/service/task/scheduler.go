@@ -20,6 +20,7 @@ import (
 	"reflect"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"hcm/cmd/woa-server/model/task"
@@ -38,6 +39,7 @@ import (
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/cvmapi"
 	cvt "hcm/pkg/tools/converter"
+	"hcm/pkg/tools/maps"
 	"hcm/pkg/tools/metadata"
 	"hcm/pkg/tools/querybuilder"
 	"hcm/pkg/tools/slice"
@@ -665,7 +667,15 @@ func (s *service) createApplyOrder(kt *kit.Kit, input *types.ApplyReq) (any, err
 
 func (s *service) verifyAccordingToRequireType(kt *kit.Kit, input *types.ApplyReq) error {
 	switch input.RequireType {
-	case enumor.RequireTypeRollServer, enumor.RequireTypeGreenChannel:
+	case enumor.RequireTypeRollServer:
+		if err := s.validateDeviceTypeForGreenAndRoll(kt, input); err != nil {
+			return err
+		}
+		if err := s.verifyProhibitDAPrefixDeviceType(kt, input); err != nil {
+			return err
+		}
+		return nil
+	case enumor.RequireTypeGreenChannel:
 		return s.validateDeviceTypeForGreenAndRoll(kt, input)
 	case enumor.RequireTypeDissolve:
 		return s.verifyBizDissolveQuota(kt, input)
@@ -707,6 +717,21 @@ func (s *service) verifyBizDissolveQuota(kt *kit.Kit, input *types.ApplyReq) err
 			dissolveQuota)
 	}
 
+	return nil
+}
+
+func (s *service) verifyProhibitDAPrefixDeviceType(kt *kit.Kit, input *types.ApplyReq) error {
+	for _, subOrder := range input.Suborders {
+		if subOrder.Spec == nil {
+			logs.Errorf("suborder spec is nil, rid: %s", kt.Rid)
+			return errors.New("suborder spec is nil")
+		}
+
+		if strings.HasPrefix(strings.TrimSpace(strings.ToUpper(subOrder.Spec.DeviceType)), "DA") {
+			logs.Errorf("prohibit to apply for DA prefix device type, rid: %s", kt.Rid)
+			return errors.New("prohibit to apply for DA prefix device type")
+		}
+	}
 	return nil
 }
 
@@ -1769,7 +1794,8 @@ func (s *service) GetApplyModify(cts *rest.Contexts) (any, error) {
 			continue
 		}
 
-		if modifyItem.Details.PreData != nil {
+		// 只有旧版可用区，才需要转换
+		if modifyItem.Details.PreData != nil && len(modifyItem.Details.PreData.Zones) == 0 {
 			modifyItem.Details.PreData.Zones = []string{modifyItem.Details.PreData.Zone}
 			// 分Campus
 			if modifyItem.Details.PreData.Zone == cvmapi.CvmSeparateCampus {
@@ -1778,7 +1804,7 @@ func (s *service) GetApplyModify(cts *rest.Contexts) (any, error) {
 			}
 		}
 
-		if modifyItem.Details.CurData != nil {
+		if modifyItem.Details.CurData != nil && len(modifyItem.Details.CurData.Zones) == 0 {
 			modifyItem.Details.CurData.Zones = []string{modifyItem.Details.CurData.Zone}
 			// 分Campus
 			if modifyItem.Details.CurData.Zone == cvmapi.CvmSeparateCampus {
@@ -2172,4 +2198,178 @@ func (s *service) FindApproveNodeResult(cts *rest.Contexts) (any, error) {
 	}
 
 	return result, nil
+}
+
+// ListHostApplyItsmTicket list host apply itsm ticket
+func (s *service) ListHostApplyItsmTicket(cts *rest.Contexts) (any, error) {
+	req := new(types.ListHostApplyItsmTicketReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	filter := mapstr.MapStr{
+		"create_at": mapstr.MapStr{"$gte": req.CreateTime},
+		"stage":     types.TicketStageAudit,
+	}
+	page := metadata.BasePage{Start: 0, Limit: pkg.BKMaxInstanceLimit}
+	tickets := make([]*types.ApplyTicket, 0)
+	for {
+		resp, err := model.Operation().ApplyTicket().FindManyApplyTicket(cts.Kit.Ctx, page, filter)
+		if err != nil {
+			logs.Errorf("failed to get apply ticket, err: %v, filter: %v, rid: %s", err, filter, cts.Kit.Rid)
+			return nil, err
+		}
+		tickets = append(tickets, resp...)
+
+		if len(resp) < page.Limit {
+			break
+		}
+		page.Start += page.Limit
+	}
+	if len(tickets) == 0 {
+		return types.ListHostApplyItsmTicketData{Tickets: make([]types.HostApplyItsmTicket, 0)}, nil
+	}
+
+	itsmTickets := make([]types.HostApplyItsmTicket, 0)
+	for _, ticket := range tickets {
+		auditInfo, err := s.getApplyAuditItsm(cts.Kit, &types.GetApplyAuditItsmReq{OrderId: ticket.OrderId})
+		if err != nil {
+			logs.Errorf("failed to get itsm audit, err: %v, ticket id: %d, rid: %s", err, ticket.OrderId, cts.Kit.Rid)
+			return nil, err
+		}
+		status := itsm.Status(auditInfo.Status)
+		if err = status.Validate(); err != nil {
+			logs.Errorf("status is invalid, err: %v, ticket id: %d, rid: %s", err, ticket.OrderId, cts.Kit.Rid)
+			return nil, fmt.Errorf("status is invalid, err: %v, ticket id: %d", err, ticket.OrderId)
+		}
+		if status.IsFinalState() || len(auditInfo.CurrentSteps) == 0 {
+			continue
+		}
+
+		stepName := enumor.HostApplyItsmStepName(auditInfo.CurrentSteps[0].Name)
+		if err = stepName.Validate(); err != nil {
+			logs.Errorf("step name is invalid, err: %v, ticket id: %d, stepName: %s, rid: %s", err, ticket.OrderId,
+				stepName, cts.Kit.Rid)
+			continue
+		}
+
+		itsmTickets = append(itsmTickets, types.HostApplyItsmTicket{
+			ID:            auditInfo.ItsmTicketId,
+			Url:           auditInfo.ItsmTicketLink,
+			User:          ticket.User,
+			ApprovalState: stepName.GetApprovalState(),
+			CreateTime:    ticket.CreateAt,
+		})
+	}
+
+	return types.ListHostApplyItsmTicketData{Tickets: itsmTickets}, nil
+}
+
+// ListHostApplyCrpTicket list host apply crp ticket
+func (s *service) ListHostApplyCrpTicket(cts *rest.Contexts) (any, error) {
+	req := new(types.ListHostApplyCrpTicketReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	subOrderMap, crpIDSubOrderIDMap, err := s.getRunningSubOrderInfo(cts.Kit, req.CreateTime)
+	if err != nil {
+		logs.Errorf("failed to get running sub order info, err: %v, create time: %v, rid: %s", err, req.CreateTime,
+			cts.Kit.Rid)
+		return nil, err
+	}
+	if len(subOrderMap) == 0 || len(crpIDSubOrderIDMap) == 0 {
+		return types.ListHostApplyCrpTicketData{Tickets: make([]types.HostApplyCrpTicket, 0)}, nil
+	}
+
+	tickets := make([]types.HostApplyCrpTicket, 0)
+	for crpID, subOrderID := range crpIDSubOrderIDMap {
+		subOrder, ok := subOrderMap[subOrderID]
+		if !ok {
+			continue
+		}
+		crpReq := types.GetApplyAuditCrpReq{CrpTicketId: crpID, SuborderId: subOrderID}
+		auditCrp, err := s.logics.Scheduler().GetApplyAuditCrp(cts.Kit, &crpReq, subOrder.ResourceType)
+		if err != nil {
+			logs.Errorf("failed to get apply ticket crp audit info, err: %v, req: %v, resourceType: %s, rid: %s", err,
+				crpReq, subOrder.ResourceType, cts.Kit.Rid)
+			continue
+		}
+		crpOrderStatus := enumor.CrpOrderStatus(auditCrp.CurrentStep.Status)
+		if !crpOrderStatus.IsAdminApproval() {
+			continue
+		}
+
+		tickets = append(tickets, types.HostApplyCrpTicket{
+			ID:            auditCrp.CrpTicketId,
+			Url:           auditCrp.CrpTicketLink,
+			User:          subOrder.User,
+			ApprovalState: crpOrderStatus.GetApprovalState(),
+			CreateTime:    subOrder.CreateAt,
+		})
+	}
+
+	return types.ListHostApplyCrpTicketData{Tickets: tickets}, nil
+}
+
+func (s *service) getRunningSubOrderInfo(kt *kit.Kit, createTime *time.Time) (map[string]*types.ApplyOrder,
+	map[string]string, error) {
+
+	subOrderFilter := mapstr.MapStr{
+		"create_at": mapstr.MapStr{"$gte": createTime},
+		"stage":     types.TicketStageRunning,
+	}
+	subOrderPage := metadata.BasePage{Start: 0, Limit: pkg.BKMaxInstanceLimit}
+	subOrderMap := make(map[string]*types.ApplyOrder)
+	for {
+		orders, err := model.Operation().ApplyOrder().FindManyApplyOrder(kt.Ctx, subOrderPage, subOrderFilter)
+		if err != nil {
+			logs.Errorf("failed to find apply orders, err: %v, filter: %v, rid: %s", err, subOrderFilter, kt.Rid)
+			return nil, nil, err
+		}
+		for _, order := range orders {
+			subOrderMap[order.SubOrderId] = order
+		}
+		if len(orders) < subOrderPage.Limit {
+			break
+		}
+		subOrderPage.Start += subOrderPage.Limit
+	}
+	if len(subOrderMap) == 0 {
+		return make(map[string]*types.ApplyOrder), make(map[string]string), nil
+	}
+
+	genRecordFilter := mapstr.MapStr{
+		"suborder_id": mapstr.MapStr{"$in": maps.Keys(subOrderMap)},
+		"status":      types.GenerateStatusHandling,
+	}
+	genRecordPage := metadata.BasePage{Start: 0, Limit: pkg.BKMaxInstanceLimit}
+	crpIDSubOrderIDMap := make(map[string]string)
+	for {
+		genRecords, err := model.Operation().GenerateRecord().FindManyGenerateRecord(kt.Ctx, genRecordPage,
+			genRecordFilter)
+		if err != nil {
+			logs.Errorf("failed to find generate records, err: %v, filter: %v, rid: %s", err, genRecordFilter,
+				kt.Rid)
+			return nil, nil, err
+		}
+		for _, genRecord := range genRecords {
+			if genRecord.TaskId == "" {
+				continue
+			}
+			crpIDSubOrderIDMap[genRecord.TaskId] = genRecord.SubOrderId
+		}
+		if len(genRecords) < genRecordPage.Limit {
+			break
+		}
+		genRecordPage.Start += genRecordPage.Limit
+	}
+
+	return subOrderMap, crpIDSubOrderIDMap, nil
 }

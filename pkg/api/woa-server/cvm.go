@@ -22,16 +22,18 @@ package woaserver
 import (
 	"fmt"
 
+	tasktable "hcm/cmd/woa-server/dal/task/table"
 	"hcm/pkg"
 	"hcm/pkg/criteria/validator"
 )
 
 // StartIdleCheckReq ...
 type StartIdleCheckReq struct {
-	HostIDs  []int64  `json:"bk_host_ids" validate:"required,min=1"`
-	AssetIDs []string `json:"bk_asset_ids" validate:"required,min=1"`
-	IPs      []string `json:"ips" validate:"required,min=1"`
-	BkBizID  int64    `json:"bk_biz_id" validate:"required"`
+	HostIDs      []int64                    `json:"bk_host_ids" validate:"required,min=1"`
+	AssetIDs     []string                   `json:"bk_asset_ids" validate:"required,min=1"`
+	IPs          []string                   `json:"ips" validate:"required,min=1"`
+	BkBizID      int64                      `json:"bk_biz_id" validate:"required"`
+	ExcludeSteps []tasktable.DetectStepName `json:"exclude_steps" validate:"max=100"`
 }
 
 // Validate ...

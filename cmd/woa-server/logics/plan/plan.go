@@ -153,6 +153,8 @@ type Logics interface {
 		req *ptypes.AuditResPlanTicketAdminReq) error
 	// RetryResPlanFailedSubTickets retry res plan failed sub tickets.
 	RetryResPlanFailedSubTickets(kt *kit.Kit, ticketID string) error
+	// TerminateResPlanFailedTicket terminate res plan failed ticket.
+	TerminateResPlanFailedTicket(kt *kit.Kit, ticketID string) error
 
 	// CreateDemandWeek create demand week.
 	CreateDemandWeek(kt *kit.Kit, createReqs []rpproto.ResPlanWeekCreateReq) (*core.BatchCreateResult, error)
@@ -168,6 +170,9 @@ type Logics interface {
 	RepairResPlanDemandFromTicket(kt *kit.Kit, bkBizIDs []int64, ticketTimeRange times.DateRange) error
 	// SyncDemandFromCRPOrder sync demand from crp order.
 	SyncDemandFromCRPOrder(kt *kit.Kit, crpSN string, priorBizIDs []int64, opProdToBizID map[string]int64) error
+
+	// ApplyDestroyOrderToResPlanDemand 将销毁单返还的预测预算保存到本地
+	ApplyDestroyOrderToResPlanDemand(kt *kit.Kit, destroyOrderID string) error
 }
 
 // Controller motivates the resource plan ticket status flow.

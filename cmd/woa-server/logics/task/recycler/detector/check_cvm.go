@@ -18,15 +18,15 @@ import (
 	"fmt"
 	"strings"
 
+	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/pkg/api/core"
 	"hcm/pkg/cc"
-	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/api-gateway/cmdb"
-	"hcm/pkg/tools/converter"
+	cvt "hcm/pkg/tools/converter"
 
 	clb "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/clb/v20180317"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
@@ -47,82 +47,82 @@ var (
 	// data from DB: db_so_cvm, table: tb_cvm_zone
 	// TODO: should get from cvm service
 	_regionMap = map[string]string{
-		"上海":     "ap-shanghai",
-		"南京":     "ap-nanjing",
-		"天津":     "ap-tianjin",
-		"广州":     "ap-guangzhou",
-		"清远":     "ap-guangzhou",
-		"佛山":     "ap-guangzhou",
-		"深圳":     "ap-shenzhen",
-		"重庆":     "ap-chongqing",
-		"香港":     "ap-hongkong",
-		"新加坡":   "ap-singapore",
-		"孟买":     "ap-mumbai",
+		"上海":   "ap-shanghai",
+		"南京":   "ap-nanjing",
+		"天津":   "ap-tianjin",
+		"广州":   "ap-guangzhou",
+		"清远":   "ap-guangzhou",
+		"佛山":   "ap-guangzhou",
+		"深圳":   "ap-shenzhen",
+		"重庆":   "ap-chongqing",
+		"香港":   "ap-hongkong",
+		"新加坡":  "ap-singapore",
+		"孟买":   "ap-mumbai",
 		"圣克拉拉": "na-siliconvalley",
-		"苏州":     "ap-shanghai",
-		"扬州":     "ap-nanjing",
-		"首尔":     "ap-seoul",
-		"西安":     "ap-xian-ec",
-		"郑州":     "ap-zhengzhou-ec",
-		"济南":     "ap-jinan-ec",
-		"福州":     "ap-fuzhou-ec",
-		"长沙":     "ap-changsha-ec",
-		"武汉":     "ap-wuhan-ec",
+		"苏州":   "ap-shanghai",
+		"扬州":   "ap-nanjing",
+		"首尔":   "ap-seoul",
+		"西安":   "ap-xian-ec",
+		"郑州":   "ap-zhengzhou-ec",
+		"济南":   "ap-jinan-ec",
+		"福州":   "ap-fuzhou-ec",
+		"长沙":   "ap-changsha-ec",
+		"武汉":   "ap-wuhan-ec",
 		"法兰克福": "eu-frankfurt",
 		"默费尔登": "eu-frankfurt",
-		"东京":     "ap-tokyo",
-		"曼谷":     "ap-bangkok",
-		"莫斯科":   "eu-moscow",
-		"石家庄":   "ap-shijiazhuang-ec",
-		"杭州":     "ap-hangzhou-ec",
-		"巴里":     "na-toronto",
-		"北京":     "ap-beijing",
-		"张家口":   "ap-beijing",
-		"成都":     "ap-chengdu",
-		"沈阳":     "ap-shenyang-ec",
-		"台北":     "ap-taipei", // no vpc
-		"合肥":     "ap-hefei-ec",
-		"雅加达":   "ap-jakarta", // no vpc
-		"汕尾":     "ap-shenzhen",
-		"圣保罗":   "sa-saopaulo",
+		"东京":   "ap-tokyo",
+		"曼谷":   "ap-bangkok",
+		"莫斯科":  "eu-moscow",
+		"石家庄":  "ap-shijiazhuang-ec",
+		"杭州":   "ap-hangzhou-ec",
+		"巴里":   "na-toronto",
+		"北京":   "ap-beijing",
+		"张家口":  "ap-beijing",
+		"成都":   "ap-chengdu",
+		"沈阳":   "ap-shenyang-ec",
+		"台北":   "ap-taipei", // no vpc
+		"合肥":   "ap-hefei-ec",
+		"雅加达":  "ap-jakarta", // no vpc
+		"汕尾":   "ap-shenzhen",
+		"圣保罗":  "sa-saopaulo",
 	}
 	_vpcIdMap = map[string]string{
-		"上海":     "vpc-2x7lhtse",
-		"南京":     "vpc-fb7sybzv",
-		"天津":     "vpc-1yoew5gc",
-		"广州":     "vpc-03nkx9tv",
-		"清远":     "vpc-03nkx9tv",
-		"佛山":     "vpc-03nkx9tv",
-		"深圳":     "vpc-kwgem8tj",
-		"重庆":     "vpc-gelpqsur",
-		"香港":     "vpc-b5okec48",
-		"新加坡":   "vpc-706wf55j",
-		"孟买":     "vpc-59eofud4",
+		"上海":   "vpc-2x7lhtse",
+		"南京":   "vpc-fb7sybzv",
+		"天津":   "vpc-1yoew5gc",
+		"广州":   "vpc-03nkx9tv",
+		"清远":   "vpc-03nkx9tv",
+		"佛山":   "vpc-03nkx9tv",
+		"深圳":   "vpc-kwgem8tj",
+		"重庆":   "vpc-gelpqsur",
+		"香港":   "vpc-b5okec48",
+		"新加坡":  "vpc-706wf55j",
+		"孟买":   "vpc-59eofud4",
 		"圣克拉拉": "vpc-n040n5bl",
-		"苏州":     "vpc-2x7lhtse",
-		"扬州":     "vpc-fb7sybzv",
-		"首尔":     "vpc-99wg8fre",
-		"西安":     "vpc-efw4kf6r",
-		"郑州":     "vpc-54mjeaf8",
-		"济南":     "vpc-kgepmcdd",
-		"福州":     "vpc-hdxonj2q",
-		"长沙":     "vpc-erdqk82h",
-		"武汉":     "vpc-867lsj6w",
+		"苏州":   "vpc-2x7lhtse",
+		"扬州":   "vpc-fb7sybzv",
+		"首尔":   "vpc-99wg8fre",
+		"西安":   "vpc-efw4kf6r",
+		"郑州":   "vpc-54mjeaf8",
+		"济南":   "vpc-kgepmcdd",
+		"福州":   "vpc-hdxonj2q",
+		"长沙":   "vpc-erdqk82h",
+		"武汉":   "vpc-867lsj6w",
 		"法兰克福": "vpc-38klpz7z",
 		"默费尔登": "vpc-38klpz7z",
-		"东京":     "vpc-8iple1iq",
-		"曼谷":     "vpc-pdnxzhz8",
-		"莫斯科":   "vpc-p62yjqvp",
-		"石家庄":   "vpc-6b3vbija",
-		"杭州":     "vpc-puhasca0",
-		"巴里":     "vpc-drefwt2v",
-		"北京":     "vpc-bhb0y6g8",
-		"张家口":   "vpc-bhb0y6g8",
-		"成都":     "vpc-r1wicnlq",
-		"沈阳":     "vpc-rea7a2kc",
-		"合肥":     "vpc-e0a5jxa7",
-		"汕尾":     "vpc-kwgem8tj",
-		"圣保罗":   "vpc-0ypt4zc1",
+		"东京":   "vpc-8iple1iq",
+		"曼谷":   "vpc-pdnxzhz8",
+		"莫斯科":  "vpc-p62yjqvp",
+		"石家庄":  "vpc-6b3vbija",
+		"杭州":   "vpc-puhasca0",
+		"巴里":   "vpc-drefwt2v",
+		"北京":   "vpc-bhb0y6g8",
+		"张家口":  "vpc-bhb0y6g8",
+		"成都":   "vpc-r1wicnlq",
+		"沈阳":   "vpc-rea7a2kc",
+		"合肥":   "vpc-e0a5jxa7",
+		"汕尾":   "vpc-kwgem8tj",
+		"圣保罗":  "vpc-0ypt4zc1",
 	}
 )
 
@@ -254,14 +254,39 @@ func newCheckCvmWorkGroup(resultHandler StepResultHandler, workerNum int, cliSet
 
 func checkCvm(kt *kit.Kit, steps []*StepMeta, resultHandler StepResultHandler, cliSet *cliSet) {
 	hostIDs := make([]int64, 0)
+	var newSteps []*StepMeta
 	for _, step := range steps {
+		if step.Step == nil {
+			logs.Errorf("IdleCheck:%s:failed to check cvm, step.Step is nil, rid: %s",
+				table.StepCvmCheck, kt.Rid)
+			err := fmt.Errorf("IdleCheck:%s, step.Step is nil", table.StepCvmCheck)
+			resultHandler.HandleResult(kt, []*StepMeta{step}, err, err.Error(), false)
+			continue
+		}
+
+		// 该主机对应的步骤已被设置为跳过
+		if step.Step.Skip == enumor.DetectStepSkipYes {
+			logs.Infof("IdleCheck:%s:SKIP ONE, subOrderID: %s, IP: %s, stepMeta: %+v, rid: %s",
+				table.StepCvmCheck, step.Step.SuborderID, step.Step.IP, cvt.PtrToVal(step), kt.Rid)
+			resultHandler.HandleResult(kt, []*StepMeta{step}, nil, "跳过", false)
+			continue
+		}
+
 		hostIDs = append(hostIDs, step.Step.HostID)
+		newSteps = append(newSteps, step)
 	}
+
+	// 所有步骤都跳过了该步骤，则直接返回
+	if len(hostIDs) == 0 {
+		logs.Warnf("IdleCheck:%s:SKIP ALL, steps: %+v, rid: %s", table.StepCvmCheck, cvt.PtrToSlice(steps), kt.Rid)
+		return
+	}
+
 	ccOp := NewCmdbOperator(cliSet.cc)
 	hosts, err := ccOp.GetHostBaseInfoByID(kt, hostIDs)
 	if err != nil {
 		logs.Errorf("failed to check cvm, for get host from cc err: %v, host id: %v, rid: %s", err, hostIDs, kt.Rid)
-		resultHandler.HandleResult(kt, steps, err, err.Error(), true)
+		resultHandler.HandleResult(kt, newSteps, err, err.Error(), true)
 		return
 	}
 	idHostMap := make(map[int64]cmdb.Host)
@@ -269,7 +294,7 @@ func checkCvm(kt *kit.Kit, steps []*StepMeta, resultHandler StepResultHandler, c
 		idHostMap[host.BkHostID] = host
 	}
 
-	for _, step := range steps {
+	for _, step := range newSteps {
 		host, ok := idHostMap[step.Step.HostID]
 		if !ok {
 			logs.Errorf("failed to check cvm, can not find host, host id: %d, ip: %s, rid: %s", step.Step.HostID,
@@ -386,7 +411,7 @@ func checkDockerSecurityGroup(kt *kit.Kit, cliSet *cliSet, clients *tencentCloud
 
 	for _, inst := range resp.Response.InstanceSet {
 		for _, sgId := range inst.SecurityGroupIds {
-			if retry, err := checkIsDefaultSG(kt, cliSet, clients, converter.PtrToVal(sgId)); err != nil {
+			if retry, err := checkIsDefaultSG(kt, cliSet, clients, cvt.PtrToVal(sgId)); err != nil {
 				return exeInfo, retry, err
 			}
 		}
@@ -398,7 +423,7 @@ func checkDockerSecurityGroup(kt *kit.Kit, cliSet *cliSet, clients *tencentCloud
 func checkIsDefaultSG(kt *kit.Kit, cliSet *cliSet, clients *tencentCloudClients, sgId string) (retry bool, err error) {
 	listReq := &core.ListReq{
 		Filter: tools.ExpressionAnd(
-			tools.RuleEqual("config_type", constant.GlobalConfigTypeRegionDefaultSecGroup),
+			tools.RuleEqual("config_type", enumor.GlobalConfigTypeRegionDefaultSecGroup),
 			tools.RuleJSONEqual("config_value.security_group_id", sgId),
 		),
 		Page: &core.BasePage{Count: true},

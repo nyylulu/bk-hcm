@@ -156,6 +156,7 @@ type PlanOrderChangeItem struct {
 	SourceType        string            `json:"sourceType"`
 	OrderId           string            `json:"orderId"`
 	ResourceMode      enumor.ResMode    `json:"resourceMode"`
+	ReturnPlanTime    string            `json:"returnPlanTime"`
 	Desc              string            `json:"desc"`
 }
 
@@ -317,6 +318,9 @@ type CvmCbsPlanQueryItem struct {
 	ReviewStatus          enumor.ResPlanReviewStatus `json:"reviewStatus"`
 	ForecastType          string                     `json:"forecastType"` // 需求类型（常规需求、年度预算）
 	GenerationType        string                     `json:"generation_type"`
+	// 短租退回时间相关参数
+	IsAutoReturnPlan bool   `json:"isAutoReturnPlan"`
+	ReturnPlanTime   string `json:"returnPlanTime"`
 }
 
 // Clone return a clone CvmCbsPlanQueryItem.
@@ -333,6 +337,7 @@ func (i *CvmCbsPlanQueryItem) Clone() *CvmCbsPlanQueryItem {
 		ExpectStartDate:       i.ExpectStartDate,
 		ExpectEndDate:         i.ExpectEndDate,
 		UseTime:               i.UseTime,
+		ReturnPlanTime:        i.ReturnPlanTime,
 		BgId:                  i.BgId,
 		BgName:                i.BgName,
 		DeptId:                i.DeptId,
@@ -468,6 +473,48 @@ type PlanOrderBaseInfo struct {
 	StatusMsg        string          `json:"statusMsg"`
 	StatusDesc       string          `json:"statusDesc"`
 	CurrentProcessor string          `json:"currentProcessor"`
+}
+
+// QueryReturnPlanResp query cvm return plan response
+type QueryReturnPlanResp struct {
+	RespMeta `json:",inline"`
+	Result   *QueryReturnPlanRst `json:"result"`
+}
+
+// QueryReturnPlanRst query cvm return plan result
+type QueryReturnPlanRst struct {
+	Total                  int               `json:"total"`
+	Data                   []*ReturnPlanItem `json:"data"`
+	TotalCoreAmount        float64           `json:"totalCoreAmount"`
+	TotalAppliedCoreAmount float64           `json:"totalAppliedCoreAmount"`
+	TotalLeftCoreAmount    float64           `json:"totalLeftCoreAmount"`
+	TotalExpiredCoreAmount float64           `json:"totalExpiredCoreAmount"`
+}
+
+// ReturnPlanItem cvm return plan item
+type ReturnPlanItem struct {
+	ID                 int64             `json:"id"`
+	BGID               int64             `json:"bgId"`
+	BGName             string            `json:"bgName"`
+	DeptID             int64             `json:"deptID"`
+	DeptName           string            `json:"deptName"`
+	PlanProductID      int64             `json:"planProductID"`
+	PlanProductName    string            `json:"planProductName"`
+	ProductID          int64             `json:"productID"`
+	ProductName        string            `json:"productName"`
+	ProjectName        enumor.ObsProject `json:"projectName"`
+	PlanTime           string            `json:"planTime"` // YYYY-MM-DD
+	GenerationType     int64             `json:"generationType"`
+	GenerationTypeName string            `json:"generationTypeName"` // 采购代次
+	CoreType           int64             `json:"coreType"`
+	CoreTypeName       string            `json:"coreTypeName"`
+	DeviceFamilyName   string            `json:"deviceFamilyName"` // 物理机机型族：云上计算标准
+	InstanceModel      string            `json:"instanceModel"`    // CVM机型
+	InstanceType       string            `json:"instanceType"`
+	CityName           string            `json:"cityName"`
+	ZoneName           string            `json:"zoneName"`
+	CvmAmount          float64           `json:"cvmAmount"`
+	CoreAmount         decimal.Decimal   `json:"coreAmount"` // 退回计划可能有小数核心
 }
 
 // CapacityResp cvm apply capacity query response
@@ -734,7 +781,7 @@ type QueryCvmInstanceTypeItem struct {
 	GPUAmount             float64           `json:"gpuAmount"`             // GPU卡数量
 	InstanceClass         string            `json:"instanceClass"`         // 实例类型
 	CoreType              int               `json:"coreType"`              // 1.2.3 分别标识，小核心，中核心，大核心
-	CvmInstanceTypeClass  string            `json:"cvmInstanceTypeClass"`  //技术分类
+	CvmInstanceTypeClass  string            `json:"cvmInstanceTypeClass"`  // 技术分类
 }
 
 // GetApproveLogResp get approve log response
@@ -786,4 +833,68 @@ type CvmApproveLogsRst struct {
 // RevokeCvmOrderResp ...
 type RevokeCvmOrderResp struct {
 	RespMeta `json:",inline"`
+}
+
+// QueryOrderListResp ...
+type QueryOrderListResp struct {
+	RespMeta `json:",inline"`
+	Result   *QueryOrderListRst `json:"result"`
+}
+
+// QueryOrderListRst cvm plan order change response
+type QueryOrderListRst struct {
+	Status  int                    `json:"status"`
+	Message string                 `json:"message"`
+	Data    *QueryOrderListRstData `json:"data"`
+}
+
+// QueryOrderListRstData cvm plan order change response data
+type QueryOrderListRstData struct {
+	Total int               `json:"total"`
+	Data  []*QueryOrderInfo `json:"data"`
+}
+
+// QueryOrderInfo cvm plan order change response data
+type QueryOrderInfo struct {
+	OrderID           string                      `json:"orderId"`
+	SourceType        int                         `json:"sourceType"`
+	SourceTypeName    string                      `json:"sourceTypeName"`
+	BgName            string                      `json:"bgName"`
+	DeptID            int                         `json:"deptId"`
+	DeptName          string                      `json:"deptName"`
+	PlanProductName   string                      `json:"planProductName"`
+	ToDeptName        string                      `json:"toDeptName"`
+	ToPlanProductName string                      `json:"toPlanProductName"`
+	UseTime           string                      `json:"useTime"`
+	OrderDesc         string                      `json:"orderDesc"`
+	Operator          string                      `json:"operator"`
+	CreateTime        string                      `json:"createTime"`
+	Status            enumor.QueryOrderInfoStatus `json:"status"`
+	StatusMsg         string                      `json:"statusMsg"`
+	StatusDesc        string                      `json:"statusDesc"`
+	CurrentProcessor  string                      `json:"currentProcessor"`
+	CvmData           []CvmData                   `json:"cvmData"`
+	CbsData           []struct {
+		Name  string `json:"name"`
+		Value int    `json:"value"`
+		Unit  string `json:"unit"`
+	} `json:"cbsData"`
+	TechData []struct {
+		Name  string  `json:"name"`
+		Value float64 `json:"value"`
+		Unit  string  `json:"unit"`
+	} `json:"techData"`
+	AllDiskAmount   int    `json:"allDiskAmount"`
+	AllCoreAmount   int    `json:"allCoreAmount"`
+	DeltaCoreAmount int    `json:"deltaCoreAmount"`
+	DeltaDiskAmount int    `json:"deltaDiskAmount"`
+	OrderType       int    `json:"orderType"`
+	OrderTypeName   string `json:"orderTypeName"`
+}
+
+// CvmData cvm plan order change response data
+type CvmData struct {
+	Name  string  `json:"name"`
+	Value float64 `json:"value"`
+	Unit  string  `json:"unit"`
 }

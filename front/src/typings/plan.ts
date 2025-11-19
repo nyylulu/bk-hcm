@@ -9,6 +9,7 @@ export interface IDemandListDetail {
   demand_class: string; // 预期需求类型
   available_year_month: string; // 需求年月
   expect_time: string; // 期望交付日期
+  return_plan_time: string; // 短租返还日期
   device_class: string; // 机型类型
   device_type: string; // 机型
   total_os: string; // 总OS数量
@@ -74,6 +75,7 @@ export interface IListConfigCvmChargeTypeDeviceTypeData {
 export interface IDemandSpec {
   region: string; // 地域
   zone: string; // 可用区
+  zones: string[]; // 可用区
   device_type: string; // 机型
   image_id: string; // 镜像ID
   disk_size: number; // 数据盘盘大小，单位G

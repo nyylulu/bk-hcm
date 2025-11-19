@@ -139,3 +139,38 @@ func (f *ResPlanFetcher) GetCrpApproveLogs(kt *kit.Kit, orderID string) ([]*ptyp
 
 	return auditLogs, nil
 }
+
+// GetOrderList 根据销毁单据查询预测返还信息
+func (f *ResPlanFetcher) GetOrderList(kt *kit.Kit, orderID string) ([]*cvmapi.QueryOrderInfo, error) {
+	req := &cvmapi.QueryOrderListReq{
+		ReqMeta: cvmapi.ReqMeta{
+			Id:      cvmapi.CvmId,
+			JsonRpc: cvmapi.CvmJsonRpc,
+			Method:  cvmapi.CvmQueryOrderList,
+		},
+		Params: &cvmapi.QueryOrderListParam{
+			DestroyReturnPlanOrderId: []string{orderID},
+			UserName:                 cvmapi.CvmApiKeyVal,
+		},
+	}
+
+	resp, err := f.crpCli.QueryOrderList(kt.Ctx, kt.Header(), req)
+	if err != nil {
+		logs.Errorf("failed to get crp destroy order, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	if resp.Error.Code != 0 {
+		logs.Errorf("failed to get crp destroy order, code: %d, crpTraceID: %s, msg: %s, order id: %v, rid: %s",
+			resp.Error.Code, resp.TraceId, resp.Error.Message, req.Params.DestroyReturnPlanOrderId, kt.Rid)
+		return nil, fmt.Errorf("failed to get crp destroy order, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
+	}
+
+	if resp.Result == nil || resp.Result.Data == nil {
+		logs.Errorf("failed to get destroy order, for result is empty, crpTraceID: %s, order id: %v, rid: %s",
+			resp.TraceId, req.Params.DestroyReturnPlanOrderId, kt.Rid)
+		return nil, errors.New("failed to get destroy order, for result is empty")
+	}
+
+	return resp.Result.Data.Data, nil
+}

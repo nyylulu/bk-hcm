@@ -73,11 +73,22 @@ export type IOpResourcesTicketsResult = IListResData<IResourcesTicketItem>;
 
 export type ResourcePlanTicketByIdResult = IQueryResData<TicketByIdResult>;
 
+export type TicketStatus =
+  | 'init'
+  | 'auditing'
+  | 'rejected'
+  | 'partial_rejected'
+  | 'done'
+  | 'failed'
+  | 'partial_failed'
+  | 'revoked'
+  | 'terminated';
+
 export interface TicketByIdResult {
   id: string;
   base_info: TicketBaseInfo;
   status_info: {
-    status: string;
+    status: TicketStatus;
     status_name: string;
     message: string;
     itsm_sn: string;

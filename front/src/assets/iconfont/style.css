@@ -368,3 +368,6 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .bkhcm-icon-other:before {
 	content: "\e17a";
 }
+.bkhcm-icon-short-rental:before {
+	content: "\e17d";
+}

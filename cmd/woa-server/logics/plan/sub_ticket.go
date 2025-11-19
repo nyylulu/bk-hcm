@@ -65,7 +65,34 @@ func (c *Controller) RetryResPlanFailedSubTickets(kt *kit.Kit, ticketID string) 
 		return err
 	}
 
-	// 2. 获取失败的子单列表
+	// 2. 已终止的主单不可重试
+	if ticket.Status == enumor.RPTicketStatusTerminated {
+		logs.Errorf("ticket already terminated, cannot retry, ticket id: %s, rid: %s", ticketID, kt.Rid)
+		return fmt.Errorf("ticket already terminated")
+	}
+
+	// 3. 处理失败的子单，更改状态，并汇总后重新拆分子单
+	if err := c.retrySplitResPlanTickets(kt, ticketID, ticket); err != nil {
+		logs.Errorf("failed to retry split res plan tickets, err: %v, ticket id: %s, rid: %s", err, ticketID,
+			kt.Rid)
+		return err
+	}
+
+	// 4. 为防止重试过程中所有子单进入终态触发主单结单，这里将主单重新启动
+	err = c.updateTicketStatus(kt, &rpts.ResPlanTicketStatusTable{
+		TicketID: ticketID,
+		Status:   enumor.RPTicketStatusAuditing,
+	})
+	if err != nil {
+		logs.Errorf("failed to update res plan ticket status, err: %v, ticket id: %s, rid: %s", err, ticketID, kt.Rid)
+		return err
+	}
+	return nil
+}
+
+// retrySplitResPlanTickets 重试，将失败的子单置为已失效状态，并汇总后重新拆分子单
+func (c *Controller) retrySplitResPlanTickets(kt *kit.Kit, ticketID string, ticket *ptypes.TicketInfo) error {
+	// 1. 获取失败的子单列表
 	failedIDs, failedDemands, err := c.getFailedSubTicketsByTicketID(kt, ticketID)
 	if err != nil {
 		logs.Errorf("failed to get failed sub tickets by ticket id %s, err: %v, rid: %s", ticketID, err, kt.Rid)
@@ -76,7 +103,7 @@ func (c *Controller) RetryResPlanFailedSubTickets(kt *kit.Kit, ticketID string) 
 		return nil
 	}
 
-	// 3. 将失败的子单置为已失效状态
+	// 2. 将失败的子单置为已失效状态
 	updateReq := &rpproto.ResPlanSubTicketStatusUpdateReq{
 		IDs:      failedIDs,
 		TicketID: ticketID,
@@ -104,7 +131,7 @@ func (c *Controller) RetryResPlanFailedSubTickets(kt *kit.Kit, ticketID string) 
 		}
 	}()
 
-	// 4. 汇总失败的单据重新拆分子单
+	// 3. 汇总失败的单据重新拆分子单
 	splitHelper := splitter.New(c.dao, c.client, c.crpCli, c.resFetcher, c.deviceTypesMap)
 	switch ticket.Type {
 	case enumor.RPTicketTypeDelete:
@@ -123,15 +150,6 @@ func (c *Controller) RetryResPlanFailedSubTickets(kt *kit.Kit, ticketID string) 
 		return splitErr
 	}
 
-	// 5. 为防止重试过程中所有子单进入终态触发主单结单，这里将主单重新启动
-	err = c.updateTicketStatus(kt, &rpts.ResPlanTicketStatusTable{
-		TicketID: ticketID,
-		Status:   enumor.RPTicketStatusAuditing,
-	})
-	if err != nil {
-		logs.Errorf("failed to update res plan ticket status, err: %v, ticket id: %s, rid: %s", err, ticketID, kt.Rid)
-		return err
-	}
 	return nil
 }
 

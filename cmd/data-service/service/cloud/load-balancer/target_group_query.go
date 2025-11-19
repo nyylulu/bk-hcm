@@ -213,12 +213,11 @@ BaseTargetListenerRuleRel {
 
 // listTargetGroupIDsByRelCond 根据监听器查询条件，查询目标组ID列表
 func (svc *lbSvc) listTargetGroupIDsByRelCond(kt *kit.Kit, lblReq protocloud.ListListenerQueryReq,
-	cloudLblIDs, clbIDs []string) ([]string, error) {
+	cloudLblIDs []string) ([]string, error) {
 
 	cloudTargetGroupIDs := make([]string, 0)
 	for _, partCloudLblIDs := range slice.Split(cloudLblIDs, int(filter.DefaultMaxInLimit)) {
 		ruleRelFilter := make([]*filter.AtomRule, 0)
-		ruleRelFilter = append(ruleRelFilter, tools.RuleIn("lb_id", clbIDs))
 		ruleRelFilter = append(ruleRelFilter, tools.RuleIn("cloud_lbl_id", partCloudLblIDs))
 		ruleRelFilter = append(ruleRelFilter, tools.RuleEqual("vendor", lblReq.Vendor))
 		ruleRelFilter = append(ruleRelFilter, tools.RuleEqual("listener_rule_type", lblReq.ListenerQueryItem.RuleType))
@@ -227,14 +226,21 @@ func (svc *lbSvc) listTargetGroupIDsByRelCond(kt *kit.Kit, lblReq protocloud.Lis
 			Filter: tools.ExpressionAnd(ruleRelFilter...),
 			Page:   core.NewDefaultBasePage(),
 		}
-		targetGroupRelList, err := svc.dao.LoadBalancerTargetGroupListenerRuleRel().List(kt, opt)
-		if err != nil {
-			logs.Errorf("list target group listener rule rel failed, err: %v, lblReq: %+v, ruleRelFilter: %+v, rid: %s",
-				err, lblReq, ruleRelFilter, kt.Rid)
-			return nil, fmt.Errorf("list target group listener rule rel failed, err: %v", err)
-		}
-		for _, item := range targetGroupRelList.Details {
-			cloudTargetGroupIDs = append(cloudTargetGroupIDs, item.CloudTargetGroupID)
+		for {
+			targetGroupRelList, err := svc.dao.LoadBalancerTargetGroupListenerRuleRel().List(kt, opt)
+			if err != nil {
+				logs.Errorf("list target group listener rule rel failed, err: %v, lblReq: %+v, ruleRelFilter: %+v, rid: %s",
+					err, lblReq, ruleRelFilter, kt.Rid)
+				return nil, fmt.Errorf("list target group listener rule rel failed, err: %v", err)
+			}
+			for _, item := range targetGroupRelList.Details {
+				cloudTargetGroupIDs = append(cloudTargetGroupIDs, item.CloudTargetGroupID)
+			}
+			if uint(len(targetGroupRelList.Details)) < core.DefaultMaxPageLimit {
+				break
+			}
+
+			opt.Page.Start += uint32(core.DefaultMaxPageLimit)
 		}
 	}
 	return slice.Unique(cloudTargetGroupIDs), nil

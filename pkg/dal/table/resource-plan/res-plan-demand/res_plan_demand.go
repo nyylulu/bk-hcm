@@ -51,6 +51,7 @@ var ResPlanDemandColumnDescriptor = utils.ColumnDescriptors{
 	{Column: "res_mode", NamedC: "res_mode", Type: enumor.String},
 	{Column: "obs_project", NamedC: "obs_project", Type: enumor.String},
 	{Column: "expect_time", NamedC: "expect_time", Type: enumor.Numeric},
+	{Column: "return_plan_time", NamedC: "return_plan_time", Type: enumor.Numeric},
 	{Column: "plan_type", NamedC: "plan_type", Type: enumor.String},
 	{Column: "area_id", NamedC: "area_id", Type: enumor.String},
 	{Column: "area_name", NamedC: "area_name", Type: enumor.String},
@@ -59,6 +60,7 @@ var ResPlanDemandColumnDescriptor = utils.ColumnDescriptors{
 	{Column: "zone_id", NamedC: "zone_id", Type: enumor.String},
 	{Column: "zone_name", NamedC: "zone_name", Type: enumor.String},
 	{Column: "technical_class", NamedC: "technical_class", Type: enumor.String},
+	{Column: "ticket_id", NamedC: "ticket_id", Type: enumor.String},
 	{Column: "device_family", NamedC: "device_family", Type: enumor.String},
 	{Column: "device_class", NamedC: "device_class", Type: enumor.String},
 	{Column: "device_type", NamedC: "device_type", Type: enumor.String},
@@ -108,8 +110,10 @@ type ResPlanDemandTable struct {
 	ResMode enumor.ResModeCode `db:"res_mode" json:"res_mode" validate:"lte=16"`
 	// ObsProject 项目类型
 	ObsProject enumor.ObsProject `db:"obs_project" json:"obs_project" validate:"lte=64"`
-	// ExpectTime 期望交付时间
+	// ExpectTime 期望交付时间，YYYYMMDD
 	ExpectTime int `db:"expect_time" json:"expect_time"`
+	// ReturnPlanTime 期望退回时间，YYYYMMDD
+	ReturnPlanTime int `db:"return_plan_time" json:"return_plan_time"`
 	// PlanType 预测内外
 	PlanType enumor.PlanTypeCode `db:"plan_type" json:"plan_type" validate:"lte=16"`
 	// AreaID 地域ID
@@ -126,6 +130,8 @@ type ResPlanDemandTable struct {
 	ZoneName string `db:"zone_name" json:"zone_name" validate:"lte=64"`
 	// TechnicalClass 技术分类
 	TechnicalClass string `db:"technical_class" json:"technical_class" validate:"lte=64"`
+	// TicketID 关联的res_plan_ticket ID
+	TicketID string `db:"ticket_id" json:"ticket_id" validate:"lte=64"`
 	// DeviceFamily 机型族
 	DeviceFamily string `db:"device_family" json:"device_family" validate:"lte=64"`
 	// DeviceClass 机型类型

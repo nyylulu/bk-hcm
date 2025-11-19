@@ -493,3 +493,39 @@ func (c *Controller) GetResPlanTicketStatusByBiz(kt *kit.Kit, ticketID string, b
 
 	return result, nil
 }
+
+// TerminateResPlanFailedTicket 终止失败的预测单据
+func (c *Controller) TerminateResPlanFailedTicket(kt *kit.Kit, ticketID string) error {
+	// 1. 获取主单信息
+	ticket, err := c.resFetcher.GetTicketInfo(kt, ticketID)
+	if err != nil {
+		logs.Errorf("failed to get ticket info, err: %v, ticket id: %s, rid: %s", err, ticketID, kt.Rid)
+		return err
+	}
+
+	// 2. 仅失败、部分失败的单据可以终止
+	switch ticket.Status {
+	case enumor.RPTicketStatusFailed, enumor.RPTicketStatusPartialFailed:
+	default:
+		logs.Errorf("ticket status is %s, can't terminate, ticket id: %s, rid: %s", ticket.Status, ticketID,
+			kt.Rid)
+		return fmt.Errorf("ticket status is %s, can't terminate", ticket.Status)
+	}
+
+	// 3. 子单汇总生效
+	if err := c.dispatcher.FinishAuditFlow(kt, ticket); err != nil {
+		logs.Errorf("failed to finish audit flow, err: %v, id: %s, rid: %s", err, ticket.ID, kt.Rid)
+		return err
+	}
+
+	// 4. 单据状态置为 RPTicketStatusTerminated
+	err = c.updateTicketStatus(kt, &rpts.ResPlanTicketStatusTable{
+		TicketID: ticketID,
+		Status:   enumor.RPTicketStatusTerminated,
+	})
+	if err != nil {
+		logs.Errorf("failed to update res plan ticket status, err: %v, ticket id: %s, rid: %s", err, ticketID, kt.Rid)
+		return err
+	}
+	return nil
+}

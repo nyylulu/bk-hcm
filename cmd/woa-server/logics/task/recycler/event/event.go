@@ -25,18 +25,20 @@ type EvType string
 
 // definition of various event type
 const (
-	CommitFailed   EvType = "COMMIT_FAILED"
-	CommitSuccess  EvType = "COMMIT_SUCCESS"
-	DetectFailed   EvType = "DETECT_FAILED"
-	DetectSuccess  EvType = "DETECT_SUCCESS"
-	AuditApproved  EvType = "AUDIT_APPROVED"
-	AuditRejected  EvType = "AUDIT_REJECTED"
-	TransitFailed  EvType = "TRANSIT_FAILED"
-	TransitSuccess EvType = "TRANSIT_SUCCESS"
-	ReturnFailed   EvType = "RETURN_FAILED"
-	ReturnHandling EvType = "RETURN_HANDLING"
-	ReturnSuccess  EvType = "RETURN_SUCCESS"
-	NoAction       EvType = "NO_ACTION"
+	CommitFailed      EvType = "COMMIT_FAILED"
+	CommitSuccess     EvType = "COMMIT_SUCCESS"
+	DetectFailed      EvType = "DETECT_FAILED"
+	DetectSuccess     EvType = "DETECT_SUCCESS"
+	AuditApproved     EvType = "AUDIT_APPROVED"
+	AuditRejected     EvType = "AUDIT_REJECTED"
+	TransitFailed     EvType = "TRANSIT_FAILED"
+	TransitSuccess    EvType = "TRANSIT_SUCCESS"
+	ReturnFailed      EvType = "RETURN_FAILED"
+	ReturnHandling    EvType = "RETURN_HANDLING"
+	ReturnSuccess     EvType = "RETURN_SUCCESS"
+	ReturnPlanFailed  EvType = "RETURN_PLAN_FAILED"
+	ReturnPlanSuccess EvType = "RETURN_PLAN_SUCCESS"
+	NoAction          EvType = "NO_ACTION"
 )
 
 // GetNoActionEvent returns a no action event, which means do not transfer the order to next step.

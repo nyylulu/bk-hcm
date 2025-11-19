@@ -10,9 +10,22 @@ POST /api/v1/woa/bizs/{bk_biz_id}/task/start/recycle/order
 
 ### 输入参数
 
-| 参数名称   | 参数类型  | 必选 | 描述   |
-|----------|----------|------|-------|
-| order_id | int      | 是   | 单据ID |
+| 参数名称                    | 参数类型         | 必选 | 描述     |
+|-------------------------|--------------|----|--------|
+| order_id                | []int        | 是  | 单据ID   |
+| suborder_id             | []string     | 是  | 子单据ID  |
+| return_forecast_configs | object array | 否  | 返还预测配置 |
+
+ps: 
+1.order_id 和 sub_order_id 只能同时传入一组。
+
+#### return_forecast_configs
+
+| 参数名称                 | 参数类型   | 必选 | 描述                                        |
+|----------------------|--------|----|-------------------------------------------|
+| suborder_id          | string | 是  | 回收子单据ID                                   |
+| return_forecast      | bool   | 否  | 是否返还预测                                    |
+| return_forecast_time | string | 否  | 期望返回预测时间，不能早于当天/不能晚于当年最后一天，格式是：YYYY-MM-DD |
 
 ### 调用示例
 
@@ -20,7 +33,14 @@ POST /api/v1/woa/bizs/{bk_biz_id}/task/start/recycle/order
 
 ```json
 {
-  "order_id":1001
+  "order_id":[1001],
+  "return_forecast_configs": [
+    {
+      "suborder_id": "123",
+      "return_forecast": true,
+      "return_forecast_time": "2025-09-17"
+    }
+  ]
 }
 ```
 

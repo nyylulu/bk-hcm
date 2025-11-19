@@ -93,20 +93,6 @@ func (c MonitorIdleCheckAction) Run(kt run.ExecuteKit, params interface{}) (resu
 		return nil, fmt.Errorf("fail to update detail to running, err: %v", err)
 	}
 
-	defer func() {
-		// 结束后写回状态
-		targetState := enumor.TaskDetailSuccess
-		if taskErr != nil {
-			// 更新为失败
-			targetState = enumor.TaskDetailFailed
-		}
-		err = actionflow.BatchUpdateTaskDetailResultState(asyncKit, taskDetailIDs, targetState, nil, taskErr)
-		if err != nil {
-			logs.Errorf("fail to set detail to %s after cloud operation finished, err: %v, rid: %s",
-				targetState, err, asyncKit.Rid)
-		}
-	}()
-
 	err = c.monitorIdleCheckCvm(asyncKit, opt, len(detailList))
 	if err != nil {
 		return nil, err
@@ -134,9 +120,6 @@ func (c MonitorIdleCheckAction) monitorIdleCheckCvm(asyncKit *kit.Kit, opt *cvm.
 	timeoutCtx, cancel := context.WithTimeout(asyncKit.Ctx, taskTimeoutSec)
 	defer cancel()
 
-	// 记录已经更新过的任务，避免重复更新
-	finalDetailIDs := make(map[string]struct{})
-
 	for {
 		select {
 		case <-timeoutCtx.Done():
@@ -163,11 +146,6 @@ func (c MonitorIdleCheckAction) monitorIdleCheckCvm(asyncKit *kit.Kit, opt *cvm.
 					return fmt.Errorf("host id %s not found in host id to task detail id map", item.HostID)
 				}
 
-				// 跳过已经处于终态的任务
-				if _, ok := finalDetailIDs[detailID]; ok {
-					continue
-				}
-
 				updateReq := task.UpdateTaskDetailField{
 					ID: detailID,
 					Param: task.IdleCheckTaskDetailParam{
@@ -180,11 +158,9 @@ func (c MonitorIdleCheckAction) monitorIdleCheckCvm(asyncKit *kit.Kit, opt *cvm.
 				case table.DetectStatusSuccess:
 					finalNum++
 					updateReq.State = enumor.TaskDetailSuccess
-					finalDetailIDs[detailID] = struct{}{}
 				case table.DetectStatusFailed:
 					finalNum++
 					updateReq.State = enumor.TaskDetailFailed
-					finalDetailIDs[detailID] = struct{}{}
 				}
 				updateReqs = append(updateReqs, updateReq)
 			}

@@ -93,9 +93,11 @@ const (
 	CLBExcelHeaderTCloudZiyan = "tencent_cloud_private(腾讯云-自研云)"
 
 	// CLBTopoFindInLimit 负载均衡各级拓扑in查询数量限制
-	CLBTopoFindInLimit = 100000
+	CLBTopoFindInLimit = 10000
 	// CLBTopoFindPageLimit 负载均衡查询分页数量限制
 	CLBTopoFindPageLimit = 100000
+	// CLBDataByTopoCondReturnLimit 根据负载均衡拓扑条件查询返回的详情数量限制
+	CLBDataByTopoCondReturnLimit = 10000
 )
 
 const (

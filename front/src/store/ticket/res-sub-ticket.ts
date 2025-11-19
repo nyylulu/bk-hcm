@@ -37,6 +37,10 @@ export const useResSubTicketStore = defineStore('resSubTicketStore', () => {
   const getTransferQuotaSummary = (params: TransferQuotasParams, bizId?: number): Promise<TransferQuotasResult> => {
     return http.post(`/api/v1/woa/${resolveBizApiPath(bizId)}plans/resources/transfer_quotas/summary`, params);
   };
+  // 终止资源预测单据
+  const terminateTicket = (ticketId: string, bizId?: number): Promise<ActionResult> => {
+    return http.post(`/api/v1/woa/${resolveBizApiPath(bizId)}plans/resources/tickets/${ticketId}/terminate`);
+  };
 
   return {
     getTransferQuotaSummary,
@@ -46,6 +50,7 @@ export const useResSubTicketStore = defineStore('resSubTicketStore', () => {
     retryTickets,
     approveAdminNode,
     getTransferQuotaConfigs,
+    terminateTicket,
   };
 });
 

@@ -21,6 +21,7 @@ import (
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/pkg"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -106,10 +107,22 @@ func (t *CheckReturnWorkGroup) check(kt *kit.Kit, steps []*StepMeta) {
 		return
 	}
 
-	// hostExecInfoMap用于记录每个step对应的执行情况，key为suborder_id+"_"+assetID。发生错误的step会从hostExecInfoMap上移除
-	hostExecInfoMap := make(map[string]*HostExecInfo, len(steps))
-	assetIDs := make([]string, 0)
+	var newSteps []*StepMeta
 	for _, step := range steps {
+		// 该主机对应的步骤已被设置为跳过
+		if step.Step != nil && step.Step.Skip == enumor.DetectStepSkipYes {
+			logs.Infof("IdleCheck:%s:SKIP ONE, subOrderID: %s, IP: %s, stepMeta: %+v, rid: %s",
+				table.StepCheckReturn, step.Step.SuborderID, step.Step.IP, cvt.PtrToVal(step), kt.Rid)
+			t.HandleResult(kt, []*StepMeta{step}, nil, "跳过", false)
+			continue
+		}
+		newSteps = append(newSteps, step)
+	}
+
+	// hostExecInfoMap用于记录每个step对应的执行情况，key为suborder_id+"_"+assetID。发生错误的step会从hostExecInfoMap上移除
+	hostExecInfoMap := make(map[string]*HostExecInfo, len(newSteps))
+	assetIDs := make([]string, 0)
+	for _, step := range newSteps {
 		hostExecInfoKey := t.getHostExecInfoKey(step.Step.SuborderID, step.Step.AssetID)
 		hostExecInfoMap[hostExecInfoKey] = &HostExecInfo{StepMeta: step}
 		// 空assetID是非法的

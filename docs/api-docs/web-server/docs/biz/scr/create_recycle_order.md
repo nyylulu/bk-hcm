@@ -10,12 +10,13 @@ POST /api/v1/woa/bizs/{bk_biz_id}/task/create/recycle/order
 
 ### 输入参数
 
-| 参数名称       | 参数类型       | 必选 | 描述             |
-|---------------|--------------|------|-----------------|
-| ips           | string array | 否	  | 回收资源ip列表     |
-| asset_ids	    | string array | 否	  | 回收资源固资号列表  |
-| bk_host_ids	| int array	   | 否	  | 回收资源CC主机ID   |
-| remark	    | string       | 否	  | 备注              |
+| 参数名称                  | 参数类型         | 必选 | 描述                                       |
+|-----------------------|--------------|----|------------------------------------------|
+| ips                   | string array | 否	 | 回收资源ip列表                                 |
+| asset_ids	            | string array | 否	 | 回收资源固资号列表                                |
+| bk_host_ids	          | int array	   | 否	 | 回收资源CC主机ID                               |
+| recycle_type_sequence | string array | 否  | 回收匹配项目类型顺序，枚举值：滚服项目、短租项目。不提供时默认为优先匹配滚服项目 |
+| remark	               | string       | 否	 | 备注                                       |
 
 - 说明：ips、asset_ids和bk_host_ids不能同时为空
 
@@ -25,10 +26,11 @@ POST /api/v1/woa/bizs/{bk_biz_id}/task/create/recycle/order
 
 ```json
 {
-    "ips": [
-        "10.0.0.1"
-    ],
-    "remark":""
+  "ips": [
+    "10.0.0.1"
+  ],
+  "recycle_type_sequence": ["滚服项目", "短租项目"],
+  "remark": ""
 }
 ```
 
@@ -38,26 +40,26 @@ POST /api/v1/woa/bizs/{bk_biz_id}/task/create/recycle/order
 
 ```json
 {
-    "result":true,
-    "code":0,
-    "message":"success",
-    "data":{
-        "order_id": 1001
-    }
+  "result": true,
+  "code": 0,
+  "message": "success",
+  "data": {
+    "order_id": 1001
+  }
 }
 ```
 
 ### 响应参数说明
 
-| 参数名称    | 参数类型       | 描述               |
-|------------|--------------|--------------------|
-| result     | bool         | 请求成功与否。true:请求成功；false请求失败 |
-| code       | int          | 错误编码。 0表示success，>0表示失败错误  |
-| message    | string       | 请求失败返回的错误信息 |
-| data	     | object array | 响应数据             |
+| 参数名称    | 参数类型         | 描述                         |
+|---------|--------------|----------------------------|
+| result  | bool         | 请求成功与否。true:请求成功；false请求失败 |
+| code    | int          | 错误编码。 0表示success，>0表示失败错误  |
+| message | string       | 请求失败返回的错误信息                |
+| data	   | object array | 响应数据                       |
 
 #### data
 
-| 参数名称  | 参数类型 | 描述   |
-|----------|--------|--------|
-| order_id | int    | 单据ID |
+| 参数名称     | 参数类型 | 描述   |
+|----------|------|------|
+| order_id | int  | 单据ID |

@@ -34,7 +34,8 @@ func (svc *securityGroupSvc) tcloudZiyanCloneSecurityGroup(kt *kit.Kit, bizID in
 	req *cloudserver.SecurityGroupCloneReq) (*core.CreateResult, error) {
 
 	// 打业务标签
-	meta, err := ziyan.GetResourceMetaByBizForUser(kt, cmdb.CmdbClient(), bizID, req.Manager, req.BakManager)
+	meta, err := ziyan.GetResourceMetaByBizForUser(kt, svc.client.DataService(), cmdb.CmdbClient(), bizID,
+		req.Manager, req.BakManager)
 	if err != nil {
 		logs.Errorf("get resource meta by biz failed, err: %v, biz: %d, rid: %s", err, bizID, kt.Rid)
 		return nil, err

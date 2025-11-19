@@ -65,17 +65,30 @@ func (f *ResPlanFetcher) GetResPlanDemandDetail(kt *kit.Kit, demandID string, bk
 	}
 	detail := rst.Details[0]
 
-	expectDateStr, err := times.TransTimeStrWithLayout(strconv.Itoa(detail.ExpectTime), constant.DateLayoutCompact,
-		constant.DateLayout)
+	expectDateStr, err := times.TransTimeStrWithLayout(strconv.Itoa(detail.ExpectTime),
+		constant.DateLayoutCompact, constant.DateLayout)
 	if err != nil {
 		logs.Errorf("failed to parse demand expect time, err: %v, expect_time: %d, rid: %s", err,
 			detail.ExpectTime, kt.Rid)
 		return nil, err
 	}
+	// 短租项目需要提供预期退回时间字段
+	returnTimePtr := new(string)
+	if detail.ObsProject == enumor.ObsProjectShortLease {
+		returnTime, err := times.TransTimeStrWithLayout(strconv.Itoa(detail.ReturnPlanTime),
+			constant.DateLayoutCompact, constant.DateLayout)
+		if err != nil {
+			logs.Warnf("failed to parse demand return plan time, err: %v, return_plan_time: %d, rid: %s", err,
+				detail.ReturnPlanTime, kt.Rid)
+		} else {
+			returnTimePtr = &returnTime
+		}
+	}
 
 	result := &ptypes.GetPlanDemandDetailResp{
 		DemandID:        detail.ID,
 		ExpectTime:      expectDateStr,
+		ReturnPlanTime:  returnTimePtr,
 		BkBizID:         detail.BkBizID,
 		BkBizName:       detail.BkBizName,
 		DeptID:          detail.VirtualDeptID,

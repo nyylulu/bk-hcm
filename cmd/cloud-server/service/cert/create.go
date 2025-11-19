@@ -148,7 +148,7 @@ func (svc *certSvc) createTCloudZiyanCert(kt *kit.Kit, body json.RawMessage, bkB
 		logs.Errorf("create tcloud ziyan cert decode privatekey failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
-	tags, err := ziyan.GenTagsForBizsWithManager(kt, svc.cmdbCli, bkBizID, kt.User, kt.User)
+	tags, err := ziyan.GenTagsForBizsWithManager(kt, svc.client.DataService(), svc.cmdbCli, bkBizID, kt.User, kt.User)
 	if err != nil {
 		logs.Errorf("create tcloud ziyan cert gen tags failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err

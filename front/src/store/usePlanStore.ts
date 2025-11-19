@@ -114,6 +114,7 @@ export default defineStore('planStore', () => {
       return {
         obs_project: detail.obs_project,
         expect_time: detail.expect_time,
+        return_plan_time: detail.return_plan_time,
         region_id: detail.region_id,
         zone_id: detail.zone_id,
         demand_res_types: demandResTypes,
@@ -183,6 +184,7 @@ export default defineStore('planStore', () => {
     return {
       obs_project: detail.obs_project,
       expect_time: detail.expect_time,
+      return_plan_time: detail.return_plan_time,
       region_id: detail.region_id,
       region_name: detail.region_name,
       zone_id: detail.zone_id,

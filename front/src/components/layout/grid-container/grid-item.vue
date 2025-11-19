@@ -2,6 +2,7 @@
   <div
     :class="{
       'grid-item': true,
+      'non-label': !($slots.label || label),
       span,
     }"
     :style="{
@@ -87,9 +88,11 @@ defineProps<IGridItemProps>();
             color: #3a84ff;
           }
         }
+
         .save-button {
           font-size: 28px;
         }
+
         .cancel-button {
           font-size: 18px;
         }

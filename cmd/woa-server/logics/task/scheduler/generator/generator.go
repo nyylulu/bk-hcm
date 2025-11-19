@@ -144,7 +144,7 @@ func (g *Generator) GenerateCVM(kt *kit.Kit, order *types.ApplyOrder) error {
 	}
 
 	// for given zone case
-	if !isCVMSeparateCampus(order) {
+	if !order.Spec.IsCVMSeparateCampus() {
 		if err = g.generateCVMConcentrate(kt, order, existDevices, orderZones); err != nil {
 			logs.Errorf("failed to generate cvm in zone %s, subOrderID: %s, rid: %s",
 				order.Spec.Zone, order.SubOrderId, kt.Rid)
@@ -161,14 +161,6 @@ func (g *Generator) GenerateCVM(kt *kit.Kit, order *types.ApplyOrder) error {
 	}
 
 	return nil
-}
-
-// isCVMSeparateCampus 是否分Campus生产
-func isCVMSeparateCampus(order *types.ApplyOrder) bool {
-	if order.Spec.ResAssign == enumor.CampusResAssign || order.Spec.Zone == cvmapi.CvmSeparateCampus {
-		return true
-	}
-	return false
 }
 
 // getApplyOrderMultiZones 获取多可用区
@@ -895,7 +887,7 @@ func (g *Generator) launchCvm(kt *kit.Kit, order *types.ApplyOrder, createCvmReq
 		}
 
 		// CRP库存不足时，更新失败的可用区到主机申请单（只有分Campus生产失败，才需要记录）
-		if strings.Contains(err.Error(), crpCapacityLackMsg) && order.Spec.Zone == cvmapi.CvmSeparateCampus {
+		if strings.Contains(err.Error(), crpCapacityLackMsg) && order.Spec.IsCVMSeparateCampus() {
 			if orderErr := g.updateOrderFailedZones(kt, order.SubOrderId, createCvmReq.Zone); orderErr != nil {
 				// 只记录日志，不应该影响主流程
 				logs.Warnf("failed to update order failed zoneIDs, subOrderID: %s, zone: %s, orderErr: %v, err: %v, "+
@@ -937,7 +929,7 @@ func (g *Generator) AddCvmDevices(kt *kit.Kit, taskId string, generateId uint64,
 		}
 
 		// 更新失败的可用区到主机申请单（只有分Campus生产失败，才需要记录）
-		if strings.Contains(err.Error(), crpProductFailedMsg) && order.Spec.Zone == cvmapi.CvmSeparateCampus {
+		if strings.Contains(err.Error(), crpProductFailedMsg) && order.Spec.IsCVMSeparateCampus() {
 			if orderErr := g.updateOrderFailedZones(kt, order.SubOrderId, zone); orderErr != nil {
 				// 只记录日志，不应该影响主流程
 				logs.Warnf("failed to update order failed zoneIDs, subOrderID: %s, zone: %s, orderErr: %v, err: %v, "+

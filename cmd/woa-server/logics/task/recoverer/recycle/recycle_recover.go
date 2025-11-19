@@ -154,6 +154,10 @@ func (r *recycleRecoverer) dealOrder(kt *kit.Kit, order *table.RecycleOrder) err
 		logs.Infof("start to recover RETURNING recycle order, the last step of recycle subOrderId: %s, rid: %s",
 			order.SuborderID, kt.Rid)
 		return r.recoverReturnedOrder(kt, order)
+	case table.RecycleStatusReturningPlan:
+		logs.Infof("start to recover RETURNING_PLAN recycle order, the last step of recycle subOrderId: %s, rid: %s",
+			order.SuborderID, kt.Rid)
+		return r.recoverReturningPlanOrder(kt, order)
 	default:
 		logs.Errorf("unknown recycle order status: %s, subOrderId: %s, rid: %s", order.Status, order.SuborderID, kt.Rid)
 		return fmt.Errorf("unknown recycle order status: %s, subOrderId: %s", order.Status, order.SuborderID)

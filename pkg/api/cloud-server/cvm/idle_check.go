@@ -25,13 +25,17 @@ import (
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/pkg"
 	"hcm/pkg/api/core"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/validator"
 	"hcm/pkg/dal/dao/types"
 )
 
 // BatchIdleCheckReq ...
 type BatchIdleCheckReq struct {
-	BkHostIDs []int64 `json:"bk_host_ids" validate:"required"`
+	BkHostIDs    []int64                     `json:"bk_host_ids" validate:"required"`
+	ExcludeSteps []table.DetectStepName      `json:"exclude_steps" validate:"max=100"`
+	BkBizID      int64                       `json:"bk_biz_id"`
+	Source       enumor.TaskManagementSource `json:"source"`
 }
 
 // Validate ...

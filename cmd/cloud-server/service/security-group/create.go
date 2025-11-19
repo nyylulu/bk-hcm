@@ -272,8 +272,8 @@ func (svc *securityGroupSvc) createTCloudZiyanSecurityGroup(cts *rest.Contexts, 
 		UsageBizIds: req.UsageBizIds,
 	}
 	// 打业务标签
-	tags, err := ziyanlogic.GenTagsForBizsWithManager(cts.Kit, cmdb.CmdbClient(), req.MgmtBizID,
-		req.Manager, req.BakManager)
+	tags, err := ziyanlogic.GenTagsForBizsWithManager(cts.Kit, svc.client.DataService(), cmdb.CmdbClient(),
+		req.MgmtBizID, req.Manager, req.BakManager)
 	if err != nil {
 		logs.Errorf("gen tags for biz sg failed, err: %v, biz: %d, rid: %s", err, bizID, cts.Kit.Rid)
 		return nil, fmt.Errorf("failed to generate biz tag, err: %w", err)

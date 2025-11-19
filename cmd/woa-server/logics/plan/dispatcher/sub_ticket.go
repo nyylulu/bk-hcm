@@ -329,7 +329,7 @@ func (d *Dispatcher) checkSubTicket(kt *kit.Kit, ticket *ptypes.TicketInfo) erro
 
 	// 单据成功完结，且不存在失败的子单，需要将所有子单的结果汇总生效
 	if !hasFailed {
-		if err := d.finishAuditFlow(kt, ticket); err != nil {
+		if err := d.FinishAuditFlow(kt, ticket); err != nil {
 			logs.Errorf("failed to finish audit flow, err: %v, id: %s, rid: %s", err, ticket.ID, kt.Rid)
 			return err
 		}

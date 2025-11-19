@@ -1,0 +1,20 @@
+.bk-radio-card {
+  .bk-radio-button {
+    &.is-disabled {
+      .bk-radio-button-label {
+        background: #fff !important;
+        color: #c4c6cc !important;
+      }
+    }
+
+    &.is-checked {
+      &.is-disabled {
+        .bk-radio-button-label {
+          background: #e1ecff !important;
+          border-color: #a3c5fd !important;
+          color: #a3c5fd !important;
+        }
+      }
+    }
+  }
+}

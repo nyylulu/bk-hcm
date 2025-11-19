@@ -55,7 +55,7 @@ func GetObsProjectMembers() []ObsProject {
 // GetObsProjectMembersForResPlan get ObsProject's members for resource plan.
 // 顺序为： 常规项目、滚服项目、春节保障、机房裁撤、改造复用、轻量云徙
 func GetObsProjectMembersForResPlan() []ObsProject {
-	obsProjects := []ObsProject{ObsProjectNormal, ObsProjectRollServer}
+	obsProjects := []ObsProject{ObsProjectNormal, ObsProjectShortLease, ObsProjectRollServer}
 	obsProjects = append(obsProjects, getSpringObsProjectForResPlan()...)
 	obsProjects = append(obsProjects, getDissolveObsProjectForResPlan()...)
 	obsProjects = append(obsProjects, []ObsProject{ObsProjectReuse, ObsProjectMigrate}...)
@@ -180,6 +180,8 @@ const (
 	RequireTypeGreenChannel RequireType = 7
 	// RequireTypeSpringResPool 春保资源池
 	RequireTypeSpringResPool RequireType = 8
+	// RequireTypeShortLease 短租项目
+	RequireTypeShortLease RequireType = 9
 )
 
 var requireTypeNameMap = map[RequireType]string{
@@ -189,6 +191,7 @@ var requireTypeNameMap = map[RequireType]string{
 	RequireTypeRollServer:    "滚服项目",
 	RequireTypeGreenChannel:  "小额绿通",
 	RequireTypeSpringResPool: "春保资源池",
+	RequireTypeShortLease:    "短租项目",
 }
 
 // GetName get name of RequireType.
@@ -209,6 +212,7 @@ func GetRequireTypeMembers() []RequireType {
 		RequireTypeRollServer,
 		RequireTypeGreenChannel,
 		RequireTypeSpringResPool,
+		RequireTypeShortLease,
 	}
 }
 
@@ -228,8 +232,8 @@ func (t RequireType) Validate() error {
 // NeedVerifyResPlan need verify resource plan.
 func (t RequireType) NeedVerifyResPlan() bool {
 	switch t {
-	// 常规项目、春节保障、机房裁撤、春保资源池需要校验预测
-	case RequireTypeRegular, RequireTypeSpring, RequireTypeDissolve, RequireTypeSpringResPool:
+	// 常规项目、春节保障、机房裁撤、春保资源池、短租项目需要校验预测
+	case RequireTypeRegular, RequireTypeSpring, RequireTypeDissolve, RequireTypeSpringResPool, RequireTypeShortLease:
 		return true
 	default:
 		return false
@@ -294,6 +298,7 @@ var RequireTypeObsProjectMap = map[RequireType]ObsProject{
 	RequireTypeDissolve:     getDissolveObsProject(),
 	// "春保资源池"使用"常规项目"的 obs project
 	RequireTypeSpringResPool: ObsProjectNormal,
+	RequireTypeShortLease:    ObsProjectShortLease,
 }
 
 // CrpOrderStatus is crp order status.
@@ -350,6 +355,22 @@ var CrpOrderStatusCanRevoke = []CrpOrderStatus{
 	CrpOrderStatusResourceApprove,
 	CrpOrderStatusWaitDeliver,
 	CrpOrderStatusDelivering,
+}
+
+var crpOrderStatusApprovalStateMap = map[CrpOrderStatus]ApprovalState{
+	CrpOrderStatusDeptApprove: HcmAdminApproval,
+	CrpOrderStatusPlanApprove: CrpAdminApproval,
+}
+
+// IsAdminApproval is admin approval.
+func (cs CrpOrderStatus) IsAdminApproval() bool {
+	_, ok := crpOrderStatusApprovalStateMap[cs]
+	return ok
+}
+
+// GetApprovalState get approval state.
+func (cs CrpOrderStatus) GetApprovalState() ApprovalState {
+	return crpOrderStatusApprovalStateMap[cs]
 }
 
 // CrpUpgradeOrderStatus is crp upgrade order status.
@@ -526,4 +547,85 @@ func (r ResAssign) Validate() error {
 	}
 
 	return nil
+}
+
+// QueryOrderInfoStatus 根据销毁单据查询预测返还信息接口状态
+type QueryOrderInfoStatus int
+
+const (
+	// QueryOrderInfoStatusSuccess 根据销毁单据查询预测返还信息接口 - 成功状态
+	QueryOrderInfoStatusSuccess = 0
+)
+
+// HostTransitStatus 主机转移状态
+type HostTransitStatus string
+
+const (
+	// HostTransitStatusCompleted 转移完成
+	HostTransitStatusCompleted HostTransitStatus = "completed"
+	// HostTransitStatusTransitToOrigin 需要转移到原始业务
+	HostTransitStatusTransitToOrigin HostTransitStatus = "transit_to_origin"
+	// HostTransitStatusTransitToReborn 需要转移到reborn业务
+	HostTransitStatusTransitToReborn HostTransitStatus = "transit_to_reborn"
+	// HostTransitStatusAbnormal 异常情况
+	HostTransitStatusAbnormal HostTransitStatus = "abnormal"
+)
+
+// ApprovalState defines the approval state
+type ApprovalState string
+
+const (
+	// LeaderApproval defines the leader approval state
+	LeaderApproval ApprovalState = "leader_approval"
+	// HcmAdminApproval defines the hcm admin approval state
+	HcmAdminApproval ApprovalState = "hcm_admin_approval"
+	// CrpAdminApproval defines the crp admin approval state
+	CrpAdminApproval ApprovalState = "crp_admin_approval"
+)
+
+// Validate validates the approve state
+func (a ApprovalState) Validate() error {
+	if _, ok := approveStateMap[a]; !ok {
+		return fmt.Errorf("invalid approval state: %s", a)
+	}
+
+	return nil
+}
+
+var approveStateMap = map[ApprovalState]string{
+	LeaderApproval:   "直属leader审批",
+	HcmAdminApproval: "HCM系统管理员审批",
+	CrpAdminApproval: "CRP系统管理员审批",
+}
+
+// HostApplyItsmStepName defines the host apply itsm step name
+type HostApplyItsmStepName string
+
+const (
+	// HostApplyItsmStepNameSpecifiedUserApproval defines the host apply specified user approval step name
+	HostApplyItsmStepNameSpecifiedUserApproval HostApplyItsmStepName = "指定审批人审批"
+	// HostApplyItsmStepNameLeaderApproval defines the host apply itsm leader approval step name
+	HostApplyItsmStepNameLeaderApproval HostApplyItsmStepName = "直属Leader审批"
+	// HostApplyItsmStepNameAdminApproval defines the host apply itsm admin approval step name
+	HostApplyItsmStepNameAdminApproval HostApplyItsmStepName = "管理员审批"
+)
+
+// Validate validates the host apply itsm step name
+func (h HostApplyItsmStepName) Validate() error {
+	if _, ok := hostApplyItsmStepNameApproveStateMap[h]; !ok {
+		return fmt.Errorf("invalid host apply itsm step name: %s", h)
+	}
+
+	return nil
+}
+
+var hostApplyItsmStepNameApproveStateMap = map[HostApplyItsmStepName]ApprovalState{
+	HostApplyItsmStepNameSpecifiedUserApproval: LeaderApproval,
+	HostApplyItsmStepNameLeaderApproval:        LeaderApproval,
+	HostApplyItsmStepNameAdminApproval:         HcmAdminApproval,
+}
+
+// GetApprovalState get the approval state
+func (h HostApplyItsmStepName) GetApprovalState() ApprovalState {
+	return hostApplyItsmStepNameApproveStateMap[h]
 }

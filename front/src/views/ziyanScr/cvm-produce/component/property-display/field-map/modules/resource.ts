@@ -6,6 +6,8 @@ import { getRegionCn, getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
 import CvmSystemDiskDisplay from '@/views/ziyanScr/components/cvm-system-disk/display.vue';
 import CvmDataDiskDisplay from '@/views/ziyanScr/components/cvm-data-disk/display.vue';
 import { ICvmDataDisk } from '@/views/ziyanScr/components/cvm-data-disk/typings';
+import { RES_ASSIGN_TYPE } from '@/components/device-type-selector/constants';
+import type { ICvmDeviceTypeFormData } from '@/components/device-type-selector/typings';
 
 export const imageId = Object.freeze({
   name: 'image_id',
@@ -45,6 +47,23 @@ export const zone = Object.freeze({
   name: 'zone',
   cn: '园区',
   transformer: getZoneCn,
+});
+
+export const zones = Object.freeze({
+  name: 'zones',
+  cn: '园区',
+  transformer: (zones: string[]) => {
+    if (zones?.[0] === 'all') {
+      return '全部可用区';
+    }
+    return zones?.map((zone: string) => getZoneCn(zone))?.join('，') ?? '--';
+  },
+});
+
+export const resAssign = Object.freeze({
+  name: 'res_assign',
+  cn: '资源分布方式',
+  transformer: (resAssign: ICvmDeviceTypeFormData['resAssignType']) => RES_ASSIGN_TYPE[resAssign]?.label ?? '--',
 });
 
 export const deviceType = Object.freeze({

@@ -82,7 +82,8 @@ const labelContainerWidth = computed(() => {
 
   &.horizontal {
     // grid-auto-rows: minmax(var(--min-height, 32px), max-content);
-    row-gap: var(--row-gap, 0px);
+    row-gap: var(--row-gap, 0);
+
     :deep(.grid-item) {
       // grid-template-columns: var(--label-width) 1fr;
       // 以下样式提供一个最小宽度，确保在切换为编辑态时不会因为宽度的变化导致布局跳动
@@ -94,9 +95,14 @@ const labelContainerWidth = computed(() => {
         grid-template-columns: var(--label-width) 1fr;
       }
 
+      &.non-label {
+        grid-template-columns: 1fr;
+      }
+
       .item-label {
         justify-content: flex-end;
         text-align: right;
+
         &::after {
           content: '：';
         }
@@ -109,6 +115,7 @@ const labelContainerWidth = computed(() => {
             // 水平排版时，设置固定高度使其与label对齐
             height: 32px;
           }
+
           .bk-switcher,
           .bk-checkbox-group {
             & + .action-button {
@@ -122,8 +129,10 @@ const labelContainerWidth = computed(() => {
 
   &.vertical {
     row-gap: var(--row-gap, 24px);
+
     :deep(.grid-item) {
       grid-template-columns: minmax(var(--content-min-width, 312px), var(--content-max-width, 1fr));
+
       // grid-template-rows: max-content;
       grid-auto-rows: auto minmax(var(--min-height, 32px), max-content);
 
@@ -143,18 +152,22 @@ const labelContainerWidth = computed(() => {
 
   &.bordered {
     gap: 0;
+
     :deep(.grid-item) {
       margin-left: -1px;
       margin-top: -1px;
       gap: 0;
+
       .item-label,
       .item-content {
         color: #63656e;
       }
+
       .item-label {
         background: #fafbfd;
         border: 1px solid #dcdee5;
       }
+
       .item-content {
         background: #fff;
         border: 1px solid #dcdee5;
@@ -167,6 +180,7 @@ const labelContainerWidth = computed(() => {
           .bk-select {
             height: 100%;
           }
+
           .bk-select {
             .bk-select-trigger {
               height: 100%;
@@ -192,11 +206,13 @@ const labelContainerWidth = computed(() => {
           margin: 0;
           padding: 11px 16px;
         }
+
         .item-label {
           &::after {
             content: '';
           }
         }
+
         .item-content {
           border-left: none;
         }
@@ -207,6 +223,7 @@ const labelContainerWidth = computed(() => {
       :deep(.grid-item) {
         // 确保有折行时表格态边框能对齐
         grid-template-rows: 1fr 1fr;
+
         .item-label,
         .item-content {
           margin: 0;
@@ -228,6 +245,7 @@ const labelContainerWidth = computed(() => {
       }
     }
   }
+
   &.grid-container-label-right {
     :deep(.grid-item) {
       .item-label {
@@ -236,6 +254,7 @@ const labelContainerWidth = computed(() => {
       }
     }
   }
+
   &.grid-container-label-center {
     :deep(.grid-item) {
       .item-label {
