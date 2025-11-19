@@ -15,6 +15,7 @@ package task
 
 import (
 	"fmt"
+	"hcm/pkg/criteria/constant"
 	"time"
 
 	"hcm/pkg"
@@ -160,14 +161,14 @@ type GetCompletionRateStatReq struct {
 
 // Validate whether GetCompletionRateStatReq is valid
 func (req *GetCompletionRateStatReq) Validate() error {
-	startTime, err := time.Parse(dateLayout, req.StartTime)
+	startTime, err := time.Parse(constant.DateLayout, req.StartTime)
 	if err != nil {
-		return fmt.Errorf("invalid start_time, expected format %s", dateLayout)
+		return fmt.Errorf("invalid start_time, expected format %s", constant.DateLayout)
 	}
 
-	endTime, err := time.Parse(dateLayout, req.EndTime)
+	endTime, err := time.Parse(constant.DateLayout, req.EndTime)
 	if err != nil {
-		return fmt.Errorf("invalid end_time, expected format %s", dateLayout)
+		return fmt.Errorf("invalid end_time, expected format %s", constant.DateLayout)
 	}
 
 	if endTime.Before(startTime) {
@@ -183,16 +184,16 @@ func (req *GetCompletionRateStatReq) GetFilter() (map[string]interface{}, error)
 
 	timeCond := make(map[string]interface{})
 	if len(req.StartTime) != 0 {
-		startTime, err := time.Parse(dateLayout, req.StartTime)
+		startTime, err := time.Parse(constant.DateLayout, req.StartTime)
 		if err != nil {
-			return nil, fmt.Errorf("invalid start_time, expected format %s", dateLayout)
+			return nil, fmt.Errorf("invalid start_time, expected format %s", constant.DateLayout)
 		}
 		timeCond[pkg.BKDBGTE] = startTime
 	}
 	if len(req.EndTime) != 0 {
-		endTime, err := time.Parse(dateLayout, req.EndTime)
+		endTime, err := time.Parse(constant.DateLayout, req.EndTime)
 		if err != nil {
-			return nil, fmt.Errorf("invalid end_time, expected format %s", dateLayout)
+			return nil, fmt.Errorf("invalid end_time, expected format %s", constant.DateLayout)
 		}
 		// '%lte: 2006-01-02' means '%lt: 2006-01-03 00:00:00'
 		timeCond[pkg.BKDBLT] = endTime.AddDate(0, 0, 1)
@@ -223,14 +224,14 @@ type GetCompletionRateDetailReq struct {
 
 // Validate 验证请求参数
 func (req *GetCompletionRateDetailReq) Validate() error {
-	startTime, err := time.Parse(dateLayout, req.StartTime)
+	startTime, err := time.Parse(constant.DateLayout, req.StartTime)
 	if err != nil {
-		return fmt.Errorf("invalid start_time, expected format %s", dateLayout)
+		return fmt.Errorf("invalid start_time, expected format %s", constant.DateLayout)
 	}
 
-	endTime, err := time.Parse(dateLayout, req.EndTime)
+	endTime, err := time.Parse(constant.DateLayout, req.EndTime)
 	if err != nil {
-		return fmt.Errorf("invalid end_time, expected format %s", dateLayout)
+		return fmt.Errorf("invalid end_time, expected format %s", constant.DateLayout)
 	}
 
 	if endTime.Before(startTime) {

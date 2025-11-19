@@ -176,24 +176,8 @@ func (d Dao) List(kt *kit.Kit, opt *types.ListOption) (*types.ListResult[tableap
 		return nil, err
 	}
 
-	fieldsExpr := tableapplystat.CvmApplyOrderStatisticsConfigTableColumns.FieldsNamedExpr(opt.Fields)
-	if len(fieldsExpr) == 0 {
-		logs.Errorf("list cvm apply order statistics config, fieldsExpr is empty, opt.Fields: %v, rid: %s",
-			opt.Fields, kt.Rid)
-		return nil, errf.New(errf.InvalidParameter, "fields expression is empty")
-	}
-
-	// 验证 namedExpr 是否包含所有字段（当 opt.Fields 为空时）
-	if opt.Fields == nil || len(opt.Fields) == 0 {
-		namedExpr := tableapplystat.CvmApplyOrderStatisticsConfigTableColumns.NamedExpr()
-		if namedExpr != fieldsExpr {
-			logs.Errorf("list cvm apply order statistics config, namedExpr mismatch, namedExpr: %s, fieldsExpr: %s, rid: %s",
-				namedExpr, fieldsExpr, kt.Rid)
-		}
-	}
-
 	sql := fmt.Sprintf(`SELECT %s FROM %s %s %s`,
-		fieldsExpr,
+		tableapplystat.CvmApplyOrderStatisticsConfigTableColumns.FieldsNamedExpr(opt.Fields),
 		table.CvmApplyOrderStatisticsConfigTable, whereExpr, pageExpr)
 
 	details := make([]tableapplystat.CvmApplyOrderStatisticsConfigTable, 0)
