@@ -60,6 +60,18 @@ func (op *operation) GetProductionStageTimeCostOverview(kt *kit.Kit, param *type
 
 	pipeline := []map[string]interface{}{
 		{pkg.BKDBMatch: match},
+		// 关联 ApplyOrder 表以过滤 source
+		{pkg.BKDBLookup: map[string]interface{}{
+			"from":         pkg.BKTableNameApplyOrder,
+			"localField":   "suborder_id",
+			"foreignField": "suborder_id",
+			"as":           "order_info",
+		}},
+		{pkg.BKDBMatch: map[string]interface{}{"order_info": map[string]interface{}{pkg.BKDBNE: []interface{}{}}}},
+		// 排除采购到资源池的订单
+		{pkg.BKDBMatch: map[string]interface{}{
+			"order_info.source": map[string]interface{}{pkg.BKDBNE: "purchase_to_resource_pool"},
+		}},
 		{pkg.BKDBAddFields: map[string]interface{}{
 			"year_month": map[string]interface{}{
 				"$dateToString": map[string]interface{}{
@@ -167,6 +179,10 @@ func (op *operation) aggregateProductionStageByRange(kt *kit.Kit, start time.Tim
 			"as":           "order_info",
 		}},
 		{pkg.BKDBMatch: map[string]interface{}{"order_info": map[string]interface{}{pkg.BKDBNE: []interface{}{}}}},
+		// 排除采购到资源池的订单
+		{pkg.BKDBMatch: map[string]interface{}{
+			"order_info.source": map[string]interface{}{pkg.BKDBNE: "purchase_to_resource_pool"},
+		}},
 		{pkg.BKDBAddFields: map[string]interface{}{
 			"bk_biz_id": map[string]interface{}{"$arrayElemAt": []interface{}{"$order_info.bk_biz_id", 0}},
 			"year_month": map[string]interface{}{

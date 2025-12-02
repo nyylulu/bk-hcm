@@ -57,11 +57,14 @@ func (op *operation) GetDeliveryRateStatistics(kt *kit.Kit, param *types.Deliver
 // buildDeliveryRateStatisticsPipeline builds the aggregation pipeline for delivery rate statistics
 func (op *operation) buildDeliveryRateStatisticsPipeline(start, end time.Time) []map[string]interface{} {
 	return []map[string]interface{}{
-		// 第一步：过滤时间范围
+		// 第一步：过滤时间范围，排除采购到资源池的订单
 		{pkg.BKDBMatch: map[string]interface{}{
 			"create_at": map[string]interface{}{
 				pkg.BKDBGTE: start,
 				pkg.BKDBLTE: end,
+			},
+			"source": map[string]interface{}{
+				pkg.BKDBNE: "purchase_to_resource_pool",
 			},
 		}},
 		// 第二步：提取年月信息

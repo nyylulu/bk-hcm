@@ -18,8 +18,8 @@ import (
 	"time"
 
 	"hcm/pkg"
-	"hcm/pkg/criteria/constant"
 	"hcm/pkg/api/core"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/validator"
 	"hcm/pkg/tools/querybuilder"
 )
@@ -759,6 +759,10 @@ func (req *GetCompletionRateStatReq) GetFilter() (map[string]interface{}, error)
 		pkg.BKDBLT: endTime.AddDate(0, 0, 1),
 	}
 	filter["create_at"] = timeCond
+
+	filter["source"] = map[string]interface{}{
+		pkg.BKDBNE: "purchase_to_resource_pool",
+	}
 
 	return filter, nil
 }

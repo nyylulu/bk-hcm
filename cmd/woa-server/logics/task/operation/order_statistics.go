@@ -65,6 +65,9 @@ func (op *operation) GetOrderTimeCostOverview(kt *kit.Kit, param *types.OrderTim
 		},
 		"stage":  types.TicketStageDone,
 		"status": types.ApplyStatusDone,
+		"source": map[string]interface{}{
+			pkg.BKDBNE: "purchase_to_resource_pool",
+		},
 	}
 
 	// Exclude suborder IDs if any
@@ -155,6 +158,9 @@ func (op *operation) aggregateOrderTimeCostByRange(kt *kit.Kit, start time.Time,
 		// only completed orders
 		"stage":  types.TicketStageDone,
 		"status": types.ApplyStatusDone,
+		"source": map[string]interface{}{
+			pkg.BKDBNE: "purchase_to_resource_pool",
+		},
 	}
 
 	// Exclude suborder IDs if any
