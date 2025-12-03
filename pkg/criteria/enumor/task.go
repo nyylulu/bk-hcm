@@ -176,7 +176,6 @@ const (
 )
 
 // ApplyTicketSource is apply ticket source
-// ApplyTicketSource is apply ticket source.
 type ApplyTicketSource string
 
 const (
