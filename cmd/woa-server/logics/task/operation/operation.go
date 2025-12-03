@@ -33,6 +33,7 @@ import (
 	"hcm/pkg/client"
 	"hcm/pkg/condition"
 	"hcm/pkg/criteria/constant"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -489,7 +490,7 @@ func buildCompletionRateDetailBaseFilter(startTime, endTime time.Time, excludeSu
 			pkg.BKDBLT:  endTime,
 		},
 		"source": map[string]interface{}{
-			pkg.BKDBNE: "purchase_to_resource_pool",
+			pkg.BKDBNE: enumor.ApplyTicketSrcPurchaseToResPool,
 		},
 	}
 
@@ -634,7 +635,7 @@ func (op *operation) GetApplyBizHostsStatistics(kt *kit.Kit, startDate, endDate 
 		"create_at": bson.M{condition.BKDBGTE: startDate, condition.BKDBLTE: endDate},
 		"stage":     types.TicketStageDone,
 		"status":    types.ApplyStatusDone,
-		"source":    bson.M{condition.BKDBNE: "purchase_to_resource_pool"},
+		"source":    bson.M{condition.BKDBNE: enumor.ApplyTicketSrcPurchaseToResPool},
 	}
 
 	// 获取需要排除的suborder_id列表（例如：手动处理的订单）
@@ -689,7 +690,7 @@ func (op *operation) GetApplyBizCpuCoresStatistics(kt *kit.Kit, startDate, endDa
 		"create_at": bson.M{condition.BKDBGTE: startDate, condition.BKDBLTE: endDate},
 		"stage":     types.TicketStageDone,
 		"status":    types.ApplyStatusDone,
-		"source":    bson.M{condition.BKDBNE: "purchase_to_resource_pool"},
+		"source":    bson.M{condition.BKDBNE: enumor.ApplyTicketSrcPurchaseToResPool},
 	}
 
 	// 获取需要排除的suborder_id列表（例如：手动处理的订单）

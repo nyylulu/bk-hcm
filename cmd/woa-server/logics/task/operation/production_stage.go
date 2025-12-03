@@ -25,6 +25,7 @@ import (
 	model "hcm/cmd/woa-server/model/task"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 )
@@ -67,10 +68,10 @@ func (op *operation) GetProductionStageTimeCostOverview(kt *kit.Kit, param *type
 			"foreignField": "suborder_id",
 			"as":           "order_info",
 		}},
-		{pkg.BKDBMatch: map[string]interface{}{"order_info": map[string]interface{}{pkg.BKDBNE: []interface{}{}}}},
-		// 排除采购到资源池的订单
+		// 过滤关联结果非空 + 排除采购到资源池的订单
 		{pkg.BKDBMatch: map[string]interface{}{
-			"order_info.source": map[string]interface{}{pkg.BKDBNE: "purchase_to_resource_pool"},
+			"order_info":        map[string]interface{}{pkg.BKDBNE: []interface{}{}},
+			"order_info.source": map[string]interface{}{pkg.BKDBNE: enumor.ApplyTicketSrcPurchaseToResPool},
 		}},
 		{pkg.BKDBAddFields: map[string]interface{}{
 			"year_month": map[string]interface{}{
@@ -178,10 +179,10 @@ func (op *operation) aggregateProductionStageByRange(kt *kit.Kit, start time.Tim
 			"foreignField": "suborder_id",
 			"as":           "order_info",
 		}},
-		{pkg.BKDBMatch: map[string]interface{}{"order_info": map[string]interface{}{pkg.BKDBNE: []interface{}{}}}},
-		// 排除采购到资源池的订单
+		// 过滤关联结果非空 + 排除采购到资源池的订单
 		{pkg.BKDBMatch: map[string]interface{}{
-			"order_info.source": map[string]interface{}{pkg.BKDBNE: "purchase_to_resource_pool"},
+			"order_info":        map[string]interface{}{pkg.BKDBNE: []interface{}{}},
+			"order_info.source": map[string]interface{}{pkg.BKDBNE: enumor.ApplyTicketSrcPurchaseToResPool},
 		}},
 		{pkg.BKDBAddFields: map[string]interface{}{
 			"bk_biz_id": map[string]interface{}{"$arrayElemAt": []interface{}{"$order_info.bk_biz_id", 0}},

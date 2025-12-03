@@ -25,6 +25,7 @@ import (
 	model "hcm/cmd/woa-server/model/task"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 )
@@ -66,7 +67,7 @@ func (op *operation) GetOrderTimeCostOverview(kt *kit.Kit, param *types.OrderTim
 		"stage":  types.TicketStageDone,
 		"status": types.ApplyStatusDone,
 		"source": map[string]interface{}{
-			pkg.BKDBNE: "purchase_to_resource_pool",
+			pkg.BKDBNE: enumor.ApplyTicketSrcPurchaseToResPool,
 		},
 	}
 
@@ -159,7 +160,7 @@ func (op *operation) aggregateOrderTimeCostByRange(kt *kit.Kit, start time.Time,
 		"stage":  types.TicketStageDone,
 		"status": types.ApplyStatusDone,
 		"source": map[string]interface{}{
-			pkg.BKDBNE: "purchase_to_resource_pool",
+			pkg.BKDBNE: enumor.ApplyTicketSrcPurchaseToResPool,
 		},
 	}
 

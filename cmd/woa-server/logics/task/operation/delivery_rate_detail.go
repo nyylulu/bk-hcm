@@ -25,6 +25,7 @@ import (
 	model "hcm/cmd/woa-server/model/task"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 )
@@ -65,7 +66,7 @@ func (op *operation) buildDeliveryRateDetailPipeline(start, end time.Time) []map
 				pkg.BKDBLTE: end,
 			},
 			"source": map[string]interface{}{
-				pkg.BKDBNE: "purchase_to_resource_pool",
+				pkg.BKDBNE: enumor.ApplyTicketSrcPurchaseToResPool,
 			},
 		}},
 		// 第二步：提取年月信息

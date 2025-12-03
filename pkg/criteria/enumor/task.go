@@ -174,3 +174,12 @@ const (
 	// TaskListenerAddTarget is a task indicating that add target to listener rule.
 	TaskListenerAddTarget TaskOperation = "listener_add_target"
 )
+
+// ApplyTicketSource is apply ticket source
+// ApplyTicketSource is apply ticket source.
+type ApplyTicketSource string
+
+const (
+	// ApplyTicketSrcPurchaseToResPool 采购到资源池的订单
+	ApplyTicketSrcPurchaseToResPool ApplyTicketSource = "purchase_to_resource_pool"
+)

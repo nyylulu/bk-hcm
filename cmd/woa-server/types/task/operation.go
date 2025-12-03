@@ -20,6 +20,7 @@ import (
 	"hcm/pkg"
 	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/constant"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/validator"
 	"hcm/pkg/tools/querybuilder"
 )
@@ -761,7 +762,7 @@ func (req *GetCompletionRateStatReq) GetFilter() (map[string]interface{}, error)
 	filter["create_at"] = timeCond
 
 	filter["source"] = map[string]interface{}{
-		pkg.BKDBNE: "purchase_to_resource_pool",
+		pkg.BKDBNE: enumor.ApplyTicketSrcPurchaseToResPool,
 	}
 
 	return filter, nil
